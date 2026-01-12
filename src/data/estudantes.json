@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "nome": "Charles Carvalho",
+    "genero": "M",
+    "privilegios": ["anciao", "presidente", "tesouros"],
+    "ultimaParte": "2025-12-20",
+    "email": "charles@email.com",
+    "telefone": "554699999999"
+  },
+  {
+    "id": 2,
+    "nome": "Simoni de Sousa",
+    "genero": "F",
+    "privilegios": ["estudante"],
+    "ultimaParte": "2026-01-05",
+    "email": "simoni@email.com",
+    "telefone": "554688888888"
+  },
+  {
+    "id": 3,
+    "nome": "Pedro Luís Musskopf",
+    "genero": "M",
+    "privilegios": ["estudante"],
+    "ultimaParte": "2026-01-14",
+    "email": "pedro@email.com",
+    "telefone": "554677777777"
+  }
+]
