@@ -1,0 +1,135 @@
+@media screen {
+    .page-break {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 16px auto;
+        background: white;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 0 12px rgba(0, 0, 0, .15);
+    }
+
+    .print-block {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .hidden-print-root {
+        display: none;
+    }
+}
+
+.page-content {
+    padding: 18mm 20mm;
+    display: flex;
+    flex-direction: column;
+}
+
+@media print {
+
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    #print-root,
+    #root,
+    body,
+    html {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+
+    /* esconde só o que NÃO é print */
+    .hidden-print-root,
+    .no-print {
+        display: none !important;
+    }
+
+    #print-root {
+        width: auto;
+        margin: 0;
+        padding: 0;
+        display: block;
+    }
+
+    .print-block {
+        display: block !important;
+        height: auto !important;
+        min-height: auto !important;
+    }
+
+    * {
+        page-break-before: auto;
+        page-break-after: auto;
+        break-before: auto;
+        break-after: auto;
+    }
+
+    .page-break {
+        width: 100%;
+        min-height: 297mm;
+        margin: 0;
+        padding: 0;
+
+        /* 🚨 REMOVA COMPLETAMENTE */
+        min-height: unset !important;
+        height: auto !important;
+
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .page-break:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    .page-content {
+        box-sizing: border-box;
+        height: 100%;
+        padding: 18mm 20mm;
+        display: block;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .page-content * {
+        max-width: 100%;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
+    }
+
+    /* 🔥 ESSENCIAL: mata o flex do wrapper */
+    .space-y-6>*+* {
+        margin-top: 0 !important;
+    }
+
+    /* 🔥 PROÍBE layout elástico dentro da página */
+    .page-break *,
+    .page-content *,
+    .page-content .flex,
+    .page-content .flex-1 {
+        flex: none !important;
+    }
+
+    /* Mata qualquer sombra/borda residual */
+    *,
+    *::before,
+    *::after {
+        box-shadow: none !important;
+        text-shadow: none !important;
+        outline: none !important;
+        filter: none !important;
+    }
+
+    .page-break {
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+}

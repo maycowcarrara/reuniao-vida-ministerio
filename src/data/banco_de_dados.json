@@ -1,0 +1,1916 @@
+{
+  "meta_dados": {
+    "versao_sistema": "1.2",
+    "data_criacao": "2026-01-13",
+    "congregacao": "Palmas PR"
+  },
+  "configuracoes": {
+    "nome_cong": "Palmas PR",
+    "idioma": "PT-BR",
+    "dia_reuniao": "Quarta-feira",
+    "horario": "19:30"
+  },
+  "historico_reunioes": [
+    {
+      "semana": "4-10 de maio",
+      "partes": [
+        {
+          "id": 1768238847509.5024,
+          "titulo": "Cântico 21 e oração | Comentários iniciais",
+          "tempo": "1",
+          "tipo": "oracao_inicial",
+          "secao": "tesouros",
+          "descricao": "",
+          "estudante": {
+            "id": 8,
+            "nome": "Erondi Soares",
+            "tipo": "irmao",
+            "email": "erondisoares248@gmail.com",
+            "telefone": "46 9973-6191",
+            "observacoes": "",
+            "historico": [
+              {
+                "data": "2026-01-12",
+                "parte": "oracao_inicial",
+                "ajudante": ""
+              },
+              {
+                "data": "2025-06-25",
+                "parte": "Leitura",
+                "ajudante": ""
+              },
+              {
+                "data": "2025-05-07",
+                "parte": "Ajudante",
+                "ajudante": "Nicolas Fernandes"
+              },
+              {
+                "data": "2025-04-16",
+                "parte": "Leitura",
+                "ajudante": ""
+              }
+            ]
+          }
+        },
+        {
+          "id": 1768238847510.8628,
+          "titulo": "1. Receba muitas bênçãos de Jeová",
+          "tempo": "10",
+          "descricao": "Por ser hospitaleiro. (Isa. 58:7-9) Por colocar as coisas espirituais em primeiro lugar. (Isa. 58:13, 14; w06 15/6 21 § 9) Por confiar que Jeová vai cuidar de você. (Isa. 59:1; w13 15/1 13 §§ 5-6) ‘Por que os israelitas deixaram de receber as bênçãos de Jeová, e o que eu posso aprender desse mau exemplo?’ (Isa. 58:1-5; it “Jejum” § 3) <img src=\"https://assetsnffrgf-a.akamaihd.net/assets/m/202026161/univ/wpub/202026161_univ_cnt_1_xs.jpg\" alt=\"Uma mãe e suas duas filhas, sentadas no chão em sua casa simples, estão alegres lendo o livro “Aprenda do Grande Instrutor”.\" class=\"south_center\"> 2. Joias espirituais",
+          "licao": null,
+          "tipo": "parte",
+          "secao": "tesouros",
+          "estudante": null,
+          "ajudante": null
+        },
+        {
+          "id": 1768238847510.9905,
+          "titulo": "2. Joias espirituais",
+          "tempo": "10",
+          "descricao": "Isa. 59:11 — Em que sentido os israelitas ‘rugiam como ursos’? (it “Urso” § 6) Que joias espirituais você encontrou na leitura da Bíblia desta semana? 3. Leitura da Bíblia",
+          "licao": null,
+          "tipo": "joias",
+          "secao": "tesouros",
+          "estudante": null,
+          "ajudante": null
+        },
+        {
+          "id": 1768238847510.1855,
+          "titulo": "DE CASA EM CASA. Use um folheto para iniciar uma conversa. (lmd lição 1 ponto 5)",
+          "tempo": "3",
+          "descricao": "5. Iniciando conversas",
+          "licao": "lmd lição 1",
+          "tipo": "parte_estudante",
+          "secao": "ministerio",
+          "estudante": null,
+          "ajudante": null
+        },
+        {
+          "id": 1768238847510.5967,
+          "titulo": "TESTEMUNHO INFORMAL. Fale sobre uma das verdades do apêndice A da brochura Ame as Pessoas. (lmd lição 2 ponto 4)",
+          "tempo": "4",
+          "descricao": "6. Discurso",
+          "licao": "lmd lição 2",
+          "tipo": "parte_estudante",
+          "secao": "ministerio",
+          "estudante": null,
+          "ajudante": null
+        },
+        {
+          "id": 1768238847510.473,
+          "titulo": "Cântico 100",
+          "tempo": "3",
+          "descricao": "",
+          "licao": null,
+          "tipo": "cantico",
+          "secao": "vida"
+        },
+        {
+          "id": 1768238847510.8284,
+          "titulo": "Consideração.",
+          "tempo": "15",
+          "descricao": "Paulo incentivou os cristãos a ‘sempre mostrarem hospitalidade’. (Rom. 12:13; nota de estudo, nwtsty) Os que seguem esse conselho recebem muitas bênçãos. — Pro. 11:25. <img src=\"https://assetsnffrgf-a.akamaihd.net/assets/m/202026161/univ/wpub/202026161_univ_cnt_2_xs.jpg\" alt=\"Uma cena do vídeo “Torne-se Amigo de Jeová — Seja Hospitaleiro”. Pedrinho e sua família mostram hospitalidade a uma família que conheceram recentemente no Salão do Reino.\" class=\"north_center\"> Mostre o VÍDEO Torne-se Amigo de Jeová — Seja Hospitaleiro. Depois, pergunte: O que você aprendeu sobre hospitalidade com esse vídeo? Que coisas boas acontecem quando você é hospitaleiro? Jeová é o maior exemplo de hospitalidade. (Atos 14:17) Leia Deuteronômio 10:17, 18. Depois, pergunte: O que aprendemos com a maneira de Jeová mostrar hospitalidade? Como nos beneficiamos quando somos hospitaleiros com aqueles que não são nossos amigos próximos? Que outros exemplos de hospitalidade encontramos na Bíblia, e o que podemos aprender com eles? Pense em como você gostaria de mostrar hospitalidade e escreva seus alvos aqui: 8. Estudo bíblico de congregação",
+          "licao": null,
+          "tipo": "parte",
+          "secao": "vida",
+          "estudante": null,
+          "ajudante": null
+        },
+        {
+          "id": 1768238847510.6572,
+          "titulo": "8. Estudo bíblico de congregação | lfb histórias 82-83",
+          "tempo": "30",
+          "descricao": "",
+          "licao": null,
+          "tipo": "estudo",
+          "secao": "vida",
+          "estudante": {
+            "id": 1,
+            "nome": "Bruno Huff",
+            "tipo": "servo",
+            "email": "brunolh.tj@gmail.com",
+            "telefone": "46 8834-8924",
+            "observacoes": "",
+            "historico": [
+              {
+                "data": "2026-01-12",
+                "parte": "estudo",
+                "ajudante": ""
+              },
+              {
+                "data": "2025-11-12",
+                "parte": "Discurso",
+                "ajudante": ""
+              },
+              {
+                "data": "2025-09-24",
+                "parte": "Ajudante",
+                "ajudante": "Ezequiel Huff"
+              }
+            ]
+          },
+          "ajudante": null
+        },
+        {
+          "id": 1768238847510.4136,
+          "titulo": "Comentários finais  | Cântico 42 e oração",
+          "tempo": "3",
+          "descricao": "",
+          "licao": null,
+          "tipo": "oracao_final",
+          "secao": "vida",
+          "estudante": null,
+          "ajudante": null
+        }
+      ]
+    }
+  ],
+  "alunos": [
+    {
+      "id": 1,
+      "nome": "Bruno Huff",
+      "tipo": "servo",
+      "email": "brunolh.tj@gmail.com",
+      "telefone": "46 8834-8924",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-12",
+          "parte": "estudo",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-12",
+          "parte": "Discurso",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Ajudante",
+          "ajudante": "Ezequiel Huff"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nome": "Leonardo Kickor",
+      "tipo": "servo",
+      "email": "lkickor@gmail.com",
+      "telefone": "46 9110-2210",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-10-22",
+          "parte": "Ajudante",
+          "ajudante": "Marco Gonzaga"
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "nome": "Nicolas Fernandes",
+      "tipo": "servo",
+      "email": "nickkolas67@gmail.com",
+      "telefone": "46 8814-3756",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "Ajudante",
+          "ajudante": "Charles Carvalho"
+        },
+        {
+          "data": "2025-11-26",
+          "parte": "Discurso",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-29",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-08-20",
+          "parte": "Discurso",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "nome": "Juliano Rodrigues",
+      "tipo": "irmao_hab",
+      "email": "rodriguesjuliano35945@gmail.com",
+      "telefone": "46 9940-1611",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "Discurso",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-12-31",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-26",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-29",
+          "parte": "Discurso",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-09-03",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "nome": "Marco Gonzaga",
+      "tipo": "irmao_hab",
+      "email": "gonzaga2082@hotmail.com",
+      "telefone": "46 9973-3222",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-02-04",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-12-24",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-22",
+          "parte": "IniciandoConversas",
+          "ajudante": "Leonardo Kickor"
+        },
+        {
+          "data": "2025-09-03",
+          "parte": "Ajudante",
+          "ajudante": "Charles Carvalho"
+        },
+        {
+          "data": "2025-07-23",
+          "parte": "Ajudante",
+          "ajudante": "Bruno Huff"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "nome": "Pedro Luís Musskopf",
+      "tipo": "irmao_hab",
+      "email": "",
+      "telefone": "46 988299159",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-09-10",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "nome": "Thiago Silva",
+      "tipo": "irmao_hab",
+      "email": "thiagogabriel1939@hotmail.com",
+      "telefone": "46 8411-3676",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-31",
+          "parte": "Discurso",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-22",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-01",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "Discurso",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "nome": "Erondi Soares",
+      "tipo": "irmao",
+      "email": "erondisoares248@gmail.com",
+      "telefone": "46 9973-6191",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-12",
+          "parte": "oracao_inicial",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-06-25",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-05-07",
+          "parte": "Ajudante",
+          "ajudante": "Nicolas Fernandes"
+        },
+        {
+          "data": "2025-04-16",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "nome": "Gustavo Fagundes André",
+      "tipo": "irmao",
+      "email": "",
+      "telefone": "46 8800-9119",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-12-17",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-05",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-08-20",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "nome": "José Carlos de Souza",
+      "tipo": "irmao",
+      "email": "",
+      "telefone": "46 988385858",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-21",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-08-27",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "nome": "Camila Silva",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "46 8403-8258",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 12,
+      "nome": "Cida Araujo",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "46 8824-7543",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "Ajudante",
+          "ajudante": "Maria Cecília Teles"
+        },
+        {
+          "data": "2025-10-29",
+          "parte": "Ajudante",
+          "ajudante": "Eliane Back"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "nome": "Cleci Fátima Bueno",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "46 8806-5508",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-10",
+          "parte": "Ajudante",
+          "ajudante": "Jeovana Tjingee"
+        },
+        {
+          "data": "2025-08-27",
+          "parte": "Ajudante",
+          "ajudante": "Jani Luci Veronez"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "nome": "Elis Cristina Gonçalves",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "46 99136-4833",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 15,
+      "nome": "Franciéli Gonzaga",
+      "tipo": "irma_lim",
+      "email": "celypiacentini@hotmail.com ",
+      "telefone": "46 9977-8398",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-24",
+          "parte": "Ajudante",
+          "ajudante": "Kelvin Gonzaga"
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "Ajudante",
+          "ajudante": "Kelvin Gonzaga"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "nome": "Maria Eduarda Finkler",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "46 98800-7427",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 17,
+      "nome": "Maria Eugênia Gonzaga",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "41 9836-5107",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-31",
+          "parte": "Ajudante",
+          "ajudante": "Milena de Sousa Campos"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "nome": "Nadir de Mello Bueno",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "46 8806-0443",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "Ajudante",
+          "ajudante": "Simoni de Sousa"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "nome": "Noemi Huff Rodrigues",
+      "tipo": "irma_lim",
+      "email": "",
+      "telefone": "46 9905-5734",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-31",
+          "parte": "Ajudante",
+          "ajudante": "Marinês Banaletti da Silva"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "nome": "Yone Fagundes Ditriche",
+      "tipo": "irma_lim",
+      "email": "elizaniaditrich@gmail.com ",
+      "telefone": "46 9919-2965",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-10",
+          "parte": "Ajudante",
+          "ajudante": "Elizânia Ditriche"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "Ajudante",
+          "ajudante": "Elizânia Ditriche"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "nome": "Bárbara Leonardi Huff",
+      "tipo": "irma_exp",
+      "email": "",
+      "telefone": "46 8819-2135",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-24",
+          "parte": "IniciandoConversas",
+          "ajudante": "Estela Maris Leonardi"
+        },
+        {
+          "data": "2025-11-26",
+          "parte": "Ajudante",
+          "ajudante": "Marilda de Oliveira Alves"
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "IniciandoConversas",
+          "ajudante": "Vérulin Oliveira da Rosa"
+        },
+        {
+          "data": "2025-09-10",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Kátia Maria Refosco"
+        },
+        {
+          "data": "2025-08-20",
+          "parte": "Ajudante",
+          "ajudante": "Camilla Fiorin"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "nome": "Camilla Fiorin",
+      "tipo": "irma_exp",
+      "email": "camillafiorin61@gmail.com",
+      "telefone": "46 9979-0003",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "Ajudante",
+          "ajudante": "Isabelly Guedes de Sousa"
+        },
+        {
+          "data": "2025-12-17",
+          "parte": "Ajudante",
+          "ajudante": "Laís Soares Kickor"
+        },
+        {
+          "data": "2025-11-05",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Larissa Rocha Huff"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "IniciandoConversas",
+          "ajudante": "Gabrielle Pereira"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "nome": "Cleuza Leme Reis",
+      "tipo": "irma_exp",
+      "email": "",
+      "telefone": "46 9901-0346",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-17",
+          "parte": "Ajudante",
+          "ajudante": "Josiane Gonçalves"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "IniciandoConversas",
+          "ajudante": "Rosicler Flores"
+        },
+        {
+          "data": "2025-10-29",
+          "parte": "Ajudante",
+          "ajudante": "Simoni de Sousa"
+        },
+        {
+          "data": "2025-10-01",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Simoni de Sousa"
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "IniciandoConversas",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "nome": "Elizânia Ditriche",
+      "tipo": "irma_exp",
+      "email": "elizaniaditrich@gmail.com ",
+      "telefone": "46 9985-0946",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "Ajudante",
+          "ajudante": "Márcia Marchioro"
+        },
+        {
+          "data": "2025-12-10",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Yone Fagundes Ditriche"
+        },
+        {
+          "data": "2025-11-12",
+          "parte": "Ajudante",
+          "ajudante": "Marinês Banaletti da Silva"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Marinês Banaletti da Silva"
+        },
+        {
+          "data": "2025-08-27",
+          "parte": "IniciandoConversas",
+          "ajudante": "Márcia Marchioro"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "nome": "Gabrielle Pereira",
+      "tipo": "irma_exp",
+      "email": "gabriellegrp03@gmail.com",
+      "telefone": "12 98827-2027",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-24",
+          "parte": "FazendoDiscípulos",
+          "ajudante": "Larissa Rocha Huff"
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "IniciandoConversas",
+          "ajudante": "Márcia Marchioro"
+        },
+        {
+          "data": "2025-11-05",
+          "parte": "FazendoDiscípulos",
+          "ajudante": "Michele Apolinário Carrara"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "Ajudante",
+          "ajudante": "Camilla Fiorin"
+        },
+        {
+          "data": "2025-08-27",
+          "parte": "IniciandoConversas",
+          "ajudante": "Marinês Banaletti da Silva"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "nome": "Jailda Carvalho",
+      "tipo": "irma_exp",
+      "email": "",
+      "telefone": "62 9537-5651",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-21",
+          "parte": "Ajudante",
+          "ajudante": "Loreci Lopes Soares"
+        },
+        {
+          "data": "2025-12-10",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Cleci Fátima Bueno"
+        },
+        {
+          "data": "2025-11-26",
+          "parte": "IniciandoConversas",
+          "ajudante": "Nilcéia dos Santos Souza"
+        },
+        {
+          "data": "2025-10-22",
+          "parte": "FazendoDiscípulos",
+          "ajudante": "Marilda de Oliveira Alves"
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Ajudante",
+          "ajudante": "Alessandra de Oliveira"
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "FazendoDiscípulos",
+          "ajudante": "Nerli Gomes"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "nome": "Jani Luci Veronez",
+      "tipo": "irma_exp",
+      "email": "",
+      "telefone": "46 8803-0612",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Laís Soares Kickor"
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Ivone Marques Gonzaga"
+        },
+        {
+          "data": "2025-08-27",
+          "parte": "IniciandoConversas",
+          "ajudante": "Cleci Fátima Bueno"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "nome": "Jeovana Tjingee",
+      "tipo": "irma_exp",
+      "email": "jeos26494@gmail.com",
+      "telefone": "41 8705-3329",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-02-04",
+          "parte": "IniciandoConversas",
+          "ajudante": "Marinês Banaletti da Silva"
+        },
+        {
+          "data": "2025-11-05",
+          "parte": "Ajudante",
+          "ajudante": "Vérulin Oliveira da Rosa"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "IniciandoConversas",
+          "ajudante": "Kethleen Branco"
+        },
+        {
+          "data": "2025-09-03",
+          "parte": "Ajudante",
+          "ajudante": "Cíntia Mara Dutra"
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "IniciandoConversas",
+          "ajudante": "Marilda de Oliveira Alves"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "nome": "Laís Soares Kickor",
+      "tipo": "irma_exp",
+      "email": "l.a.i.s.s.o.a.r.e.s@hotmail.com",
+      "telefone": "46 8805-9991",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "Ajudante",
+          "ajudante": "Jani Luci Veronez"
+        },
+        {
+          "data": "2025-12-17",
+          "parte": "ExplicandoCrenças",
+          "ajudante": "Camilla Fiorin"
+        },
+        {
+          "data": "2025-11-12",
+          "parte": "Ajudante",
+          "ajudante": "Kethleen Branco"
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "ExplicandoCrenças",
+          "ajudante": "Nerli Gomes"
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Ajudante",
+          "ajudante": "Milena de Sousa Campos"
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Loreci Lopes Soares"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "nome": "Larissa Rocha Huff",
+      "tipo": "irma_exp",
+      "email": "laryrocha2002@gmail.com",
+      "telefone": "46 8820-1934",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-24",
+          "parte": "Ajudante",
+          "ajudante": "Gabrielle Pereira"
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "FazendoDiscípulos",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-05",
+          "parte": "Ajudante",
+          "ajudante": "Camilla Fiorin"
+        },
+        {
+          "data": "2025-09-03",
+          "parte": "IniciandoConversas",
+          "ajudante": "Josiane Gonçalves"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "nome": "Maria Cecília Teles",
+      "tipo": "irma_exp",
+      "email": "mariacteles42@gmail.com",
+      "telefone": "46 8807-7371",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Cida Araujo"
+        },
+        {
+          "data": "2025-12-17",
+          "parte": "Ajudante",
+          "ajudante": "Michele Apolinário Carrara"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "IniciandoConversas",
+          "ajudante": "Loreci Lopes Soares"
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Mariane Reis Cremasco"
+        },
+        {
+          "data": "2025-09-10",
+          "parte": "Ajudante",
+          "ajudante": "Bárbara Leonardi Huff"
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Isabelly Guedes de Sousa"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "nome": "Marinês Banaletti da Silva",
+      "tipo": "irma_exp",
+      "email": "marinesbanaletti@hotmail.com",
+      "telefone": "46 8805-7219",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-02-04",
+          "parte": "Ajudante",
+          "ajudante": "Jeovana Tjingee"
+        },
+        {
+          "data": "2025-12-31",
+          "parte": "IniciandoConversas",
+          "ajudante": "Noemi Huff Rodrigues"
+        },
+        {
+          "data": "2025-11-12",
+          "parte": "IniciandoConversas",
+          "ajudante": "Elizânia Ditriche"
+        },
+        {
+          "data": "2025-08-27",
+          "parte": "Ajudante",
+          "ajudante": "Gabrielle Pereira"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "nome": "Michele Apolinário Carrara",
+      "tipo": "irma_exp",
+      "email": "micamicheleapol@gmail.com ",
+      "telefone": "46 8824-2252",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-21",
+          "parte": "Ajudante",
+          "ajudante": "Kethleen Branco"
+        },
+        {
+          "data": "2025-12-17",
+          "parte": "IniciandoConversas",
+          "ajudante": "Maria Cecília Teles"
+        },
+        {
+          "data": "2025-11-05",
+          "parte": "Ajudante",
+          "ajudante": "Gabrielle Pereira"
+        },
+        {
+          "data": "2025-10-22",
+          "parte": "IniciandoConversas",
+          "ajudante": "Alessandra de Oliveira"
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Ajudante",
+          "ajudante": "Nerli Gomes"
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "Ajudante",
+          "ajudante": "Cleuza Leme Reis"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "nome": "Milena de Sousa Campos",
+      "tipo": "irma_exp",
+      "email": "milena.sousa.campos@hotmail.com",
+      "telefone": "11 94894-4986",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "FazendoDiscípulos",
+          "ajudante": "Cleuza Leme Reis"
+        },
+        {
+          "data": "2025-12-31",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Maria Eugênia Gonzaga"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "Ajudante",
+          "ajudante": "Rosecleia Fagundes"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "FazendoDiscípulos",
+          "ajudante": "Isabelly Guedes de Sousa"
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "IniciandoConversas",
+          "ajudante": "Laís Soares Kickor"
+        },
+        {
+          "data": "2025-08-20",
+          "parte": "Ajudante",
+          "ajudante": "Simoni de Sousa"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "nome": "Simoni de Sousa",
+      "tipo": "irma_exp",
+      "email": "simoni_gonzaga@hotmail.com",
+      "telefone": "41 9639-5224",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "IniciandoConversas",
+          "ajudante": "Nadir de Mello Bueno"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "Ajudante",
+          "ajudante": "Isabelly Guedes de Sousa"
+        },
+        {
+          "data": "2025-10-29",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Cleuza Leme Reis"
+        },
+        {
+          "data": "2025-10-01",
+          "parte": "Ajudante",
+          "ajudante": "Cleuza Leme Reis"
+        },
+        {
+          "data": "2025-08-20",
+          "parte": "IniciandoConversas",
+          "ajudante": "Milena de Sousa Campos"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "nome": "Vérulin Oliveira da Rosa",
+      "tipo": "irma_exp",
+      "email": "verulinoliveira2020@gmail.com",
+      "telefone": "51 9523-8423",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-11-05",
+          "parte": "IniciandoConversas",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "Ajudante",
+          "ajudante": "Bárbara Leonardi Huff"
+        },
+        {
+          "data": "2025-09-10",
+          "parte": "IniciandoConversas",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "nome": "Cíntia Mara Dutra",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 9900-2535",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-09-03",
+          "parte": "IniciandoConversas",
+          "ajudante": "Jeovana Tjingee"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "nome": "Estela Maris Leonardi",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 8805-6368",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-24",
+          "parte": "Ajudante",
+          "ajudante": "Bárbara Leonardi Huff"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "nome": "Isabelly Guedes de Sousa",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 8822-6315",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "FazendoDiscípulos",
+          "ajudante": "Camilla Fiorin"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "ExplicandoCrenças",
+          "ajudante": "Simoni de Sousa"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "Ajudante",
+          "ajudante": "Milena de Sousa Campos"
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "Ajudante",
+          "ajudante": "Maria Cecília Teles"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "nome": "Ivone Marques Gonzaga",
+      "tipo": "irma",
+      "email": "iamgonzaga@hotmail.com",
+      "telefone": "46 8400-1020",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-02-04",
+          "parte": "IniciandoConversas",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "Ajudante",
+          "ajudante": "Jani Luci Veronez"
+        },
+        {
+          "data": "2025-10-22",
+          "parte": "Ajudante",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "nome": "Josiane Gonçalves",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 99136 4833",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-17",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Cleuza Leme Reis"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "Ajudante",
+          "ajudante": "Maria Cecília Teles"
+        },
+        {
+          "data": "2025-09-03",
+          "parte": "Ajudante",
+          "ajudante": "Larissa Rocha Huff"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "nome": "Kátia Maria Refosco",
+      "tipo": "irma",
+      "email": "katiarefosco@gmail.com",
+      "telefone": "46 9915-5229",
+      "observacoes": "teset",
+      "historico": [
+        {
+          "data": "2025-09-10",
+          "parte": "Ajudante",
+          "ajudante": "Bárbara Leonardi Huff"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "nome": "Kethleen Branco",
+      "tipo": "irma",
+      "email": "kethleenbranco@gmail.com",
+      "telefone": "51 9592-5620",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-21",
+          "parte": "IniciandoConversas",
+          "ajudante": "Michele Apolinário Carrara"
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "Ajudante",
+          "ajudante": "Kethleen Branco"
+        },
+        {
+          "data": "2025-11-12",
+          "parte": "IniciandoConversas",
+          "ajudante": "Laís Soares Kickor"
+        },
+        {
+          "data": "2025-10-08",
+          "parte": "Ajudante",
+          "ajudante": "Jeovana Tjingee"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "nome": "Loreci Lopes Soares",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 9972-6837",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-21",
+          "parte": "ExplicandoCrenças",
+          "ajudante": "Jailda Carvalho"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "Ajudante",
+          "ajudante": "Maria Cecília Teles"
+        },
+        {
+          "data": "2025-10-01",
+          "parte": "Ajudante",
+          "ajudante": "Loreci Lopes Soares"
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "Ajudante",
+          "ajudante": "Laís Soares Kickor"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "nome": "Márcia Marchioro",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 8807-6110",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-28",
+          "parte": "IniciandoConversas",
+          "ajudante": "Elizânia Ditriche"
+        },
+        {
+          "data": "2025-12-03",
+          "parte": "Ajudante",
+          "ajudante": "Gabrielle Pereira"
+        },
+        {
+          "data": "2025-08-27",
+          "parte": "Ajudante",
+          "ajudante": "Elizânia Ditriche"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "nome": "Mariane Reis Cremasco",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 9921-0693",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-10-15",
+          "parte": "Ajudante",
+          "ajudante": "Maria Cecília Teles"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "nome": "Marilda de Oliveira Alves",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 98823 0948",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-11-26",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Bárbara Leonardi Huff"
+        },
+        {
+          "data": "2025-10-22",
+          "parte": "Ajudante",
+          "ajudante": "Jailda Carvalho"
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "Ajudante",
+          "ajudante": "Jeovana Tjingee"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "nome": "Nerli Gomes",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 99978 5695",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-02-04",
+          "parte": "Ajudante",
+          "ajudante": "Rejeane da Silva Lima"
+        },
+        {
+          "data": "2025-12-10",
+          "parte": "Ajudante",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "Ajudante",
+          "ajudante": "Laís Soares Kickor"
+        },
+        {
+          "data": "2025-10-01",
+          "parte": "Ajudante",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "Ajudante",
+          "ajudante": "Jailda Carvalho"
+        },
+        {
+          "data": "2025-07-23",
+          "parte": "Ajudante",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "nome": "Nilcéia dos Santos Souza",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 98800-7427",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-11-26",
+          "parte": "Ajudante",
+          "ajudante": "Jailda Carvalho"
+        },
+        {
+          "data": "2025-09-10",
+          "parte": "Ajudante",
+          "ajudante": "Nilcéia dos Santos Souza"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "nome": "Rejeane da Silva Lima",
+      "tipo": "irma",
+      "email": "rejeaneregi676@gmail.com",
+      "telefone": "46 8810-8461",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-02-04",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Nerli Gomes"
+        },
+        {
+          "data": "2025-12-10",
+          "parte": "FazendoDiscípulos",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-12",
+          "parte": "CultivandoInteresse",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-10-01",
+          "parte": "CultivandoInteresse",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-07-23",
+          "parte": "CultivandoInteresse",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "nome": "Rosecleia Fagundes",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 8831-2399",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-21",
+          "parte": "Ajudante",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-26",
+          "parte": "Ajudante",
+          "ajudante": "Rosecleia Fagundes"
+        },
+        {
+          "data": "2025-11-19",
+          "parte": "Ajudante",
+          "ajudante": "Milena de Sousa Campos"
+        },
+        {
+          "data": "2025-09-10",
+          "parte": "Ajudante",
+          "ajudante": "Nilcéia dos Santos Souza"
+        },
+        {
+          "data": "2025-08-20",
+          "parte": "Ajudante",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "nome": "Rosicler Flores",
+      "tipo": "irma",
+      "email": "",
+      "telefone": "46 8803-7860",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-11-19",
+          "parte": "Ajudante",
+          "ajudante": "Cleuza Leme Reis"
+        },
+        {
+          "data": "2025-09-10",
+          "parte": "IniciandoConversas",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "IniciandoConversas",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "nome": "Alessandra de Oliveira",
+      "tipo": "desab",
+      "email": "alessandra.bonatti@hotmail.com",
+      "telefone": "51 9344-3647",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-10-22",
+          "parte": "Ajudante",
+          "ajudante": "Jailda Carvalho"
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Ajudante",
+          "ajudante": "Jailda Carvalho"
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "nome": "Antônio Carlos Tavares",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 9905-9956",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-05-21",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-04-09",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "nome": "Carlos Alberto da Silva",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 9923-0643",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 56,
+      "nome": "Cassiano de Oliveira Alves ",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 98820-5947",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-05-28",
+          "parte": "Leitura",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-03-26",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "nome": "Delcides Lima de Souza",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 99920-4118",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-02-19",
+          "parte": "Leitura",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "nome": "Eliane Back",
+      "tipo": "desab",
+      "email": "elianeb.dermopigmentadora@gmail.com",
+      "telefone": "51 9303-9937",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-10-29",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Cida Araujo"
+        },
+        {
+          "data": "2025-08-06",
+          "parte": "Ajudante",
+          "ajudante": "Marilda de Oliveira Alves"
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "nome": "Florina Fiori",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 98804-4410",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 60,
+      "nome": "Maria Araujo",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 98824-7543",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 61,
+      "nome": "Maria Leonice de Paula",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 99902 6519",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 62,
+      "nome": "Maria Mirandina de Souza",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 999204118",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 63,
+      "nome": "Nair Macedo Rosa",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 9988-8402",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 64,
+      "nome": "Patrícia da Silva Carlim",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 65,
+      "nome": "Rejane Tesseroli",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 99914 1291",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 66,
+      "nome": "Sandra Fiorin",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 9979-0002",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 67,
+      "nome": "Tereza Gomes",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 8803-4949",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 68,
+      "nome": "Terezinha",
+      "tipo": "desab",
+      "email": "",
+      "telefone": "46 8832-2215",
+      "observacoes": "",
+      "historico": []
+    },
+    {
+      "id": 69,
+      "nome": "Antenor Bueno",
+      "tipo": "anciao",
+      "email": "",
+      "telefone": "46 8807-9798",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-11-12",
+          "parte": "Discurso",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Ajudante",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "nome": "Charles Carvalho",
+      "tipo": "anciao",
+      "email": "charlescarvalho635@gmail.com",
+      "telefone": "46 8813-0404",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "IniciandoConversas",
+          "ajudante": "Nicolas Fernandes"
+        },
+        {
+          "data": "2025-09-03",
+          "parte": "IniciandoConversas",
+          "ajudante": "Marco Gonzaga"
+        },
+        {
+          "data": "2025-08-13",
+          "parte": "Ajudante",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "nome": "Diego Tjingee",
+      "tipo": "anciao",
+      "email": "diegotjingeem2@gmail.com",
+      "telefone": "41 8741-9126",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2026-01-14",
+          "parte": "Ajudante",
+          "ajudante": "Nicolas Fernandes"
+        },
+        {
+          "data": "2025-11-26",
+          "parte": "Ajudante",
+          "ajudante": "Nicolas Fernandes"
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "nome": "Ezequiel Huff",
+      "tipo": "anciao",
+      "email": "ezequielhufftj@gmail.com",
+      "telefone": "46 8421-6163",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-09-24",
+          "parte": "FazendoDiscípulos",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-09-24",
+          "parte": "Ajudante",
+          "ajudante": "Bruno Huff"
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "nome": "Kelvin Gonzaga",
+      "tipo": "anciao",
+      "email": "kelvinfran2011@gmail.com",
+      "telefone": "46 9919-4116",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-24",
+          "parte": "CultivandoInteresse",
+          "ajudante": "Franciéli Gonzaga"
+        },
+        {
+          "data": "2025-10-15",
+          "parte": "Ajudante",
+          "ajudante": "Franciéli Gonzaga"
+        },
+        {
+          "data": "2025-10-01",
+          "parte": "CultivandoInteresse",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-07-23",
+          "parte": "CultivandoInteresse",
+          "ajudante": ""
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "nome": "Maycow Carrara",
+      "tipo": "anciao",
+      "email": "maycowcarrara@gmail.com",
+      "telefone": "46 8818-6769",
+      "observacoes": "",
+      "historico": [
+        {
+          "data": "2025-12-24",
+          "parte": "Ajudante",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-11-12",
+          "parte": "Discurso",
+          "ajudante": ""
+        },
+        {
+          "data": "2025-07-23",
+          "parte": "Discurso",
+          "ajudante": ""
+        }
+      ]
+    }
+  ]
+}
