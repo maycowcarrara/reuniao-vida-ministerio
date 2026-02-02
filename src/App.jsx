@@ -551,7 +551,7 @@ function App() {
                 className="flex flex-col items-center gap-1 bg-green-700 p-2 rounded-lg text-white hover:bg-green-600 transition"
               >
                 <FileDown size={16} />
-                <span className="text-[9px] font-bold">{t.salvar}</span>
+                <span className="text-[9px] font-bold">{t.exportarBanco}</span>
               </button>
             </div>
           </div>

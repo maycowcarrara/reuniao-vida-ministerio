@@ -326,9 +326,16 @@ const Designar = ({
         // remove chaves órfãs quando lista muda
         setSemanasSelecionadas((prev) => {
             const next = {};
+            const keysVisiveis = new Set();
             listaFiltradaPorFlag.forEach((sem, idx) => {
-                const k = getSemanaKey(sem, idx);
-                if (prev?.[k]) next[k] = true;
+                keysVisiveis.add(getSemanaKey(sem, idx));
+            });
+
+            // Mantém apenas o que ainda existe
+            Object.keys(prev || {}).forEach(k => {
+                if (keysVisiveis.has(k) && prev[k]) {
+                    next[k] = true;
+                }
             });
             return next;
         });
@@ -592,7 +599,7 @@ const Designar = ({
         userClearedWeeksRef.current = true;
     };
 
-    // ---------- FILTRO + ORDENACAO ALUNOS ----------
+    // ---------- FILTRO + ORDENACAO ALUNOS (Com busca no histórico) ----------
     const alunosFiltrados = useMemo(() => {
         const buscaNorm = termoBusca ? normalizar(termoBusca) : '';
         const filtrados = (Array.isArray(alunos) ? alunos : [])
@@ -607,7 +614,18 @@ const Designar = ({
                     const nomeNorm = normalizar(aluno?.nome ?? '');
                     const cargoNorm = normalizar(cargoInfo?.[lang] || cargoInfo?.pt || cargoInfo?.es || cargoKey || '');
                     const obsNorm = normalizar(aluno?.observacoes ?? '');
-                    const passouBusca = nomeNorm.includes(buscaNorm) || cargoNorm.includes(buscaNorm) || obsNorm.includes(buscaNorm);
+
+                    // Adicionado: Busca no histórico
+                    const histNorm = (Array.isArray(aluno?.historico) ? aluno.historico : [])
+                        .map(h => normalizar(h?.parte ?? ''))
+                        .join(' ');
+
+                    const passouBusca =
+                        nomeNorm.includes(buscaNorm) ||
+                        cargoNorm.includes(buscaNorm) ||
+                        obsNorm.includes(buscaNorm) ||
+                        histNorm.includes(buscaNorm);
+
                     if (!passouBusca) return false;
                 }
 
@@ -970,37 +988,43 @@ const Designar = ({
                             <>
                                 {/* HEADER - filtro + seleção + ações */}
                                 <div className="bg-white rounded-xl shadow-sm border p-4 space-y-3">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <div className="text-[10px] font-black uppercase text-gray-400">
-                                                Semanas selecionadas: {totalSelecionadas}
-                                            </div>
-                                            <div className="text-sm font-bold text-gray-800 truncate">
-                                                Clique para selecionar/deselecionar
-                                            </div>
-                                        </div>
+                                    {/* Linha 1: controles */}
+                                    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                                        {/* Esquerda: título + contador (status) */}
 
-                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                        {/* Direita: filtros + ações */}
+                                        <div className="w-full lg:w-auto flex flex-wrap items-center gap-2 min-w-0">
                                             {/* filtro de semanas */}
-                                            <div className="flex border rounded-full overflow-hidden">
+                                            <div className="flex border rounded-full overflow-hidden shrink-0">
                                                 <button
                                                     type="button"
                                                     onClick={() => { setFiltroSemanas('ativas'); limparSelecaoVisiveis(); setSemanaAtivaIndex(0); }}
-                                                    className={`px-3 py-1 text-xs font-bold ${filtroSemanas === 'ativas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+                                                    className={`px-3 py-1 text-xs font-bold ${filtroSemanas === 'ativas'
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                                                        }`}
                                                 >
                                                     {TT.filtroAtivas}
                                                 </button>
+
                                                 <button
                                                     type="button"
                                                     onClick={() => { setFiltroSemanas('arquivadas'); limparSelecaoVisiveis(); setSemanaAtivaIndex(0); }}
-                                                    className={`px-3 py-1 text-xs font-bold border-l ${filtroSemanas === 'arquivadas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+                                                    className={`px-3 py-1 text-xs font-bold border-l ${filtroSemanas === 'arquivadas'
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                                                        }`}
                                                 >
                                                     {TT.filtroArquivadas}
                                                 </button>
+
                                                 <button
                                                     type="button"
                                                     onClick={() => { setFiltroSemanas('todas'); limparSelecaoVisiveis(); setSemanaAtivaIndex(0); }}
-                                                    className={`px-3 py-1 text-xs font-bold border-l ${filtroSemanas === 'todas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+                                                    className={`px-3 py-1 text-xs font-bold border-l ${filtroSemanas === 'todas'
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                                                        }`}
                                                 >
                                                     {TT.filtroTodas}
                                                 </button>
@@ -1028,7 +1052,12 @@ const Designar = ({
                                                 type="button"
                                                 onClick={arquivarSelecionadas}
                                                 disabled={totalSelecionadas === 0}
-                                                className={`px-3 py-1 rounded-full text-xs font-bold border transition inline-flex items-center gap-1 ${totalSelecionadas === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
+                                                className={[
+                                                    'px-3 py-1 rounded-full text-xs font-bold border transition inline-flex items-center gap-1',
+                                                    totalSelecionadas === 0
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                                ].join(' ')}
                                                 title={TT.arquivar}
                                             >
                                                 <Archive size={14} /> {TT.arquivar}
@@ -1038,7 +1067,12 @@ const Designar = ({
                                                 type="button"
                                                 onClick={restaurarSelecionadas}
                                                 disabled={totalSelecionadas === 0}
-                                                className={`px-3 py-1 rounded-full text-xs font-bold border transition inline-flex items-center gap-1 ${totalSelecionadas === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+                                                className={[
+                                                    'px-3 py-1 rounded-full text-xs font-bold border transition inline-flex items-center gap-1',
+                                                    totalSelecionadas === 0
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                                ].join(' ')}
                                                 title={TT.restaurar}
                                             >
                                                 <RotateCcw size={14} /> {TT.restaurar}
@@ -1055,11 +1089,14 @@ const Designar = ({
                                         </div>
                                     </div>
 
-                                    {/* Chips semanas */}
+                                    {/* DIVISÓRIA */}
+                                    <div className="-mx-4 h-px bg-gray-300" />
+
+                                    {/* Linha 2: chips semanas */}
                                     <div className="flex flex-wrap gap-2">
                                         {listaFiltradaPorFlag.map((sem, idx) => {
                                             const k = getSemanaKey(sem, idx);
-                                            const on = !!semanasSelecionadas[k];
+                                            const on = !!semanasSelecionadas?.[k];
                                             const foco = idx === semanaAtivaIndex;
                                             const isArq = !!sem?.arquivada;
 
@@ -1073,13 +1110,13 @@ const Designar = ({
                                                         setSemanaAtivaIndex(idx);
                                                     }}
                                                     className={[
-                                                        "px-3 py-1 rounded-full text-xs font-bold border transition whitespace-nowrap inline-flex items-center gap-2",
-                                                        on ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700 border-gray-300",
-                                                        foco ? "ring-2 ring-blue-200" : ""
-                                                    ].join(" ")}
-                                                    title={sem?.semana || `Semana ${idx + 1}`}
+                                                        'px-3 py-1 rounded-full text-xs font-bold border transition whitespace-nowrap inline-flex items-center gap-2',
+                                                        on ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300',
+                                                        foco ? 'ring-2 ring-blue-200' : ''
+                                                    ].join(' ')}
+                                                    title={sem?.semana}
                                                 >
-                                                    <span>{sem?.semana || `Semana ${idx + 1}`}</span>
+                                                    <span className="truncate">{sem?.semana}</span>
                                                     {isArq && (
                                                         <span className="text-[10px] font-black px-2 py-0.5 rounded bg-black/10">
                                                             {TT.arquivada}
@@ -1090,6 +1127,7 @@ const Designar = ({
                                         })}
                                     </div>
                                 </div>
+
 
                                 {/* CONTEÚDO - várias semanas */}
                                 {semanasParaExibir.length === 0 ? (

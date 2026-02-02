@@ -298,7 +298,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
     const isSent = (key, channel) => Boolean(sentMap?.[key]?.[channel]);
 
-    // --- GRAVAR HISTÓRICO ---
+    // --- GRAVAR HISTÓRICO COM PADRONIZAÇÃO DE TERMOS ---
     const gravarHistorico = () => {
         if (typeof onAlunosChange !== 'function') {
             alert(t.erroSemCallback);
@@ -319,79 +319,91 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             const data = getDataReuniaoISO(sem);
             if (!data) return;
 
-            // Presidente (nível semana)
+            // 1. PRESIDENTE (Sempre "presidente")
             if (sem?.presidente?.id) {
                 novosAlunos = addHistorico(novosAlunos, sem.presidente.id, {
                     data,
-                    parte: 'Presidente',
+                    parte: 'presidente',
                     ajudante: '',
                 });
                 gravouAlgo = true;
             }
 
-            // Partes
+            // Loop nas partes
             (sem?.partes || []).forEach((p) => {
-                const tipo = getTipo(p);
+                const tituloLower = (p.titulo || '').toLowerCase();
+                const secaoLower = (p.secao || '').toLowerCase();
 
-                // Orações
+                // Variável para definir o termo exato a ser gravado
+                let termoGravacao = '';
+
+                // A. ORAÇÕES
                 if (isOracao(p)) {
-                    const pessoa = p?.oracao || p?.estudante;
-                    if (pessoa?.id) {
-                        novosAlunos = addHistorico(novosAlunos, pessoa.id, {
-                            data,
-                            parte: tipoOracaoToDb(tipo),
-                            ajudante: '',
-                        });
-                        gravouAlgo = true;
+                    termoGravacao = 'oracao';
+                }
+                // B. TESOUROS (Parte 1, Joias, Leitura)
+                else if (secaoLower === 'tesouros') {
+                    if (tituloLower.includes('joias')) {
+                        termoGravacao = 'joias';
+                    } else if (tituloLower.includes('leitura')) {
+                        termoGravacao = 'leitura';
+                    } else {
+                        // Se é Tesouros e não é joias nem leitura, é a Parte 1 (Discurso)
+                        termoGravacao = 'tesouros';
                     }
-                    return;
+                }
+                // C. MINISTÉRIO
+                else if (secaoLower === 'ministerio') {
+                    termoGravacao = 'ministerio';
+                }
+                // D. VIDA CRISTÃ e ESTUDO
+                else if (secaoLower === 'vida' || isEstudo(p) || tituloLower.includes('estudo')) {
+                    if (isEstudo(p) || tituloLower.includes('estudo bíblico')) {
+                        termoGravacao = 'estudobiblico';
+                    } else {
+                        termoGravacao = 'vidacrista';
+                    }
                 }
 
-                // Estudo bíblico
-                if (isEstudo(p)) {
-                    const dirigente = p?.dirigente || p?.estudante;
-                    if (dirigente?.id) {
-                        novosAlunos = addHistorico(novosAlunos, dirigente.id, {
+                // --- APLICAR A GRAVAÇÃO ---
+
+                // 1. Gravar o Principal (Estudante, Dirigente, Orador)
+                if (termoGravacao) {
+                    // Tenta achar quem é o principal nessa parte
+                    const principal = p.dirigente || p.oracao || p.estudante;
+
+                    if (principal?.id) {
+                        novosAlunos = addHistorico(novosAlunos, principal.id, {
                             data,
-                            parte: 'estudo',
-                            ajudante: '',
+                            parte: termoGravacao,
+                            ajudante: p.ajudante?.nome || '',
                         });
                         gravouAlgo = true;
                     }
+                }
 
-                    const leitor = p?.leitor || sem?.leitor;
+                // 2. Gravar o Ajudante (Sempre "ajudante")
+                if (p.ajudante?.id) {
+                    novosAlunos = addHistorico(novosAlunos, p.ajudante.id, {
+                        data,
+                        parte: 'ajudante',
+                        ajudante: p.estudante?.nome || '', // Referência de quem ele ajudou
+                    });
+                    gravouAlgo = true;
+                }
+
+                // 3. Gravar o Leitor do Estudo (Sempre "leitor")
+                // Só grava leitor se a parte for o Estudo Bíblico
+                if (termoGravacao === 'estudobiblico') {
+                    const leitor = p.leitor || sem.leitor;
                     if (leitor?.id) {
                         novosAlunos = addHistorico(novosAlunos, leitor.id, {
                             data,
-                            parte: 'Leitor',
+                            parte: 'leitor',
                             ajudante: '',
                         });
                         gravouAlgo = true;
                     }
-                    return;
-                }
-
-                // Partes normais
-                const estudante = p?.estudante;
-                const ajudante = p?.ajudante;
-
-                if (estudante?.id) {
-                    novosAlunos = addHistorico(novosAlunos, estudante.id, {
-                        data,
-                        parte: tipo || (p?.titulo ?? 'Parte'),
-                        ajudante: ajudante?.nome || '',
-                    });
-                    gravouAlgo = true;
-                }
-
-                // ajudante
-                if (ajudante?.id) {
-                    novosAlunos = addHistorico(novosAlunos, ajudante.id, {
-                        data,
-                        parte: 'ajudante',
-                        ajudante: estudante?.nome || '',
-                    });
-                    gravouAlgo = true;
                 }
             });
         });
@@ -771,13 +783,13 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                         grid items-start border-b border-gray-100
                                                                         ${qtdSemanas === 1
                                                                                 ? 'grid-cols-[48px_1fr_240px] gap-x-4 py-2'
-                                                                                : 'grid-cols-[50px_1fr_150px] gap-x-2 py-0.5'
+                                                                                : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5'
                                                                             }
                                                                     `}
                                                                     >
 
                                                                         {/* Tempo */}
-                                                                        <div className={`text-right text-sm font-medium ${qtdSemanas === 2 ? 'pr-2' : 'pr-1'}`}>
+                                                                        <div className={`text-right text-sm font-medium whitespace-nowrap ${qtdSemanas === 2 ? 'pr-2' : 'pr-1'}`}>
                                                                             <span className="bg-gray-100 text-gray-600 font-bold border border-gray-200 rounded px-1.5 py-0.5 text-[9px]">
                                                                                 {parte.tempo} min
                                                                             </span>

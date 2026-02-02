@@ -29,7 +29,8 @@ export const TRANSLATIONS = {
         arquivar: "Finalizar e Arquivar",
         backup: "Banco de Dados",
         carregar: "Abrir Banco",
-        salvar: "Exportar Banco",
+        salvar: "Salvar",
+        exportarBanco: "Exportar Banco", 
         infoBackup:
             "Salve ou restaure todas as suas informações (Alunos, Designações e Histórico) em um arquivo JSON único.",
         registros: "registros",
@@ -53,7 +54,8 @@ export const TRANSLATIONS = {
         arquivar: "Finalizar y Archivar",
         backup: "Base de Datos",
         carregar: "Abrir Base",
-        salvar: "Exportar Base",
+        salvar: "Guardar",
+        exportarBanco: "Exportar Base",
         infoBackup:
             "Guarde o restaure toda su información (Estudiantes, Asignaciones e Historial) en un solo archivo JSON.",
         registros: "registros",
