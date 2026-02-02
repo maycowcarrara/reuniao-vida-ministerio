@@ -90,3 +90,43 @@ O sistema utiliza uma estrutura de dados simples baseada em JSON para facilitar 
   "programacao": [ ... ]
 }
 ```
+
+
+## 🔧 Como Executar Localmente
+
+Certifique-se de ter o [Node.js](https://nodejs.org/) instalado.
+
+1. Clone o repositório:
+   **Bash**
+
+   ```
+   git clone [https://github.com/seu-usuario/reuniao-vida-ministerio.git](https://github.com/seu-usuario/reuniao-vida-ministerio.git)
+   ```
+2. Entre na pasta:
+   **Bash**
+
+   ```
+   cd reuniao-vida-ministerio
+   ```
+3. Instale as dependências:
+   **Bash**
+
+   ```
+   npm install
+   ```
+4. Rode o projeto:
+   **Bash**
+
+   ```
+   npm run dev
+   ```
+
+---
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues relatando bugs ou sugerindo novas funcionalidades baseadas na experiência real de uso nas congregações.
+
+---
+
+**Nota:** Este software não é uma ferramenta oficial da Watch Tower Bible and Tract Society of Pennsylvania. É uma ferramenta auxiliar desenvolvida por voluntários para uso pessoal e local.
