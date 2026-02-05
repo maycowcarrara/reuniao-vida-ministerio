@@ -35,7 +35,47 @@ export const TRANSLATIONS = {
             "Salve ou restaure todas as suas informações (Alunos, Designações e Histórico) em um arquivo JSON único.",
         registros: "registros",
         info: { nunca: "Estreia", dias: "dias" },
-        ordem: { nome: "Nome", dias: "Tempo" }
+        ordem: { nome: "Nome", dias: "Tempo" },
+        inicio: "Início",
+        ajustes: "Ajustes",
+        dashboard: {
+            titulo: "Painel de Controle",
+            visaoGeral: "Visão geral da",
+            hoje: "Hoje",
+            proximaReuniao: "Próxima Reunião",
+            status: "Status das Designações",
+            completo: "Completo!",
+            pendentes: "pendentes",
+            gerenciar: "Gerenciar",
+            semReuniaoFutura: "Nenhuma reunião futura encontrada.",
+            importar: "Importar Programação",
+            estatisticas: {
+                alunos: "Total de Alunos",
+                semanas: "Semanas Ativas",
+                acoes: "Ações Rápidas",
+                gerarQuadro: "Gerar Quadro/PDF"
+            },
+            proximasSemanas: "Próximas Semanas",
+            verTodas: "Ver todas",
+            eventos: {
+                titulo: "Eventos Especiais",
+                agendar: "Agendar Evento",
+                tipo: "Tipo de Evento",
+                data: "Data",
+                adicionar: "Adicionar",
+                semEventos: "Nenhum evento especial configurado.",
+                avisoSemReuniao: "⚠️ Não haverá reunião nesta semana",
+                visita: "Visita do Superintendente",
+                assembleia_betel: "Assembleia (Rep. Betel)",
+                assembleia_circuito: "Assembleia (Sup. Circuito)",
+                congresso: "Congresso Regional",
+                dicaVisita: "A reunião será movida automaticamente para Terça-feira.",
+                dicaCancelamento: "A reunião de meio de semana será cancelada.",
+                helpVisita: "Selecione a Segunda-feira da semana da visita.",
+                helpCongresso: "Selecione a Sexta-feira de início.",
+                helpAssembleia: "Selecione o dia exato (Sábado ou Domingo)."
+            }
+        }
     },
     es: {
         importar: "Importar",
@@ -60,6 +100,46 @@ export const TRANSLATIONS = {
             "Guarde o restaure toda su información (Estudiantes, Asignaciones e Historial) en un solo archivo JSON.",
         registros: "registros",
         info: { nunca: "Estreno", dias: "días" },
-        ordem: { nome: "Nombre", dias: "Tiempo" }
+        ordem: { nome: "Nombre", dias: "Tiempo" },
+        inicio: "Inicio",
+        ajustes: "Ajustes",
+        dashboard: {
+            titulo: "Panel de Control",
+            visaoGeral: "Visión general de la",
+            hoje: "Hoy",
+            proximaReuniao: "Próxima Reunión",
+            status: "Estado de Asignaciones",
+            completo: "¡Completo!",
+            pendentes: "pendientes",
+            gerenciar: "Gestionar",
+            semReuniaoFutura: "No se encontraron reuniones futuras.",
+            importar: "Importar Programación",
+            estatisticas: {
+                alunos: "Total de Estudiantes",
+                semanas: "Semanas Activas",
+                acoes: "Acciones Rápidas",
+                gerarQuadro: "Generar Tablón/PDF"
+            },
+            proximasSemanas: "Próximas Semanas",
+            verTodas: "Ver todas",
+            eventos: {
+                titulo: "Eventos Especiales",
+                agendar: "Programar Evento",
+                tipo: "Tipo de Evento",
+                data: "Fecha",
+                adicionar: "Añadir",
+                semEventos: "Ningún evento especial configurado.",
+                avisoSemReuniao: "⚠️ No habrá reunión esta semana",
+                visita: "Visita del Superintendente",
+                assembleia_betel: "Asamblea (Rep. Betel)",
+                assembleia_circuito: "Asamblea (Sup. Circuito)",
+                congresso: "Asamblea Regional",
+                dicaVisita: "La reunión se moverá automáticamente al Martes.",
+                dicaCancelamento: "La reunión de entre semana será cancelada.",
+                helpVisita: "Seleccione el Lunes de la semana de la visita.",
+                helpCongresso: "Seleccione el Viernes de inicio.",
+                helpAssembleia: "Seleccione el día exacto (Sábado o Domingo)."
+            }
+        }
     }
 };

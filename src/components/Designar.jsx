@@ -4,8 +4,9 @@ import {
     Calendar, User,
     Search, SortAsc, SortDesc, FilterX, UsersRound, UserRound, Clock,
     AlertTriangle, StickyNote, Trash2, Edit2, X, Save, UserPlus,
-    Archive, RotateCcw
-} from 'lucide-react';
+    Archive, RotateCcw, Lightbulb, Briefcase, Tent } from 'lucide-react';
+
+import ModalSugestao from './ModalSugestao'; // <--- INJEÇÃO 2: Importamos o Modal
 
 // Fallback mínimo para evitar crash quando t/lang não vierem
 const T_FALLBACK = {
@@ -130,6 +131,14 @@ const Designar = ({
     // Modal de edição de parte
     const [modalEditarOpen, setModalEditarOpen] = useState(false);
     const [parteEditCtx, setParteEditCtx] = useState(null); // { parteId, semanaIndex, valores }
+
+    // --- INJEÇÃO 3: Estado para o Modal de Sugestão ---
+    const [modalSugestao, setModalSugestao] = useState({
+        aberto: false,
+        semanaIndex: null, // index na lista filtrada
+        parteId: null,
+        key: null // 'estudante', 'ajudante', 'presidente', etc
+    });
 
     // t "mesclado" (fallback + props)
     const TT = useMemo(() => {
@@ -313,11 +322,13 @@ const Designar = ({
             if (e.key === 'Escape') {
                 if (modalEditarOpen) { setModalEditarOpen(false); setParteEditCtx(null); }
                 if (slotAtivo) setSlotAtivo(null);
+                // Fecha sugestão também
+                if (modalSugestao.aberto) setModalSugestao(prev => ({ ...prev, aberto: false }));
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [modalEditarOpen, slotAtivo]);
+    }, [modalEditarOpen, slotAtivo, modalSugestao.aberto]);
 
     // auto-selecionar semanas visíveis (uma vez), respeitando "Limpar"
     useEffect(() => {
@@ -726,6 +737,51 @@ const Designar = ({
         setSlotAtivo(null);
     };
 
+    // --- INJEÇÃO 4: Lógica para Sugestão Automática ---
+    const abrirSugestao = (e, semanaIndex, key, parteId = null) => {
+        e.stopPropagation(); // Impede que o slot seja ativado ao clicar na lâmpada
+        setModalSugestao({ aberto: true, semanaIndex, key, parteId });
+    };
+
+    const aplicarSugestao = (aluno) => {
+        // Usa a lógica de atualização segura
+        const { semanaIndex, key, parteId } = modalSugestao;
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndex);
+        if (semanaRealIndex === -1) return;
+
+        setListaProgramacoesSafe(prev => {
+            const lista = Array.isArray(prev) ? prev : [];
+            const atual = lista[semanaRealIndex];
+            if (!atual) return lista;
+
+            const novaLista = [...lista];
+            const semana = { ...atual, partes: Array.isArray(atual.partes) ? [...atual.partes] : [] };
+
+            if (key === 'presidente') {
+                semana.presidente = aluno;
+            } else {
+                const idxParte = semana.partes.findIndex(p => p.id === parteId);
+                if (idxParte !== -1) {
+                    semana.partes[idxParte] = { ...semana.partes[idxParte], [key]: aluno };
+                }
+            }
+            novaLista[semanaRealIndex] = semana;
+            return novaLista;
+        });
+
+        setModalSugestao({ ...modalSugestao, aberto: false });
+    };
+
+    // Helper para o modal saber qual parte estamos editando
+    const getParteFocoModal = () => {
+        if (!modalSugestao.aberto) return null;
+        const sem = listaFiltradaPorFlag?.[modalSugestao.semanaIndex];
+        if (!sem) return null;
+        if (modalSugestao.key === 'presidente') return { titulo: TT.presidente };
+        return sem.partes?.find(p => p.id === modalSugestao.parteId) || null;
+    };
+    // ----------------------------------------------------
+
     const renderTituloSecao = (secKey, partesDaSemana) => {
         const meta = SECOES_META?.[secKey] || SECOES_META.vida;
         const count = (Array.isArray(partesDaSemana) ? partesDaSemana : [])
@@ -805,36 +861,51 @@ const Designar = ({
         emptyText,
         activeClass,
         idleClass,
-        barActiveClass
+        barActiveClass,
+        onSuggest // <--- Aceita nova prop
     }) => {
         const isEmpty = !value;
         return (
-            <button
-                type="button"
-                onClick={onClick}
-                className={[
-                    "w-full p-3 rounded-lg border-2 transition-all text-left relative group focus:outline-none",
-                    isEmpty ? "border-dashed" : "",
-                    active ? activeClass : idleClass
-                ].join(" ")}
-                title={value ? "Clique para trocar" : (emptyText || hint || TT.cliquePara)}
-            >
-                <span className="text-[10px] font-black uppercase text-gray-400 block mb-1">{label}</span>
-                {value ? (
-                    <p className="font-bold text-sm text-gray-800 truncate">{value.nome}</p>
-                ) : (
-                    <p className="text-xs text-gray-400 italic flex items-center gap-1">
-                        <UserPlus size={14} className="opacity-60" />
-                        {emptyText || hint || TT.cliquePara}
-                    </p>
-                )}
-                <div
+            <div className="relative w-full group/slot"> {/* Wrapper para posicionar o botão da lâmpada */}
+                <button
+                    type="button"
+                    onClick={onClick}
                     className={[
-                        "absolute inset-y-0 right-0 w-1 rounded-r-lg transition-opacity",
-                        active ? barActiveClass : "bg-transparent"
+                        "w-full p-3 rounded-lg border-2 transition-all text-left relative group focus:outline-none",
+                        isEmpty ? "border-dashed" : "",
+                        active ? activeClass : idleClass
                     ].join(" ")}
-                />
-            </button>
+                    title={value ? "Clique para trocar" : (emptyText || hint || TT.cliquePara)}
+                >
+                    <span className="text-[10px] font-black uppercase text-gray-400 block mb-1">{label}</span>
+                    {value ? (
+                        <p className="font-bold text-sm text-gray-800 truncate">{value.nome}</p>
+                    ) : (
+                        <p className="text-xs text-gray-400 italic flex items-center gap-1">
+                            <UserPlus size={14} className="opacity-60" />
+                            {emptyText || hint || TT.cliquePara}
+                        </p>
+                    )}
+                    <div
+                        className={[
+                            "absolute inset-y-0 right-0 w-1 rounded-r-lg transition-opacity",
+                            active ? barActiveClass : "bg-transparent"
+                        ].join(" ")}
+                    />
+                </button>
+
+                {/* BOTÃO DA LÂMPADA (Sugestão) */}
+                {onSuggest && (
+                    <button
+                        type="button"
+                        onClick={onSuggest}
+                        className="absolute top-1 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100"
+                        title="Sugestão Inteligente"
+                    >
+                        <Lightbulb size={14} />
+                    </button>
+                )}
+            </div>
         );
     };
 
@@ -897,7 +968,8 @@ const Designar = ({
                                 hint: TT.cliquePara,
                                 activeClass: 'border-blue-500 bg-blue-50 ring-2 ring-blue-100',
                                 idleClass: 'border-gray-200 hover:border-blue-300',
-                                barActiveClass: 'bg-blue-500'
+                                barActiveClass: 'bg-blue-500',
+                                onSuggest: (e) => abrirSugestao(e, semanaIndexFiltrado, 'oracao', parte.id)
                             })}
                         </div>
                     </div>
@@ -911,7 +983,8 @@ const Designar = ({
                             hint: TT.cliquePara,
                             activeClass: 'border-purple-500 bg-purple-50 ring-2 ring-purple-100',
                             idleClass: 'border-gray-200 hover:border-purple-300',
-                            barActiveClass: 'bg-purple-500'
+                            barActiveClass: 'bg-purple-500',
+                            onSuggest: (e) => abrirSugestao(e, semanaIndexFiltrado, 'dirigente', parte.id)
                         })}
 
                         {renderSlotButton({
@@ -922,7 +995,8 @@ const Designar = ({
                             hint: TT.cliquePara,
                             activeClass: 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100',
                             idleClass: 'border-gray-200 hover:border-indigo-300',
-                            barActiveClass: 'bg-indigo-500'
+                            barActiveClass: 'bg-indigo-500',
+                            onSuggest: (e) => abrirSugestao(e, semanaIndexFiltrado, 'leitor', parte.id)
                         })}
                     </div>
                 ) : (
@@ -935,7 +1009,8 @@ const Designar = ({
                             hint: TT.cliquePara,
                             activeClass: 'border-green-500 bg-green-50 ring-2 ring-green-100',
                             idleClass: 'border-gray-200 hover:border-green-300',
-                            barActiveClass: 'bg-green-500'
+                            barActiveClass: 'bg-green-500',
+                            onSuggest: (e) => abrirSugestao(e, semanaIndexFiltrado, 'estudante', parte.id)
                         })}
 
                         {permiteAjudante && renderSlotButton({
@@ -946,7 +1021,8 @@ const Designar = ({
                             emptyText: 'Opcional',
                             activeClass: 'border-blue-500 bg-blue-50 ring-2 ring-blue-100',
                             idleClass: 'border-gray-200 hover:border-blue-300',
-                            barActiveClass: 'bg-blue-500'
+                            barActiveClass: 'bg-blue-500',
+                            onSuggest: (e) => abrirSugestao(e, semanaIndexFiltrado, 'ajudante', parte.id)
                         })}
                     </div>
                 )}
@@ -1143,110 +1219,114 @@ const Designar = ({
                                             const partesLinhaFinal = partesDaSemana.filter(isEncerramento);
                                             const isArq = !!sem?.arquivada;
 
+                                            // ... dentro de semanasParaExibir.map ...
                                             return (
-                                                <div key={key} className="rounded-2xl border bg-gray-50 p-3 space-y-4">
-                                                    <div className="bg-white rounded-xl border p-4 flex items-center justify-between gap-3">
-                                                        <div className="min-w-0">
-                                                            <h3 className="font-black text-base text-gray-800 truncate flex items-center gap-2">
-                                                                <span>{sem?.semana || `Semana ${idx + 1}`}</span>
-                                                                {isArq && (
-                                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                                                                        {TT.arquivada}
-                                                                    </span>
-                                                                )}
-                                                            </h3>
-                                                            <p className="text-xs text-gray-400 mt-1">
-                                                                {sem?.dataReuniao ? `Data: ${sem.dataReuniao}` : `${TT.semana} ${idx + 1}`}
-                                                            </p>
-                                                        </div>
+                                                <div key={key} className={`rounded-2xl border p-3 space-y-4 transition-all ${sem.evento === 'visita' ? 'bg-blue-50 border-blue-200' :
+                                                        (sem.evento && sem.evento !== 'normal') ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
+                                                    }`}>
+                                                    {/* HEADER DA SEMANA */}
+                                                    <div className="bg-white rounded-xl border p-4 flex flex-col gap-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="min-w-0">
+                                                                <h3 className="font-black text-base text-gray-800 truncate flex items-center gap-2">
+                                                                    <span>{sem?.semana || `Semana ${idx + 1}`}</span>
 
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => toggleArquivadaSemana(key, !isArq)}
-                                                                className={`p-2 rounded-lg border transition ${isArq ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
-                                                                title={isArq ? TT.restaurar : TT.arquivar}
-                                                            >
-                                                                {isArq ? <RotateCcw size={18} /> : <Archive size={18} />}
-                                                            </button>
+                                                                    {/* BADGES DE EVENTO */}
+                                                                    {sem.evento === 'visita' && (
+                                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                                                            <Briefcase size={12} /> Visita SC
+                                                                        </span>
+                                                                    )}
+                                                                    {sem.evento?.includes('assembleia') && (
+                                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center gap-1">
+                                                                            <Tent size={12} /> Assembleia
+                                                                        </span>
+                                                                    )}
+                                                                    {sem.evento === 'congresso' && (
+                                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1">
+                                                                            <UsersRound size={12} /> Congresso
+                                                                        </span>
+                                                                    )}
+                                                                </h3>
+                                                                <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                                                                    {sem?.dataReuniao ? (
+                                                                        <>
+                                                                            <Calendar size={12} />
+                                                                            Data Real: <strong>{sem.dataReuniao.split('-').reverse().join('/')}</strong>
+                                                                        </>
+                                                                    ) : `${TT.semana} ${idx + 1}`}
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleExcluirSemana(key)}
-                                                                className="p-2 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-lg transition"
-                                                                title="Excluir esta semana"
-                                                            >
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* PRESIDENTE */}
-                                                    <div className="grid grid-cols-1 gap-4">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
-                                                            className={[
-                                                                "bg-white p-4 rounded-xl border-2 transition-all hover:shadow-md text-left",
-                                                                slotKeyMatch('presidente', undefined, idx)
-                                                                    ? "border-blue-500 ring-2 ring-blue-100"
-                                                                    : "border-gray-200"
-                                                            ].join(" ")}
-                                                            title={TT.cliquePara}
-                                                        >
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <User size={16} className="text-blue-600" />
-                                                                <span className="text-xs font-black uppercase text-gray-400">{TT.presidente}</span>
+                                                                    {sem.evento === 'visita' && <span className="text-blue-600 font-bold">(Terça-feira)</span>}
+                                                                </p>
                                                             </div>
 
-                                                            {sem?.presidente ? (
-                                                                <p className="font-bold text-gray-800">{sem.presidente.nome}</p>
-                                                            ) : (
-                                                                <p className="text-sm text-gray-400 italic flex items-center gap-1">
-                                                                    <UserPlus size={16} className="opacity-60" /> {TT.cliquePara}
-                                                                </p>
-                                                            )}
-                                                        </button>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={() => toggleArquivadaSemana(key, !isArq)} className="p-2 rounded-lg border bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600" title={isArq ? TT.restaurar : TT.arquivar}>
+                                                                    {isArq ? <RotateCcw size={18} /> : <Archive size={18} />}
+                                                                </button>
+                                                                <button onClick={() => handleExcluirSemana(key)} className="p-2 rounded-lg border bg-white hover:bg-red-50 text-gray-500 hover:text-red-600">
+                                                                    <Trash2 size={18} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     </div>
 
-                                                    {/* LINHA INICIAL */}
-                                                    {partesLinhaInicial.length > 0 && (
-                                                        <div className="space-y-3">
-                                                            {partesLinhaInicial.map(p => renderParteCard(p, idx))}
+                                                    {/* CONTEÚDO CONDICIONAL */}
+                                                    {(sem.evento && sem.evento !== 'normal' && sem.evento !== 'visita') ? (
+                                                        <div className="bg-white rounded-xl border-2 border-dashed border-yellow-300 p-8 text-center flex flex-col items-center justify-center gap-3">
+                                                            <div className="bg-yellow-100 p-4 rounded-full text-yellow-600">
+                                                                {sem.evento === 'congresso' ? <UsersRound size={48} /> : <Tent size={48} />}
+                                                            </div>
+                                                            <h3 className="text-xl font-bold text-gray-700">
+                                                                Semana de {sem.evento === 'congresso' ? 'Congresso' : 'Assembleia'}
+                                                            </h3>
+                                                            <p className="text-sm text-gray-500 max-w-md">
+                                                                Não haverá Reunião Vida e Ministério nesta semana.
+                                                                O quadro de anúncios não exibirá designações.
+                                                            </p>
                                                         </div>
-                                                    )}
-
-                                                    {/* SEÇÕES */}
-                                                    <div className="space-y-4">
-                                                        {SECOES_ORDEM.map(secKey => {
-                                                            const partesDaSecao = partesDaSemana.filter(p => {
-                                                                const s = normalizarSecao(p?.secao);
-                                                                return s === secKey && !isAbertura(p) && !isEncerramento(p);
-                                                            });
-
-                                                            return (
-                                                                <div key={`${key}-${secKey}`} className="space-y-3">
-                                                                    {renderTituloSecao(secKey, partesDaSemana)}
-
-                                                                    {partesDaSecao.length === 0 ? (
-                                                                        <div className="text-xs text-gray-400 italic px-2">
-                                                                            Sem itens nesta seção nesta semana.
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="space-y-3">
-                                                                            {partesDaSecao.map(p => renderParteCard(p, idx))}
-                                                                        </div>
-                                                                    )}
+                                                    ) : (
+                                                        <>
+                                                            {/* PRESIDENTE (Se for Visita, o sistema permite designar normalmente) */}
+                                                            <div className="grid grid-cols-1 gap-4">
+                                                                <div className="relative group/slot w-full">
+                                                                    <button type="button" onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })} className={`bg-white p-4 rounded-xl border-2 transition-all hover:shadow-md text-left w-full ${slotKeyMatch('presidente', undefined, idx) ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200"}`}>
+                                                                        <div className="flex items-center gap-2 mb-2"><User size={16} className="text-blue-600" /><span className="text-xs font-black uppercase text-gray-400">{TT.presidente}</span></div>
+                                                                        {sem.presidente ? <p className="font-bold text-gray-800">{sem.presidente.nome}</p> : <p className="text-sm text-gray-400 italic flex items-center gap-1"><UserPlus size={16} className="opacity-60" /> {TT.cliquePara}</p>}
+                                                                    </button>
+                                                                    <button type="button" onClick={(e) => abrirSugestao(e, idx, 'presidente')} className="absolute top-1 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100"><Lightbulb size={14} /></button>
                                                                 </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                            </div>
 
-                                                    {/* LINHA FINAL */}
-                                                    {partesLinhaFinal.length > 0 && (
-                                                        <div className="space-y-3">
-                                                            {partesLinhaFinal.map(p => renderParteCard(p, idx))}
-                                                        </div>
+                                                            {/* LISTA DE PARTES */}
+                                                            {partesLinhaInicial.length > 0 && (
+                                                                <div className="space-y-3">{partesLinhaInicial.map(p => renderParteCard(p, idx))}</div>
+                                                            )}
+
+                                                            <div className="space-y-4">
+                                                                {SECOES_ORDEM.map(secKey => {
+                                                                    const partesDaSecao = partesDaSemana.filter(p => {
+                                                                        const s = normalizarSecao(p?.secao);
+                                                                        return s === secKey && !isAbertura(p) && !isEncerramento(p);
+                                                                    });
+
+                                                                    return (
+                                                                        <div key={`${key}-${secKey}`} className="space-y-3">
+                                                                            {renderTituloSecao(secKey, partesDaSemana)}
+                                                                            {partesDaSecao.length === 0 ? (
+                                                                                <div className="text-xs text-gray-400 italic px-2">Sem itens.</div>
+                                                                            ) : (
+                                                                                <div className="space-y-3">{partesDaSecao.map(p => renderParteCard(p, idx))}</div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            {partesLinhaFinal.length > 0 && (
+                                                                <div className="space-y-3">{partesLinhaFinal.map(p => renderParteCard(p, idx))}</div>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             );
@@ -1608,6 +1688,20 @@ const Designar = ({
                     </div>
                 </div>
             )}
+
+            {/* --- INJEÇÃO 5: RENDERIZAR O MODAL DE SUGESTÃO --- */}
+            <ModalSugestao
+                isOpen={modalSugestao.aberto}
+                onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })}
+                onSelect={aplicarSugestao}
+                alunos={alunos}
+                historico={listaProgramacoes}
+                parteAtual={getParteFocoModal()}
+                semanaAtual={listaFiltradaPorFlag?.[modalSugestao.semanaIndex]}
+                modalKey={modalSugestao.key}
+                cargosMap={cargosMap}
+                lang={lang}
+            />
         </div>
     );
 };

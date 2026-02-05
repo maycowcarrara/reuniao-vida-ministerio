@@ -1,4 +1,3 @@
-
 # 📅 Gerenciador da Reunião Vida e Ministério
 
 > Um sistema intuitivo, local e focado em privacidade para auxiliar o Superintendente da Reunião Vida e Ministério na gestão de designações, notificações e impressão de programações.
@@ -90,7 +89,6 @@ O sistema utiliza uma estrutura de dados simples baseada em JSON para facilitar 
   "programacao": [ ... ]
 }
 ```
-
 
 ## 🔧 Como Executar Localmente
 
