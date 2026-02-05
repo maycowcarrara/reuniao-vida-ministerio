@@ -18,10 +18,37 @@ export const formatHm = (mins) => {
     return `${h}:${String(mm).padStart(2, '0')}`;
 };
 
-export const proxyUrl = (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`;
+// --- NOVA LÓGICA DE PROXY ---
 
-export const fetchHtmlViaProxy = async (u, { signal } = {}) => {
-    const resp = await fetch(proxyUrl(u), { signal });
-    const text = await resp.text();
-    return { ok: resp.ok, status: resp.status, text };
+export const fetchHtmlViaProxy = async (targetUrl, { signal } = {}) => {
+    // 1. Tenta ALLORIGINS (Retorna JSON com campo 'contents') - Geralmente mais estável
+    try {
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        const response = await fetch(proxyUrl, { signal });
+        
+        if (!response.ok) throw new Error(`AllOrigins status: ${response.status}`);
+        
+        const data = await response.json();
+        if (!data.contents) throw new Error('AllOrigins returned empty contents');
+        
+        return { ok: true, status: 200, text: data.contents };
+
+    } catch (err1) {
+        console.warn("AllOrigins falhou, tentando fallback (corsproxy)...", err1);
+
+        // 2. Fallback: CORSPROXY.IO (Retorna raw HTML)
+        try {
+            const proxyUrl2 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+            const response2 = await fetch(proxyUrl2, { signal });
+            
+            if (!response2.ok) throw new Error(`CorsProxy status: ${response2.status}`);
+            
+            const text = await response2.text();
+            return { ok: true, status: 200, text };
+
+        } catch (err2) {
+            console.error("Todos os proxies falharam.", err2);
+            return { ok: false, status: 0, text: null };
+        }
+    }
 };

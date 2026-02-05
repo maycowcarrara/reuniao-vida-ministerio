@@ -354,7 +354,12 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 }
                 // C. MINISTÉRIO
                 else if (secaoLower === 'ministerio') {
-                    termoGravacao = 'ministerio';
+                    // NOVA REGRA: Se for discurso no ministério, grava como 'discurso'
+                    if (tituloLower.includes('discurso')) {
+                        termoGravacao = 'discurso';
+                    } else {
+                        termoGravacao = 'ministerio'; // Iniciando conversas, etc.
+                    }
                 }
                 // D. VIDA CRISTÃ e ESTUDO
                 else if (secaoLower === 'vida' || isEstudo(p) || tituloLower.includes('estudo')) {
