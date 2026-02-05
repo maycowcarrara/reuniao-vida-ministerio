@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Calendar, Users, LayoutDashboard, Send, Settings,
-    ChevronLeft, FileUp, FileDown, AlertTriangle, LogOut, Home
+    ChevronLeft, LogOut, Home
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -10,9 +10,6 @@ export default function Sidebar({
     abaAtiva,
     setAbaAtiva,
     usuario,
-    handleAbrirBackup,
-    handleSalvarBackup,
-    handleResetarTudo,
     logout,
     listaProgramacoes,
     t
@@ -62,7 +59,7 @@ export default function Sidebar({
             {sidebarOpen && (
                 <div className="p-4 bg-blue-900/40 border-t border-blue-500/30 space-y-3">
                     {/* Info User */}
-                    <div className="flex items-center gap-3 mb-4 p-2 bg-blue-800/50 rounded-lg">
+                    <div className="flex items-center gap-3 mb-2 p-2 bg-blue-800/50 rounded-lg">
                         {usuario?.photoURL ? (
                             <img
                                 src={usuario.photoURL}
@@ -82,26 +79,8 @@ export default function Sidebar({
                         </div>
                     </div>
 
-                    {/* Botões de Ação */}
-                    <div className="grid grid-cols-2 gap-2">
-                        <button onClick={handleAbrirBackup} className="flex flex-col items-center gap-1 bg-blue-700 p-2 rounded-lg text-white hover:bg-blue-600 transition">
-                            <FileUp size={16} /> <span className="text-[9px] font-bold">Restaurar</span>
-                        </button>
-                        <button onClick={handleSalvarBackup} className="flex flex-col items-center gap-1 bg-green-700 p-2 rounded-lg text-white hover:bg-green-600 transition">
-                            <FileDown size={16} /> <span className="text-[9px] font-bold">Backup JSON</span>
-                        </button>
-                    </div>
-
-                    <button
-                        onClick={handleResetarTudo}
-                        className="w-full flex items-center justify-center gap-2 text-red-300 hover:text-white hover:bg-red-900/30 text-xs py-2 mt-2 rounded border border-transparent hover:border-red-900/30 transition"
-                        title="Apagar todos os dados da nuvem"
-                    >
-                        <AlertTriangle size={12} /> Limpar Banco
-                    </button>
-
                     <button onClick={logout} className="w-full flex items-center justify-center gap-2 text-blue-300 hover:text-white text-xs py-2 mt-1 border border-blue-800/30 rounded hover:bg-blue-800/50 transition">
-                        <LogOut size={12} /> Sair da Conta
+                        <LogOut size={14} /> Sair da Conta
                     </button>
                 </div>
             )}

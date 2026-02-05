@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import {
     Calendar, Users, CheckCircle, AlertTriangle,
-    ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info
+    ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info,
+    UserCheck, UserX, User, Medal, BookHeart
 } from 'lucide-react';
 
 export default function Dashboard({
@@ -17,23 +18,49 @@ export default function Dashboard({
     const [tipoEvento, setTipoEvento] = useState('visita');
 
     const txt = t?.dashboard || { eventos: {}, estatisticas: {} };
+    
+    // Fallback de idioma local para o novo painel
+    const lang = (config?.idioma || 'pt').toLowerCase().startsWith('es') ? 'es' : 'pt';
+    
+    const localTxt = {
+        pt: {
+            alunosTitulo: "Visão Geral de Alunos",
+            total: "Total",
+            ativos: "Ativos",
+            inativos: "Desab.",
+            irParaAlunos: "Gerenciar Alunos",
+            anciaos: "Anciãos",
+            servos: "Servos",
+            irmas: "Irmãs"
+        },
+        es: {
+            alunosTitulo: "Resumen de Estudiantes",
+            total: "Total",
+            ativos: "Activos",
+            inativos: "Deshab.",
+            irParaAlunos: "Gestionar Estudiantes",
+            anciaos: "Ancianos",
+            servos: "Siervos",
+            irmas: "Hermanas"
+        }
+    }[lang];
 
     // --- ESTATÍSTICAS ---
     const stats = useMemo(() => {
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
 
-        // 1. Próxima Reunião (Baseado nas semanas importadas)
+        // 1. Próxima Reunião
         const ativas = listaProgramacoes
             .filter(s => !s.arquivada)
             .sort((a, b) => new Date(a.dataReuniao) - new Date(b.dataReuniao));
 
         const proxima = ativas.find(s => new Date(s.dataReuniao) >= hoje) || ativas[0];
 
-        // 2. Lista de Eventos Agendados (Lê das Configurações globais)
+        // 2. Eventos Agendados
         const eventosAgendados = (config?.eventosAnuais || [])
             .sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio))
-            .filter(ev => new Date(ev.dataInicio) >= hoje); // Apenas futuros ou atuais
+            .filter(ev => new Date(ev.dataInicio) >= hoje);
 
         // 3. Pendências
         let partesTotais = 0;
@@ -52,8 +79,22 @@ export default function Dashboard({
         const pendentes = partesTotais - partesPreenchidas;
         const progresso = partesTotais > 0 ? (partesPreenchidas / partesTotais) * 100 : (isSemReuniao ? 100 : 0);
 
-        return { proxima, ativas, pendentes, progresso, eventosAgendados, totalAlunos: alunos.length };
-    }, [listaProgramacoes, alunos, config?.eventosAnuais]); // Recalcula se a config mudar
+        // 4. Estatísticas de Alunos
+        const totalAlunos = alunos.length;
+        const ativos = alunos.filter(a => a.tipo !== 'desab');
+        const totalAtivos = ativos.length;
+        const totalDesabilitados = totalAlunos - totalAtivos;
+
+        const countAnciaos = ativos.filter(a => a.tipo === 'anciao').length;
+        const countServos = ativos.filter(a => a.tipo === 'servo').length;
+        const countIrmas = ativos.filter(a => ['irma', 'irma_exp', 'irma_lim'].includes(a.tipo)).length;
+
+        return { 
+            proxima, ativas, pendentes, progresso, eventosAgendados, 
+            totalAlunos, totalAtivos, totalDesabilitados,
+            countAnciaos, countServos, countIrmas
+        };
+    }, [listaProgramacoes, alunos, config?.eventosAnuais]);
 
     // --- HELPERS ---
     const formatarData = (dataIso) => {
@@ -93,15 +134,15 @@ export default function Dashboard({
                     <h1 className="text-2xl font-bold text-gray-800">{txt.titulo}</h1>
                     <p className="text-gray-500 text-sm">{txt.visaoGeral} {config?.nome_cong || 'Congregação'}</p>
                 </div>
-                <div className="bg-white px-4 py-2 rounded-full border shadow-sm text-sm text-gray-600 flex items-center gap-2">
-                    <Calendar size={16} className="text-blue-600" />
+                <div className="bg-white px-3 py-1.5 rounded-full border shadow-sm text-xs text-gray-600 flex items-center gap-2">
+                    <Calendar size={14} className="text-blue-600" />
                     <span>{txt.hoje}: <strong>{new Date().toLocaleDateString()}</strong></span>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* COLUNA ESQUERDA */}
+                {/* COLUNA ESQUERDA (Principal) */}
                 <div className="lg:col-span-2 space-y-6">
                     {stats.proxima ? (
                         <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
@@ -166,7 +207,7 @@ export default function Dashboard({
                         </div>
                     )}
 
-                    {/* LISTA DE PRÓXIMOS EVENTOS (AGORA LÊ DAS CONFIGURAÇÕES) */}
+                    {/* LISTA DE PRÓXIMOS EVENTOS */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-100 font-bold text-gray-800">
                             {txt.eventos.titulo}
@@ -178,14 +219,14 @@ export default function Dashboard({
                         ) : (
                             <div className="divide-y divide-gray-100">
                                 {stats.eventosAgendados.map((ev, idx) => (
-                                    <div key={idx} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                                    <div key={idx} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50">
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-2 rounded-lg border text-xs font-bold w-16 text-center ${getCorEvento(ev.tipo)}`}>
+                                            <div className={`p-1.5 rounded-lg border text-[10px] font-bold w-14 text-center ${getCorEvento(ev.tipo)}`}>
                                                 {formatarData(ev.dataInput || ev.dataInicio)}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-gray-800 text-sm">{getNomeEvento(ev.tipo)}</p>
-                                                <p className="text-xs text-gray-500">Semana de {formatarData(ev.dataInicio)}</p>
+                                                <p className="font-bold text-gray-800 text-xs">{getNomeEvento(ev.tipo)}</p>
+                                                <p className="text-[10px] text-gray-500">Semana de {formatarData(ev.dataInicio)}</p>
                                             </div>
                                         </div>
                                         <button
@@ -196,7 +237,7 @@ export default function Dashboard({
                                             }}
                                             className="text-gray-400 hover:text-red-500 p-2"
                                         >
-                                            <Trash2 size={16} />
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
                                 ))}
@@ -205,20 +246,77 @@ export default function Dashboard({
                     </div>
                 </div>
 
-                {/* COLUNA DIREITA */}
+                {/* COLUNA DIREITA (Laterais) */}
                 <div className="lg:col-span-1 space-y-6">
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sticky top-6">
-                        <div className="flex items-center gap-2 mb-4 text-indigo-700 font-bold">
-                            <Calendar size={20} />
-                            <span>{txt.eventos.agendar}</span>
+                    {/* --- PAINEL DE ALUNOS ATUALIZADO --- */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                        <div className="flex items-center gap-2 mb-3 text-blue-800 font-bold border-b pb-2 border-gray-100">
+                            <Users size={18} />
+                            <span className="text-sm">{localTxt.alunosTitulo}</span>
                         </div>
 
-                        <div className="space-y-4">
+                        {/* Totais Gerais */}
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col items-center justify-center">
+                                <span className="text-[9px] uppercase font-black text-gray-400 mb-0.5">{localTxt.total}</span>
+                                <span className="text-xl font-black text-gray-800">{stats.totalAlunos}</span>
+                            </div>
+                            <div className="bg-green-50 p-2 rounded-lg border border-green-100 flex flex-col items-center justify-center">
+                                <span className="text-[9px] uppercase font-black text-green-600 mb-0.5">{localTxt.ativos}</span>
+                                <span className="text-xl font-black text-green-700">{stats.totalAtivos}</span>
+                            </div>
+                        </div>
+
+                        {/* Detalhes (Anciãos, Servos, Irmãs) */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                            <div className="bg-blue-50/50 p-2 rounded border border-blue-100 flex flex-col items-center">
+                                <Medal size={14} className="text-blue-500 mb-1" />
+                                <span className="text-sm font-bold text-blue-900">{stats.countAnciaos}</span>
+                                <span className="text-[8px] uppercase font-bold text-blue-400">{localTxt.anciaos}</span>
+                            </div>
+                            <div className="bg-indigo-50/50 p-2 rounded border border-indigo-100 flex flex-col items-center">
+                                <User size={14} className="text-indigo-500 mb-1" />
+                                <span className="text-sm font-bold text-indigo-900">{stats.countServos}</span>
+                                <span className="text-[8px] uppercase font-bold text-indigo-400">{localTxt.servos}</span>
+                            </div>
+                            <div className="bg-pink-50/50 p-2 rounded border border-pink-100 flex flex-col items-center">
+                                <BookHeart size={14} className="text-pink-500 mb-1" />
+                                <span className="text-sm font-bold text-pink-900">{stats.countIrmas}</span>
+                                <span className="text-[8px] uppercase font-bold text-pink-400">{localTxt.irmas}</span>
+                            </div>
+                        </div>
+
+                        {/* Rodapé do Card (Desabilitados + Botão) */}
+                        <div className="flex items-center justify-between mt-1 pt-2 border-t border-gray-50">
+                            {stats.totalDesabilitados > 0 ? (
+                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                                    <UserX size={12} />
+                                    <span>{stats.totalDesabilitados} {localTxt.inativos}</span>
+                                </div>
+                            ) : <div></div>}
+
+                            <button 
+                                onClick={() => setAbaAtiva('alunos')}
+                                className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 py-1 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                            >
+                                {localTxt.irParaAlunos} <ArrowRight size={12}/>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* AGENDAR EVENTO (Compacto) */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                        <div className="flex items-center gap-2 mb-3 text-indigo-700 font-bold border-b pb-2 border-gray-100">
+                            <Calendar size={18} />
+                            <span className="text-sm">{txt.eventos.agendar}</span>
+                        </div>
+
+                        <div className="space-y-3">
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">{txt.eventos.tipo}</label>
+                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">{txt.eventos.tipo}</label>
                                 <select
-                                    className="w-full mt-1 p-2 border rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100"
+                                    className="w-full mt-0.5 p-1.5 border rounded text-xs bg-gray-50 outline-none focus:ring-1 focus:ring-indigo-200"
                                     value={tipoEvento}
                                     onChange={(e) => {
                                         setTipoEvento(e.target.value);
@@ -233,15 +331,15 @@ export default function Dashboard({
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase">{txt.eventos.data}</label>
+                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">{txt.eventos.data}</label>
                                 <input
                                     type="date"
-                                    className="w-full mt-1 p-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-100"
+                                    className="w-full mt-0.5 p-1.5 border rounded text-xs outline-none focus:ring-1 focus:ring-indigo-200"
                                     value={dataEvento}
                                     onChange={(e) => setDataEvento(e.target.value)}
                                 />
-                                <div className="flex gap-2 mt-2 bg-indigo-50 p-2 rounded text-[10px] text-indigo-800">
-                                    <Info size={14} className="shrink-0" />
+                                <div className="flex gap-2 mt-2 bg-indigo-50 p-2 rounded text-[10px] text-indigo-800 leading-tight">
+                                    <Info size={12} className="shrink-0 mt-0.5" />
                                     <p>{getHelpText()}</p>
                                 </div>
                             </div>
@@ -252,21 +350,16 @@ export default function Dashboard({
                                     onDefinirEvento(dataEvento, tipoEvento);
                                     setDataEvento('');
                                 }}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition"
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 rounded-lg flex items-center justify-center gap-2 transition text-xs shadow-sm"
                             >
-                                <Plus size={16} /> {txt.eventos.adicionar}
+                                <Plus size={14} /> {txt.eventos.adicionar}
                             </button>
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-800 space-y-2">
-                        <p className="font-bold flex items-center gap-2"><Briefcase size={14} /> {txt.eventos.visita}</p>
-                        <p>{txt.eventos.dicaVisita}</p>
-
-                        <div className="h-px bg-blue-200 my-2"></div>
-
-                        <p className="font-bold flex items-center gap-2"><Tent size={14} /> {txt.eventos.assembleia_circuito}</p>
-                        <p>{txt.eventos.dicaCancelamento}</p>
+                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-[10px] text-blue-800 space-y-2">
+                        <p className="font-bold flex items-center gap-1.5"><Briefcase size={12} /> {txt.eventos.visita}</p>
+                        <p className="leading-tight opacity-80">{txt.eventos.dicaVisita}</p>
                     </div>
 
                 </div>

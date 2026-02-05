@@ -355,6 +355,8 @@ function App() {
               salvarAlteracao={salvarAlteracao}
               t={t}
               lang={lang}
+              importarBackup={importarBackupParaUsuario}
+              resetarConta={resetarConta}
             />
           )}
         </div>
