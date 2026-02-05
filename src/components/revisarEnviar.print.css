@@ -229,7 +229,7 @@
     }
 
     /* Compacta tipografia no print (2 semanas) */
-    #print-root .text-[9px] {
+    #print-root .text-\[9px\] {
         line-height: 1.1 !important;
     }
 

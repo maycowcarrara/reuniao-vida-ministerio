@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa' // <--- Importe isso
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({ // <--- Adicione a configuração do PWA aqui
+    VitePWA({ 
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
@@ -39,4 +39,21 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Se o arquivo vier de "node_modules", é uma biblioteca
+          if (id.includes('node_modules')) {
+            // Vamos separar o Firebase em um arquivo só pra ele (é o mais pesado)
+            if (id.includes('firebase')) {
+              return 'firebase';
+            }
+            // O resto das bibliotecas (React, Lucide, etc) vai para "vendor"
+            return 'vendor';
+          }
+        }
+      }
+    }
+  }
 })
