@@ -18,10 +18,12 @@ export const formatHm = (mins) => {
     return `${h}:${String(mm).padStart(2, '0')}`;
 };
 
-// --- NOVA LÓGICA DE PROXY ---
+// --- ESTRATÉGIA ROBUSTA DE PROXY (3 CAMADAS) ---
 
 export const fetchHtmlViaProxy = async (targetUrl, { signal } = {}) => {
-    // 1. Tenta ALLORIGINS (Retorna JSON com campo 'contents') - Geralmente mais estável
+    
+    // TENTATIVA 1: AllOrigins (Retorna JSON)
+    // Geralmente o mais seguro contra CORS, mas às vezes dá Timeout (408).
     try {
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
         const response = await fetch(proxyUrl, { signal });
@@ -34,21 +36,43 @@ export const fetchHtmlViaProxy = async (targetUrl, { signal } = {}) => {
         return { ok: true, status: 200, text: data.contents };
 
     } catch (err1) {
-        console.warn("AllOrigins falhou, tentando fallback (corsproxy)...", err1);
+        console.warn("AllOrigins falhou, tentando CodeTabs...", err1);
 
-        // 2. Fallback: CORSPROXY.IO (Retorna raw HTML)
+        // TENTATIVA 2: CodeTabs (Retorna Texto Puro)
+        // Muito robusto, costuma funcionar quando AllOrigins cai.
         try {
-            const proxyUrl2 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+            const proxyUrl2 = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(targetUrl)}`;
             const response2 = await fetch(proxyUrl2, { signal });
             
-            if (!response2.ok) throw new Error(`CorsProxy status: ${response2.status}`);
+            if (!response2.ok) throw new Error(`CodeTabs status: ${response2.status}`);
             
             const text = await response2.text();
+            if (!text || text.length < 50) throw new Error('CodeTabs returned empty/short text');
+
             return { ok: true, status: 200, text };
 
         } catch (err2) {
-            console.error("Todos os proxies falharam.", err2);
-            return { ok: false, status: 0, text: null };
+            console.warn("CodeTabs falhou, tentando CorsProxy...", err2);
+
+            // TENTATIVA 3: CorsProxy.io (Retorna Texto Puro)
+            // Último recurso, pois costuma bloquear domínios .web.app frequentemente.
+            try {
+                const proxyUrl3 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                const response3 = await fetch(proxyUrl3, { signal });
+                
+                if (!response3.ok) throw new Error(`CorsProxy status: ${response3.status}`);
+                
+                const text = await response3.text();
+                return { ok: true, status: 200, text };
+
+            } catch (err3) {
+                console.error("CRÍTICO: Todos os proxies falharam.", err3);
+                return { ok: false, status: 0, text: null };
+            }
         }
     }
 };
+
+// Mantemos o export do proxyUrl simples caso seja usado em outro lugar, 
+// mas apontando para o CodeTabs que é mais permissivo hoje.
+export const proxyUrl = (u) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`;
