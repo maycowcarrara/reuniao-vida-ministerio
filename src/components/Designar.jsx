@@ -106,7 +106,8 @@ const Designar = ({
     cargosMap = {},
     lang = 'pt',
     t = {},
-    onExcluirSemana
+    onExcluirSemana,
+    config = {}
 }) => {
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
 
@@ -1266,9 +1267,19 @@ const Designar = ({
                                             const partesLinhaFinal = partesDaSemana.filter(isEncerramento);
                                             const isArq = !!sem?.arquivada;
 
-                                            // --- NOVAS VARIÁVEIS DE CONTROLE DE EVENTO ---
-                                            const isVisita = sem.evento === 'visita';
-                                            const isAssembly = sem.evento && sem.evento !== 'normal' && !isVisita; // Assembleia ou Congresso
+                                            // NOVA LÓGICA: Cruza com a configuração global
+                                            const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
+
+                                            // Prioriza a configuração global, mas aceita a local se houver
+                                            const tipoEvento = eventoConfig?.tipo || sem.evento || 'normal';
+
+                                            const isVisita = tipoEvento === 'visita';
+                                            const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
+
+                                            // Se for visita, a data é a definida na config (ex: 2026-02-10)
+                                            const dataExibicao = isVisita && eventoConfig?.dataInput
+                                                ? eventoConfig.dataInput.split('-').reverse().join('/')
+                                                : (sem?.dataReuniao ? sem.dataReuniao.split('-').reverse().join('/') : "Data não definida");
 
                                             return (
                                                 <div key={key} className={`rounded-2xl border p-3 space-y-4 transition-all ${isVisita ? 'bg-blue-50 border-blue-200' :

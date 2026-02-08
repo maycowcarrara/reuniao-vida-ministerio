@@ -245,8 +245,50 @@
         padding: 3mm 4mm !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        /* DIVIDE EM 2 LINHAS IGUAIS */
         column-gap: 4mm;
         row-gap: 2.2mm;
+        height: 100%;
+    }
+
+    /* Faz cada semana ocupar a célula inteira do grid */
+    .page-content[data-qtd="4"]>div {
+        display: flex !important;
+        flex-direction: column;
+        justify-content: flex-start;
+        height: 100% !important;
+    }
+
+    /* Empurra o último elemento (a linha pontilhada) para o fundo */
+    .page-content[data-qtd="4"]>div>div:last-child {
+        margin-top: auto !important;
+        margin-bottom: 0 !important;
+        /* Garante que a linha apareça mesmo se o JSX for uma div vazia */
+        border-bottom: 2px dashed #d1d5db;
+        width: 100%;
+    }
+
+    /* Remove o empurrão automático APENAS da 3ª e 4ª célula */
+    .page-content[data-qtd="4"]>div:nth-child(3)>div:last-child,
+    .page-content[data-qtd="4"]>div:nth-child(4)>div:last-child {
+        margin-top: 0 !important;
+    }
+
+    /* Garante linha só nas semanas 1 e 2 */
+    .page-content[data-qtd="4"]>div:nth-child(1)>div:last-child,
+    .page-content[data-qtd="4"]>div:nth-child(2)>div:last-child {
+        border-bottom: 2px dashed #d1d5db !important;
+        margin-top: auto !important;
+        padding-top: 2mm !important;
+        padding-bottom: 2mm !important;
+    }
+
+    /* Remove completamente das semanas 3 e 4 */
+    .page-content[data-qtd="4"]>div:nth-child(3)>div:last-child,
+    .page-content[data-qtd="4"]>div:nth-child(4)>div:last-child {
+        border-bottom: none !important;
+        margin-top: 0 !important;
     }
 
     .page-content[data-qtd="5"] {

@@ -113,17 +113,14 @@ const addDays = (dateObj, days) => {
     return d;
 };
 
-export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback }) => {
+export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, overrideDia = null }) => {
     const range = parseSemanaRange(semanaStr);
 
-    const weekdayIdx = weekdayToIndex(
-        config?.dia_reuniao ??
-        config?.diaReuniao ??
-        config?.diaSemana ??
-        config?.dia_semana ??
-        config?.dia ??
-        ''
-    );
+    // Se houver um overrideDia (ex: 'Terça-feira' para visita), usa ele.
+    // Senão, tenta a configuração. Se não tiver configuração, string vazia.
+    const diaAlvo = overrideDia || config?.dia_reuniao || config?.diaReuniao || config?.diaSemana || '';
+    
+    const weekdayIdx = weekdayToIndex(diaAlvo);
 
     // tenta inferir ano do fallback (se existir), senão ano atual
     let year = new Date().getFullYear();
@@ -155,6 +152,8 @@ export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback }) 
 
     let cur = new Date(start);
     let found = null;
+    
+    // Procura o dia da semana específico dentro do range da semana
     while (cur.getTime() <= end.getTime()) {
         if (cur.getDay() === weekdayIdx) {
             found = new Date(cur);

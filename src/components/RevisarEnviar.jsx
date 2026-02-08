@@ -74,7 +74,35 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         });
     }, [historico]);
 
+    // historicoSelect: Do mais novo para o mais antigo (para o dropdown)
     const historicoSelect = useMemo(() => [...historicoOrdenado].reverse(), [historicoOrdenado]);
+
+    // --- AJUSTE 1: Definir startIndex padrão para a semana ativa mais antiga ---
+    useEffect(() => {
+        if (historicoSelect.length > 0) {
+            // Procura a última semana (no array invertido) que NÃO está arquivada
+            // Como o array é [Futuro ... Passado], a última ativa é a "mais antiga ativa" (a próxima reunião)
+            let indexMaisAntigaAtiva = -1;
+
+            // Percorre de trás para frente (do passado para o futuro no array invertido)
+            // Na verdade, historicoSelect é [Newest ... Oldest]
+            // Queremos o índice mais alto (mais antigo) que ainda seja !arquivada.
+            for (let i = historicoSelect.length - 1; i >= 0; i--) {
+                if (!historicoSelect[i].arquivada) {
+                    indexMaisAntigaAtiva = i;
+                    break;
+                }
+            }
+
+            if (indexMaisAntigaAtiva !== -1) {
+                setStartIndex(indexMaisAntigaAtiva);
+            } else {
+                setStartIndex(0);
+            }
+        }
+    }, [historicoSelect]);
+
+
     const realStartIndex = historicoOrdenado.length - 1 - startIndex;
     const startSeguro = Math.max(0, realStartIndex);
 
@@ -168,19 +196,31 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         return historicoOrdenado.slice(startSeguro, startSeguro + 1);
     }, [historicoOrdenado, startSeguro]);
 
-    const getDataReuniaoISO = (sem) => {
-        // CORREÇÃO: Prioriza dataReuniao do banco (que já é a da visita se foi salvo assim)
-        if (sem?.dataReuniao) return sem.dataReuniao;
 
-        const fallback = sem?.dataReuniao;
+    const getDataReuniaoISO = (sem) => {
+        // 1. Verifica se existe um evento anual configurado para esta semana (batendo pela data de início)
+        // O formato no banco é "dataInicio": "2026-02-09"
+        const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
+
+        if (eventoEspecial) {
+            // Se for Visita ou Assembleia, usamos a dataInput definida nas configurações (ex: 2026-02-10)
+            if (eventoEspecial.dataInput) {
+                return eventoEspecial.dataInput;
+            }
+        }
+
+        // 2. Se já tiver data fixa salva na própria semana (fallback manual)
+        if (sem?.dataReuniao && sem.dataReuniao !== sem.dataInicio) {
+            return sem.dataReuniao;
+        }
+
+        // 3. Lógica padrão (calcula baseado no dia da reunião configurado: Segunda, Quarta, etc.)
         return (
             getMeetingDateISOFromSemana({
                 semanaStr: sem?.semana,
                 config,
-                isoFallback: fallback,
-            }) ||
-            fallback ||
-            null
+                isoFallback: sem?.dataReuniao
+            }) || null
         );
     };
 
@@ -219,6 +259,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     partTitle: 'text-[10px] font-medium',
                     names: 'text-[10px] font-medium',
                     meta: 'text-[9px]',
+
                 };
             case 5:
                 return {
@@ -529,7 +570,10 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                 {semanasDaPagina.map((semana, idxSem) => {
                                     const dataISO = getDataReuniaoISO(semana);
                                     const horarioExib = config?.horarioReuniao ?? config?.horario ?? '';
-                                    const isVisita = semana.evento === 'visita';
+
+                                    // --- CORREÇÃO: Cruza com a configuração global para saber se é visita ---
+                                    const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === semana.dataInicio);
+                                    const isVisita = semana.evento === 'visita' || eventoEspecial?.tipo === 'visita';
 
                                     return (
                                         <div key={idxSem} className={isListMode ? 're-week' : 'print-block flex flex-col'}>
@@ -544,10 +588,10 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                 >
                                                     <h2 className={`${layout.h1} font-bold uppercase tracking-tighter flex items-center justify-center gap-2`}>
                                                         {semana.semana}
-                                                        {/* --- BADGE VISITA SC (IMPRESSÃO) --- */}
+                                                        {/* --- AJUSTE 2: BADGE VISITA SC (ESTILO E TEXTO) --- */}
                                                         {isVisita && (
-                                                            <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded border border-blue-700">
-                                                                VISITA SC
+                                                            <span className="text-[9px] bg-white text-blue-700 px-2 py-0.5 rounded border border-blue-700 font-bold uppercase tracking-widest">
+                                                                VISITA DO SC
                                                             </span>
                                                         )}
                                                         {/* ----------------------------------- */}
@@ -558,7 +602,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                         </p>
                                                     ) : (
                                                         <p className={`${layout.h2} font-bold text-gray-500 uppercase`}>
-                                                            {config?.nome_cong} | {horarioExib} | {formatarDataFolha(dataISO, lang)} {isVisita && "(Terça-feira)"}
+                                                            {/* --- AJUSTE 3: ORDEM DATA | HORA | CONGREGAÇÃO --- */}
+                                                            {formatarDataFolha(dataISO, lang)} | {horarioExib} | {config?.nome_cong}
                                                         </p>
                                                     )}
 

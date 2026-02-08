@@ -340,6 +340,7 @@ function App() {
               cargosMap={CARGOS_MAP}
               lang={lang}
               t={t}
+              config={dadosSistema?.configuracoes} // <--- ADICIONADO AQUI: Isso resolve a verificação constante
               onExcluirSemana={handleExcluirSemanaBanco}
             />
           )}
