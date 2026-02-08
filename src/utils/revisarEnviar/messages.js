@@ -21,10 +21,23 @@ export const montarMensagemDesignacao = ({
     tituloParte,
     descricaoParte,
     minutosParte,
+    isVisita = false 
 }) => {
-    const dataFmt = formatarDataFolha(dataISO, lang);
+    // 1. Textos de Visita baseados no idioma
+    const textoVisitaData = lang === 'es' ? "(Visita del SC - Martes)" : "(Visita do SC - Terça-feira)";
+    const tagVisitaTitulo = lang === 'es' ? "✨ [VISITA DEL SUPERINTENDENTE] ✨" : "✨ [VISITA DO SUPERINTENDENTE] ✨";
+
+    // 2. Formatar data (adicionando aviso se for visita)
+    let dataFmt = formatarDataFolha(dataISO, lang);
+    if (isVisita) {
+        dataFmt += ` ${textoVisitaData}`;
+    }
 
     const bloco = [
+        // Se for visita, coloca o destaque antes do título padrão
+        isVisita ? tagVisitaTitulo : null,
+        isVisita ? '' : null,
+        
         t.msgTituloPadrao,
         '',
         fill(t.msgData, { data: dataFmt }),

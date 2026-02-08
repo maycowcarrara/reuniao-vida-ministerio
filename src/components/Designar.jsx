@@ -7,7 +7,7 @@ import {
     Archive, RotateCcw, Lightbulb, Briefcase, Tent, Info
 } from 'lucide-react';
 
-import ModalSugestao from './ModalSugestao'; // <--- INJEÇÃO 2: Importamos o Modal
+import ModalSugestao from './ModalSugestao';
 
 // Fallback mínimo para evitar crash quando t/lang não vierem
 const T_FALLBACK = {
@@ -1214,6 +1214,9 @@ const Designar = ({
                                             const on = !!semanasSelecionadas?.[k];
                                             const foco = idx === semanaAtivaIndex;
                                             const isArq = !!sem?.arquivada;
+                                            // --- CORREÇÃO DE CHIPS COM ÍCONES ---
+                                            const isVisita = sem.evento === 'visita';
+                                            const isAssembly = sem.evento === 'assembleia' || sem.evento === 'congresso';
 
                                             return (
                                                 <button
@@ -1232,6 +1235,11 @@ const Designar = ({
                                                     title={sem?.semana}
                                                 >
                                                     <span className="truncate">{sem?.semana}</span>
+
+                                                    {/* ÍCONES NO CHIP DE NAVEGAÇÃO */}
+                                                    {isVisita && <Briefcase size={12} className={on ? "text-white" : "text-blue-600"} />}
+                                                    {isAssembly && <Tent size={12} className={on ? "text-white" : "text-yellow-600"} />}
+
                                                     {isArq && (
                                                         <span className="text-[10px] font-black px-2 py-0.5 rounded bg-black/10">
                                                             {TT.arquivada}
@@ -1258,21 +1266,24 @@ const Designar = ({
                                             const partesLinhaFinal = partesDaSemana.filter(isEncerramento);
                                             const isArq = !!sem?.arquivada;
 
-                                            // ... dentro de semanasParaExibir.map ...
+                                            // --- NOVAS VARIÁVEIS DE CONTROLE DE EVENTO ---
+                                            const isVisita = sem.evento === 'visita';
+                                            const isAssembly = sem.evento && sem.evento !== 'normal' && !isVisita; // Assembleia ou Congresso
+
                                             return (
-                                                <div key={key} className={`rounded-2xl border p-3 space-y-4 transition-all ${sem.evento === 'visita' ? 'bg-blue-50 border-blue-200' :
-                                                    (sem.evento && sem.evento !== 'normal') ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
+                                                <div key={key} className={`rounded-2xl border p-3 space-y-4 transition-all ${isVisita ? 'bg-blue-50 border-blue-200' :
+                                                    isAssembly ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
                                                     }`}>
                                                     {/* HEADER DA SEMANA */}
-                                                    <div className="bg-white rounded-xl border p-4 flex flex-col gap-3">
+                                                    <div className={`rounded-xl border p-4 flex flex-col gap-3 ${isVisita ? 'bg-white/80 border-blue-200' : 'bg-white border-gray-200'}`}>
                                                         <div className="flex items-center justify-between">
                                                             <div className="min-w-0">
                                                                 <h3 className="font-black text-base text-gray-800 truncate flex items-center gap-2">
                                                                     <span>{sem?.semana || `Semana ${idx + 1}`}</span>
 
-                                                                    {/* BADGES DE EVENTO */}
-                                                                    {sem.evento === 'visita' && (
-                                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                                                    {/* BADGES DE EVENTO NO HEADER DO CARD */}
+                                                                    {isVisita && (
+                                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-600 text-white border border-blue-700 flex items-center gap-1 uppercase tracking-wider animate-pulse">
                                                                             <Briefcase size={12} /> Visita SC
                                                                         </span>
                                                                     )}
@@ -1287,15 +1298,19 @@ const Designar = ({
                                                                         </span>
                                                                     )}
                                                                 </h3>
-                                                                <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+
+                                                                <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
                                                                     {sem?.dataReuniao ? (
                                                                         <>
                                                                             <Calendar size={12} />
-                                                                            Data Real: <strong>{sem.dataReuniao.split('-').reverse().join('/')}</strong>
+                                                                            Data da Reunião: <strong className={isVisita ? 'text-blue-700' : ''}>
+                                                                                {sem.dataReuniao.split('-').reverse().join('/')}
+                                                                            </strong>
+                                                                            {isVisita && " (Terça-feira)"}
                                                                         </>
-                                                                    ) : `${TT.semana} ${idx + 1}`}
-
-                                                                    {sem.evento === 'visita' && <span className="text-blue-600 font-bold">(Terça-feira)</span>}
+                                                                    ) : (
+                                                                        <span>Data não definida</span>
+                                                                    )}
                                                                 </p>
                                                             </div>
 
@@ -1310,8 +1325,8 @@ const Designar = ({
                                                         </div>
                                                     </div>
 
-                                                    {/* CONTEÚDO CONDICIONAL */}
-                                                    {(sem.evento && sem.evento !== 'normal' && sem.evento !== 'visita') ? (
+                                                    {/* CONTEÚDO CONDICIONAL (BLOQUEIO SE FOR ASSEMBLEIA) */}
+                                                    {isAssembly ? (
                                                         <div className="bg-white rounded-xl border-2 border-dashed border-yellow-300 p-8 text-center flex flex-col items-center justify-center gap-3">
                                                             <div className="bg-yellow-100 p-4 rounded-full text-yellow-600">
                                                                 {sem.evento === 'congresso' ? <UsersRound size={48} /> : <Tent size={48} />}
@@ -1517,14 +1532,6 @@ const Designar = ({
 
                                         const podeClicar = !!slotAtivo;
 
-                                        const miniHist = Array.isArray(aluno?.historico)
-                                            ? [...aluno.historico].sort((a, b) => {
-                                                const da = a?.data ? new Date(a.data).getTime() : 0;
-                                                const db = b?.data ? new Date(b.data).getTime() : 0;
-                                                return db - da;
-                                            }).slice(0, 6)
-                                            : [];
-
                                         return (
                                             <button
                                                 key={aluno?.id || aluno?.nome}
@@ -1586,43 +1593,10 @@ const Designar = ({
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        
-                                                        {/*todo: remover ou comentar*/}
-                                                        {!!aluno?.observacoes && (
-                                                            <div className="mt-2 text-[11px] text-gray-600 flex items-start gap-2">
-                                                                <StickyNote size={14} className="opacity-60 mt-0.5" />
-                                                                <span className="line-clamp-2">{aluno.observacoes}</span>
-                                                            </div>
-                                                        )}
 
                                                         {(ultimo?.data || ultimo?.parte) && (
                                                             <div className="mt-2 text-[10px] text-gray-400">
                                                                 Último: {ultimo?.data ? String(ultimo.data) : "—"}{ultimo?.parte ? ` • ${String(ultimo.parte)}` : ""}
-                                                            </div>
-                                                        )}
-
-                                                        {miniHist.length > 0 && (
-                                                            <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
-                                                                {miniHist.map((h, i) => {
-                                                                    const dt = h?.data ? String(h.data) : '';
-                                                                    const ddmm = dt
-                                                                        ? dt.toString().split('T')[0].split('-').reverse().slice(0, 2).join('/')
-                                                                        : '—';
-                                                                    const parte = h?.parte ? String(h.parte) : '';
-                                                                    const aj = h?.ajudante ? String(h.ajudante) : '';
-
-                                                                    return (
-                                                                        <div key={`${aluno?.id || aluno?.nome}-hist-${i}`} className="flex items-center gap-2 text-[10px] text-gray-500">
-                                                                            <span className="font-mono text-gray-400 shrink-0">{ddmm}</span>
-                                                                            <span className="truncate flex-1" title={parte || ''}>{parte || '—'}</span>
-                                                                            {!!aj && (
-                                                                                <span className="text-[9px] text-blue-500 shrink-0" title={aj}>
-                                                                                    {aj.split(' ')[0]}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                })}
                                                             </div>
                                                         )}
                                                     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, Mail, MessageCircle } from 'lucide-react';
+import { CheckCircle, Mail, MessageCircle, Briefcase, Tent, UsersRound } from 'lucide-react';
 
 import { formatarDataFolha } from '../utils/revisarEnviar/dates';
 import { montarMensagemDesignacao } from '../utils/revisarEnviar/messages';
@@ -99,16 +99,38 @@ const RevisarEnviarNotificarTab = ({
                     const partes = Array.isArray(sem?.partes) ? sem.partes : [];
                     const dataISO = getDataReuniaoISO(sem);
                     const horarioExib = config?.horarioReuniao ?? config?.horario ?? '';
+                    const isVisita = sem.evento === 'visita';
+
+                    // --- BLOQUEIO DE EVENTO ESPECIAL ---
+                    if (sem.evento && sem.evento !== 'normal' && sem.evento !== 'visita') {
+                        return (
+                            <div key={sIdx} className="bg-yellow-50 rounded-2xl p-6 border border-yellow-200 text-center">
+                                <div className="flex justify-center mb-3">
+                                    <div className="bg-yellow-100 p-3 rounded-full text-yellow-600">
+                                        {sem.evento === 'congresso' ? <UsersRound size={32} /> : <Tent size={32} />}
+                                    </div>
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800 uppercase mb-1">{sem.semana}</h3>
+                                <p className="text-sm font-semibold text-yellow-800 uppercase tracking-wide mb-2">
+                                    Semana de {sem.evento === 'congresso' ? 'Congresso' : 'Assembleia'}
+                                </p>
+                                <p className="text-xs text-gray-600">Não há designações para notificar nesta semana.</p>
+                            </div>
+                        );
+                    }
+                    // -----------------------------------
 
                     const oracoes = partes.filter(isOracao);
                     const primeira = partes[0];
                     const ultima = partes[partes.length - 1];
 
                     const oracaoInicial =
-                        oracoes.find((p) => getOracaoPos(p) === 'inicio') || (primeira && isOracao(primeira) ? primeira : null);
+                        oracoes.find((p) => getOracaoPos(p) === 'inicio') ||
+                        (primeira && isOracao(primeira) ? primeira : null);
 
                     const oracaoFinal =
-                        oracoes.find((p) => getOracaoPos(p) === 'final') || (ultima && isOracao(ultima) ? ultima : null);
+                        oracoes.find((p) => getOracaoPos(p) === 'final') ||
+                        (ultima && isOracao(ultima) ? ultima : null);
 
                     const partesSemOracao = partes.filter((p) => !isOracao(p));
                     const normSec = (v) => (v ?? '').toString().trim().toLowerCase();
@@ -140,6 +162,7 @@ const RevisarEnviarNotificarTab = ({
                             tituloParte,
                             descricaoParte: descricao,
                             minutosParte: min,
+                            isVisita // <--- Passando flag de visita
                         });
 
                         const subjectResp = `${sem.semana} - ${tituloParte}`;
@@ -163,6 +186,7 @@ const RevisarEnviarNotificarTab = ({
                                 tituloParte,
                                 descricaoParte: descricao,
                                 minutosParte: min,
+                                isVisita // <--- Passando flag de visita
                             })
                             : null;
 
@@ -235,6 +259,7 @@ const RevisarEnviarNotificarTab = ({
                             tituloParte,
                             descricaoParte: descricao,
                             minutosParte: min,
+                            isVisita // <--- Passando flag de visita
                         });
 
                         const subject = `${sem.semana} - ${tituloParte}`;
@@ -278,6 +303,7 @@ const RevisarEnviarNotificarTab = ({
                                 tituloParte: `${t.dirigente} - ${tituloBase}`,
                                 descricaoParte: descricao,
                                 minutosParte: min,
+                                isVisita // <--- Passando flag de visita
                             });
 
                             const subject = `${sem.semana} - ${t.dirigente} - ${tituloBase}`;
@@ -315,6 +341,7 @@ const RevisarEnviarNotificarTab = ({
                                 tituloParte: `${t.leitor} - ${tituloBase}`,
                                 descricaoParte: descricao,
                                 minutosParte: min,
+                                isVisita // <--- Passando flag de visita
                             });
 
                             const subject = `${sem.semana} - ${t.leitor} - ${tituloBase}`;
@@ -371,11 +398,19 @@ const RevisarEnviarNotificarTab = ({
                     };
 
                     return (
-                        <div key={sIdx} className="bg-gray-50 rounded-2xl p-4 border">
+                        <div key={sIdx} className={`bg-gray-50 rounded-2xl p-4 border ${isVisita ? 'border-blue-200 bg-blue-50/30' : ''}`}>
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b pb-3 mb-4">
-                                <h4 className="font-black text-blue-900 uppercase text-xs tracking-wider">{sem.semana}</h4>
+                                <h4 className="font-black text-blue-900 uppercase text-xs tracking-wider flex items-center gap-2">
+                                    {sem.semana}
+                                    {/* --- BADGE VISITA SC (NOTIFICAÇÃO) --- */}
+                                    {isVisita && (
+                                        <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded border border-blue-700">
+                                            VISITA SC
+                                        </span>
+                                    )}
+                                </h4>
                                 <div className="text-[11px] text-gray-500 font-bold">
-                                    {config?.nome_cong} | {horarioExib} | {formatarDataFolha(dataISO, lang)}
+                                    {config?.nome_cong} | {horarioExib} | {formatarDataFolha(dataISO, lang)} {isVisita && "(Terça-feira)"}
                                 </div>
                             </div>
 
@@ -396,6 +431,7 @@ const RevisarEnviarNotificarTab = ({
                                             tituloParte,
                                             descricaoParte: '',
                                             minutosParte: '',
+                                            isVisita // <--- Passando flag de visita
                                         });
 
                                         const subject = `${sem.semana} - ${tituloParte}`;
