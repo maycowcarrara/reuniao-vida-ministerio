@@ -4,7 +4,8 @@ import {
     Calendar, User,
     Search, SortAsc, SortDesc, FilterX, UsersRound, UserRound, Clock,
     AlertTriangle, StickyNote, Trash2, Edit2, X, Save, UserPlus,
-    Archive, RotateCcw, Lightbulb, Briefcase, Tent } from 'lucide-react';
+    Archive, RotateCcw, Lightbulb, Briefcase, Tent, Info
+} from 'lucide-react';
 
 import ModalSugestao from './ModalSugestao'; // <--- INJEÇÃO 2: Importamos o Modal
 
@@ -104,7 +105,8 @@ const Designar = ({
     alunos = [],
     cargosMap = {},
     lang = 'pt',
-    t = {}
+    t = {},
+    onExcluirSemana
 }) => {
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
 
@@ -467,7 +469,7 @@ const Designar = ({
     };
 
     // ---------- Ações semanas ----------
-    const handleExcluirSemana = (semanaKey) => {
+    const handleExcluirSemana = async (semanaKey) => {
         const atual = (Array.isArray(listaProgramacoes) ? listaProgramacoes : [])
             .find((s, idx) => getSemanaKey(s, idx) === semanaKey);
 
@@ -475,6 +477,16 @@ const Designar = ({
 
         const ok = window.confirm(`Excluir a semana ${atual?.semana || semanaKey}?`);
         if (!ok) return;
+
+        if (onExcluirSemana && atual.id) {
+            try {
+                await onExcluirSemana(atual.id);
+            } catch (error) {
+                alert("Erro ao excluir do banco de dados.");
+                console.error(error);
+                return; // Para aqui se der erro no banco
+            }
+        }
 
         setSlotAtivo(null);
         setModalEditarOpen(false);
@@ -567,20 +579,37 @@ const Designar = ({
         });
     };
 
-    const apagarArquivadas = () => {
+    const apagarArquivadas = async () => {
         const keys = getSelectedKeys();
 
-        // se tiver seleção, apaga só as selecionadas (desde que arquivadas)
+        // --- CENÁRIO 1: Apagar seleção específica (se houver checkbox marcado) ---
         if (keys.length > 0) {
             const ok = window.confirm(`Apagar ${keys.length} semana(s) selecionada(s)?`);
             if (!ok) return;
 
+            // 1. Identificar quais itens serão apagados para deletar do Banco
+            const itensParaDeletar = (Array.isArray(listaProgramacoes) ? listaProgramacoes : [])
+                .filter((s, idx) => {
+                    const k = getSemanaKey(s, idx);
+                    // Deleta se estiver selecionado E estiver arquivado
+                    return keys.includes(k) && s?.arquivada;
+                });
+
+            // 2. Deletar do Banco de Dados (Firebase)
+            if (onExcluirSemana) {
+                for (const item of itensParaDeletar) {
+                    if (item.id) await onExcluirSemana(item.id);
+                }
+            }
+
+            // 3. Atualizar Visual (Estado Local)
             setListaProgramacoesSafe(prev => {
                 const lista = Array.isArray(prev) ? prev : [];
                 return lista.filter((s, idx) => {
                     const k = getSemanaKey(s, idx);
+                    // Mantém se NÃO estiver na lista de exclusão
                     if (!keys.includes(k)) return true;
-                    return !s?.arquivada; // só apaga se estiver arquivada
+                    return !s?.arquivada;
                 });
             });
 
@@ -589,9 +618,11 @@ const Designar = ({
             return;
         }
 
-        // sem seleção: apaga todas as arquivadas
-        const qtdArquivadas = (Array.isArray(listaProgramacoes) ? listaProgramacoes : [])
-            .filter(s => !!s?.arquivada).length;
+        // --- CENÁRIO 2: Apagar TODAS as arquivadas (sem seleção) ---
+        const arquivadasParaDeletar = (Array.isArray(listaProgramacoes) ? listaProgramacoes : [])
+            .filter(s => !!s?.arquivada);
+
+        const qtdArquivadas = arquivadasParaDeletar.length;
 
         if (qtdArquivadas === 0) {
             window.alert('Nenhuma semana arquivada para apagar.');
@@ -601,6 +632,14 @@ const Designar = ({
         const ok = window.confirm(`Apagar TODAS as ${qtdArquivadas} semana(s) arquivada(s)?`);
         if (!ok) return;
 
+        // 1. Deletar do Banco de Dados (Firebase)
+        if (onExcluirSemana) {
+            for (const item of arquivadasParaDeletar) {
+                if (item.id) await onExcluirSemana(item.id);
+            }
+        }
+
+        // 2. Atualizar Visual (Estado Local)
         setListaProgramacoesSafe(prev => {
             const lista = Array.isArray(prev) ? prev : [];
             return lista.filter(s => !s?.arquivada);
@@ -1222,7 +1261,7 @@ const Designar = ({
                                             // ... dentro de semanasParaExibir.map ...
                                             return (
                                                 <div key={key} className={`rounded-2xl border p-3 space-y-4 transition-all ${sem.evento === 'visita' ? 'bg-blue-50 border-blue-200' :
-                                                        (sem.evento && sem.evento !== 'normal') ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
+                                                    (sem.evento && sem.evento !== 'normal') ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
                                                     }`}>
                                                     {/* HEADER DA SEMANA */}
                                                     <div className="bg-white rounded-xl border p-4 flex flex-col gap-3">
@@ -1515,6 +1554,12 @@ const Designar = ({
                                                         <div className="font-black text-sm text-gray-800 truncate flex items-center gap-2">
                                                             <span className="truncate">{aluno?.nome || "(Sem nome)"}</span>
                                                             {ja && <AlertTriangle size={14} className="text-amber-600 shrink-0" />}
+
+                                                            {!!aluno?.observacoes && (
+                                                                <div title={aluno.observacoes} className="cursor-help shrink-0">
+                                                                    <Info size={14} className="text-blue-400 hover:text-blue-600 transition-colors" />
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -1541,7 +1586,8 @@ const Designar = ({
                                                                 </span>
                                                             )}
                                                         </div>
-
+                                                        
+                                                        {/*todo: remover ou comentar*/}
                                                         {!!aluno?.observacoes && (
                                                             <div className="mt-2 text-[11px] text-gray-600 flex items-start gap-2">
                                                                 <StickyNote size={14} className="opacity-60 mt-0.5" />

@@ -22,6 +22,7 @@ function App() {
     loading,
     usuario,
     salvarItem,
+    excluirItem,
     importarBackupParaUsuario,
     resetarConta
   } = useGerenciadorDados();
@@ -244,6 +245,17 @@ function App() {
     alert("✅ Evento agendado! Será aplicado nas semanas existentes e futuras importações.");
   };
 
+  //EXCLUIR SEMANA
+  const handleExcluirSemanaBanco = async (id) => {
+    // 'programacao' é o nome da coleção no Firebase definida no seu hook
+    await excluirItem('programacao', id);
+  };
+
+  // Excluir Aluno (Para passar ao componente ListaAlunos)
+  const handleExcluirAlunoBanco = async (id) => {
+    await excluirItem('alunos', id);
+  };
+
   if (loading) return <div className="h-screen flex items-center justify-center">Carregando...</div>;
   if (!usuario) return <Login />;
 
@@ -328,6 +340,7 @@ function App() {
               cargosMap={CARGOS_MAP}
               lang={lang}
               t={t}
+              onExcluirSemana={handleExcluirSemanaBanco}
             />
           )}
 
@@ -346,6 +359,7 @@ function App() {
               setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })}
               config={dadosSistema?.configuracoes}
               cargosMap={CARGOS_MAP}
+              onExcluirAluno={handleExcluirAlunoBanco}
             />
           )}
 

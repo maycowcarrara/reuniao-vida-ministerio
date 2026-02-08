@@ -55,7 +55,7 @@ export function useGerenciadorDados() {
         });
 
         const unsubProg = onSnapshot(collection(db, basePath, "programacao"), (snap) => {
-            const lista = snap.docs.map(d => ({ ...d.data() }));
+            const lista = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             lista.sort((a, b) => new Date(a.semana) - new Date(b.semana));
             setDados(prev => ({ ...prev, historico_reunioes: lista }));
             setLoading(false);
