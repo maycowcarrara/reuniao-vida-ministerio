@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, AlertCircle, Filter } from 'lucide-react';
 
 // Dicionário de Traduções Interno
@@ -24,9 +24,12 @@ const T = {
             joias: "Joias Espirituais",
             tesouros: "Discurso (Tesouros)",
             vida: "Parte (Vida Cristã)",
+            estudobiblico: "Estudo Bíblico (Dirigente)",
             dirigente: "Dirigente (EBC)",
             leitor: "Leitor (EBC)",
-            estudante: "Parte de Estudante"
+            estudante: "Parte de Estudante",
+            ministerio: "Parte de Estudante",
+            discurso: "Discurso (Ministério)"
         }
     },
     es: {
@@ -50,9 +53,12 @@ const T = {
             joias: "Perlas Escondidas",
             tesouros: "Discurso (Tesoros)",
             vida: "Parte (Vida Cristiana)",
+            estudobiblico: "Estudio Bíblico (Director)",
             dirigente: "Director (EBC)",
             leitor: "Lector (EBC)",
-            estudante: "Parte de Estudiante"
+            estudante: "Parte de Estudiante",
+            ministerio: "Parte de Estudiante",
+            discurso: "Discurso (Ministerio)"
         }
     }
 };
@@ -65,105 +71,143 @@ export default function ModalSugestao({
     historico,
     parteAtual,
     semanaAtual,
-    modalKey,
+    modalKey, // 'estudante', 'ajudante', 'presidente', etc.
     cargosMap,
-    lang = 'pt' // Recebe o idioma (padrão pt)
+    lang = 'pt'
 }) {
     const [sugestoes, setSugestoes] = useState([]);
-    const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos' });
+    const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer' });
 
-    // Seleciona o pacote de tradução
     const t = T[lang] || T.pt;
 
     useEffect(() => {
         if (!isOpen) return;
         calcularSugestoes();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, parteAtual, modalKey, lang]);
 
-    // --- 1. DEFINIR O QUE ESTAMOS PROCURANDO ---
+    // --- 1. DETECTAR O QUE ESTAMOS PROCURANDO (CONTEXTO) ---
     const detectarContexto = () => {
-        let ctx = {
-            tipo: 'qualquer',
-            labelKey: 'qualquer',
-            gender: 'todos',
-            strict: false
-        };
+        // Padrão
+        let ctx = { tipo: 'qualquer', labelKey: 'qualquer', gender: 'todos' };
 
         const titulo = (parteAtual?.titulo || '').toLowerCase();
         const secao = (parteAtual?.secao || '').toLowerCase();
 
-        // Palavras-chave (PT e ES)
+        // Helpers de palavras-chave (bilingue)
         const kw = {
             leitura: ['leitura', 'lectura'],
             joias: ['joias', 'jóias', 'perlas'],
-            estudo: ['estudo', 'estudio']
+            estudo: ['estudo', 'estudio'],
+            discurso: ['discurso']
         };
 
-        // A) PRESIDENTE
-        if (modalKey === 'presidente') {
-            return { tipo: 'presidente', labelKey: 'presidente', gender: 'M', strict: true };
-        }
+        // --- Casos Específicos do ModalKey ---
+        if (modalKey === 'presidente') return { tipo: 'presidente', labelKey: 'presidente', gender: 'M' };
+        if (modalKey === 'oracao') return { tipo: 'oracao', labelKey: 'oracao', gender: 'M' };
+        if (modalKey === 'dirigente') return { tipo: 'dirigente', labelKey: 'dirigente', gender: 'M' }; // EBC Dirigente
+        if (modalKey === 'leitor') return { tipo: 'leitor', labelKey: 'leitor', gender: 'M' }; // EBC Leitor
 
-        // B) ORAÇÃO
-        if (modalKey === 'oracao') {
-            return { tipo: 'oracao', labelKey: 'oracao', gender: 'M', strict: true };
-        }
+        // --- Casos Baseados na Parte (Titulo/Secao) ---
 
-        // C) LEITURA DA BÍBLIA
+        // 1. TESOUROS
         if (kw.leitura.some(k => titulo.includes(k)) && !kw.estudo.some(k => titulo.includes(k))) {
-            return { tipo: 'leitura', labelKey: 'leitura', gender: 'M', strict: false };
+            return { tipo: 'leitura', labelKey: 'leitura', gender: 'M' };
         }
-
-        // D) JOIAS ESPIRITUAIS
         if (kw.joias.some(k => titulo.includes(k))) {
-            return { tipo: 'joias', labelKey: 'joias', gender: 'M', strict: false };
+            return { tipo: 'joias', labelKey: 'joias', gender: 'M' };
+        }
+        if (secao.includes('tesouros')) {
+            // Se é tesouros e não é leitura nem joias, é a parte 1 (Discurso)
+            return { tipo: 'tesouros', labelKey: 'tesouros', gender: 'M' };
         }
 
-        // E) TESOUROS (Discurso de 10 min)
-        if (secao === 'tesouros' && !kw.leitura.some(k => titulo.includes(k)) && !kw.joias.some(k => titulo.includes(k))) {
-            return { tipo: 'tesouros', labelKey: 'tesouros', gender: 'M', strict: false };
+        // 2. MINISTÉRIO
+        if (secao.includes('ministerio') || secao.includes('ministério')) {
+            if (kw.discurso.some(k => titulo.includes(k))) {
+                return { tipo: 'discurso', labelKey: 'discurso', gender: 'M' };
+            }
+            // Estudante normal
+            return { tipo: 'ministerio', labelKey: 'ministerio', gender: 'todos' };
         }
 
-        // F) NOSSA VIDA CRISTÃ (Discursos/Partes, exceto estudo)
-        if (secao === 'vida' && !kw.estudo.some(k => titulo.includes(k)) && !modalKey.includes('leitor')) {
-            return { tipo: 'vida', labelKey: 'vida', gender: 'M', strict: false };
-        }
-
-        // G) ESTUDO BÍBLICO DE CONGREGAÇÃO
-        if (modalKey === 'dirigente') return { tipo: 'dirigente', labelKey: 'dirigente', gender: 'M', strict: true };
-        if (modalKey === 'leitor') return { tipo: 'leitor', labelKey: 'leitor', gender: 'M', strict: true };
-
-        // H) ESTUDANTE (Faça seu Melhor)
-        if (modalKey === 'estudante' || modalKey === 'ajudante') {
-            return { tipo: 'estudante', labelKey: 'estudante', gender: 'todos', strict: false };
+        // 3. VIDA CRISTÃ
+        if (secao.includes('vida')) {
+            if (kw.estudo.some(k => titulo.includes(k))) {
+                return { tipo: 'estudobiblico', labelKey: 'estudobiblico', gender: 'M' };
+            }
+            return { tipo: 'vida', labelKey: 'vida', gender: 'M' };
         }
 
         return ctx;
     };
 
+    // --- 2. CALCULAR HISTÓRICO ---
     const calcularSugestoes = () => {
         const ctx = detectarContexto();
         setContexto(ctx);
 
-        // 1. Mapear ocupados
+        // A. Quem já está ocupado nesta semana?
         const ocupadosNestaSemana = new Set();
         if (semanaAtual && Array.isArray(semanaAtual.partes)) {
+            // Presidente
             if (semanaAtual.presidente?.nome) ocupadosNestaSemana.add(semanaAtual.presidente.nome);
             if (semanaAtual.presidente?.id) ocupadosNestaSemana.add(semanaAtual.presidente.id);
 
+            // Partes
             semanaAtual.partes.forEach(p => {
-                if (p.estudante?.nome) ocupadosNestaSemana.add(p.estudante.nome);
-                if (p.ajudante?.nome) ocupadosNestaSemana.add(p.ajudante.nome);
-                if (p.leitor?.nome) ocupadosNestaSemana.add(p.leitor.nome);
-                if (p.dirigente?.nome) ocupadosNestaSemana.add(p.dirigente.nome);
-                if (p.oracao?.nome) ocupadosNestaSemana.add(p.oracao.nome);
-
-                if (typeof p.estudante === 'string') ocupadosNestaSemana.add(p.estudante);
-                if (typeof p.ajudante === 'string') ocupadosNestaSemana.add(p.ajudante);
+                const addIfObj = (u) => { if (u?.nome) ocupadosNestaSemana.add(u.nome); if (u?.id) ocupadosNestaSemana.add(u.id); };
+                addIfObj(p.estudante);
+                addIfObj(p.ajudante);
+                addIfObj(p.leitor);
+                addIfObj(p.dirigente);
+                addIfObj(p.oracao);
             });
         }
 
-        // 2. Filtrar e Calcular
+        // B. Função auxiliar para classificar uma parte do histórico
+        // Retorna o "tipo" daquela parte antiga, para compararmos com o ctx.tipo
+        const classificarParteHistorica = (p) => {
+            const tLower = (p.titulo || '').toLowerCase();
+            const sLower = (p.secao || '').toLowerCase();
+
+            // Keywords helpers
+            const has = (arr) => arr.some(k => tLower.includes(k));
+            const kRead = ['leitura', 'lectura'];
+            const kGems = ['joias', 'jóias', 'perlas'];
+            const kDisc = ['discurso'];
+            const kStudy = ['estudo', 'estudio'];
+
+            // 1. Orações
+            if (p.oracao) return 'oracao';
+
+            // 2. Tesouros
+            if (sLower.includes('tesouros')) {
+                if (has(kRead)) return 'leitura';
+                if (has(kGems)) return 'joias';
+                return 'tesouros'; // Discurso 10min
+            }
+
+            // 3. Ministério
+            if (sLower.includes('ministerio') || sLower.includes('ministério')) {
+                if (has(kDisc)) return 'discurso';
+                return 'ministerio'; // Partes de estudante
+            }
+
+            // 4. Vida Cristã / Estudo
+            if (sLower.includes('vida') || has(kStudy)) {
+                // Se foi dirigente de estudo
+                if (p.dirigente) return 'estudobiblico'; // ou 'dirigente'
+                // Se foi leitor de estudo
+                if (p.leitor && has(kStudy)) return 'leitor';
+                // Parte comum de Vida Cristã
+                return 'vida';
+            }
+
+            return 'desconhecido';
+        };
+
+        // C. Filtrar alunos elegíveis pelo gênero
         const listaAnalise = alunos
             .filter(aluno => {
                 if (ctx.gender === 'todos') return true;
@@ -176,53 +220,55 @@ export default function ModalSugestao({
                 let ultimaData = null;
                 let diasSemFazer = 9999;
 
+                // Loop reverso no histórico (do mais recente para o antigo)
+                // historico deve vir ordenado cronologicamente. Se vier do mais antigo pro novo, inverta o loop.
+                // Assumindo que listaProgramacoes vem ordenada por data.
                 for (let i = historico.length - 1; i >= 0; i--) {
                     const semana = historico[i];
+                    // Ignora reuniões futuras
                     if (new Date(semana.dataReuniao) > new Date()) continue;
 
-                    let fezParteRelevante = false;
+                    let fezParteCompativel = false;
 
-                    // Validação flexível PT/ES
-                    const checkTitle = (txt, keys) => {
-                        const t = (txt || '').toLowerCase();
-                        return keys.some(k => t.includes(k));
-                    }
-
+                    // Verifica Presidente
                     if (ctx.tipo === 'presidente') {
                         const pres = semana.presidente;
-                        if ((pres?.id === aluno.id) || (pres?.nome === aluno.nome) || (pres === aluno.nome)) fezParteRelevante = true;
+                        if ((pres?.id === aluno.id) || (pres?.nome === aluno.nome)) fezParteCompativel = true;
                     }
+                    // Verifica Partes
                     else if (Array.isArray(semana.partes)) {
-                        const partesDoAluno = semana.partes.filter(p => {
-                            const est = typeof p.estudante === 'object' ? p.estudante?.nome : p.estudante;
-                            const aju = typeof p.ajudante === 'object' ? p.ajudante?.nome : p.ajudante;
-                            const lei = typeof p.leitor === 'object' ? p.leitor?.nome : p.leitor;
-                            const dir = typeof p.dirigente === 'object' ? p.dirigente?.nome : p.dirigente;
-                            const ora = typeof p.oracao === 'object' ? p.oracao?.nome : p.oracao;
-                            return (est === aluno.nome) || (aju === aluno.nome) || (lei === aluno.nome) || (dir === aluno.nome) || (ora === aluno.nome);
-                        });
+                        for (const p of semana.partes) {
+                            // O aluno participou dessa parte?
+                            const participou =
+                                (p.estudante?.nome === aluno.nome) ||
+                                (p.ajudante?.nome === aluno.nome) || // Se for ministério, ajudante conta como ter feito parte
+                                (p.leitor?.nome === aluno.nome) ||
+                                (p.dirigente?.nome === aluno.nome) ||
+                                (p.oracao?.nome === aluno.nome);
 
-                        for (const p of partesDoAluno) {
-                            const tLower = (p.titulo || '').toLowerCase();
-                            const sLower = (p.secao || '').toLowerCase();
+                            if (participou) {
+                                // Se participou, qual era o tipo daquela parte?
+                                const tipoDaParteAntiga = classificarParteHistorica(p);
 
-                            // Regras robustas para PT/ES
-                            if (ctx.tipo === 'oracao' && p.oracao) { fezParteRelevante = true; break; }
-                            if (ctx.tipo === 'leitura' && checkTitle(tLower, ['leitura', 'lectura'])) { fezParteRelevante = true; break; }
-                            if (ctx.tipo === 'joias' && checkTitle(tLower, ['joias', 'jóias', 'perlas'])) { fezParteRelevante = true; break; }
-                            if (ctx.tipo === 'tesouros' && sLower === 'tesouros' && !checkTitle(tLower, ['leitura', 'lectura', 'joias', 'perlas'])) { fezParteRelevante = true; break; }
-                            if (ctx.tipo === 'vida' && sLower === 'vida' && !checkTitle(tLower, ['estudo', 'estudio'])) { fezParteRelevante = true; break; }
-                            if (ctx.tipo === 'estudante' && sLower === 'ministerio') { fezParteRelevante = true; break; }
-                            if (ctx.tipo === 'leitor' && p.leitor) { fezParteRelevante = true; break; }
-                            if (ctx.tipo === 'dirigente' && p.dirigente) { fezParteRelevante = true; break; }
+                                // Verifica compatibilidade
+                                if (tipoDaParteAntiga === ctx.tipo) {
+                                    fezParteCompativel = true;
+                                    break; // Encontrou nessa semana
+                                }
+
+                                // Caso especial: EBC Dirigente vs 'dirigente' do modal
+                                if (ctx.tipo === 'dirigente' && (tipoDaParteAntiga === 'estudobiblico' || tipoDaParteAntiga === 'dirigente')) {
+                                    fezParteCompativel = true; break;
+                                }
+                            }
                         }
                     }
 
-                    if (fezParteRelevante) {
-                        ultimaData = semana.dataReuniao || semana.semana;
+                    if (fezParteCompativel) {
+                        ultimaData = semana.dataReuniao;
                         const diff = Math.abs(new Date() - new Date(semana.dataReuniao));
                         diasSemFazer = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                        break;
+                        break; // Encontrou a última, para de procurar
                     }
                 }
 
@@ -234,10 +280,11 @@ export default function ModalSugestao({
                 };
             });
 
+        // D. Ordenar: Quem não está ocupado primeiro, depois quem faz tempo que não faz
         listaAnalise.sort((a, b) => {
             if (a.ocupadoAgora && !b.ocupadoAgora) return 1;
             if (!a.ocupadoAgora && b.ocupadoAgora) return -1;
-            return b.diasSemFazer - a.diasSemFazer;
+            return b.diasSemFazer - a.diasSemFazer; // Decrescente de dias (quem fez há mais tempo aparece primeiro)
         });
 
         setSugestoes(listaAnalise);

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
     Calendar, Users, CheckCircle, AlertTriangle,
     ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info,
-    UserCheck, UserX, User, Medal, BookHeart
+    UserCheck, UserX, User, Medal, BookHeart, Archive
 } from 'lucide-react';
 
 export default function Dashboard({
@@ -18,10 +18,10 @@ export default function Dashboard({
     const [tipoEvento, setTipoEvento] = useState('visita');
 
     const txt = t?.dashboard || { eventos: {}, estatisticas: {} };
-    
-    // Fallback de idioma local para o novo painel
+
+    // Fallback de idioma local
     const lang = (config?.idioma || 'pt').toLowerCase().startsWith('es') ? 'es' : 'pt';
-    
+
     const localTxt = {
         pt: {
             alunosTitulo: "Visão Geral de Alunos",
@@ -31,7 +31,8 @@ export default function Dashboard({
             irParaAlunos: "Gerenciar Alunos",
             anciaos: "Anciãos",
             servos: "Servos",
-            irmas: "Irmãs"
+            irmas: "Irmãs",
+            passado: "Concluído"
         },
         es: {
             alunosTitulo: "Resumen de Estudiantes",
@@ -41,28 +42,58 @@ export default function Dashboard({
             irParaAlunos: "Gestionar Estudiantes",
             anciaos: "Ancianos",
             servos: "Siervos",
-            irmas: "Hermanas"
+            irmas: "Hermanas",
+            passado: "Concluido"
         }
     }[lang];
 
     // --- ESTATÍSTICAS ---
     const stats = useMemo(() => {
+        // Data de hoje zerada (00:00:00)
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
 
-        // 1. Próxima Reunião
+        // Data limite (30 dias atrás) para exibir histórico recente
+        const dataLimitePassado = new Date(hoje);
+        dataLimitePassado.setDate(hoje.getDate() - 30);
+
+        // 1. Próxima Reunião (Lógica original mantida para o card principal)
         const ativas = listaProgramacoes
             .filter(s => !s.arquivada)
             .sort((a, b) => new Date(a.dataReuniao) - new Date(b.dataReuniao));
 
-        const proxima = ativas.find(s => new Date(s.dataReuniao) >= hoje) || ativas[0];
+        const proxima = ativas.find(s => {
+            // Corrige fuso horário para comparação da próxima reunião
+            const [ano, mes, dia] = s.dataReuniao.split('-').map(Number);
+            const dataReuniao = new Date(ano, mes - 1, dia);
+            return dataReuniao >= hoje;
+        }) || ativas[0];
 
-        // 2. Eventos Agendados
+        // 2. Eventos Agendados (COM A NOVA LÓGICA)
         const eventosAgendados = (config?.eventosAnuais || [])
-            .sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio))
-            .filter(ev => new Date(ev.dataInicio) >= hoje);
+            .map(ev => {
+                // Converter string 'YYYY-MM-DD' para Objeto Date Local
+                const [ano, mes, dia] = ev.dataInicio.split('-').map(Number);
+                const dataInicioObj = new Date(ano, mes - 1, dia);
 
-        // 3. Pendências
+                // Calcular fim da semana (Domingo)
+                // Assumindo que dataInicio é geralmente segunda ou terça. 
+                // Adicionamos 6 dias para garantir que cobrimos a semana toda.
+                const fimDaSemana = new Date(dataInicioObj);
+                fimDaSemana.setDate(dataInicioObj.getDate() + 6);
+
+                return {
+                    ...ev,
+                    dataObjeto: dataInicioObj,
+                    fimDaSemana: fimDaSemana,
+                    isPassado: hoje > fimDaSemana // True se hoje for segunda-feira da próxima semana
+                };
+            })
+            // Filtra: Futuros OU Passados há menos de 30 dias
+            .filter(ev => ev.dataObjeto >= dataLimitePassado)
+            .sort((a, b) => a.dataObjeto - b.dataObjeto);
+
+        // 3. Pendências (Lógica original)
         let partesTotais = 0;
         let partesPreenchidas = 0;
         const isSemReuniao = proxima?.evento && proxima.evento !== 'visita' && proxima.evento !== 'normal';
@@ -79,7 +110,7 @@ export default function Dashboard({
         const pendentes = partesTotais - partesPreenchidas;
         const progresso = partesTotais > 0 ? (partesPreenchidas / partesTotais) * 100 : (isSemReuniao ? 100 : 0);
 
-        // 4. Estatísticas de Alunos
+        // 4. Estatísticas de Alunos (Lógica original)
         const totalAlunos = alunos.length;
         const ativos = alunos.filter(a => a.tipo !== 'desab');
         const totalAtivos = ativos.length;
@@ -89,8 +120,8 @@ export default function Dashboard({
         const countServos = ativos.filter(a => a.tipo === 'servo').length;
         const countIrmas = ativos.filter(a => ['irma', 'irma_exp', 'irma_lim'].includes(a.tipo)).length;
 
-        return { 
-            proxima, ativas, pendentes, progresso, eventosAgendados, 
+        return {
+            proxima, ativas, pendentes, progresso, eventosAgendados,
             totalAlunos, totalAtivos, totalDesabilitados,
             countAnciaos, countServos, countIrmas
         };
@@ -113,7 +144,10 @@ export default function Dashboard({
         return map[tipo] || tipo;
     };
 
-    const getCorEvento = (tipo) => {
+    const getCorEvento = (tipo, isPassado) => {
+        // Se for passado, retorna cinza
+        if (isPassado) return 'bg-gray-100 text-gray-500 border-gray-200 grayscale';
+
         if (tipo === 'visita') return 'bg-blue-100 text-blue-700 border-blue-200';
         if (tipo === 'congresso') return 'bg-purple-100 text-purple-700 border-purple-200';
         return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -219,23 +253,44 @@ export default function Dashboard({
                         ) : (
                             <div className="divide-y divide-gray-100">
                                 {stats.eventosAgendados.map((ev, idx) => (
-                                    <div key={idx} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50">
+                                    <div
+                                        key={idx}
+                                        className={`px-6 py-3 flex items-center justify-between transition-colors
+                                            ${ev.isPassado ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50 bg-white'}`}
+                                    >
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-1.5 rounded-lg border text-[10px] font-bold w-14 text-center ${getCorEvento(ev.tipo)}`}>
-                                                {formatarData(ev.dataInput || ev.dataInicio)}
+                                            {/* Data Badge */}
+                                            <div className={`p-1.5 rounded-lg border text-[10px] font-bold w-14 text-center ${getCorEvento(ev.tipo, ev.isPassado)}`}>
+                                                {formatarData(ev.dataInicio)}
                                             </div>
+
+                                            {/* Info Evento */}
                                             <div>
-                                                <p className="font-bold text-gray-800 text-xs">{getNomeEvento(ev.tipo)}</p>
-                                                <p className="text-[10px] text-gray-500">Semana de {formatarData(ev.dataInicio)}</p>
+                                                <p className={`font-bold text-xs ${ev.isPassado ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+                                                    {getNomeEvento(ev.tipo)}
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[10px] text-gray-500">
+                                                        Semana de {formatarData(ev.dataInicio)}
+                                                    </p>
+                                                    {ev.isPassado && (
+                                                        <span className="text-[9px] bg-gray-200 text-gray-600 px-1.5 rounded flex items-center gap-1">
+                                                            <Archive size={10} /> {localTxt.passado}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {/* Botão Excluir */}
                                         <button
                                             onClick={() => {
                                                 if (window.confirm('Remover evento da lista?')) {
-                                                    onDefinirEvento(ev.dataInput, 'normal');
+                                                    onDefinirEvento(ev.dataInicio, 'normal');
                                                 }
                                             }}
-                                            className="text-gray-400 hover:text-red-500 p-2"
+                                            className="text-gray-400 hover:text-red-500 p-2 transition-colors"
+                                            title="Remover evento"
                                         >
                                             <Trash2 size={14} />
                                         </button>
@@ -296,11 +351,11 @@ export default function Dashboard({
                                 </div>
                             ) : <div></div>}
 
-                            <button 
+                            <button
                                 onClick={() => setAbaAtiva('alunos')}
                                 className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 py-1 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
                             >
-                                {localTxt.irParaAlunos} <ArrowRight size={12}/>
+                                {localTxt.irParaAlunos} <ArrowRight size={12} />
                             </button>
                         </div>
                     </div>

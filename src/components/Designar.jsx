@@ -31,7 +31,7 @@ const T_FALLBACK = {
         ordem: { nome: "Nome", dias: "Tempo" },
         info: { nunca: "Nunca" },
 
-        // novos textos
+        // Novos textos traduzidos
         filtroAtivas: "Ativas",
         filtroArquivadas: "Arquivadas",
         filtroTodas: "Todas",
@@ -39,6 +39,34 @@ const T_FALLBACK = {
         arquivar: "Arquivar",
         restaurar: "Restaurar",
         apagarArquivadas: "Apagar arquivadas",
+        excluirParte: "Excluir parte",
+        confirmarExcluirParte: "Tem certeza que deseja excluir esta parte?",
+
+        semItens: "Sem itens.",
+        semNome: "(Sem nome)",
+        duplicadoBadge: "Duplicado",
+        duplicadoTooltip: "Duplicado na semana (mas você pode usar se desejar)",
+        confirmarDuplicado: "Esse aluno já está designado nesta semana. Quer usar mesmo assim?",
+        dias: "dias",
+        dataNaoDefinida: "Data não definida",
+        dataReuniao: "Data da Reunião",
+        obsTempo: "Observação: para Abertura/Encerramento, o sistema exibe 5 min (o valor pode ser ignorado ao salvar).",
+        com: "com", // ex: com João
+        titulo: "Título",
+        descricao: "Descrição",
+        tempo: "Tempo",
+        ultimo: "Último",
+        visitaSC: "Visita SC",
+        assembleia: "Assembleia",
+        congresso: "Congresso",
+        semReuniao: "Não haverá Reunião Vida e Ministério nesta semana.",
+        quadroAviso: "O quadro de anúncios não exibirá designações.",
+        semanaDe: "Semana de",
+        tercaFeira: "(Terça-feira)",
+        nenhumaImportada: "Nenhuma programação importada.",
+        vaParaImportar: "Vá para Importar para começar.",
+        selecioneSemana: "Selecione pelo menos uma semana acima.",
+        nenhumAluno: "Nenhum aluno encontrado"
     },
     es: {
         semana: "Semana",
@@ -67,6 +95,34 @@ const T_FALLBACK = {
         arquivar: "Archivar",
         restaurar: "Restaurar",
         apagarArquivadas: "Borrar archivadas",
+        excluirParte: "Eliminar parte",
+        confirmarExcluirParte: "¿Estás seguro de que deseas eliminar esta parte?",
+
+        semItens: "Sin ítems.",
+        semNome: "(Sin nombre)",
+        duplicadoBadge: "Duplicado",
+        duplicadoTooltip: "Duplicado en la semana (pero puede usarlo si lo desea)",
+        confirmarDuplicado: "¿Este estudiante ya está asignado en esta semana? ¿Desea usarlo de todos modos?",
+        dias: "días",
+        dataNaoDefinida: "Fecha no definida",
+        dataReuniao: "Fecha de la Reunión",
+        obsTempo: "Nota: para Oración Inicial/Final, el sistema muestra 5 min (el valor puede ignorarse al guardar).",
+        com: "con",
+        titulo: "Título",
+        descricao: "Descripción",
+        tempo: "Tiempo",
+        ultimo: "Último",
+        visitaSC: "Visita SC",
+        assembleia: "Asamblea",
+        congresso: "Congreso",
+        semReuniao: "No habrá Reunión Vida y Ministerio esta semana.",
+        quadroAviso: "El tablero de anuncios no mostrará asignaciones.",
+        semanaDe: "Semana de",
+        tercaFeira: "(Martes)",
+        nenhumaImportada: "Ninguna programación importada.",
+        vaParaImportar: "Vaya a Importar para comenzar.",
+        selecioneSemana: "Seleccione al menos una semana arriba.",
+        nenhumAluno: "Ningún estudiante encontrado"
     }
 };
 
@@ -112,17 +168,16 @@ const Designar = ({
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
 
     // filtro para mostrar apenas ativas / arquivadas / todas
-    const [filtroSemanas, setFiltroSemanas] = useState('ativas'); // 'ativas' | 'arquivadas' | 'todas'
+    const [filtroSemanas, setFiltroSemanas] = useState('ativas');
 
-    // seleção múltipla de semanas (estilo RevisarEnviar)
+    // seleção múltipla de semanas
     const getSemanaKey = (sem, idx) =>
         (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
 
     const [semanasSelecionadas, setSemanasSelecionadas] = useState({});
     const userClearedWeeksRef = useRef(false);
 
-    // slotAtivo guarda contexto e a semana alvo (semanaIndex sempre no contexto do filtro atual)
-    // { key: 'presidente'|'estudante'|'ajudante'|'oracao'|'dirigente'|'leitor', parteId?: any, semanaIndex?: number }
+    // slotAtivo guarda contexto e a semana alvo
     const [slotAtivo, setSlotAtivo] = useState(null);
 
     const [termoBusca, setTermoBusca] = useState('');
@@ -133,14 +188,14 @@ const Designar = ({
 
     // Modal de edição de parte
     const [modalEditarOpen, setModalEditarOpen] = useState(false);
-    const [parteEditCtx, setParteEditCtx] = useState(null); // { parteId, semanaIndex, valores }
+    const [parteEditCtx, setParteEditCtx] = useState(null);
 
-    // --- INJEÇÃO 3: Estado para o Modal de Sugestão ---
+    // Modal de Sugestão
     const [modalSugestao, setModalSugestao] = useState({
         aberto: false,
-        semanaIndex: null, // index na lista filtrada
+        semanaIndex: null,
         parteId: null,
-        key: null // 'estudante', 'ajudante', 'presidente', etc
+        key: null
     });
 
     // t "mesclado" (fallback + props)
@@ -169,7 +224,6 @@ const Designar = ({
 
     const parseSemanaPt = (semanaStr, anoPadrao) => {
         const raw = normalizar(semanaStr || '');
-        // ex: "8-14 de setembro - proverbios 30"
         const m = raw.match(/^(\d{1,2})\s*[-–]\s*(\d{1,2})\s*de\s*([a-z]+)\b/);
         if (!m) return null;
 
@@ -184,8 +238,6 @@ const Designar = ({
 
         const dataInicio = `${y}-${pad2(mesIdx + 1)}-${pad2(dIni)}`;
         const dataFim = `${y}-${pad2(mesIdx + 1)}-${pad2(dFim)}`;
-
-        // regra atual: reunião é na segunda (dataInicio)
         const dataReuniao = dataInicio;
         return { dataInicio, dataFim, dataReuniao };
     };
@@ -220,7 +272,6 @@ const Designar = ({
         if (!next.dataReuniao && parsed?.dataReuniao) next.dataReuniao = parsed.dataReuniao;
 
         if (!next.id) {
-            // id estável preferindo data + semana
             const base = next.dataReuniao || next.dataInicio || String(idx);
             const tail = normalizar(next.semana || '').slice(0, 40);
             next.id = `${base}|${tail || 'semana'}`;
@@ -246,7 +297,6 @@ const Designar = ({
         return true;
     };
 
-    // normaliza 1x (e quando detectar necessidade) para garantir ordem cronológica real no storage
     useEffect(() => {
         if (!Array.isArray(listaProgramacoes) || listaProgramacoes.length === 0) return;
 
@@ -283,7 +333,7 @@ const Designar = ({
         return lista.filter(s => !s?.arquivada);
     }, [listaProgramacoes, filtroSemanas]);
 
-    // clamp do índice (no contexto do filtro atual)
+    // clamp do índice
     useEffect(() => {
         setSemanaAtivaIndex(prev => {
             const len = Array.isArray(listaFiltradaPorFlag) ? listaFiltradaPorFlag.length : 0;
@@ -292,7 +342,7 @@ const Designar = ({
         });
     }, [listaFiltradaPorFlag?.length]);
 
-    // ---------- helpers de mapeamento (filtrado -> real) ----------
+    // ---------- helpers de mapeamento ----------
     const getSemanaKeyByFilteredIndex = (idxFiltrado) => {
         const sem = listaFiltradaPorFlag?.[idxFiltrado];
         if (!sem) return null;
@@ -315,17 +365,12 @@ const Designar = ({
         return semanaAtivaIndex;
     };
 
-    // ---------- semana foco (para sidebar/contagens; aqui é só referência, não escrever diretamente) ----------
-    const semanaAtivaFiltrada = listaFiltradaPorFlag?.[semanaAtivaIndex] || null;
-    const partesSemanaAtiva = Array.isArray(semanaAtivaFiltrada?.partes) ? semanaAtivaFiltrada.partes : [];
-
     // fechar modal/slot no ESC
     useEffect(() => {
         const onKey = (e) => {
             if (e.key === 'Escape') {
                 if (modalEditarOpen) { setModalEditarOpen(false); setParteEditCtx(null); }
                 if (slotAtivo) setSlotAtivo(null);
-                // Fecha sugestão também
                 if (modalSugestao.aberto) setModalSugestao(prev => ({ ...prev, aberto: false }));
             }
         };
@@ -333,19 +378,16 @@ const Designar = ({
         return () => window.removeEventListener('keydown', onKey);
     }, [modalEditarOpen, slotAtivo, modalSugestao.aberto]);
 
-    // auto-selecionar semanas visíveis (uma vez), respeitando "Limpar"
+    // auto-selecionar semanas visíveis
     useEffect(() => {
         if (!Array.isArray(listaFiltradaPorFlag) || listaFiltradaPorFlag.length === 0) return;
 
-        // remove chaves órfãs quando lista muda
         setSemanasSelecionadas((prev) => {
             const next = {};
             const keysVisiveis = new Set();
             listaFiltradaPorFlag.forEach((sem, idx) => {
                 keysVisiveis.add(getSemanaKey(sem, idx));
             });
-
-            // Mantém apenas o que ainda existe
             Object.keys(prev || {}).forEach(k => {
                 if (keysVisiveis.has(k) && prev[k]) {
                     next[k] = true;
@@ -379,7 +421,6 @@ const Designar = ({
 
     const tipoLower = (parte) => (parte?.tipo ?? parte?.type ?? '').toString().toLowerCase();
 
-    // abertura/encerramento (orações)
     const isAbertura = (parte) => {
         const raw = `${tipoLower(parte)} ${(parte?.titulo ?? '').toString().toLowerCase()}`.trim();
         return raw.includes('oracao') && (raw.includes('inicial') || raw.includes('inicio') || raw.includes('abertura'));
@@ -389,7 +430,6 @@ const Designar = ({
         return raw.includes('oracao') && (raw.includes('final') || raw.includes('encerr'));
     };
 
-    // regra de negócio: linha inicial/final = blocos mesclados fixos
     const isLinhaInicialFinal = (parte) => isAbertura(parte) || isEncerramento(parte);
 
     const isEstudoBiblicoCongregacao = (parte) => {
@@ -417,13 +457,13 @@ const Designar = ({
     };
 
     const getTempoExibicao = (parte) => {
-        if (isLinhaInicialFinal(parte)) return 5; // regra atual do sistema
+        if (isLinhaInicialFinal(parte)) return 5;
         const n = Number(parte?.tempo);
         if (Number.isFinite(n) && n > 0) return n;
         return parte?.tempo;
     };
 
-    // histórico helpers (dias desde última designação)
+    // Histórico helpers
     const getUltimoRegistro = (aluno) => {
         if (!aluno?.historico || aluno.historico.length === 0) return { data: null, parte: null, ajudante: null };
         const ordenado = [...aluno.historico].sort((a, b) => {
@@ -432,6 +472,18 @@ const Designar = ({
             return dateB - dateA;
         });
         return { data: ordenado[0]?.data, parte: ordenado[0]?.parte ?? null, ajudante: ordenado[0]?.ajudante ?? null };
+    };
+
+    // --- Histórico Recente (Lista) ---
+    const getHistoricoRecente = (aluno, limit = 6) => {
+        if (!aluno?.historico) return [];
+        return [...aluno.historico]
+            .sort((a, b) => {
+                const dateA = a?.data ? new Date(a.data).getTime() : 0;
+                const dateB = b?.data ? new Date(b.data).getTime() : 0;
+                return dateB - dateA;
+            })
+            .slice(0, limit);
     };
 
     const calcularDiasDesdeUltimaParte = (aluno) => {
@@ -485,7 +537,7 @@ const Designar = ({
             } catch (error) {
                 alert("Erro ao excluir do banco de dados.");
                 console.error(error);
-                return; // Para aqui se der erro no banco
+                return;
             }
         }
 
@@ -493,7 +545,6 @@ const Designar = ({
         setModalEditarOpen(false);
         setParteEditCtx(null);
 
-        // índice no filtro atual (para ajustar foco)
         const idxFiltradoExcluir = (Array.isArray(listaFiltradaPorFlag) ? listaFiltradaPorFlag : [])
             .findIndex((s, idx) => getSemanaKey(s, idx) === semanaKey);
 
@@ -523,8 +574,8 @@ const Designar = ({
         if (!alvo) return;
 
         const msg = arquivar
-            ? `Arquivar a semana ${alvo?.semana || semanaKey}?`
-            : `Restaurar a semana ${alvo?.semana || semanaKey}?`;
+            ? `${TT.arquivar} ${TT.semana} ${alvo?.semana || semanaKey}?`
+            : `${TT.restaurar} ${TT.semana} ${alvo?.semana || semanaKey}?`;
 
         const ok = window.confirm(msg);
         if (!ok) return;
@@ -550,7 +601,7 @@ const Designar = ({
         const keys = getSelectedKeys();
         if (keys.length === 0) return;
 
-        const ok = window.confirm(`Arquivar ${keys.length} semana(s) selecionada(s)?`);
+        const ok = window.confirm(`${TT.arquivar} ${keys.length} ${TT.semana}(s)?`);
         if (!ok) return;
 
         setListaProgramacoesSafe(prev => {
@@ -567,7 +618,7 @@ const Designar = ({
         const keys = getSelectedKeys();
         if (keys.length === 0) return;
 
-        const ok = window.confirm(`Restaurar ${keys.length} semana(s) selecionada(s)?`);
+        const ok = window.confirm(`${TT.restaurar} ${keys.length} ${TT.semana}(s)?`);
         if (!ok) return;
 
         setListaProgramacoesSafe(prev => {
@@ -583,32 +634,26 @@ const Designar = ({
     const apagarArquivadas = async () => {
         const keys = getSelectedKeys();
 
-        // --- CENÁRIO 1: Apagar seleção específica (se houver checkbox marcado) ---
         if (keys.length > 0) {
-            const ok = window.confirm(`Apagar ${keys.length} semana(s) selecionada(s)?`);
+            const ok = window.confirm(`${TT.apagarArquivadas}? (${keys.length})`);
             if (!ok) return;
 
-            // 1. Identificar quais itens serão apagados para deletar do Banco
             const itensParaDeletar = (Array.isArray(listaProgramacoes) ? listaProgramacoes : [])
                 .filter((s, idx) => {
                     const k = getSemanaKey(s, idx);
-                    // Deleta se estiver selecionado E estiver arquivado
                     return keys.includes(k) && s?.arquivada;
                 });
 
-            // 2. Deletar do Banco de Dados (Firebase)
             if (onExcluirSemana) {
                 for (const item of itensParaDeletar) {
                     if (item.id) await onExcluirSemana(item.id);
                 }
             }
 
-            // 3. Atualizar Visual (Estado Local)
             setListaProgramacoesSafe(prev => {
                 const lista = Array.isArray(prev) ? prev : [];
                 return lista.filter((s, idx) => {
                     const k = getSemanaKey(s, idx);
-                    // Mantém se NÃO estiver na lista de exclusão
                     if (!keys.includes(k)) return true;
                     return !s?.arquivada;
                 });
@@ -619,7 +664,6 @@ const Designar = ({
             return;
         }
 
-        // --- CENÁRIO 2: Apagar TODAS as arquivadas (sem seleção) ---
         const arquivadasParaDeletar = (Array.isArray(listaProgramacoes) ? listaProgramacoes : [])
             .filter(s => !!s?.arquivada);
 
@@ -630,17 +674,15 @@ const Designar = ({
             return;
         }
 
-        const ok = window.confirm(`Apagar TODAS as ${qtdArquivadas} semana(s) arquivada(s)?`);
+        const ok = window.confirm(`${TT.apagarArquivadas}? (${qtdArquivadas})`);
         if (!ok) return;
 
-        // 1. Deletar do Banco de Dados (Firebase)
         if (onExcluirSemana) {
             for (const item of arquivadasParaDeletar) {
                 if (item.id) await onExcluirSemana(item.id);
             }
         }
 
-        // 2. Atualizar Visual (Estado Local)
         setListaProgramacoesSafe(prev => {
             const lista = Array.isArray(prev) ? prev : [];
             return lista.filter(s => !s?.arquivada);
@@ -650,7 +692,7 @@ const Designar = ({
         userClearedWeeksRef.current = true;
     };
 
-    // ---------- FILTRO + ORDENACAO ALUNOS (Com busca no histórico) ----------
+    // ---------- FILTRO + ORDENACAO ALUNOS ----------
     const alunosFiltrados = useMemo(() => {
         const buscaNorm = termoBusca ? normalizar(termoBusca) : '';
         const filtrados = (Array.isArray(alunos) ? alunos : [])
@@ -666,7 +708,6 @@ const Designar = ({
                     const cargoNorm = normalizar(cargoInfo?.[lang] || cargoInfo?.pt || cargoInfo?.es || cargoKey || '');
                     const obsNorm = normalizar(aluno?.observacoes ?? '');
 
-                    // Adicionado: Busca no histórico
                     const histNorm = (Array.isArray(aluno?.historico) ? aluno.historico : [])
                         .map(h => normalizar(h?.parte ?? ''))
                         .join(' ');
@@ -700,7 +741,6 @@ const Designar = ({
         return filtrados;
     }, [alunos, cargosMap, filtroGenero, termoBusca, filtrosTiposAtivos, ordenacaoChave, ordemCrescente, lang]);
 
-    // Atualiza parte na semana REAL (recebe semanaRealIndex)
     const atualizarParteNaSemanaRealIndex = (semanaRealIndex, parteId, patch) => {
         setListaProgramacoesSafe(prev => {
             const lista = Array.isArray(prev) ? prev : [];
@@ -777,14 +817,12 @@ const Designar = ({
         setSlotAtivo(null);
     };
 
-    // --- INJEÇÃO 4: Lógica para Sugestão Automática ---
     const abrirSugestao = (e, semanaIndex, key, parteId = null) => {
-        e.stopPropagation(); // Impede que o slot seja ativado ao clicar na lâmpada
+        e.stopPropagation();
         setModalSugestao({ aberto: true, semanaIndex, key, parteId });
     };
 
     const aplicarSugestao = (aluno) => {
-        // Usa a lógica de atualização segura
         const { semanaIndex, key, parteId } = modalSugestao;
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndex);
         if (semanaRealIndex === -1) return;
@@ -812,7 +850,6 @@ const Designar = ({
         setModalSugestao({ ...modalSugestao, aberto: false });
     };
 
-    // Helper para o modal saber qual parte estamos editando
     const getParteFocoModal = () => {
         if (!modalSugestao.aberto) return null;
         const sem = listaFiltradaPorFlag?.[modalSugestao.semanaIndex];
@@ -820,7 +857,6 @@ const Designar = ({
         if (modalSugestao.key === 'presidente') return { titulo: TT.presidente };
         return sem.partes?.find(p => p.id === modalSugestao.parteId) || null;
     };
-    // ----------------------------------------------------
 
     const renderTituloSecao = (secKey, partesDaSemana) => {
         const meta = SECOES_META?.[secKey] || SECOES_META.vida;
@@ -874,6 +910,34 @@ const Designar = ({
         setParteEditCtx(null);
     };
 
+    const handleExcluirParte = (parteId, semanaIndexFiltrado) => {
+        if (!window.confirm(TT.confirmarExcluirParte)) return;
+
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndexFiltrado);
+        if (semanaRealIndex === -1) return;
+
+        setListaProgramacoesSafe(prev => {
+            const lista = Array.isArray(prev) ? prev : [];
+            const atual = lista[semanaRealIndex];
+            if (!atual) return lista;
+
+            const novaLista = [...lista];
+            const partesAntigas = Array.isArray(atual.partes) ? atual.partes : [];
+            const novasPartes = partesAntigas.filter(p => p.id !== parteId);
+
+            novaLista[semanaRealIndex] = { ...atual, partes: novasPartes };
+            return novaLista;
+        });
+
+        if (parteEditCtx?.parteId === parteId) {
+            setModalEditarOpen(false);
+            setParteEditCtx(null);
+        }
+        if (slotAtivo?.parteId === parteId) {
+            setSlotAtivo(null);
+        }
+    };
+
     const buildSlotLabel = () => {
         if (!slotAtivo) return TT.alunos;
         const map = {
@@ -902,11 +966,11 @@ const Designar = ({
         activeClass,
         idleClass,
         barActiveClass,
-        onSuggest // <--- Aceita nova prop
+        onSuggest
     }) => {
         const isEmpty = !value;
         return (
-            <div className="relative w-full group/slot"> {/* Wrapper para posicionar o botão da lâmpada */}
+            <div className="relative w-full group/slot">
                 <button
                     type="button"
                     onClick={onClick}
@@ -915,7 +979,7 @@ const Designar = ({
                         isEmpty ? "border-dashed" : "",
                         active ? activeClass : idleClass
                     ].join(" ")}
-                    title={value ? "Clique para trocar" : (emptyText || hint || TT.cliquePara)}
+                    title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
                 >
                     <span className="text-[10px] font-black uppercase text-gray-400 block mb-1">{label}</span>
                     {value ? (
@@ -934,7 +998,6 @@ const Designar = ({
                     />
                 </button>
 
-                {/* BOTÃO DA LÂMPADA (Sugestão) */}
                 {onSuggest && (
                     <button
                         type="button"
@@ -968,7 +1031,8 @@ const Designar = ({
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
+                        {/* Botão EDITAR */}
                         <button
                             type="button"
                             onClick={() => abrirModalEditarParte(parte, semanaIndexFiltrado)}
@@ -983,9 +1047,24 @@ const Designar = ({
                             <Edit2 size={14} />
                         </button>
 
+                        {/* Botão EXCLUIR */}
+                        <button
+                            type="button"
+                            onClick={() => handleExcluirParte(parte.id, semanaIndexFiltrado)}
+                            className={[
+                                "p-1.5 rounded-lg border transition",
+                                isLinhaInicialFinal(parte)
+                                    ? "border-gray-300 bg-white text-red-500 hover:bg-red-50 hover:border-red-200"
+                                    : "border-white/20 bg-white/10 text-white hover:bg-red-500 hover:border-red-500"
+                            ].join(" ")}
+                            title={TT.excluirParte}
+                        >
+                            <Trash2 size={14} />
+                        </button>
+
                         {typeof tempoExib !== 'undefined' && (
                             <span className={[
-                                "px-2 py-1 rounded text-xs font-bold",
+                                "ml-1 px-2 py-1 rounded text-xs font-bold",
                                 isLinhaInicialFinal(parte)
                                     ? "bg-white text-gray-700 border border-gray-300"
                                     : "bg-white/20 text-white"
@@ -1097,8 +1176,8 @@ const Designar = ({
                         {(!Array.isArray(listaProgramacoes) || listaProgramacoes.length === 0) ? (
                             <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
                                 <Calendar size={48} className="mx-auto mb-4 opacity-20" />
-                                <p className="text-sm font-medium">Nenhuma programação importada.</p>
-                                <p className="text-xs mt-2">Vá para Importar para começar.</p>
+                                <p className="text-sm font-medium">{TT.nenhumaImportada}</p>
+                                <p className="text-xs mt-2">{TT.vaParaImportar}</p>
                             </div>
                         ) : (
                             <>
@@ -1106,8 +1185,6 @@ const Designar = ({
                                 <div className="bg-white rounded-xl shadow-sm border p-4 space-y-3">
                                     {/* Linha 1: controles */}
                                     <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                                        {/* Esquerda: título + contador (status) */}
-
                                         {/* Direita: filtros + ações */}
                                         <div className="w-full lg:w-auto flex flex-wrap items-center gap-2 min-w-0">
                                             {/* filtro de semanas */}
@@ -1152,7 +1229,7 @@ const Designar = ({
                                                 onClick={selecionarTodasVisiveis}
                                                 className="px-3 py-1 rounded-full text-xs font-bold border bg-gray-100 hover:bg-gray-200 transition"
                                             >
-                                                Todas
+                                                {TT.filtroTodas}
                                             </button>
 
                                             <button
@@ -1215,7 +1292,7 @@ const Designar = ({
                                             const on = !!semanasSelecionadas?.[k];
                                             const foco = idx === semanaAtivaIndex;
                                             const isArq = !!sem?.arquivada;
-                                            // --- CORREÇÃO DE CHIPS COM ÍCONES ---
+
                                             const isVisita = sem.evento === 'visita';
                                             const isAssembly = sem.evento === 'assembleia' || sem.evento === 'congresso';
 
@@ -1237,7 +1314,6 @@ const Designar = ({
                                                 >
                                                     <span className="truncate">{sem?.semana}</span>
 
-                                                    {/* ÍCONES NO CHIP DE NAVEGAÇÃO */}
                                                     {isVisita && <Briefcase size={12} className={on ? "text-white" : "text-blue-600"} />}
                                                     {isAssembly && <Tent size={12} className={on ? "text-white" : "text-yellow-600"} />}
 
@@ -1257,7 +1333,7 @@ const Designar = ({
                                 {semanasParaExibir.length === 0 ? (
                                     <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
                                         <Calendar size={32} className="mx-auto mb-2 opacity-30" />
-                                        <p className="text-sm font-medium">Selecione pelo menos uma semana acima.</p>
+                                        <p className="text-sm font-medium">{TT.selecioneSemana}</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-6">
@@ -1267,19 +1343,11 @@ const Designar = ({
                                             const partesLinhaFinal = partesDaSemana.filter(isEncerramento);
                                             const isArq = !!sem?.arquivada;
 
-                                            // NOVA LÓGICA: Cruza com a configuração global
                                             const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
-
-                                            // Prioriza a configuração global, mas aceita a local se houver
                                             const tipoEvento = eventoConfig?.tipo || sem.evento || 'normal';
 
                                             const isVisita = tipoEvento === 'visita';
                                             const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
-
-                                            // Se for visita, a data é a definida na config (ex: 2026-02-10)
-                                            const dataExibicao = isVisita && eventoConfig?.dataInput
-                                                ? eventoConfig.dataInput.split('-').reverse().join('/')
-                                                : (sem?.dataReuniao ? sem.dataReuniao.split('-').reverse().join('/') : "Data não definida");
 
                                             return (
                                                 <div key={key} className={`rounded-2xl border p-3 space-y-4 transition-all ${isVisita ? 'bg-blue-50 border-blue-200' :
@@ -1290,22 +1358,21 @@ const Designar = ({
                                                         <div className="flex items-center justify-between">
                                                             <div className="min-w-0">
                                                                 <h3 className="font-black text-base text-gray-800 truncate flex items-center gap-2">
-                                                                    <span>{sem?.semana || `Semana ${idx + 1}`}</span>
+                                                                    <span>{sem?.semana || `${TT.semana} ${idx + 1}`}</span>
 
-                                                                    {/* BADGES DE EVENTO NO HEADER DO CARD */}
                                                                     {isVisita && (
                                                                         <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-600 text-white border border-blue-700 flex items-center gap-1 uppercase tracking-wider animate-pulse">
-                                                                            <Briefcase size={12} /> Visita SC
+                                                                            <Briefcase size={12} /> {TT.visitaSC}
                                                                         </span>
                                                                     )}
                                                                     {sem.evento?.includes('assembleia') && (
                                                                         <span className="text-[10px] font-black px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center gap-1">
-                                                                            <Tent size={12} /> Assembleia
+                                                                            <Tent size={12} /> {TT.assembleia}
                                                                         </span>
                                                                     )}
                                                                     {sem.evento === 'congresso' && (
                                                                         <span className="text-[10px] font-black px-2 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1">
-                                                                            <UsersRound size={12} /> Congresso
+                                                                            <UsersRound size={12} /> {TT.congresso}
                                                                         </span>
                                                                     )}
                                                                 </h3>
@@ -1314,13 +1381,13 @@ const Designar = ({
                                                                     {sem?.dataReuniao ? (
                                                                         <>
                                                                             <Calendar size={12} />
-                                                                            Data da Reunião: <strong className={isVisita ? 'text-blue-700' : ''}>
+                                                                            {TT.dataReuniao}: <strong className={isVisita ? 'text-blue-700' : ''}>
                                                                                 {sem.dataReuniao.split('-').reverse().join('/')}
                                                                             </strong>
-                                                                            {isVisita && " (Terça-feira)"}
+                                                                            {isVisita && ` ${TT.tercaFeira}`}
                                                                         </>
                                                                     ) : (
-                                                                        <span>Data não definida</span>
+                                                                        <span>{TT.dataNaoDefinida}</span>
                                                                     )}
                                                                 </p>
                                                             </div>
@@ -1343,16 +1410,17 @@ const Designar = ({
                                                                 {sem.evento === 'congresso' ? <UsersRound size={48} /> : <Tent size={48} />}
                                                             </div>
                                                             <h3 className="text-xl font-bold text-gray-700">
-                                                                Semana de {sem.evento === 'congresso' ? 'Congresso' : 'Assembleia'}
+                                                                {TT.semanaDe} {sem.evento === 'congresso' ? TT.congresso : TT.assembleia}
                                                             </h3>
                                                             <p className="text-sm text-gray-500 max-w-md">
-                                                                Não haverá Reunião Vida e Ministério nesta semana.
-                                                                O quadro de anúncios não exibirá designações.
+                                                                {TT.semReuniao}
+                                                                <br />
+                                                                {TT.quadroAviso}
                                                             </p>
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            {/* PRESIDENTE (Se for Visita, o sistema permite designar normalmente) */}
+                                                            {/* PRESIDENTE */}
                                                             <div className="grid grid-cols-1 gap-4">
                                                                 <div className="relative group/slot w-full">
                                                                     <button type="button" onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })} className={`bg-white p-4 rounded-xl border-2 transition-all hover:shadow-md text-left w-full ${slotKeyMatch('presidente', undefined, idx) ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200"}`}>
@@ -1379,7 +1447,7 @@ const Designar = ({
                                                                         <div key={`${key}-${secKey}`} className="space-y-3">
                                                                             {renderTituloSecao(secKey, partesDaSemana)}
                                                                             {partesDaSecao.length === 0 ? (
-                                                                                <div className="text-xs text-gray-400 italic px-2">Sem itens.</div>
+                                                                                <div className="text-xs text-gray-400 italic px-2">{TT.semItens}</div>
                                                                             ) : (
                                                                                 <div className="space-y-3">{partesDaSecao.map(p => renderParteCard(p, idx))}</div>
                                                                             )}
@@ -1419,7 +1487,7 @@ const Designar = ({
                                             type="button"
                                             onClick={() => setSlotAtivo(null)}
                                             className="hover:bg-white/20 rounded p-1 transition"
-                                            title="Cancelar seleção"
+                                            title="Cancelar"
                                         >
                                             <X size={16} />
                                         </button>
@@ -1429,7 +1497,7 @@ const Designar = ({
                                         type="button"
                                         onClick={() => { setTermoBusca(''); setFiltrosTiposAtivos([]); setFiltroGenero('todos'); }}
                                         className="hover:bg-white/20 rounded p-1 transition"
-                                        title="Limpar filtros"
+                                        title="Limpar"
                                     >
                                         <FilterX size={16} />
                                     </button>
@@ -1447,7 +1515,7 @@ const Designar = ({
                                     <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                                     <input
                                         type="text"
-                                        placeholder="Nome, cargo ou observação..."
+                                        placeholder="Nome, cargo..."
                                         className="w-full pl-8 pr-4 py-1.5 text-xs border rounded-md outline-none focus:ring-1 focus:ring-blue-400"
                                         value={termoBusca}
                                         onChange={(e) => setTermoBusca(e.target.value)}
@@ -1467,7 +1535,6 @@ const Designar = ({
                                             type="button"
                                             onClick={() => setOrdemCrescente(!ordemCrescente)}
                                             className="px-2 py-1 bg-white hover:bg-gray-100 text-gray-600"
-                                            title="Inverter ordem"
                                         >
                                             {ordemCrescente ? <SortAsc size={14} /> : <SortDesc size={14} />}
                                         </button>
@@ -1478,7 +1545,6 @@ const Designar = ({
                                             type="button"
                                             onClick={() => handleMudarGenero('M')}
                                             className={`px-2 py-1 transition ${filtroGenero === 'M' ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-400'}`}
-                                            title="Masculino"
                                         >
                                             <User size={14} />
                                         </button>
@@ -1486,7 +1552,6 @@ const Designar = ({
                                             type="button"
                                             onClick={() => handleMudarGenero('F')}
                                             className={`px-2 py-1 border-l transition ${filtroGenero === 'F' ? 'bg-pink-100 text-pink-700' : 'bg-white text-gray-400'}`}
-                                            title="Feminino"
                                         >
                                             <UserRound size={14} />
                                         </button>
@@ -1494,7 +1559,6 @@ const Designar = ({
                                             type="button"
                                             onClick={() => handleMudarGenero('todos')}
                                             className={`px-2 py-1 border-l transition ${filtroGenero === 'todos' ? 'bg-gray-200 text-gray-700' : 'bg-white text-gray-400'}`}
-                                            title="Todos"
                                         >
                                             <UsersRound size={14} />
                                         </button>
@@ -1527,7 +1591,7 @@ const Designar = ({
                                 {alunosFiltrados.length === 0 ? (
                                     <div className="text-center py-10 text-gray-400">
                                         <Search size={32} className="mx-auto mb-2 opacity-30" />
-                                        <p className="text-xs">Nenhum aluno encontrado</p>
+                                        <p className="text-xs">{TT.nenhumAluno}</p>
                                     </div>
                                 ) : (
                                     alunosFiltrados.map((aluno) => {
@@ -1536,7 +1600,7 @@ const Designar = ({
 
                                         const ja = semanaKey ? isAlunoDuplicadoBySemanaKey(aluno?.id, semanaKey) : false;
                                         const dias = calcularDiasDesdeUltimaParte(aluno);
-                                        const ultimo = getUltimoRegistro(aluno);
+                                        const historicoRecente = getHistoricoRecente(aluno, 6); // Busca os últimos 6
 
                                         const cargoKey = aluno?.tipo;
                                         const cargoInfo = getCargoInfo(cargoKey);
@@ -1550,68 +1614,76 @@ const Designar = ({
                                                 onClick={() => {
                                                     if (!podeClicar) return;
                                                     if (ja) {
-                                                        const ok = window.confirm("Esse aluno já está designado nesta semana. Quer usar mesmo assim?");
+                                                        const ok = window.confirm(TT.confirmarDuplicado);
                                                         if (!ok) return;
                                                     }
                                                     atribuirAluno(aluno);
                                                 }}
                                                 disabled={!podeClicar}
                                                 className={[
-                                                    "w-full text-left p-3 rounded-xl border transition relative group shadow-sm",
+                                                    "w-full text-left p-2.5 rounded-xl border transition relative group shadow-sm flex flex-col gap-1",
                                                     podeClicar ? "bg-white hover:shadow-md hover:border-blue-200" : "bg-gray-50 cursor-not-allowed",
                                                     ja ? "border-amber-200" : "border-gray-200"
                                                 ].join(" ")}
                                                 title={
                                                     !slotAtivo ? TT.selecioneCampo
-                                                        : ja ? "Duplicado na semana (mas você pode usar se desejar)"
-                                                            : "Clique para designar"
+                                                        : ja ? TT.duplicadoTooltip
+                                                            : TT.cliquePara
                                                 }
                                             >
-                                                <div className="flex items-start justify-between gap-2">
+                                                {/* CABEÇALHO DO CARD (Nome, Icones, Duplicado) */}
+                                                <div className="flex items-start justify-between gap-2 w-full">
                                                     <div className="min-w-0">
-                                                        <div className="font-black text-sm text-gray-800 truncate flex items-center gap-2">
-                                                            <span className="truncate">{aluno?.nome || "(Sem nome)"}</span>
-                                                            {ja && <AlertTriangle size={14} className="text-amber-600 shrink-0" />}
-
-                                                            {!!aluno?.observacoes && (
-                                                                <div title={aluno.observacoes} className="cursor-help shrink-0">
-                                                                    <Info size={14} className="text-blue-400 hover:text-blue-600 transition-colors" />
-                                                                </div>
-                                                            )}
+                                                        <div className="font-bold text-xs text-gray-800 truncate flex items-center gap-1.5">
+                                                            <span className="truncate">{aluno?.nome || TT.semNome}</span>
+                                                            {ja && <AlertTriangle size={12} className="text-amber-600 shrink-0" />}
                                                         </div>
+                                                    </div>
 
-                                                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                                                            <span className={[
-                                                                "text-[10px] font-black px-2 py-0.5 rounded-full border",
-                                                                cargoInfo?.cor || "bg-gray-100 text-gray-700 border-gray-200"
-                                                            ].join(" ")}>
-                                                                {cargoInfo?.[lang] || cargoInfo?.pt || cargoInfo?.es || cargoKey || "—"}
+                                                    <div className="flex flex-wrap items-center gap-1 shrink-0">
+                                                        <span className={[
+                                                            "text-[9px] font-black px-1.5 py-0.5 rounded-full border",
+                                                            cargoInfo?.cor || "bg-gray-100 text-gray-700 border-gray-200"
+                                                        ].join(" ")}>
+                                                            {cargoInfo?.[lang] || cargoInfo?.pt || cargoInfo?.es || cargoKey || "—"}
+                                                        </span>
+
+                                                        {typeof dias === 'number' ? (
+                                                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 inline-flex items-center gap-0.5">
+                                                                <Clock size={10} /> {dias} {TT.dias}
                                                             </span>
-
-                                                            {typeof dias === 'number' ? (
-                                                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 inline-flex items-center gap-1">
-                                                                    <Clock size={12} /> {dias} dias
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 inline-flex items-center gap-1">
-                                                                    <Clock size={12} /> {TT.info.nunca}
-                                                                </span>
-                                                            )}
-
-                                                            {ja && (
-                                                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
-                                                                    <AlertTriangle size={12} /> Duplicado
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        {(ultimo?.data || ultimo?.parte) && (
-                                                            <div className="mt-2 text-[10px] text-gray-400">
-                                                                Último: {ultimo?.data ? String(ultimo.data) : "—"}{ultimo?.parte ? ` • ${String(ultimo.parte)}` : ""}
-                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 inline-flex items-center gap-0.5">
+                                                                <Clock size={10} /> {TT.info.nunca}
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* OBSERVAÇÕES VISÍVEIS */}
+                                                {!!aluno?.observacoes && (
+                                                    <div className="bg-yellow-50 border border-yellow-100 rounded px-1.5 py-1 text-[10px] text-yellow-800 leading-tight italic w-full">
+                                                        {aluno.observacoes}
+                                                    </div>
+                                                )}
+
+                                                {/* LISTA DE HISTÓRICO (Últimos 6 com Ajudante se houver) */}
+                                                {historicoRecente.length > 0 && (
+                                                    <div className="mt-1.5 border-t border-gray-100 pt-1.5 w-full space-y-0.5">
+                                                        {historicoRecente.map((hist, i) => (
+                                                            <div key={i} className="flex justify-between items-center text-[9px] text-gray-400">
+                                                                <span className="shrink-0 mr-2">{hist.data ? new Date(hist.data).toLocaleDateString() : '--/--'}</span>
+                                                                <span
+                                                                    className="truncate text-right font-medium text-gray-500"
+                                                                    title={`${hist.parte || "—"}${hist.ajudante ? ` (${TT.com} ${hist.ajudante})` : ''}`}
+                                                                >
+                                                                    {hist.parte || "—"}
+                                                                    {hist.ajudante && <span className="text-gray-400 font-normal opacity-80"> ({TT.com} {hist.ajudante})</span>}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
 
                                                 {!slotAtivo && (
                                                     <div className="absolute inset-0 rounded-xl bg-white/40" />
@@ -1652,7 +1724,7 @@ const Designar = ({
                         <div className="p-4 space-y-3">
                             <div>
                                 <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">
-                                    Título
+                                    {TT.titulo}
                                 </label>
                                 <input
                                     type="text"
@@ -1667,7 +1739,7 @@ const Designar = ({
 
                             <div>
                                 <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">
-                                    Descrição
+                                    {TT.descricao}
                                 </label>
                                 <textarea
                                     rows={3}
@@ -1682,7 +1754,7 @@ const Designar = ({
 
                             <div>
                                 <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">
-                                    Tempo
+                                    {TT.tempo}
                                 </label>
                                 <input
                                     type="text"
@@ -1694,7 +1766,7 @@ const Designar = ({
                                     className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200"
                                 />
                                 <p className="mt-1 text-[10px] text-gray-400">
-                                    Observação: para Abertura/Encerramento, o sistema exibe 5 min (o valor pode ser ignorado ao salvar).
+                                    {TT.obsTempo}
                                 </p>
                             </div>
                         </div>
