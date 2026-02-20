@@ -4,30 +4,30 @@ import { normalizar } from './helpers';
 // --- HELPER FUNCTIONS INTERNAS ---
 
 const getTermos = (lang) =>
-    ({
-        pt: {
-            tesouros: ['tesouros da palavra de deus'],
-            ministerio: ['faca seu melhor no ministerio'],
-            vida: ['nossa vida crista'],
-            estudo: ['estudo biblico de congregacao'],
-            cantico: ['cantico'],
-            oracao: ['oracao'],
-            iniciais: ['comentarios iniciais'],
-            finais: ['comentarios finais'],
-            conclusao: ['conclusao'],
-        },
-        es: {
-            tesouros: ['tesoros de la biblia', 'tesoros de la palabra'],
-            ministerio: ['seamos mejores maestros', 'sea mejor maestro'],
-            vida: ['nuestra vida cristiana'],
-            estudo: ['estudio biblico de la congregacion'],
-            cantico: ['cancion'],
-            oracao: ['oracion'],
-            iniciais: ['palabras de introduccion', 'comentarios iniciales', 'comentarios inicial'],
-            finais: ['palabras de conclusion', 'comentarios finales'],
-            conclusao: ['conclusion'],
-        },
-    }[lang]);
+({
+    pt: {
+        tesouros: ['tesouros da palavra de deus'],
+        ministerio: ['faca seu melhor no ministerio'],
+        vida: ['nossa vida crista'],
+        estudo: ['estudo biblico de congregacao'],
+        cantico: ['cantico'],
+        oracao: ['oracao'],
+        iniciais: ['comentarios iniciais'],
+        finais: ['comentarios finais'],
+        conclusao: ['conclusao'],
+    },
+    es: {
+        tesouros: ['tesoros de la biblia', 'tesoros de la palabra'],
+        ministerio: ['seamos mejores maestros', 'sea mejor maestro'],
+        vida: ['nuestra vida cristiana'],
+        estudo: ['estudio biblico de la congregacion'],
+        cantico: ['cancion'],
+        oracao: ['oracion'],
+        iniciais: ['palabras de introduccion', 'comentarios iniciales', 'comentarios inicial'],
+        finais: ['palabras de conclusion', 'comentarios finales'],
+        conclusao: ['conclusion'],
+    },
+}[lang]);
 
 const limparTexto = (txt) => {
     if (!txt) return '';
@@ -213,7 +213,7 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
     for (let i = 0; i < linhas.length; i++) {
         const linha = linhas[i];
         const nLine = normalizar(linha);
-        
+
         if (linha.toUpperCase().startsWith('PRESIDENTE')) continue;
 
         if (termos.tesouros.some((x) => nLine.includes(x))) { secaoAtual = 'tesouros'; continue; }
@@ -224,26 +224,28 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
         const splitTempo = extrairTempoETexto(linha);
         const looksLikeNumeroTitulo = /^\d+\.\s+/.test(linha.trim());
         const hasCantOrOrac = nLine.includes('cantico') || nLine.includes('cancion') || nLine.includes('oracao') || nLine.includes('oracion');
-        
+        const isIniciaisFinais = termos.iniciais.some(x => nLine.includes(x)) || termos.finais.some(x => nLine.includes(x)) || termos.conclusao.some(x => nLine.includes(x));
+
         // Merge logic
         if (parteAtual && splitTempo && /^\d+\.\s+/.test((parteAtual.titulo || '').trim())) {
-             const beforeHasAlphaNum = /[A-Za-zÀ-ÖØ-öø-ÿ0-9]/.test((splitTempo.before || '').trim());
-             if (!beforeHasAlphaNum && (parteAtual._aguardandoTempoDescricao || !parteAtual.descricao) && !looksLikeNumeroTitulo) {
-                 parteAtual.tempo = String(splitTempo.tempo || parteAtual.tempo || '5');
-                 if (!parteAtual._ignorarDescricao) {
-                     const tail = (splitTempo.after || '').trim();
-                     if ((parteAtual.secao || '') === 'vida' && parteAtual.tipo !== 'estudo') {
-                         if (tail) { parteAtual.descricao = tail; parteAtual._vidaDescricaoBloqueada = true; }
-                     } else {
-                         parteAtual.descricao = tail;
-                     }
-                 }
-                 parteAtual._aguardandoTempoDescricao = false;
-                 continue;
-             }
+            const beforeHasAlphaNum = /[A-Za-zÀ-ÖØ-öø-ÿ0-9]/.test((splitTempo.before || '').trim());
+            if (!beforeHasAlphaNum && (parteAtual._aguardandoTempoDescricao || !parteAtual.descricao) && !looksLikeNumeroTitulo) {
+                parteAtual.tempo = String(splitTempo.tempo || parteAtual.tempo || '5');
+                if (!parteAtual._ignorarDescricao) {
+                    const tail = (splitTempo.after || '').trim();
+                    if ((parteAtual.secao || '') === 'vida' && parteAtual.tipo !== 'estudo') {
+                        if (tail) { parteAtual.descricao = tail; parteAtual._vidaDescricaoBloqueada = true; }
+                    } else {
+                        parteAtual.descricao = tail;
+                    }
+                }
+                parteAtual._aguardandoTempoDescricao = false;
+                continue;
+            }
         }
 
-        if (looksLikeNumeroTitulo || !!splitTempo || hasCantOrOrac) {
+        // AGORA REQUER COMEÇAR COM NÚMERO (ou ser cântico/oração/comentários iniciais e finais)
+        if (looksLikeNumeroTitulo || hasCantOrOrac || isIniciaisFinais) {
             commitParteAtual();
             let tempo = null;
             let titulo = linha;
@@ -255,8 +257,8 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
                 tail = splitTempo.after || '';
             } else if (tempoSozinho) {
                 tempo = tempoSozinho[1];
-            } else if (linhas[i+1] && linhas[i+1].match(regexTempoSozinho)) {
-                tempo = linhas[i+1].match(regexTempoSozinho)[1];
+            } else if (linhas[i + 1] && linhas[i + 1].match(regexTempoSozinho)) {
+                tempo = linhas[i + 1].match(regexTempoSozinho)[1];
                 i++; // Skip next line
             }
 
@@ -267,7 +269,9 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
             else if (termos.estudo.some((x) => nTitle.includes(x))) tipo = 'estudo';
             else if (termos.cantico.some((x) => nTitle.includes(x))) tipo = 'cantico';
 
-            if (tipo === 'oracao_inicial' || tipo === 'oracao_final') { titulo = linha; tail = ''; tempo = '5'; }
+            if (tipo === 'oracao_inicial') { titulo = linha; tail = ''; tempo = '6'; }
+            else if (tipo === 'oracao_final') { titulo = linha; tail = ''; tempo = '8'; }
+
             if (!tempo) tempo = tipo === 'cantico' ? '3' : '5';
 
             parteAtual = {
@@ -281,15 +285,16 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
                 somenteOracao: (tipo === 'oracao_inicial' || tipo === 'oracao_final') ? true : undefined
             };
 
-            if (/^\s*1\./.test(titulo) && (secaoAtual || 'tesouros') === 'tesouros') parteAtual._ignorarDescricao = true;
+            // NOVA REGRA: Ignorar descrição das partes 1 e 2 (Discurso e Joias)
+            if (/^\s*[12]\./.test(titulo) && (secaoAtual || 'tesouros') === 'tesouros') parteAtual._ignorarDescricao = true;
             if (/^\d+\.\s+/.test(titulo) && !splitTempo) parteAtual._aguardandoTempoDescricao = true;
 
             if (tail && !parteAtual._ignorarDescricao) {
-                 if (parteAtual.secao === 'vida' && parteAtual.tipo !== 'estudo') {
-                     parteAtual.descricao = tail; parteAtual._vidaDescricaoBloqueada = true;
-                 } else {
-                     parteAtual.descricao = tail;
-                 }
+                if (parteAtual.secao === 'vida' && parteAtual.tipo !== 'estudo') {
+                    parteAtual.descricao = tail; parteAtual._vidaDescricaoBloqueada = true;
+                } else {
+                    parteAtual.descricao = tail;
+                }
             }
 
             if (['oracao_inicial', 'oracao_final', 'cantico'].includes(tipo)) commitParteAtual();
@@ -300,7 +305,7 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
         if (parteAtual && !parteAtual._ignorarDescricao) {
             const n = normalizar(linha);
             if (!n || n === 'sua resposta' || n === 'respuesta') continue;
-            
+
             if (parteAtual.secao === 'vida' && parteAtual.tipo !== 'estudo') {
                 if (parteAtual._vidaDescricaoBloqueada || (parteAtual.descricao || '').trim()) { commitParteAtual(); continue; }
                 if (linha.trim().length <= 140) parteAtual.descricao = linha;
@@ -317,29 +322,37 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
     const merged = [];
     for (let i = 0; i < partes.length; i++) {
         const cur = partes[i];
-        const next = partes[i+1];
+        const next = partes[i + 1];
         const isSongPrayer = (p) => isSongPrayerText(normalizar(p?.titulo || ''));
-        
-        if (cur.tipo === 'oracao_inicial' || cur.tipo === 'oracao_final') {
-            merged.push({...cur, tempo: '5', secao: '', descricao: '', somenteOracao: true});
-            continue;
-        }
+
+        // CORREÇÃO: As mesclagens (Song + Prayer) devem vir antes para não serem engolidas pelos individuais
         if (isSongPrayer(cur) && next?.tipo === 'oracao_inicial') {
-            merged.push({...next, tempo: '5', titulo: `${cur.titulo} | ${next.titulo}`, secao: '', somenteOracao: true});
+            merged.push({ ...next, tempo: '6', titulo: `${cur.titulo} | ${next.titulo}`, secao: '', somenteOracao: true });
             i++; continue;
         }
         if (cur.tipo === 'oracao_inicial' && next && isSongPrayer(next) && i <= 1) {
-            merged.push({...cur, tempo: '5', titulo: `${next.titulo} | ${cur.titulo}`, secao: '', somenteOracao: true});
+            merged.push({ ...cur, tempo: '6', titulo: `${next.titulo} | ${cur.titulo}`, secao: '', somenteOracao: true });
             i++; continue;
         }
         if (cur.tipo === 'oracao_final' && next && isSongPrayer(next)) {
-            merged.push({...cur, tempo: '5', titulo: `${cur.titulo} | ${next.titulo}`, secao: '', somenteOracao: true});
+            merged.push({ ...cur, tempo: '8', titulo: `${cur.titulo} | ${next.titulo}`, secao: '', somenteOracao: true });
             i++; continue;
         }
         if (isSongPrayer(cur) && next?.tipo === 'oracao_final') {
-            merged.push({...next, tempo: '5', titulo: `${next.titulo} | ${cur.titulo}`, secao: '', somenteOracao: true});
+            merged.push({ ...next, tempo: '8', titulo: `${next.titulo} | ${cur.titulo}`, secao: '', somenteOracao: true });
             i++; continue;
         }
+
+        // Retaguarda caso não tenha mesclagem
+        if (cur.tipo === 'oracao_inicial') {
+            merged.push({ ...cur, tempo: '6', secao: '', descricao: '', somenteOracao: true });
+            continue;
+        }
+        if (cur.tipo === 'oracao_final') {
+            merged.push({ ...cur, tempo: '8', secao: '', descricao: '', somenteOracao: true });
+            continue;
+        }
+
         merged.push(cur);
     }
 
