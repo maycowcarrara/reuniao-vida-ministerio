@@ -160,7 +160,7 @@ export default function Dashboard({
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-6 p-6 animate-in fade-in duration-500 pb-20">
 
             {/* HEADER */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">

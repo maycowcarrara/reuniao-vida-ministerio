@@ -37,7 +37,7 @@ body {
 }
 
 @media print {
-  
+
   /* 🔥 Neutraliza o layout flex do app */
   #app-root {
     display: block !important;
@@ -68,3 +68,29 @@ body {
 
 }
 
+/* =========================================================
+    MODO TELA CHEIA (FULLSCREEN)
+========================================================= */
+
+/* Quando ativo, reduzimos drasticamente o padding das telas internas 
+   (Dashboard, Designar, etc) para usar 100% da área útil do monitor */
+.fullscreen-active .p-4,
+.fullscreen-active .p-6,
+.fullscreen-active .px-6,
+.fullscreen-active .py-6,
+.fullscreen-active .p-8 {
+  padding: 0.5rem !important;
+  /* Deixa apenas uma bordinha mínima */
+}
+
+/* Removemos travas de largura máxima para a programação esticar */
+.fullscreen-active .max-w-7xl,
+.fullscreen-active .max-w-6xl,
+.fullscreen-active .max-w-5xl {
+  max-width: 100% !important;
+}
+
+/* Deixa o fundo completamente branco na tela cheia para evitar bordas acinzentadas */
+.fullscreen-active {
+  background-color: #ffffff !important;
+}

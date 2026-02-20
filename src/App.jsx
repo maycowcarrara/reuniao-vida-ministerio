@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Globe, X } from 'lucide-react';
+import { Globe, X, Maximize, Minimize } from 'lucide-react';
 
 // Componentes
 import Dashboard from './components/Dashboard';
@@ -33,6 +33,31 @@ function App() {
   const [dupModal, setDupModal] = useState({ open: false, existing: null, incoming: null, resolve: null });
 
   const fileInputRef = useRef(null);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const VERSAO_SISTEMA = "1.0.0"; // Você pode ir alterando isso a cada nova versão
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.warn(`Erro ao tentar entrar em tela cheia: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFull = !!document.fullscreenElement;
+      setIsFullscreen(isFull);
+      // Se entrar em tela cheia, fecha o menu. Se sair, abre o menu.
+      setSidebarOpen(!isFull);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // --- Sincronização Inicial ---
   useEffect(() => {
@@ -292,23 +317,41 @@ function App() {
         logout={() => auth.signOut()}
         listaProgramacoes={listaProgramacoes}
         t={t}
+        toggleFullscreen={toggleFullscreen}
+        versaoSistema={VERSAO_SISTEMA}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 bg-gray-50 h-screen overflow-hidden relative">
-        <header className="h-14 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0 z-40">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-bold text-gray-800 capitalize">
-              {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
-            </h2>
-            <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-              <Globe size={12} className="text-blue-600" />
-              <span className="text-[10px] font-black uppercase text-blue-800">{lang}</span>
+      {/* Adicionamos a classe 'fullscreen-active' condicionalmente para o CSS atuar */}
+      <main className={`flex-1 flex flex-col min-w-0 bg-gray-50 h-screen overflow-hidden relative ${isFullscreen ? 'fullscreen-active' : ''}`}>
+
+        {/* Só exibe o Header se NÃO estiver em tela cheia */}
+        {!isFullscreen && (
+          <header className="h-14 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0 z-40">
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-bold text-gray-800 capitalize">
+                {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
+              </h2>
+              <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                <Globe size={12} className="text-blue-600" />
+                <span className="text-[10px] font-black uppercase text-blue-800">{lang}</span>
+              </div>
             </div>
-          </div>
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            {dadosSistema?.configuracoes?.nome_cong || 'Minha Congregação'}
-          </div>
-        </header>
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              {dadosSistema?.configuracoes?.nome_cong || 'Minha Congregação'}
+            </div>
+          </header>
+        )}
+
+        {/* Botão flutuante para ajudar o usuário a SAIR da tela cheia sem precisar apertar ESC */}
+        {isFullscreen && (
+          <button
+            onClick={toggleFullscreen}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-full shadow-2xl hover:bg-gray-700 transition-all opacity-50 hover:opacity-100 no-print"
+          >
+            <Minimize size={20} />
+            <span className="text-sm font-medium">Sair da Tela Cheia</span>
+          </button>
+        )}
 
         <div className="flex-1 overflow-y-auto scroll-smooth">
           {abaAtiva === 'dashboard' && (
