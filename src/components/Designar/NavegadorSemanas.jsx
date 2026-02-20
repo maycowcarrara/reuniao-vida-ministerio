@@ -11,7 +11,7 @@ const NavegadorSemanas = ({
     if (!listaSemanas || listaSemanas.length === 0) return null;
 
     return (
-        <div className="hidden xl:flex flex-col w-64 shrink-0 lg:sticky lg:top-28 self-start max-h-[calc(100vh-8rem)] overflow-y-auto bg-white rounded-xl shadow-sm border border-gray-200 custom-scroll">
+        <div className="hidden xl:flex flex-col w-64 shrink-0 lg:sticky lg:top-20 self-start max-h-[calc(100vh-10rem)] overflow-y-auto bg-white rounded-xl shadow-sm border border-gray-200 custom-scroll">
             <div className="p-4 bg-gray-50 border-b border-gray-200 sticky top-0 z-10 flex items-center justify-between">
                 <h3 className="font-bold text-xs text-gray-700 uppercase tracking-widest">
                     Resumo

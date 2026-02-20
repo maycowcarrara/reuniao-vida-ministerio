@@ -146,7 +146,7 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6 bg-white p-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="max-w-3xl mx-auto space-y-6 bg-white p-6 m-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><ClipboardList className="text-blue-600" /> Importador</h2>

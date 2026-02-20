@@ -2,16 +2,16 @@ import React from 'react';
 import { X, FilterX, Search, SortAsc, SortDesc, User, UserRound, UsersRound, AlertTriangle, Clock } from 'lucide-react';
 
 const SidebarAlunos = ({
-    TT, buildSlotLabel, alunosFiltrados, slotAtivo, setSlotAtivo, 
-    termoBusca, setTermoBusca, ordenacaoChave, setOrdenacaoChave, 
-    ordemCrescente, setOrdemCrescente, filtroGenero, handleMudarGenero, 
-    cargosMap, filtrosTiposAtivos, toggleFiltroTipo, lang, 
-    atribuirAluno, calcularDiasDesdeUltimaParte, getHistoricoRecente, 
+    TT, buildSlotLabel, alunosFiltrados, slotAtivo, setSlotAtivo,
+    termoBusca, setTermoBusca, ordenacaoChave, setOrdenacaoChave,
+    ordemCrescente, setOrdemCrescente, filtroGenero, handleMudarGenero,
+    cargosMap, filtrosTiposAtivos, toggleFiltroTipo, lang,
+    atribuirAluno, calcularDiasDesdeUltimaParte, getHistoricoRecente,
     isAlunoDuplicadoBySemanaKey, getSemanaKeyByFilteredIndex, getSemanaIndexContexto, getCargoInfo
 }) => {
     return (
-        <div className="lg:w-80 shrink-0 w-full lg:sticky lg:top-28 self-start">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 max-h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
+        <div className="lg:w-80 shrink-0 w-full lg:sticky lg:top-20 self-start">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden">
                 <div className="p-4 bg-blue-700 text-white text-xs font-bold uppercase tracking-widest flex justify-between items-center shrink-0">
                     <div className="flex flex-col">
                         <span>{buildSlotLabel()}</span>

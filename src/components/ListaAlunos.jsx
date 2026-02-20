@@ -300,7 +300,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     };
 
     return (
-        <div className="space-y-4 pb-10">
+        <div className="space-y-4 pb-10 p-6">
             <style>{`
             @media print {
                 html, body, #root { height: auto !important; overflow: visible !important; }

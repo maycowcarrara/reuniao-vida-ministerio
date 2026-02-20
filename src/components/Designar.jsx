@@ -498,7 +498,7 @@ const Designar = ({
             </div>
 
             {/* CONTAINER PRINCIPAL DO LAYOUT */}
-            <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-6">
+            <div className="w-full max-w-7xl mx-auto py-4">
                 <div className="flex flex-col lg:flex-row gap-6 pb-20 items-start">
 
                     {/* NAVEGADOR ESQUERDO */}
