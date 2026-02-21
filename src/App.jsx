@@ -35,7 +35,6 @@ function App() {
   const fileInputRef = useRef(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const VERSAO_SISTEMA = "1.0.0"; // Você pode ir alterando isso a cada nova versão
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -51,8 +50,8 @@ function App() {
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       setIsFullscreen(isFull);
-      // Se entrar em tela cheia, fecha o menu. Se sair, abre o menu.
-      setSidebarOpen(!isFull);
+      // Mantém o comportamento de fechar o menu ao voltar, se desejar
+      if (isFull) setSidebarOpen(false);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -305,21 +304,23 @@ function App() {
         </div>
       )}
 
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        abaAtiva={abaAtiva}
-        setAbaAtiva={setAbaAtiva}
-        usuario={usuario}
-        handleAbrirBackup={handleAbrirBackup}
-        handleSalvarBackup={handleSalvarBackup}
-        handleResetarTudo={handleResetarTudo}
-        logout={() => auth.signOut()}
-        listaProgramacoes={listaProgramacoes}
-        t={t}
-        toggleFullscreen={toggleFullscreen}
-        versaoSistema={VERSAO_SISTEMA}
-      />
+      {/* SÓ MOSTRA O SIDEBAR SE NÃO ESTIVER EM TELA CHEIA */}
+      {!isFullscreen && (
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          abaAtiva={abaAtiva}
+          setAbaAtiva={setAbaAtiva}
+          usuario={usuario}
+          handleAbrirBackup={handleAbrirBackup}
+          handleSalvarBackup={handleSalvarBackup}
+          handleResetarTudo={handleResetarTudo}
+          logout={() => auth.signOut()}
+          listaProgramacoes={listaProgramacoes}
+          t={t}
+          toggleFullscreen={toggleFullscreen}
+        />
+      )}
 
       {/* Adicionamos a classe 'fullscreen-active' condicionalmente para o CSS atuar */}
       <main className={`flex-1 flex flex-col min-w-0 bg-gray-50 h-screen overflow-hidden relative ${isFullscreen ? 'fullscreen-active' : ''}`}>
@@ -383,7 +384,7 @@ function App() {
               cargosMap={CARGOS_MAP}
               lang={lang}
               t={t}
-              config={dadosSistema?.configuracoes} // <--- ADICIONADO AQUI: Isso resolve a verificação constante
+              config={dadosSistema?.configuracoes}
               onExcluirSemana={handleExcluirSemanaBanco}
             />
           )}

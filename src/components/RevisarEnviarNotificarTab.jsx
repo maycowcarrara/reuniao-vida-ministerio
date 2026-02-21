@@ -1,8 +1,9 @@
-import React from 'react';
-import { CheckCircle, Mail, MessageCircle, Briefcase, Tent, UsersRound } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, Mail, MessageCircle, Briefcase, Tent, UsersRound, Loader2, Send } from 'lucide-react';
 
 import { formatarDataFolha } from '../utils/revisarEnviar/dates';
 import { montarMensagemDesignacao } from '../utils/revisarEnviar/messages';
+import { enviarEmailAutomatico } from '../utils/revisarEnviar/enviadorEmail';
 
 const SECAO_UI = {
     tesouros: { chip: 'bg-slate-600', wrap: 'border-slate-200 bg-slate-50', text: 'text-slate-900' },
@@ -24,14 +25,128 @@ const RevisarEnviarNotificarTab = ({
 
     // runtime notificações (estado + ações)
     enviarZap,
-    enviarEmail,
     buildMsgKey,
     markSent,
     isSent,
 }) => {
-    const renderButtons = ({ pessoa, msg, subject, msgKey, corWa, compact = false }) => {
+    // --- ESTADOS DO ENVIO DE E-MAIL AUTOMÁTICO ---
+    const [enviandoGlobal, setEnviandoGlobal] = useState(false);
+    const [progresso, setProgresso] = useState({ total: 0, enviados: 0, erros: 0 });
+    const [enviandoInd, setEnviandoInd] = useState({});
+
+    // --- COLETOR DE E-MAILS PARA O DISPARO GLOBAL ---
+    const coletarTodasDesignacoes = () => {
+        const lista = [];
+
+        semanasParaNotificar.forEach(sem => {
+            if (sem.evento && sem.evento !== 'normal' && sem.evento !== 'visita') return;
+
+            const dataISO = getDataReuniaoISO(sem);
+            const dataReuniaoFormatada = formatarDataFolha(dataISO, lang);
+
+            const addToList = (pessoa, titulo, role, ajudante = null, parteId) => {
+                if (pessoa?.email) {
+                    const msgKey = buildMsgKey({
+                        dataISO,
+                        semana: sem.semana,
+                        parteId: parteId || titulo,
+                        pessoaId: pessoa.id || pessoa.nome,
+                        role
+                    });
+
+                    // Só adiciona na fila se ainda não foi enviado!
+                    if (!isSent(msgKey, 'mail')) {
+                        lista.push({
+                            msgKey,
+                            payload: {
+                                aluno: pessoa,
+                                ajudante,
+                                dataReuniaoFormatada,
+                                parteTitulo: titulo,
+                                sala: 'Principal'
+                            }
+                        });
+                    }
+                }
+            };
+
+            if (sem.presidente) {
+                addToList(sem.presidente, t.presidente, 'presidente', null, 'presidente');
+            }
+
+            const partes = Array.isArray(sem?.partes) ? sem.partes : [];
+            partes.forEach(p => {
+                if (isOracao(p)) {
+                    const pOracao = p.oracao || p.estudante;
+                    if (pOracao) addToList(pOracao, p.titulo || t.oracao, 'oracao', null, p.id);
+                } else if (isEstudo(p)) {
+                    const dir = p.dirigente || p.estudante;
+                    const lei = p.leitor || sem.leitor;
+                    if (dir) addToList(dir, `${t.dirigente} - ${p.titulo || 'Estudo'}`, 'dirigente', null, p.id);
+                    if (lei) addToList(lei, `${t.leitor} - ${p.titulo || 'Estudo'}`, 'leitor', null, p.id);
+                } else if (p.estudante) {
+                    addToList(p.estudante, p.titulo || 'Parte', 'resp', p.ajudante, p.id);
+                    if (p.ajudante) addToList(p.ajudante, `${t.ajudante} - ${p.titulo}`, 'ajud', null, p.id);
+                }
+            });
+        });
+        return lista;
+    };
+
+    const handleDispararEmails = async () => {
+        const fila = coletarTodasDesignacoes();
+
+        if (fila.length === 0) {
+            alert("Nenhum e-mail pendente ou válido encontrado para envio automático nas semanas ativas.");
+            return;
+        }
+
+        if (!window.confirm(`Você está prestes a enviar automaticamente ${fila.length} e-mails.\nDeseja continuar?`)) {
+            return;
+        }
+
+        setEnviandoGlobal(true);
+        setProgresso({ total: fila.length, enviados: 0, erros: 0 });
+
+        let contEnviados = 0;
+        let contErros = 0;
+
+        for (const item of fila) {
+            try {
+                await enviarEmailAutomatico(item.payload);
+                markSent(item.msgKey, 'mail');
+                contEnviados++;
+            } catch (error) {
+                console.error("Erro no envio:", error);
+                contErros++;
+            }
+
+            setProgresso(prev => ({ ...prev, enviados: contEnviados, erros: contErros }));
+            // Delay de 500ms para evitar estourar o limite de requisições do EmailJS
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        setEnviandoGlobal(false);
+        alert(`Disparo concluído!\n✅ Enviados com sucesso: ${contEnviados}\n⚠️ Erros: ${contErros}`);
+    };
+
+    const handleEnviarIndividual = async (msgKey, payload) => {
+        setEnviandoInd(prev => ({ ...prev, [msgKey]: true }));
+        try {
+            await enviarEmailAutomatico(payload);
+            markSent(msgKey, 'mail');
+        } catch (error) {
+            alert("Falha ao enviar e-mail. Verifique a configuração do EmailJS.");
+        } finally {
+            setEnviandoInd(prev => ({ ...prev, [msgKey]: false }));
+        }
+    };
+
+    const renderButtons = ({ pessoa, msg, msgKey, corWa, compact = false, emailPayload }) => {
         const waSent = isSent(msgKey, 'wa');
         const mailSent = isSent(msgKey, 'mail');
+        const hasEmail = !!pessoa?.email;
+        const isSending = enviandoInd[msgKey];
 
         return (
             <div className="flex items-center gap-2 shrink-0">
@@ -54,19 +169,24 @@ const RevisarEnviarNotificarTab = ({
                 </button>
 
                 <button
-                    onClick={() => {
-                        enviarEmail(pessoa, subject, msg);
-                        markSent(msgKey, 'mail');
-                    }}
-                    className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${mailSent ? 'bg-gray-200 text-gray-600' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                    disabled={!hasEmail || isSending || enviandoGlobal}
+                    onClick={() => handleEnviarIndividual(msgKey, emailPayload)}
+                    className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${!hasEmail ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50' :
+                            mailSent ? 'bg-gray-200 text-gray-600' :
+                                'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
                         }`}
-                    title={t.btnEnviarEmail}
+                    title={!hasEmail ? "Aluno sem e-mail cadastrado" : t.btnEnviarEmail}
                 >
-                    <Mail size={compact ? 16 : 18} />
-                    {mailSent && (
+                    {isSending ? (
+                        <Loader2 size={compact ? 16 : 18} className="animate-spin text-indigo-500" />
+                    ) : (
+                        <Mail size={compact ? 16 : 18} />
+                    )}
+
+                    {mailSent && !isSending && (
                         <CheckCircle
                             size={compact ? 12 : 14}
-                            className="absolute -top-1 -right-1 text-green-700 bg-white rounded-full"
+                            className="absolute -top-1 -right-1 text-indigo-700 bg-white rounded-full"
                         />
                     )}
                 </button>
@@ -74,14 +194,20 @@ const RevisarEnviarNotificarTab = ({
         );
     };
 
-    const renderCardPessoa = ({ tituloTopo, pessoa, msg, subject, msgKey, corWa, compact = false }) => (
+    const renderCardPessoa = ({ tituloTopo, pessoa, msg, msgKey, corWa, compact = false, emailPayload }) => (
         <div className={`bg-white ${compact ? 'p-2' : 'p-3'} rounded-lg shadow-sm flex justify-between items-center border`}>
             <div className="min-w-0 pr-2">
                 <p className="text-[10px] font-bold text-gray-400 uppercase truncate">{tituloTopo}</p>
                 <p className={`${compact ? 'text-[13px]' : 'text-sm'} font-bold truncate`}>{pessoa?.nome}</p>
-                {pessoa?.email && <p className="text-[10px] text-gray-400 truncate">{pessoa.email}</p>}
+
+                {pessoa?.email && (
+                    <p className="text-[10px] text-gray-400 truncate">{pessoa.email}</p>
+                )}
+                {!pessoa?.email && (
+                    <p className="text-[9px] text-red-400 italic truncate">Sem e-mail</p>
+                )}
             </div>
-            {renderButtons({ pessoa, msg, subject, msgKey, corWa, compact })}
+            {renderButtons({ pessoa, msg, msgKey, corWa, compact, emailPayload })}
         </div>
     );
 
@@ -94,10 +220,44 @@ const RevisarEnviarNotificarTab = ({
                 <p className="text-sm text-gray-500">{t.notificarAviso}</p>
             </div>
 
+            {/* PAINEL DISPARO GLOBAL */}
+            <div className="mb-6 bg-indigo-50 rounded-xl p-5 border border-indigo-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                    <h4 className="font-bold text-indigo-800 flex items-center gap-2">
+                        <Send size={18} /> Disparo Automático de E-mails
+                    </h4>
+                    <p className="text-xs text-indigo-600 mt-1 max-w-lg">
+                        Envia todas as designações não notificadas de uma só vez. Alunos sem e-mail cadastrado serão ignorados automaticamente.
+                    </p>
+
+                    {enviandoGlobal && (
+                        <div className="w-full max-w-md bg-indigo-200 h-2 mt-3 rounded-full overflow-hidden">
+                            <div
+                                className="bg-indigo-600 h-full transition-all duration-300"
+                                style={{ width: `${(progresso.enviados + progresso.erros) / progresso.total * 100}%` }}
+                            ></div>
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    onClick={handleDispararEmails}
+                    disabled={enviandoGlobal}
+                    className={`px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition inline-flex items-center gap-2 shrink-0 ${enviandoGlobal
+                            ? 'bg-indigo-300 text-white cursor-wait'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        }`}
+                >
+                    {enviandoGlobal ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                    {enviandoGlobal ? `Enviando (${progresso.enviados}/${progresso.total})` : "Disparar E-mails Pendentes"}
+                </button>
+            </div>
+
             <div className="space-y-5">
                 {semanasParaNotificar.map((sem, sIdx) => {
                     const partes = Array.isArray(sem?.partes) ? sem.partes : [];
                     const dataISO = getDataReuniaoISO(sem);
+                    const dataReuniaoFormatada = formatarDataFolha(dataISO, lang);
                     const horarioExib = config?.horarioReuniao ?? config?.horario ?? '';
                     const isVisita = sem.evento === 'visita';
 
@@ -162,10 +322,9 @@ const RevisarEnviarNotificarTab = ({
                             tituloParte,
                             descricaoParte: descricao,
                             minutosParte: min,
-                            isVisita // <--- Passando flag de visita
+                            isVisita
                         });
 
-                        const subjectResp = `${sem.semana} - ${tituloParte}`;
                         const keyResp = buildMsgKey({
                             dataISO,
                             semana: sem.semana,
@@ -174,8 +333,20 @@ const RevisarEnviarNotificarTab = ({
                             role: 'resp',
                         });
 
-                        const msgAjud = ajud?.nome
-                            ? montarMensagemDesignacao({
+                        const emailPayloadResp = {
+                            aluno: estudante,
+                            ajudante: ajud,
+                            dataReuniaoFormatada,
+                            parteTitulo: tituloParte,
+                            sala: p.sala || 'Principal'
+                        };
+
+                        let msgAjud = null;
+                        let keyAjud = null;
+                        let emailPayloadAjud = null;
+
+                        if (ajud?.nome) {
+                            msgAjud = montarMensagemDesignacao({
                                 t,
                                 lang,
                                 config,
@@ -186,18 +357,25 @@ const RevisarEnviarNotificarTab = ({
                                 tituloParte,
                                 descricaoParte: descricao,
                                 minutosParte: min,
-                                isVisita // <--- Passando flag de visita
-                            })
-                            : null;
+                                isVisita
+                            });
 
-                        const subjectAjud = `${sem.semana} - ${t.ajudante} - ${tituloParte}`;
-                        const keyAjud = buildMsgKey({
-                            dataISO,
-                            semana: sem.semana,
-                            parteId: p?.id || tituloParte,
-                            pessoaId: ajud?.id || ajud?.nome,
-                            role: 'ajud',
-                        });
+                            keyAjud = buildMsgKey({
+                                dataISO,
+                                semana: sem.semana,
+                                parteId: p?.id || tituloParte,
+                                pessoaId: ajud?.id || ajud?.nome,
+                                role: 'ajud',
+                            });
+
+                            emailPayloadAjud = {
+                                aluno: ajud,
+                                ajudante: null,
+                                dataReuniaoFormatada,
+                                parteTitulo: `${t.ajudante} - ${tituloParte}`,
+                                sala: p.sala || 'Principal'
+                            };
+                        }
 
                         return (
                             <div
@@ -207,21 +385,28 @@ const RevisarEnviarNotificarTab = ({
                                 <div className="min-w-0">
                                     <p className="text-[10px] font-bold text-gray-400 uppercase truncate">{tituloParte}</p>
                                     <p className="text-sm font-bold truncate">{estudante.nome}</p>
+
+                                    {!estudante.email && (
+                                        <p className="text-[9px] text-red-400 italic">Sem e-mail</p>
+                                    )}
+
                                     {ajud?.nome && (
                                         <p className="text-[12px] print:text-[11px] text-blue-700 font-bold truncate">
                                             {t.ajudante}: {ajud.nome}
                                         </p>
                                     )}
-                                    {descricao && <p className="text-[11px] text-gray-500 italic mt-1 line-clamp-2">{descricao}</p>}
+                                    {descricao && (
+                                        <p className="text-[11px] text-gray-500 italic mt-1 line-clamp-2">{descricao}</p>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
                                     {renderButtons({
                                         pessoa: estudante,
                                         msg: msgResp,
-                                        subject: subjectResp,
                                         msgKey: keyResp,
                                         corWa: 'bg-green-100 text-green-700 hover:bg-green-200',
+                                        emailPayload: emailPayloadResp
                                     })}
 
                                     {msgAjud && ajud && (
@@ -229,9 +414,9 @@ const RevisarEnviarNotificarTab = ({
                                             {renderButtons({
                                                 pessoa: ajud,
                                                 msg: msgAjud,
-                                                subject: subjectAjud,
                                                 msgKey: keyAjud,
                                                 corWa: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                                                emailPayload: emailPayloadAjud
                                             })}
                                         </div>
                                     )}
@@ -259,10 +444,9 @@ const RevisarEnviarNotificarTab = ({
                             tituloParte,
                             descricaoParte: descricao,
                             minutosParte: min,
-                            isVisita // <--- Passando flag de visita
+                            isVisita
                         });
 
-                        const subject = `${sem.semana} - ${tituloParte}`;
                         const msgKey = buildMsgKey({
                             dataISO,
                             semana: sem.semana,
@@ -271,14 +455,22 @@ const RevisarEnviarNotificarTab = ({
                             role: 'oracao',
                         });
 
+                        const emailPayload = {
+                            aluno: pessoa,
+                            ajudante: null,
+                            dataReuniaoFormatada,
+                            parteTitulo: tituloParte,
+                            sala: 'Principal'
+                        };
+
                         return renderCardPessoa({
                             tituloTopo: tituloTopoOverride || t.oracao,
                             pessoa,
                             msg,
-                            subject,
                             msgKey,
                             corWa: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
                             compact: true,
+                            emailPayload
                         });
                     };
 
@@ -292,6 +484,7 @@ const RevisarEnviarNotificarTab = ({
                         const min = (p?.tempo ?? '').toString().trim();
 
                         if (dirigente) {
+                            const tituloFinal = `${t.dirigente} - ${tituloBase}`;
                             const msg = montarMensagemDesignacao({
                                 t,
                                 lang,
@@ -300,13 +493,12 @@ const RevisarEnviarNotificarTab = ({
                                 dataISO,
                                 responsavelNome: dirigente.nome,
                                 ajudanteNome: '',
-                                tituloParte: `${t.dirigente} - ${tituloBase}`,
+                                tituloParte: tituloFinal,
                                 descricaoParte: descricao,
                                 minutosParte: min,
-                                isVisita // <--- Passando flag de visita
+                                isVisita
                             });
 
-                            const subject = `${sem.semana} - ${t.dirigente} - ${tituloBase}`;
                             const msgKey = buildMsgKey({
                                 dataISO,
                                 semana: sem.semana,
@@ -315,21 +507,30 @@ const RevisarEnviarNotificarTab = ({
                                 role: 'dirigente',
                             });
 
+                            const emailPayload = {
+                                aluno: dirigente,
+                                ajudante: null,
+                                dataReuniaoFormatada,
+                                parteTitulo: tituloFinal,
+                                sala: 'Principal'
+                            };
+
                             cards.push(
                                 <React.Fragment key={`dir-${p?.id || tituloBase}`}>
                                     {renderCardPessoa({
                                         tituloTopo: t.dirigente,
                                         pessoa: dirigente,
                                         msg,
-                                        subject,
                                         msgKey,
                                         corWa: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
+                                        emailPayload
                                     })}
                                 </React.Fragment>
                             );
                         }
 
                         if (leitor) {
+                            const tituloFinal = `${t.leitor} - ${tituloBase}`;
                             const msg = montarMensagemDesignacao({
                                 t,
                                 lang,
@@ -338,13 +539,12 @@ const RevisarEnviarNotificarTab = ({
                                 dataISO,
                                 responsavelNome: leitor.nome,
                                 ajudanteNome: '',
-                                tituloParte: `${t.leitor} - ${tituloBase}`,
+                                tituloParte: tituloFinal,
                                 descricaoParte: descricao,
                                 minutosParte: min,
-                                isVisita // <--- Passando flag de visita
+                                isVisita
                             });
 
-                            const subject = `${sem.semana} - ${t.leitor} - ${tituloBase}`;
                             const msgKey = buildMsgKey({
                                 dataISO,
                                 semana: sem.semana,
@@ -353,15 +553,23 @@ const RevisarEnviarNotificarTab = ({
                                 role: 'leitor',
                             });
 
+                            const emailPayload = {
+                                aluno: leitor,
+                                ajudante: null,
+                                dataReuniaoFormatada,
+                                parteTitulo: tituloFinal,
+                                sala: 'Principal'
+                            };
+
                             cards.push(
                                 <React.Fragment key={`lei-${p?.id || tituloBase}`}>
                                     {renderCardPessoa({
                                         tituloTopo: t.leitor,
                                         pessoa: leitor,
                                         msg,
-                                        subject,
                                         msgKey,
                                         corWa: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200',
+                                        emailPayload
                                     })}
                                 </React.Fragment>
                             );
@@ -392,7 +600,9 @@ const RevisarEnviarNotificarTab = ({
                                     <span className="text-[10px] font-black text-gray-500">{arr.length}</span>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{arr.map(renderParte)}</div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {arr.map(renderParte)}
+                                </div>
                             </div>
                         );
                     };
@@ -402,7 +612,6 @@ const RevisarEnviarNotificarTab = ({
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b pb-3 mb-4">
                                 <h4 className="font-black text-blue-900 uppercase text-xs tracking-wider flex items-center gap-2">
                                     {sem.semana}
-                                    {/* --- BADGE VISITA SC (NOTIFICAÇÃO) --- */}
                                     {isVisita && (
                                         <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded border border-blue-700">
                                             VISITA SC
@@ -410,11 +619,10 @@ const RevisarEnviarNotificarTab = ({
                                     )}
                                 </h4>
                                 <div className="text-[11px] text-gray-500 font-bold">
-                                    {config?.nome_cong} | {horarioExib} | {formatarDataFolha(dataISO, lang)} {isVisita && "(Terça-feira)"}
+                                    {config?.nome_cong} | {horarioExib} | {dataReuniaoFormatada} {isVisita && "(Terça-feira)"}
                                 </div>
                             </div>
 
-                            {/* Abertura: Presidente + Oração inicial */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                                 {sem?.presidente &&
                                     (() => {
@@ -431,10 +639,9 @@ const RevisarEnviarNotificarTab = ({
                                             tituloParte,
                                             descricaoParte: '',
                                             minutosParte: '',
-                                            isVisita // <--- Passando flag de visita
+                                            isVisita
                                         });
 
-                                        const subject = `${sem.semana} - ${tituloParte}`;
                                         const msgKey = buildMsgKey({
                                             dataISO,
                                             semana: sem.semana,
@@ -443,13 +650,21 @@ const RevisarEnviarNotificarTab = ({
                                             role: 'presidente',
                                         });
 
+                                        const emailPayload = {
+                                            aluno: sem.presidente,
+                                            ajudante: null,
+                                            dataReuniaoFormatada,
+                                            parteTitulo: tituloParte,
+                                            sala: 'Principal'
+                                        };
+
                                         return renderCardPessoa({
                                             tituloTopo: t.presidente,
                                             pessoa: sem.presidente,
                                             msg,
-                                            subject,
                                             msgKey,
                                             corWa: 'bg-green-100 text-green-700 hover:bg-green-200',
+                                            emailPayload
                                         });
                                     })()}
 
@@ -467,19 +682,22 @@ const RevisarEnviarNotificarTab = ({
                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Outros</span>
                                             <span className="text-[10px] font-black text-gray-500">{grupos.outros.length}</span>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{grupos.outros.map(renderParte)}</div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {grupos.outros.map(renderParte)}
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Encerramento: Oração final (se existir e não duplicar a inicial) */}
                             {oracaoFinal && oracaoFinal !== oracaoInicial && (
                                 <div className="rounded-2xl border p-4 bg-white mt-4">
                                     <div className="flex items-center justify-between mb-3">
                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Encerramento</span>
                                         <span className="text-[10px] font-black text-gray-500">1</span>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{renderOracao(oracaoFinal, `${t.oracao} (final)`)}</div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {renderOracao(oracaoFinal, `${t.oracao} (final)`)}
+                                    </div>
                                 </div>
                             )}
                         </div>

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
     Calendar, Users, CheckCircle, AlertTriangle,
     ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info,
-    UserCheck, UserX, User, Medal, BookHeart, Archive
+    UserCheck, UserX, User, Medal, BookHeart, Archive, HeartPulse, ThumbsUp, AlertCircle
 } from 'lucide-react';
 
 export default function Dashboard({
@@ -13,7 +13,6 @@ export default function Dashboard({
     onDefinirEvento,
     t
 }) {
-
     const [dataEvento, setDataEvento] = useState('');
     const [tipoEvento, setTipoEvento] = useState('visita');
 
@@ -32,7 +31,15 @@ export default function Dashboard({
             anciaos: "Anciãos",
             servos: "Servos",
             irmas: "Irmãs",
-            passado: "Concluído"
+            passado: "Concluído",
+            saudeTitulo: "Saúde da Congregação",
+            rodizio: "Engajamento (90 dias)",
+            rodizioSub: "dos alunos ativos com partes",
+            atencao: "Precisam de Atenção",
+            atencaoSub: "Sem designação há mais de 4 meses",
+            nunca: "Nunca designado",
+            dias: "dias",
+            tudoEmDia: "Excelente! Nenhum aluno esquecido."
         },
         es: {
             alunosTitulo: "Resumen de Estudiantes",
@@ -43,42 +50,43 @@ export default function Dashboard({
             anciaos: "Ancianos",
             servos: "Siervos",
             irmas: "Hermanas",
-            passado: "Concluido"
+            passado: "Concluido",
+            saudeTitulo: "Salud de la Congregación",
+            rodizio: "Participación (90 días)",
+            rodizioSub: "de los activos con asignaciones",
+            atencao: "Necesitan Atención",
+            atencaoSub: "Sin asignación por más de 4 meses",
+            nunca: "Nunca asignado",
+            dias: "días",
+            tudoEmDia: "¡Excelente! Ningún estudiante olvidado."
         }
     }[lang];
 
-    // --- ESTATÍSTICAS ---
+    // --- ESTATÍSTICAS E PAINEL DE SAÚDE ---
     const stats = useMemo(() => {
-        // Data de hoje zerada (00:00:00)
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
 
-        // Data limite (30 dias atrás) para exibir histórico recente
         const dataLimitePassado = new Date(hoje);
         dataLimitePassado.setDate(hoje.getDate() - 30);
 
-        // 1. Próxima Reunião (Lógica original mantida para o card principal)
+        // 1. Próxima Reunião
         const ativas = listaProgramacoes
             .filter(s => !s.arquivada)
             .sort((a, b) => new Date(a.dataReuniao) - new Date(b.dataReuniao));
 
         const proxima = ativas.find(s => {
-            // Corrige fuso horário para comparação da próxima reunião
             const [ano, mes, dia] = s.dataReuniao.split('-').map(Number);
             const dataReuniao = new Date(ano, mes - 1, dia);
             return dataReuniao >= hoje;
         }) || ativas[0];
 
-        // 2. Eventos Agendados (COM A NOVA LÓGICA)
+        // 2. Eventos Agendados
         const eventosAgendados = (config?.eventosAnuais || [])
             .map(ev => {
-                // Converter string 'YYYY-MM-DD' para Objeto Date Local
                 const [ano, mes, dia] = ev.dataInicio.split('-').map(Number);
                 const dataInicioObj = new Date(ano, mes - 1, dia);
 
-                // Calcular fim da semana (Domingo)
-                // Assumindo que dataInicio é geralmente segunda ou terça. 
-                // Adicionamos 6 dias para garantir que cobrimos a semana toda.
                 const fimDaSemana = new Date(dataInicioObj);
                 fimDaSemana.setDate(dataInicioObj.getDate() + 6);
 
@@ -86,14 +94,13 @@ export default function Dashboard({
                     ...ev,
                     dataObjeto: dataInicioObj,
                     fimDaSemana: fimDaSemana,
-                    isPassado: hoje > fimDaSemana // True se hoje for segunda-feira da próxima semana
+                    isPassado: hoje > fimDaSemana
                 };
             })
-            // Filtra: Futuros OU Passados há menos de 30 dias
             .filter(ev => ev.dataObjeto >= dataLimitePassado)
             .sort((a, b) => a.dataObjeto - b.dataObjeto);
 
-        // 3. Pendências (Lógica original)
+        // 3. Pendências
         let partesTotais = 0;
         let partesPreenchidas = 0;
         const isSemReuniao = proxima?.evento && proxima.evento !== 'visita' && proxima.evento !== 'normal';
@@ -110,20 +117,56 @@ export default function Dashboard({
         const pendentes = partesTotais - partesPreenchidas;
         const progresso = partesTotais > 0 ? (partesPreenchidas / partesTotais) * 100 : (isSemReuniao ? 100 : 0);
 
-        // 4. Estatísticas de Alunos (Lógica original)
+        // 4. Estatísticas de Alunos & SAÚDE DA CONGREGAÇÃO
         const totalAlunos = alunos.length;
-        const ativos = alunos.filter(a => a.tipo !== 'desab');
-        const totalAtivos = ativos.length;
+        const ativosAlunos = alunos.filter(a => a.tipo !== 'desab');
+        const totalAtivos = ativosAlunos.length;
         const totalDesabilitados = totalAlunos - totalAtivos;
 
-        const countAnciaos = ativos.filter(a => a.tipo === 'anciao').length;
-        const countServos = ativos.filter(a => a.tipo === 'servo').length;
-        const countIrmas = ativos.filter(a => ['irma', 'irma_exp', 'irma_lim'].includes(a.tipo)).length;
+        const countAnciaos = ativosAlunos.filter(a => a.tipo === 'anciao').length;
+        const countServos = ativosAlunos.filter(a => a.tipo === 'servo').length;
+        const countIrmas = ativosAlunos.filter(a => ['irma', 'irma_exp', 'irma_lim'].includes(a.tipo)).length;
+
+        // Cálculos do Painel de Saúde
+        const hojeTs = new Date().getTime();
+        const trimestresTs = hojeTs - (90 * 24 * 60 * 60 * 1000); // 90 dias
+        const quatroMesesTs = hojeTs - (120 * 24 * 60 * 60 * 1000); // 120 dias
+
+        let usadosNoTrimestre = 0;
+        const precisandoAtencao = [];
+
+        ativosAlunos.forEach(aluno => {
+            if (!aluno.historico || aluno.historico.length === 0) {
+                precisandoAtencao.push({ ...aluno, dias: null });
+                return;
+            }
+
+            const sortedHist = [...aluno.historico].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+            const ultimaDataTs = new Date(sortedHist[0].data).getTime();
+
+            if (ultimaDataTs >= trimestresTs) {
+                usadosNoTrimestre++;
+            }
+
+            if (ultimaDataTs < quatroMesesTs) {
+                const diffTime = Math.abs(hojeTs - ultimaDataTs);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                precisandoAtencao.push({ ...aluno, dias: diffDays });
+            }
+        });
+
+        // Ordena a lista de esquecidos: os que NUNCA tiveram parte ou há mais tempo
+        precisandoAtencao.sort((a, b) => {
+            if (a.dias === null) return -1;
+            if (b.dias === null) return 1;
+            return b.dias - a.dias;
+        });
 
         return {
             proxima, ativas, pendentes, progresso, eventosAgendados,
             totalAlunos, totalAtivos, totalDesabilitados,
-            countAnciaos, countServos, countIrmas
+            countAnciaos, countServos, countIrmas,
+            usadosNoTrimestre, precisandoAtencao
         };
     }, [listaProgramacoes, alunos, config?.eventosAnuais]);
 
@@ -145,9 +188,7 @@ export default function Dashboard({
     };
 
     const getCorEvento = (tipo, isPassado) => {
-        // Se for passado, retorna cinza
         if (isPassado) return 'bg-gray-100 text-gray-500 border-gray-200 grayscale';
-
         if (tipo === 'visita') return 'bg-blue-100 text-blue-700 border-blue-200';
         if (tipo === 'congresso') return 'bg-purple-100 text-purple-700 border-purple-200';
         return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -157,6 +198,29 @@ export default function Dashboard({
         if (tipoEvento === 'visita') return txt.eventos.helpVisita;
         if (tipoEvento === 'congresso') return txt.eventos.helpCongresso;
         return txt.eventos.helpAssembleia;
+    };
+
+    // Helper SVG para o círculo de progresso
+    const ProgressRing = ({ percentage }) => {
+        const radius = 28;
+        const circumference = 2 * Math.PI * radius;
+        const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+        return (
+            <div className="relative flex items-center justify-center">
+                <svg width="70" height="70" className="transform -rotate-90">
+                    <circle cx="35" cy="35" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className="text-green-100" />
+                    <circle
+                        cx="35" cy="35" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent"
+                        strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+                        className="text-green-500 transition-all duration-1000 ease-out drop-shadow-sm"
+                    />
+                </svg>
+                <div className="absolute flex flex-col items-center justify-center inset-0">
+                    <span className="text-sm font-black text-green-700">{percentage}%</span>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -176,7 +240,7 @@ export default function Dashboard({
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* COLUNA ESQUERDA (Principal) */}
+                {/* COLUNA ESQUERDA (Principal & Saúde) */}
                 <div className="lg:col-span-2 space-y-6">
                     {stats.proxima ? (
                         <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
@@ -240,6 +304,64 @@ export default function Dashboard({
                             <button onClick={() => setAbaAtiva('importar')} className="bg-blue-600 text-white px-4 py-2 rounded-lg">{txt.importar}</button>
                         </div>
                     )}
+
+                    {/* --- NOVO: PAINEL DE SAÚDE DA CONGREGAÇÃO --- */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                        <div className="flex items-center gap-2 mb-4 text-rose-600 font-bold border-b border-gray-50 pb-3">
+                            <HeartPulse size={18} />
+                            <span>{localTxt.saudeTitulo}</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                            {/* Gráfico de Rodízio */}
+                            <div className="flex items-center gap-4 bg-green-50/50 border border-green-100 p-4 rounded-xl">
+                                <ProgressRing percentage={stats.totalAtivos > 0 ? Math.round((stats.usadosNoTrimestre / stats.totalAtivos) * 100) : 0} />
+                                <div>
+                                    <h4 className="font-bold text-green-900 text-sm">{localTxt.rodizio}</h4>
+                                    <p className="text-[11px] text-green-700 mt-0.5 leading-tight">{localTxt.rodizioSub}</p>
+                                </div>
+                            </div>
+
+                            {/* Lista de Alunos precisando de atenção */}
+                            <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl flex flex-col h-full">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <h4 className="font-bold text-red-900 text-sm flex items-center gap-1.5">
+                                            <AlertCircle size={14} className="text-red-600" /> {localTxt.atencao}
+                                        </h4>
+                                        <p className="text-[10px] text-red-700 mt-0.5">{localTxt.atencaoSub}</p>
+                                    </div>
+                                    <span className="bg-red-200 text-red-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                                        {stats.precisandoAtencao.length}
+                                    </span>
+                                </div>
+
+                                {stats.precisandoAtencao.length === 0 ? (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center p-2 text-green-600">
+                                        <ThumbsUp size={24} className="mb-2 opacity-50" />
+                                        <p className="text-xs font-medium">{localTxt.tudoEmDia}</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {stats.precisandoAtencao.slice(0, 3).map(aluno => (
+                                            <div key={aluno.id} className="flex justify-between items-center text-xs p-2 bg-white rounded border border-red-100 shadow-sm">
+                                                <span className="font-bold text-red-900 truncate max-w-[120px]">{aluno.nome}</span>
+                                                <span className="text-[9px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-bold whitespace-nowrap border border-red-100">
+                                                    {aluno.dias === null ? localTxt.nunca : `${aluno.dias} ${localTxt.dias}`}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {stats.precisandoAtencao.length > 3 && (
+                                            <button onClick={() => setAbaAtiva('alunos')} className="w-full text-center text-[10px] text-red-500 font-bold hover:text-red-700 pt-1">
+                                                + {stats.precisandoAtencao.length - 3} outros...
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
                     {/* LISTA DE PRÓXIMOS EVENTOS */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

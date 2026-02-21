@@ -7,7 +7,10 @@ const SidebarAlunos = ({
     ordemCrescente, setOrdemCrescente, filtroGenero, handleMudarGenero,
     cargosMap, filtrosTiposAtivos, toggleFiltroTipo, lang,
     atribuirAluno, calcularDiasDesdeUltimaParte, getHistoricoRecente,
-    isAlunoDuplicadoBySemanaKey, getSemanaKeyByFilteredIndex, getSemanaIndexContexto, getCargoInfo
+    isAlunoDuplicadoBySemanaKey, getSemanaKeyByFilteredIndex, getSemanaIndexContexto, getCargoInfo,
+
+    // NOVAS PROPS AQUI:
+    setDraggedAluno, semanasSelecionadas
 }) => {
     return (
         <div className="lg:w-80 shrink-0 w-full lg:sticky lg:top-20 self-start">
@@ -34,7 +37,7 @@ const SidebarAlunos = ({
 
                 {!slotAtivo ? (
                     <div className="px-4 py-2 bg-blue-50 text-blue-800 text-[11px] font-semibold border-b border-blue-100 shrink-0">
-                        {TT.selecioneCampo}
+                        {TT.selecioneCampo} ou arraste o aluno
                     </div>
                 ) : (
                     <div className="px-3 pt-3 pb-2 border-b border-gray-200 bg-gray-50 shrink-0">
@@ -44,7 +47,7 @@ const SidebarAlunos = ({
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                atribuirAluno(null); // Limpa o campo designado
+                                atribuirAluno(null);
                             }}
                             className="w-full py-2 px-4 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-100 transition flex items-center justify-center gap-2 shadow-sm"
                         >
@@ -112,41 +115,66 @@ const SidebarAlunos = ({
                         alunosFiltrados.map((aluno) => {
                             const semanaIdxFiltrado = getSemanaIndexContexto();
                             const semanaKey = getSemanaKeyByFilteredIndex(semanaIdxFiltrado);
-                            const ja = semanaKey ? isAlunoDuplicadoBySemanaKey(aluno?.id, semanaKey) : false;
+
+                            // LÓGICA DE DUPLICIDADE EM MÚLTIPLAS SEMANAS
+                            let duplicadoMesmaSemana = false;
+                            let duplicadoOutraSemana = false;
+
+                            if (semanaKey && isAlunoDuplicadoBySemanaKey(aluno?.id, semanaKey)) {
+                                duplicadoMesmaSemana = true;
+                            }
+
+                            if (semanasSelecionadas) {
+                                const chavesAtivas = Object.keys(semanasSelecionadas).filter(k => semanasSelecionadas[k] && k !== semanaKey);
+                                for (const k of chavesAtivas) {
+                                    if (isAlunoDuplicadoBySemanaKey(aluno?.id, k)) {
+                                        duplicadoOutraSemana = true;
+                                        break;
+                                    }
+                                }
+                            }
+
                             const dias = calcularDiasDesdeUltimaParte(aluno);
                             const historicoRecente = getHistoricoRecente(aluno, 6);
                             const cargoKey = aluno?.tipo;
                             const cargoInfo = getCargoInfo(cargoKey);
                             const podeClicar = !!slotAtivo;
 
+                            // Definindo as cores com base no status do aluno
+                            let borderColor = "border-gray-200";
+                            if (duplicadoMesmaSemana) borderColor = "border-red-300";
+                            else if (duplicadoOutraSemana) borderColor = "border-orange-300";
+
                             return (
                                 <button
                                     key={aluno?.id || aluno?.nome}
                                     type="button"
-                                    onMouseDown={(e) => e.preventDefault()}
+                                    draggable={true} // Habilita o Drag and Drop
+                                    onDragStart={() => setDraggedAluno && setDraggedAluno(aluno)}
+                                    onDragEnd={() => setDraggedAluno && setDraggedAluno(null)}
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
                                         if (!podeClicar) return;
-                                        if (ja) {
-                                            const ok = window.confirm(TT.confirmarDuplicado);
+                                        if (duplicadoMesmaSemana) {
+                                            const ok = window.confirm(TT.confirmarDuplicado || "Já designado nesta semana. Usar mesmo assim?");
                                             if (!ok) return;
                                         }
                                         atribuirAluno(aluno);
                                     }}
-                                    disabled={!podeClicar}
                                     className={[
                                         "w-full text-left p-2.5 rounded-xl border transition relative group shadow-sm flex flex-col gap-1",
-                                        podeClicar ? "bg-white hover:shadow-md hover:border-blue-200" : "bg-gray-50 cursor-not-allowed",
-                                        ja ? "border-amber-200" : "border-gray-200"
+                                        "cursor-grab active:cursor-grabbing bg-white hover:shadow-md hover:border-blue-300",
+                                        borderColor
                                     ].join(" ")}
-                                    title={!slotAtivo ? TT.selecioneCampo : ja ? TT.duplicadoTooltip : TT.cliquePara}
+                                    title={duplicadoMesmaSemana ? "Duplicado na MESMA semana" : duplicadoOutraSemana ? "Já tem parte em outra semana selecionada no mês" : TT.cliquePara}
                                 >
                                     <div className="flex items-start justify-between gap-2 w-full">
                                         <div className="min-w-0">
                                             <div className="font-bold text-xs text-gray-800 truncate flex items-center gap-1.5">
                                                 <span className="truncate">{aluno?.nome || TT.semNome}</span>
-                                                {ja && <AlertTriangle size={12} className="text-amber-600 shrink-0" />}
+                                                {duplicadoMesmaSemana && <AlertTriangle size={12} className="text-red-500 shrink-0" />}
+                                                {!duplicadoMesmaSemana && duplicadoOutraSemana && <AlertTriangle size={12} className="text-orange-500 shrink-0" />}
                                             </div>
                                         </div>
 
@@ -165,6 +193,22 @@ const SidebarAlunos = ({
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Exibição das Badges de Conflito */}
+                                    {(duplicadoMesmaSemana || duplicadoOutraSemana) && (
+                                        <div className="flex gap-1 mt-0.5">
+                                            {duplicadoMesmaSemana && (
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 inline-flex items-center gap-0.5">
+                                                    <AlertTriangle size={10} /> Nesta Semana
+                                                </span>
+                                            )}
+                                            {!duplicadoMesmaSemana && duplicadoOutraSemana && (
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 inline-flex items-center gap-0.5">
+                                                    <AlertTriangle size={10} /> Outra Semana (Mês)
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {!!aluno?.observacoes && (
                                         <div className="bg-yellow-50 border border-yellow-100 rounded px-1.5 py-1 text-[10px] text-yellow-800 leading-tight italic w-full">
@@ -185,8 +229,6 @@ const SidebarAlunos = ({
                                             ))}
                                         </div>
                                     )}
-
-                                    {!slotAtivo && <div className="absolute inset-0 rounded-xl bg-white/40" />}
                                     <div className="absolute inset-y-0 right-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-xl" />
                                 </button>
                             );

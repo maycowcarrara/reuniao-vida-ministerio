@@ -19,7 +19,7 @@ const T_FALLBACK = {
     pt: {
         semana: "Semana", presidente: "Presidente", dirigente: "Dirigente", leitor: "Leitor",
         estudante: "Estudante", ajudante: "Ajudante", oracao: "Oração", cliquePara: "Clique para designar",
-        selecioneCampo: "Selecione um campo para designar", designado: "Designando", alunos: "Alunos",
+        selecioneCampo: "Selecione um campo", designado: "Designando", alunos: "Alunos",
         registros: "registros", editarParte: "Editar parte", salvar: "Salvar", cancelar: "Cancelar",
         minutos: "Minutos", ordem: { nome: "Nome", dias: "Tempo" }, info: { nunca: "Nunca" },
         filtroAtivas: "Ativas", filtroArquivadas: "Arquivadas", filtroTodas: "Todas", arquivada: "Arquivada",
@@ -69,6 +69,10 @@ const Designar = ({
         aberto: false, semanaIndex: null, parteId: null, key: null
     });
 
+    // --- ESTADOS DO DRAG AND DROP ---
+    const [draggedAluno, setDraggedAluno] = useState(null);
+    const [dragOverSlot, setDragOverSlot] = useState(null);
+
     const TT = useMemo(() => {
         const base = T_FALLBACK?.[lang] || T_FALLBACK.pt;
         return { ...base, ...t, ordem: { ...(base?.ordem || {}), ...(t?.ordem || {}) }, info: { ...(base?.info || {}), ...(t?.info || {}) } };
@@ -79,7 +83,6 @@ const Designar = ({
 
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
 
-    // --- ORDENAÇÃO ROBUSTA POR DATA ---
     const getSortTime = (sem) => {
         const iso = sem?.dataReuniao || sem?.dataInicio || sem?.data || null;
         if (iso) {
@@ -100,10 +103,8 @@ const Designar = ({
         setListaProgramacoes(prev => normalizeAndSortProgramacoes(typeof updater === 'function' ? updater(prev) : updater));
     };
 
-    // Garante que a lista filtrada esteja sempre perfeitamente ordenada
     const listaFiltradaPorFlag = useMemo(() => {
         const lista = Array.isArray(listaProgramacoes) ? [...listaProgramacoes] : [];
-
         lista.sort((a, b) => {
             const timeA = getSortTime(a);
             const timeB = getSortTime(b);
@@ -125,7 +126,6 @@ const Designar = ({
     const getSemanaRealIndexFromFilteredIndex = (idxFiltrado) => getSemanaRealIndexByKey(getSemanaKeyByFilteredIndex(idxFiltrado));
     const getSemanaIndexContexto = () => Number.isInteger(slotAtivo?.semanaIndex) ? slotAtivo.semanaIndex : semanaAtivaIndex;
 
-    // --- AUTO SELEÇÃO E CONTROLE DE FILTROS ---
     useEffect(() => {
         if (!Array.isArray(listaFiltradaPorFlag) || listaFiltradaPorFlag.length === 0) return;
 
@@ -133,7 +133,6 @@ const Designar = ({
             const keysVisiveis = new Set(listaFiltradaPorFlag.map((s, i) => getSemanaKey(s, i)));
             const hasAnyVisibleSelected = Object.keys(prev).some(k => keysVisiveis.has(k) && prev[k]);
 
-            // Se não houver nada selecionado e o usuário não limpou propositalmente, seleciona todas.
             if (!userClearedWeeksRef.current && !hasAnyVisibleSelected) {
                 const next = { ...prev };
                 listaFiltradaPorFlag.forEach((sem, idx) => { next[getSemanaKey(sem, idx)] = true; });
@@ -147,12 +146,11 @@ const Designar = ({
         return (listaFiltradaPorFlag || []).map((sem, idx) => ({ sem, idx, key: getSemanaKey(sem, idx) })).filter(({ key }) => !!semanasSelecionadas[key]);
     }, [listaFiltradaPorFlag, semanasSelecionadas]);
 
-    // Mudar aba de filtro (Resolve a tela em branco)
     const mudarFiltro = (novoFiltro) => {
         setFiltroSemanas(novoFiltro);
-        userClearedWeeksRef.current = false; // Permite auto-selecionar novamente
+        userClearedWeeksRef.current = false;
         setSemanaAtivaIndex(0);
-        setSemanasSelecionadas({}); // Zera a seleção atual para a nova aba carregar preenchida
+        setSemanasSelecionadas({});
     };
 
     const totalSelecionadas = Object.values(semanasSelecionadas).filter(Boolean).length;
@@ -230,7 +228,6 @@ const Designar = ({
         setListaProgramacoesSafe(prev => prev.map((s, idx) => getSemanaKey(s, idx) === semanaKey ? { ...s, arquivada: arquivar, arquivadaEm: arquivar ? new Date().toISOString() : null } : s));
     };
 
-    // --- Helpers de Histórico ---
     const getUltimoRegistro = (aluno) => {
         if (!aluno?.historico || aluno.historico.length === 0) return { data: null };
         const ordenado = [...aluno.historico].sort((a, b) => new Date(b?.data || 0).getTime() - new Date(a?.data || 0).getTime());
@@ -276,38 +273,38 @@ const Designar = ({
         });
     }, [alunos, cargosMap, filtroGenero, termoBusca, filtrosTiposAtivos, ordenacaoChave, ordemCrescente, lang]);
 
-    // --- Ações de Designação ---
-    const atribuirAluno = (aluno) => {
-        if (!slotAtivo) return;
-        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(getSemanaIndexContexto());
+    // --- ATUALIZADO: ATRIBUIR ALUNO (SUPORTA DRAG & DROP E CLIQUE) ---
+    const atribuirAluno = (aluno, targetSlot = slotAtivo) => {
+        if (!targetSlot) return;
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(targetSlot.semanaIndex) ? targetSlot.semanaIndex : semanaAtivaIndex);
         if (semanaRealIndex === -1) return;
 
         setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const semana = { ...lista[semanaRealIndex], partes: [...(lista[semanaRealIndex].partes || [])] };
 
-            if (slotAtivo.key === 'presidente') semana.presidente = aluno;
+            if (targetSlot.key === 'presidente') semana.presidente = aluno;
             else {
-                const idxParte = semana.partes.findIndex(p => p.id === slotAtivo.parteId);
-                if (idxParte !== -1) semana.partes[idxParte] = { ...semana.partes[idxParte], [slotAtivo.key]: aluno };
+                const idxParte = semana.partes.findIndex(p => p.id === targetSlot.parteId);
+                if (idxParte !== -1) semana.partes[idxParte] = { ...semana.partes[idxParte], [targetSlot.key]: aluno };
             }
             lista[semanaRealIndex] = semana;
             return lista;
         });
 
-        setTimeout(() => setSlotAtivo(null), 10);
+        // Se a designação veio por clique (usando slotAtivo), limpa o ativo. 
+        // Se veio por Drag&Drop, o slotAtivo já não interferia.
+        if (targetSlot === slotAtivo) {
+            setTimeout(() => setSlotAtivo(null), 10);
+        }
     };
 
     const aplicarSugestao = (aluno) => {
         const { semanaIndex, key, parteId } = modalSugestao;
-        const oldSlot = slotAtivo;
-        setSlotAtivo({ key, parteId, semanaIndex });
-        atribuirAluno(aluno);
-        setSlotAtivo(oldSlot);
+        atribuirAluno(aluno, { key, parteId, semanaIndex });
         setModalSugestao({ ...modalSugestao, aberto: false });
     };
 
-    // --- Ações de Edição de Partes ---
     const atualizarParteNaSemanaRealIndex = (semanaRealIndex, parteId, patch) => {
         setListaProgramacoesSafe(prev => {
             const lista = [...prev];
@@ -365,18 +362,52 @@ const Designar = ({
         if (slotAtivo?.parteId === parteId) setSlotAtivo(null);
     };
 
-    // --- Renderização de Partes ---
-    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, activeClass, idleClass, barActiveClass, onSuggest }) => {
+    // --- RENDERIZAÇÃO DE BOTÕES COM DRAG & DROP E LAYOUT COMPACTO ---
+    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, activeClass, idleClass, barActiveClass, onSuggest, slotCtx }) => {
         const isEmpty = !value;
+        const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
+
         return (
-            <div className="relative w-full group/slot">
-                <button type="button" onClick={onClick} className={`w-full p-3 rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isEmpty ? "border-dashed" : ""} ${active ? activeClass : idleClass}`} title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}>
-                    <span className="text-[10px] font-black uppercase text-gray-400 block mb-1">{label}</span>
-                    {value ? <p className="font-bold text-sm text-gray-800 truncate">{value.nome}</p> : <p className="text-xs text-gray-400 italic flex items-center gap-1"><UserPlus size={14} className="opacity-60" /> {emptyText || hint || TT.cliquePara}</p>}
-                    <div className={`absolute inset-y-0 right-0 w-1 rounded-r-lg transition-opacity ${active ? barActiveClass : "bg-transparent"}`} />
+            <div
+                className="relative w-full group/slot"
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    if (draggedAluno && slotCtx && (!dragOverSlot || dragOverSlot.key !== slotCtx.key || dragOverSlot.parteId !== slotCtx.parteId)) {
+                        setDragOverSlot(slotCtx);
+                    }
+                }}
+                onDragLeave={(e) => {
+                    e.preventDefault();
+                    if (!e.currentTarget.contains(e.relatedTarget)) setDragOverSlot(null);
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverSlot(null);
+                    if (draggedAluno && slotCtx) atribuirAluno(draggedAluno, slotCtx);
+                }}
+            >
+                <button
+                    type="button"
+                    onClick={onClick}
+                    className={`w-full py-2 px-3 rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isEmpty ? "border-dashed" : ""} ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : (active ? activeClass : idleClass)}`}
+                    title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
+                >
+                    <div className="flex flex-row items-center justify-between gap-2">
+                        <span className="text-[10px] font-black uppercase text-gray-400 shrink-0 w-20">{label}</span>
+                        {value ? (
+                            <p className="font-bold text-[13px] text-gray-800 truncate text-right flex-1">{value.nome}</p>
+                        ) : (
+                            <p className="text-[11px] text-gray-400 italic flex items-center justify-end gap-1 flex-1">
+                                <UserPlus size={12} className="opacity-60" /> {emptyText || hint || TT.cliquePara}
+                            </p>
+                        )}
+                    </div>
+                    <div className={`absolute inset-y-0 right-0 w-1 rounded-r-lg transition-opacity ${active || isHoveredByDrag ? barActiveClass : "bg-transparent"}`} />
                 </button>
                 {onSuggest && (
-                    <button type="button" onClick={onSuggest} className="absolute top-1 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100" title="Sugestão Inteligente"><Lightbulb size={14} /></button>
+                    <button type="button" onClick={onSuggest} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100" title="Sugestão Inteligente">
+                        <Lightbulb size={12} />
+                    </button>
                 )}
             </div>
         );
@@ -389,41 +420,42 @@ const Designar = ({
 
         return (
             <div key={parte.id} className="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all">
-                <div className={`${headerClass} px-4 py-2 flex justify-between items-start gap-3`}>
+                {/* Cabeçalho mais compacto (px-3 py-1.5) */}
+                <div className={`${headerClass} px-3 py-1.5 flex justify-between items-center gap-3`}>
                     <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm break-words">{parte.titulo}</p>
-                        {!!parte.descricao && <p className={`text-xs mt-1 line-clamp-1 ${isLinhaInicialFinal(parte) ? 'text-gray-600 opacity-80' : ''}`}>{parte.descricao}</p>}
+                        <p className="font-bold text-sm truncate">{parte.titulo}</p>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                        <button type="button" onClick={() => abrirModalEditarParte(parte, semanaIndexFiltrado)} className={`p-1.5 rounded-lg border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-gray-700 hover:bg-gray-50" : "border-white/20 bg-white/10 text-white hover:bg-white/20"}`} title={TT.editarParte}><Edit2 size={14} /></button>
-                        <button type="button" onClick={() => handleExcluirParte(parte.id, semanaIndexFiltrado)} className={`p-1.5 rounded-lg border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-red-500 hover:bg-red-50" : "border-white/20 bg-white/10 text-white hover:bg-red-500 hover:border-red-500"}`} title={TT.excluirParte}><Trash2 size={14} /></button>
-                        {typeof parte.tempo !== 'undefined' && <span className={`ml-1 px-2 py-1 rounded text-xs font-bold ${isLinhaInicialFinal(parte) ? "bg-white text-gray-700 border border-gray-300" : "bg-white/20 text-white"}`}>{parte.tempo} min</span>}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {typeof parte.tempo !== 'undefined' && <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLinhaInicialFinal(parte) ? "bg-white text-gray-700 border border-gray-300" : "bg-white/20 text-white"}`}>{parte.tempo} min</span>}
+                        <button type="button" onClick={() => abrirModalEditarParte(parte, semanaIndexFiltrado)} className={`p-1 rounded border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-gray-700 hover:bg-gray-50" : "border-white/20 bg-white/10 text-white hover:bg-white/20"}`} title={TT.editarParte}><Edit2 size={12} /></button>
+                        <button type="button" onClick={() => handleExcluirParte(parte.id, semanaIndexFiltrado)} className={`p-1 rounded border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-red-500 hover:bg-red-50" : "border-white/20 bg-white/10 text-white hover:bg-red-500 hover:border-red-500"}`} title={TT.excluirParte}><Trash2 size={12} /></button>
                     </div>
                 </div>
 
                 {isCantico ? (
-                    <div className="p-3 text-xs text-center text-gray-400 italic bg-gray-50 border-t border-gray-100">
+                    <div className="p-2 text-[11px] text-center text-gray-400 italic bg-gray-50 border-t border-gray-100">
                         Nenhuma designação necessária
                     </div>
                 ) : isLinhaInicialFinal(parte) ? (
-                    <div className="p-3">
+                    <div className="p-2">
                         {renderSlotButton({
                             label: TT.oracao, value: parte.oracao || null,
                             onClick: () => setSlotAtivo({ key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado }),
                             active: slotAtivo?.key === 'oracao' && slotAtivo?.parteId === parte.id,
                             activeClass: 'border-blue-500 bg-blue-50 ring-2 ring-blue-100', idleClass: 'border-gray-200 hover:border-blue-300', barActiveClass: 'bg-blue-500',
-                            onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'oracao', parteId: parte.id }); }
+                            onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'oracao', parteId: parte.id }); },
+                            slotCtx: { key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado }
                         })}
                     </div>
                 ) : isEstudoBiblicoCongregacao(parte) ? (
-                    <div className="p-3 grid grid-cols-2 gap-2">
-                        {renderSlotButton({ label: TT.dirigente, value: parte.dirigente, onClick: () => setSlotAtivo({ key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'dirigente' && slotAtivo?.parteId === parte.id, activeClass: 'border-purple-500 bg-purple-50 ring-2 ring-purple-100', idleClass: 'border-gray-200 hover:border-purple-300', barActiveClass: 'bg-purple-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'dirigente', parteId: parte.id }); } })}
-                        {renderSlotButton({ label: TT.leitor, value: parte.leitor, onClick: () => setSlotAtivo({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'leitor' && slotAtivo?.parteId === parte.id, activeClass: 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100', idleClass: 'border-gray-200 hover:border-indigo-300', barActiveClass: 'bg-indigo-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'leitor', parteId: parte.id }); } })}
+                    <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                        {renderSlotButton({ label: TT.dirigente, value: parte.dirigente, onClick: () => setSlotAtivo({ key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'dirigente' && slotAtivo?.parteId === parte.id, activeClass: 'border-purple-500 bg-purple-50 ring-2 ring-purple-100', idleClass: 'border-gray-200 hover:border-purple-300', barActiveClass: 'bg-purple-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'dirigente', parteId: parte.id }); }, slotCtx: { key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {renderSlotButton({ label: TT.leitor, value: parte.leitor, onClick: () => setSlotAtivo({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'leitor' && slotAtivo?.parteId === parte.id, activeClass: 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100', idleClass: 'border-gray-200 hover:border-indigo-300', barActiveClass: 'bg-indigo-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'leitor', parteId: parte.id }); }, slotCtx: { key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
                     </div>
                 ) : (
-                    <div className={`p-3 grid gap-2 ${secKey === 'ministerio' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                        {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, activeClass: 'border-green-500 bg-green-50 ring-2 ring-green-100', idleClass: 'border-gray-200 hover:border-green-300', barActiveClass: 'bg-green-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); } })}
-                        {secKey === 'ministerio' && renderSlotButton({ label: TT.ajudante, value: parte.ajudante, onClick: () => setSlotAtivo({ key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'ajudante' && slotAtivo?.parteId === parte.id, emptyText: 'Opcional', activeClass: 'border-blue-500 bg-blue-50 ring-2 ring-blue-100', idleClass: 'border-gray-200 hover:border-blue-300', barActiveClass: 'bg-blue-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'ajudante', parteId: parte.id }); } })}
+                    <div className={`p-2 grid gap-1.5 ${secKey === 'ministerio' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                        {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, activeClass: 'border-green-500 bg-green-50 ring-2 ring-green-100', idleClass: 'border-gray-200 hover:border-green-300', barActiveClass: 'bg-green-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); }, slotCtx: { key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {secKey === 'ministerio' && renderSlotButton({ label: TT.ajudante, value: parte.ajudante, onClick: () => setSlotAtivo({ key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'ajudante' && slotAtivo?.parteId === parte.id, emptyText: 'Opcional', activeClass: 'border-blue-500 bg-blue-50 ring-2 ring-blue-100', idleClass: 'border-gray-200 hover:border-blue-300', barActiveClass: 'bg-blue-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'ajudante', parteId: parte.id }); }, slotCtx: { key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
                     </div>
                 )}
             </div>
@@ -459,7 +491,6 @@ const Designar = ({
                     </div>
 
                     <div className="flex flex-wrap gap-2 lg:max-w-[40%]">
-
                         {listaFiltradaPorFlag.map((sem, idx) => {
                             const k = getSemanaKey(sem, idx);
                             const on = !!semanasSelecionadas?.[k];
@@ -501,7 +532,6 @@ const Designar = ({
             <div className="w-full max-w-7xl mx-auto py-4">
                 <div className="flex flex-col lg:flex-row gap-6 pb-20 items-start">
 
-                    {/* NAVEGADOR ESQUERDO */}
                     <NavegadorSemanas
                         listaSemanas={listaFiltradaPorFlag}
                         semanasSelecionadas={semanasSelecionadas}
@@ -520,7 +550,7 @@ const Designar = ({
                                 <p className="text-xs mt-2">{TT.vaParaImportar}</p>
                             </div>
                         ) : (
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {listaFiltradaPorFlag.length === 0 ? (
                                     <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
                                         <Archive size={32} className="mx-auto mb-2 opacity-30" />
@@ -542,93 +572,104 @@ const Designar = ({
                                         const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
 
                                         return (
-                                            // scroll-mt-40 cria o respiro pro cabeçalho não cobrir a semana ao rolar
-                                            <div id={`semana-${key}`} key={key} className={`scroll-mt-40 rounded-2xl border p-3 space-y-4 transition-all ${isVisita ? 'bg-blue-50 border-blue-200' : isAssembly ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'}`}>
+                                            <div id={`semana-${key}`} key={key} className={`scroll-mt-40 rounded-2xl border p-2.5 space-y-2.5 transition-all ${isVisita ? 'bg-blue-50 border-blue-200' : isAssembly ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'}`}>
 
                                                 {/* CABEÇALHO DA SEMANA */}
-                                                <div className={`rounded-xl border p-4 flex flex-col gap-3 ${isVisita ? 'bg-white/80 border-blue-200' : 'bg-white border-gray-200 shadow-sm'}`}>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="min-w-0">
-                                                            <h3 className="font-black text-base text-gray-800 truncate flex items-center gap-2">
-                                                                <span>{sem?.semana || `${TT.semana} ${idx + 1}`}</span>
-                                                                {isVisita && <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-600 text-white border border-blue-700 flex items-center gap-1 uppercase tracking-wider animate-pulse"><Briefcase size={12} /> {TT.visitaSC}</span>}
-                                                                {tipoEvento.includes('assembleia') && <span className="text-[10px] font-black px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center gap-1"><Tent size={12} /> {TT.assembleia}</span>}
-                                                                {tipoEvento.includes('congresso') && <span className="text-[10px] font-black px-2 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1"><UsersRound size={12} /> {TT.congresso}</span>}
-                                                            </h3>
-
-                                                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                                                                {sem?.dataReuniao ? (
-                                                                    <>
-                                                                        <Calendar size={12} />
-                                                                        {TT.dataReuniao}: <strong className={isVisita ? 'text-blue-700' : ''}>
-                                                                            {sem.dataReuniao.split('-').reverse().join('/')}
-                                                                        </strong>
-                                                                        {isVisita && ` ${TT.tercaFeira}`}
-                                                                    </>
-                                                                ) : (
-                                                                    <span>{TT.dataNaoDefinida}</span>
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex gap-2 shrink-0">
-                                                            <button onClick={() => toggleArquivadaSemana(key, !isArq)} className="p-2 rounded-lg border bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 transition" title={isArq ? TT.restaurar : TT.arquivar}>
-                                                                {isArq ? <RotateCcw size={18} /> : <Archive size={18} />}
-                                                            </button>
-                                                            <button onClick={() => handleExcluirSemana(key)} className="p-2 rounded-lg border bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 transition">
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                        </div>
+                                                <div className={`rounded-xl border px-3 py-2 flex items-center justify-between gap-3 ${isVisita ? 'bg-white/80 border-blue-200' : 'bg-white border-gray-200 shadow-sm'}`}>
+                                                    <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                                                        <h3 className="font-black text-[15px] text-gray-800 truncate flex items-center gap-2">
+                                                            <span>{sem?.semana || `${TT.semana} ${idx + 1}`}</span>
+                                                            {isVisita && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-600 text-white border border-blue-700 flex items-center gap-1 uppercase tracking-wider animate-pulse"><Briefcase size={10} /> {TT.visitaSC}</span>}
+                                                            {tipoEvento.includes('assembleia') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center gap-1"><Tent size={10} /> {TT.assembleia}</span>}
+                                                            {tipoEvento.includes('congresso') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1"><UsersRound size={10} /> {TT.congresso}</span>}
+                                                        </h3>
+                                                        <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                                                            {sem?.dataReuniao ? (
+                                                                <>
+                                                                    <Calendar size={10} />
+                                                                    <strong className={isVisita ? 'text-blue-700' : ''}>{sem.dataReuniao.split('-').reverse().join('/')}</strong>
+                                                                    {isVisita && ` ${TT.tercaFeira}`}
+                                                                </>
+                                                            ) : <span>{TT.dataNaoDefinida}</span>}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex gap-1.5 shrink-0">
+                                                        <button onClick={() => toggleArquivadaSemana(key, !isArq)} className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 transition" title={isArq ? TT.restaurar : TT.arquivar}>
+                                                            {isArq ? <RotateCcw size={14} /> : <Archive size={14} />}
+                                                        </button>
+                                                        <button onClick={() => handleExcluirSemana(key)} className="p-1.5 rounded-lg border bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 transition">
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </div>
                                                 </div>
 
                                                 {isAssembly ? (
-                                                    <div className="bg-white rounded-xl border-2 border-dashed border-yellow-300 p-8 text-center flex flex-col items-center justify-center gap-3">
-                                                        <div className="bg-yellow-100 p-4 rounded-full text-yellow-600">
-                                                            {tipoEvento.includes('congresso') ? <UsersRound size={48} /> : <Tent size={48} />}
+                                                    <div className="bg-white rounded-xl border-2 border-dashed border-yellow-300 p-6 text-center flex flex-col items-center justify-center gap-2">
+                                                        <div className="bg-yellow-100 p-3 rounded-full text-yellow-600">
+                                                            {tipoEvento.includes('congresso') ? <UsersRound size={32} /> : <Tent size={32} />}
                                                         </div>
-                                                        <h3 className="text-xl font-bold text-gray-700">
-                                                            {TT.semanaDe} {tipoEvento.includes('congresso') ? TT.congresso : TT.assembleia}
-                                                        </h3>
-                                                        <p className="text-sm text-gray-500 max-w-md">
-                                                            {TT.semReuniao}<br />{TT.quadroAviso}
-                                                        </p>
+                                                        <h3 className="text-lg font-bold text-gray-700">{TT.semanaDe} {tipoEvento.includes('congresso') ? TT.congresso : TT.assembleia}</h3>
+                                                        <p className="text-xs text-gray-500 max-w-md">{TT.semReuniao} {TT.quadroAviso}</p>
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        {/* PRESIDENTE */}
-                                                        <div className="relative group/slot w-full shadow-sm rounded-xl">
-                                                            <button type="button" onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })} className={`bg-white p-4 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200"}`}>
-                                                                <div className="flex items-center gap-2 mb-2"><User size={16} className="text-blue-600" /><span className="text-xs font-black uppercase text-gray-400">{TT.presidente}</span></div>
-                                                                {sem.presidente ? <p className="font-bold text-gray-800">{sem.presidente.nome}</p> : <p className="text-sm text-gray-400 italic flex items-center gap-1"><UserPlus size={16} className="opacity-60" /> {TT.cliquePara}</p>}
+                                                        {/* PRESIDENTE (DROPZONE) */}
+                                                        <div
+                                                            className="relative group/slot w-full shadow-sm rounded-xl"
+                                                            onDragOver={(e) => {
+                                                                e.preventDefault();
+                                                                if (draggedAluno && (!dragOverSlot || dragOverSlot.key !== 'presidente' || dragOverSlot.semanaIndex !== idx)) {
+                                                                    setDragOverSlot({ key: 'presidente', semanaIndex: idx });
+                                                                }
+                                                            }}
+                                                            onDragLeave={(e) => {
+                                                                e.preventDefault();
+                                                                if (!e.currentTarget.contains(e.relatedTarget)) setDragOverSlot(null);
+                                                            }}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                setDragOverSlot(null);
+                                                                if (draggedAluno) atribuirAluno(draggedAluno, { key: 'presidente', semanaIndex: idx });
+                                                            }}
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
+                                                                className={`bg-white py-2 px-3 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : (slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200")}`}
+                                                            >
+                                                                <div className="flex flex-row items-center justify-between gap-2">
+                                                                    <div className="flex items-center gap-1.5 w-24 shrink-0"><User size={14} className="text-blue-600" /><span className="text-[10px] font-black uppercase text-gray-400">{TT.presidente}</span></div>
+                                                                    {sem.presidente ? <p className="font-bold text-[13px] text-gray-800 truncate flex-1 text-right">{sem.presidente.nome}</p> : <p className="text-[11px] text-gray-400 italic flex items-center justify-end gap-1 flex-1"><UserPlus size={12} className="opacity-60" /> {TT.cliquePara}</p>}
+                                                                </div>
                                                             </button>
-                                                            <button type="button" onClick={(e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); }} className="absolute top-1 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100"><Lightbulb size={14} /></button>
+                                                            <button type="button" onClick={(e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); }} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100"><Lightbulb size={12} /></button>
                                                         </div>
 
-                                                        {/* PARTES INICIAIS E SECOES */}
-                                                        <div className="space-y-3">{partesDaSemana.filter(isAbertura).map(p => renderParteCard(p, idx))}</div>
+                                                        {/* PARTES INICIAIS E SECOES (USAM renderParteCard com visual COMPACTO) */}
+                                                        <div className="space-y-2">{partesDaSemana.filter(isAbertura).map(p => renderParteCard(p, idx))}</div>
 
-                                                        <div className="space-y-4">
+                                                        <div className="space-y-2.5">
                                                             {SECOES_ORDEM.map(secKey => {
                                                                 const partesSecao = partesDaSemana.filter(p => normalizarSecao(p.secao) === secKey && !isAbertura(p) && !isEncerramento(p));
                                                                 return (
-                                                                    <div key={secKey} className="space-y-3">
-                                                                        <div className={`rounded-xl overflow-hidden border ${SECOES_META[secKey].border} shadow-sm`}>
-                                                                            <div className={`${SECOES_META[secKey].header} px-4 py-2 flex items-center justify-between`}>
-                                                                                <span className="text-xs font-black tracking-widest uppercase">{SECOES_META[secKey].titulo}</span>
-                                                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded ${SECOES_META[secKey].pill}`}>{partesSecao.length} itens</span>
+                                                                    <div key={secKey} className="space-y-2">
+                                                                        <div className={`rounded-lg overflow-hidden border ${SECOES_META[secKey].border} shadow-sm`}>
+                                                                            <div className={`${SECOES_META[secKey].header} px-3 py-1.5 flex items-center justify-between`}>
+                                                                                <span className="text-[10px] font-black tracking-widest uppercase">{SECOES_META[secKey].titulo}</span>
+                                                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${SECOES_META[secKey].pill}`}>{partesSecao.length} itens</span>
                                                                             </div>
                                                                         </div>
                                                                         {partesSecao.length === 0 ? (
-                                                                            <div className="text-xs text-gray-400 italic px-2">{TT.semItens}</div>
+                                                                            <div className="text-[10px] text-gray-400 italic px-2">{TT.semItens}</div>
                                                                         ) : (
-                                                                            <div className="space-y-3">{partesSecao.map(p => renderParteCard(p, idx))}</div>
+                                                                            <div className="space-y-2">{partesSecao.map(p => renderParteCard(p, idx))}</div>
                                                                         )}
                                                                     </div>
                                                                 );
                                                             })}
                                                         </div>
 
-                                                        <div className="space-y-3">{partesDaSemana.filter(isEncerramento).map(p => renderParteCard(p, idx))}</div>
+                                                        <div className="space-y-2">{partesDaSemana.filter(isEncerramento).map(p => renderParteCard(p, idx))}</div>
                                                     </>
                                                 )}
                                             </div>
@@ -639,7 +680,7 @@ const Designar = ({
                         )}
                     </div>
 
-                    {/* BARRA LATERAL ALUNOS */}
+                    {/* BARRA LATERAL ALUNOS COM DRAG AND DROP */}
                     <SidebarAlunos
                         TT={TT} buildSlotLabel={() => slotAtivo ? `Designando ${slotAtivo.key}` : TT.alunos}
                         alunosFiltrados={alunosFiltrados} slotAtivo={slotAtivo} setSlotAtivo={setSlotAtivo}
@@ -652,6 +693,10 @@ const Designar = ({
                         getHistoricoRecente={getHistoricoRecente} isAlunoDuplicadoBySemanaKey={isAlunoDuplicadoBySemanaKey}
                         getSemanaKeyByFilteredIndex={getSemanaKeyByFilteredIndex} getSemanaIndexContexto={getSemanaIndexContexto}
                         getCargoInfo={getCargoInfo}
+
+                        setDraggedAluno={setDraggedAluno}
+                        semanasSelecionadas={semanasSelecionadas}
+                        dragOverSlot={dragOverSlot}
                     />
 
                 </div>

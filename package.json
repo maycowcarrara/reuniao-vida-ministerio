@@ -12,6 +12,7 @@
     "deploy": "git add . && git commit -m \"Auto deploy updates\" && git push && npm run build && firebase deploy"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@tailwindcss/postcss": "^4.1.18",
     "cheerio": "^1.2.0",
     "date-fns": "^4.1.0",
