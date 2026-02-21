@@ -69,7 +69,6 @@ const Designar = ({
         aberto: false, semanaIndex: null, parteId: null, key: null
     });
 
-    // --- ESTADOS DO DRAG AND DROP ---
     const [draggedAluno, setDraggedAluno] = useState(null);
     const [dragOverSlot, setDragOverSlot] = useState(null);
 
@@ -273,7 +272,6 @@ const Designar = ({
         });
     }, [alunos, cargosMap, filtroGenero, termoBusca, filtrosTiposAtivos, ordenacaoChave, ordemCrescente, lang]);
 
-    // --- ATUALIZADO: ATRIBUIR ALUNO (SUPORTA DRAG & DROP E CLIQUE) ---
     const atribuirAluno = (aluno, targetSlot = slotAtivo) => {
         if (!targetSlot) return;
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(targetSlot.semanaIndex) ? targetSlot.semanaIndex : semanaAtivaIndex);
@@ -292,8 +290,6 @@ const Designar = ({
             return lista;
         });
 
-        // Se a designação veio por clique (usando slotAtivo), limpa o ativo. 
-        // Se veio por Drag&Drop, o slotAtivo já não interferia.
         if (targetSlot === slotAtivo) {
             setTimeout(() => setSlotAtivo(null), 10);
         }
@@ -362,10 +358,23 @@ const Designar = ({
         if (slotAtivo?.parteId === parteId) setSlotAtivo(null);
     };
 
-    // --- RENDERIZAÇÃO DE BOTÕES COM DRAG & DROP E LAYOUT COMPACTO ---
-    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, activeClass, idleClass, barActiveClass, onSuggest, slotCtx }) => {
+    // --- NOVO LAYOUT DO BOTÃO DE SLOT: CORES VERDE E VERMELHO CLARINHO ---
+    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx }) => {
         const isEmpty = !value;
         const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
+
+        // Se estiver ATIVO (clicado), mostra Azul Escuro como sempre.
+        // Se estiver VAZIO, fica Vermelho Clarinho.
+        // Se estiver PREENCHIDO (e não ativo), fica Verde Clarinho.
+        const currentColorClass = active
+            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
+            : isEmpty
+                ? 'border-red-200 bg-red-50 hover:border-red-400 border-dashed'
+                : 'border-green-200 bg-green-50 hover:border-green-400 shadow-sm';
+
+        const textColorClass = isEmpty ? 'text-red-400' : 'text-green-800';
+        const labelColorClass = isEmpty ? 'text-red-300' : 'text-green-600';
+        const iconColorClass = isEmpty ? 'text-red-300' : 'text-green-500';
 
         return (
             <div
@@ -389,20 +398,19 @@ const Designar = ({
                 <button
                     type="button"
                     onClick={onClick}
-                    className={`w-full py-2 px-3 rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isEmpty ? "border-dashed" : ""} ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : (active ? activeClass : idleClass)}`}
+                    className={`w-full py-2 px-3 rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
                     title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
                 >
                     <div className="flex flex-row items-center justify-between gap-2">
-                        <span className="text-[10px] font-black uppercase text-gray-400 shrink-0 w-20">{label}</span>
+                        <span className={`text-[10px] font-black uppercase shrink-0 w-20 ${active ? 'text-blue-500' : labelColorClass}`}>{label}</span>
                         {value ? (
-                            <p className="font-bold text-[13px] text-gray-800 truncate text-right flex-1">{value.nome}</p>
+                            <p className={`font-bold text-[13px] truncate text-right flex-1 ${active ? 'text-blue-900' : textColorClass}`}>{value.nome}</p>
                         ) : (
-                            <p className="text-[11px] text-gray-400 italic flex items-center justify-end gap-1 flex-1">
-                                <UserPlus size={12} className="opacity-60" /> {emptyText || hint || TT.cliquePara}
+                            <p className={`text-[11px] italic flex items-center justify-end gap-1 flex-1 ${active ? 'text-blue-400' : textColorClass}`}>
+                                <UserPlus size={12} className={active ? 'opacity-100' : 'opacity-60'} /> {emptyText || hint || TT.cliquePara}
                             </p>
                         )}
                     </div>
-                    <div className={`absolute inset-y-0 right-0 w-1 rounded-r-lg transition-opacity ${active || isHoveredByDrag ? barActiveClass : "bg-transparent"}`} />
                 </button>
                 {onSuggest && (
                     <button type="button" onClick={onSuggest} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100" title="Sugestão Inteligente">
@@ -420,12 +428,17 @@ const Designar = ({
 
         return (
             <div key={parte.id} className="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all">
-                {/* Cabeçalho mais compacto (px-3 py-1.5) */}
-                <div className={`${headerClass} px-3 py-1.5 flex justify-between items-center gap-3`}>
+                <div className={`${headerClass} px-3 py-1.5 flex justify-between items-start gap-3`}>
                     <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm truncate">{parte.titulo}</p>
+                        <p className="font-bold text-sm leading-tight">{parte.titulo}</p>
+                        {/* A DESCRIÇÃO VOLTOU AQUI, EMBAIXO DO TÍTULO */}
+                        {!!parte.descricao && (
+                            <p className={`text-[10px] mt-0.5 line-clamp-2 leading-tight ${isLinhaInicialFinal(parte) ? 'text-gray-500' : 'text-white/70'}`}>
+                                {parte.descricao}
+                            </p>
+                        )}
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
                         {typeof parte.tempo !== 'undefined' && <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLinhaInicialFinal(parte) ? "bg-white text-gray-700 border border-gray-300" : "bg-white/20 text-white"}`}>{parte.tempo} min</span>}
                         <button type="button" onClick={() => abrirModalEditarParte(parte, semanaIndexFiltrado)} className={`p-1 rounded border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-gray-700 hover:bg-gray-50" : "border-white/20 bg-white/10 text-white hover:bg-white/20"}`} title={TT.editarParte}><Edit2 size={12} /></button>
                         <button type="button" onClick={() => handleExcluirParte(parte.id, semanaIndexFiltrado)} className={`p-1 rounded border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-red-500 hover:bg-red-50" : "border-white/20 bg-white/10 text-white hover:bg-red-500 hover:border-red-500"}`} title={TT.excluirParte}><Trash2 size={12} /></button>
@@ -442,20 +455,19 @@ const Designar = ({
                             label: TT.oracao, value: parte.oracao || null,
                             onClick: () => setSlotAtivo({ key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado }),
                             active: slotAtivo?.key === 'oracao' && slotAtivo?.parteId === parte.id,
-                            activeClass: 'border-blue-500 bg-blue-50 ring-2 ring-blue-100', idleClass: 'border-gray-200 hover:border-blue-300', barActiveClass: 'bg-blue-500',
                             onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'oracao', parteId: parte.id }); },
                             slotCtx: { key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado }
                         })}
                     </div>
                 ) : isEstudoBiblicoCongregacao(parte) ? (
                     <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                        {renderSlotButton({ label: TT.dirigente, value: parte.dirigente, onClick: () => setSlotAtivo({ key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'dirigente' && slotAtivo?.parteId === parte.id, activeClass: 'border-purple-500 bg-purple-50 ring-2 ring-purple-100', idleClass: 'border-gray-200 hover:border-purple-300', barActiveClass: 'bg-purple-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'dirigente', parteId: parte.id }); }, slotCtx: { key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
-                        {renderSlotButton({ label: TT.leitor, value: parte.leitor, onClick: () => setSlotAtivo({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'leitor' && slotAtivo?.parteId === parte.id, activeClass: 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100', idleClass: 'border-gray-200 hover:border-indigo-300', barActiveClass: 'bg-indigo-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'leitor', parteId: parte.id }); }, slotCtx: { key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {renderSlotButton({ label: TT.dirigente, value: parte.dirigente, onClick: () => setSlotAtivo({ key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'dirigente' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'dirigente', parteId: parte.id }); }, slotCtx: { key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {renderSlotButton({ label: TT.leitor, value: parte.leitor, onClick: () => setSlotAtivo({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'leitor' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'leitor', parteId: parte.id }); }, slotCtx: { key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
                     </div>
                 ) : (
                     <div className={`p-2 grid gap-1.5 ${secKey === 'ministerio' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                        {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, activeClass: 'border-green-500 bg-green-50 ring-2 ring-green-100', idleClass: 'border-gray-200 hover:border-green-300', barActiveClass: 'bg-green-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); }, slotCtx: { key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
-                        {secKey === 'ministerio' && renderSlotButton({ label: TT.ajudante, value: parte.ajudante, onClick: () => setSlotAtivo({ key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'ajudante' && slotAtivo?.parteId === parte.id, emptyText: 'Opcional', activeClass: 'border-blue-500 bg-blue-50 ring-2 ring-blue-100', idleClass: 'border-gray-200 hover:border-blue-300', barActiveClass: 'bg-blue-500', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'ajudante', parteId: parte.id }); }, slotCtx: { key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); }, slotCtx: { key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {secKey === 'ministerio' && renderSlotButton({ label: TT.ajudante, value: parte.ajudante, onClick: () => setSlotAtivo({ key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'ajudante' && slotAtivo?.parteId === parte.id, emptyText: 'Opcional', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'ajudante', parteId: parte.id }); }, slotCtx: { key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
                     </div>
                 )}
             </div>
@@ -465,7 +477,6 @@ const Designar = ({
     return (
         <div className="w-full min-h-screen bg-gray-50 relative font-sans text-gray-800">
 
-            {/* CABEÇALHO STICKY EXCLUSIVO COM FULL-WIDTH */}
             <div className="w-full sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200 transition-all">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
 
@@ -528,7 +539,6 @@ const Designar = ({
                 </div>
             </div>
 
-            {/* CONTAINER PRINCIPAL DO LAYOUT */}
             <div className="w-full max-w-7xl mx-auto py-4">
                 <div className="flex flex-col lg:flex-row gap-6 pb-20 items-start">
 
@@ -571,11 +581,19 @@ const Designar = ({
                                         const isVisita = tipoEvento === 'visita';
                                         const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
 
+                                        // ALTERNÂNCIA DE CORES NAS SEMANAS:
+                                        // Semanas pares: fundo branco. Semanas ímpares: fundo azul muito claro (slate-50).
+                                        // A borda também fica sutilmente diferente.
+                                        const cardBgClass = isVisita ? 'bg-blue-50 border-blue-200' 
+                                                          : isAssembly ? 'bg-yellow-50 border-yellow-200' 
+                                                          : (idx % 2 === 0) ? 'bg-white border-gray-200 shadow-sm' 
+                                                          : 'bg-slate-50 border-slate-200';
+
                                         return (
-                                            <div id={`semana-${key}`} key={key} className={`scroll-mt-40 rounded-2xl border p-2.5 space-y-2.5 transition-all ${isVisita ? 'bg-blue-50 border-blue-200' : isAssembly ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'}`}>
+                                            <div id={`semana-${key}`} key={key} className={`scroll-mt-40 rounded-2xl border p-2.5 space-y-2.5 transition-all ${cardBgClass}`}>
 
                                                 {/* CABEÇALHO DA SEMANA */}
-                                                <div className={`rounded-xl border px-3 py-2 flex items-center justify-between gap-3 ${isVisita ? 'bg-white/80 border-blue-200' : 'bg-white border-gray-200 shadow-sm'}`}>
+                                                <div className={`rounded-xl border px-3 py-2 flex items-center justify-between gap-3 ${isVisita ? 'bg-white/80 border-blue-200' : 'bg-white border-gray-100 shadow-sm'}`}>
                                                     <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-4">
                                                         <h3 className="font-black text-[15px] text-gray-800 truncate flex items-center gap-2">
                                                             <span>{sem?.semana || `${TT.semana} ${idx + 1}`}</span>
@@ -613,7 +631,7 @@ const Designar = ({
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        {/* PRESIDENTE (DROPZONE) */}
+                                                        {/* PRESIDENTE (DROPZONE COM CORES) */}
                                                         <div
                                                             className="relative group/slot w-full shadow-sm rounded-xl"
                                                             onDragOver={(e) => {
@@ -635,17 +653,32 @@ const Designar = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
-                                                                className={`bg-white py-2 px-3 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : (slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-200")}`}
+                                                                className={`bg-white py-2 px-3 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${
+                                                                    dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx 
+                                                                        ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" 
+                                                                        : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx 
+                                                                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100" 
+                                                                            : sem.presidente
+                                                                                ? "border-green-200 bg-green-50"
+                                                                                : "border-red-200 bg-red-50 border-dashed"
+                                                                }`}
                                                             >
                                                                 <div className="flex flex-row items-center justify-between gap-2">
-                                                                    <div className="flex items-center gap-1.5 w-24 shrink-0"><User size={14} className="text-blue-600" /><span className="text-[10px] font-black uppercase text-gray-400">{TT.presidente}</span></div>
-                                                                    {sem.presidente ? <p className="font-bold text-[13px] text-gray-800 truncate flex-1 text-right">{sem.presidente.nome}</p> : <p className="text-[11px] text-gray-400 italic flex items-center justify-end gap-1 flex-1"><UserPlus size={12} className="opacity-60" /> {TT.cliquePara}</p>}
+                                                                    <div className="flex items-center gap-1.5 w-24 shrink-0">
+                                                                        <User size={14} className={sem.presidente ? 'text-green-500' : 'text-red-300'} />
+                                                                        <span className={`text-[10px] font-black uppercase ${sem.presidente ? 'text-green-600' : 'text-red-300'}`}>{TT.presidente}</span>
+                                                                    </div>
+                                                                    {sem.presidente ? (
+                                                                        <p className="font-bold text-[13px] text-green-900 truncate flex-1 text-right">{sem.presidente.nome}</p>
+                                                                    ) : (
+                                                                        <p className="text-[11px] text-red-400 italic flex items-center justify-end gap-1 flex-1"><UserPlus size={12} className="opacity-60" /> {TT.cliquePara}</p>
+                                                                    )}
                                                                 </div>
                                                             </button>
                                                             <button type="button" onClick={(e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); }} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100"><Lightbulb size={12} /></button>
                                                         </div>
 
-                                                        {/* PARTES INICIAIS E SECOES (USAM renderParteCard com visual COMPACTO) */}
+                                                        {/* PARTES INICIAIS E SECOES */}
                                                         <div className="space-y-2">{partesDaSemana.filter(isAbertura).map(p => renderParteCard(p, idx))}</div>
 
                                                         <div className="space-y-2.5">
