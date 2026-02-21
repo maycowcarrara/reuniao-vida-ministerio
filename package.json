@@ -1,7 +1,7 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "3.4.49",
+  "version": "3.8.50",
   "type": "module",
   "scripts": {
     "dev": "vite",
