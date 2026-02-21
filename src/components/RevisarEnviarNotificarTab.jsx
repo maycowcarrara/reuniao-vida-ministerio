@@ -4,6 +4,7 @@ import { CheckCircle, Mail, MessageCircle, Briefcase, Tent, UsersRound, Loader2,
 import { formatarDataFolha } from '../utils/revisarEnviar/dates';
 import { montarMensagemDesignacao } from '../utils/revisarEnviar/messages';
 import { enviarEmailAutomatico } from '../utils/revisarEnviar/enviadorEmail';
+import { buildAgendaLink } from '../utils/revisarEnviar/links';
 
 const SECAO_UI = {
     tesouros: { chip: 'bg-slate-600', wrap: 'border-slate-200 bg-slate-50', text: 'text-slate-900' },
@@ -44,7 +45,7 @@ const RevisarEnviarNotificarTab = ({
             const dataISO = getDataReuniaoISO(sem);
             const dataReuniaoFormatada = formatarDataFolha(dataISO, lang);
 
-            const addToList = (pessoa, titulo, role, ajudante = null, parteId) => {
+            const addToList = (pessoa, titulo, role, ajudante = null, parteId, salaOverride = null) => {
                 if (pessoa?.email) {
                     const msgKey = buildMsgKey({
                         dataISO,
@@ -59,11 +60,20 @@ const RevisarEnviarNotificarTab = ({
                         lista.push({
                             msgKey,
                             payload: {
-                                aluno: pessoa,
-                                ajudante,
-                                dataReuniaoFormatada,
-                                parteTitulo: titulo,
-                                sala: 'Principal'
+                                Nome: pessoa.nome,
+                                Ajudante: ajudante?.nome || "—",
+                                Data: dataReuniaoFormatada,
+                                Desig: titulo,
+                                Sala: salaOverride || 'Principal',
+                                Link: buildAgendaLink({
+                                    config,
+                                    semana: sem.semana,
+                                    dataISO,
+                                    tituloParte: titulo,
+                                    responsavelNome: pessoa.nome,
+                                    ajudanteNome: ajudante?.nome
+                                }),
+                                email_destino: pessoa.email
                             }
                         });
                     }
@@ -71,22 +81,89 @@ const RevisarEnviarNotificarTab = ({
             };
 
             if (sem.presidente) {
-                addToList(sem.presidente, t.presidente, 'presidente', null, 'presidente');
+                addToList(
+                    sem.presidente,
+                    t.presidente,
+                    'presidente',
+                    null,
+                    'presidente'
+                );
             }
 
             const partes = Array.isArray(sem?.partes) ? sem.partes : [];
+
+            // Pré-processamento para orações (Saber quem é quem)
+            const oracoes = partes.filter(isOracao);
+            const primeira = partes[0];
+            const ultima = partes[partes.length - 1];
+
+            const oracaoInicial =
+                oracoes.find((p) => getOracaoPos(p) === 'inicio') ||
+                (primeira && isOracao(primeira) ? primeira : null);
+
+            const oracaoFinal =
+                oracoes.find((p) => getOracaoPos(p) === 'final') ||
+                (ultima && isOracao(ultima) ? ultima : null);
+
             partes.forEach(p => {
                 if (isOracao(p)) {
                     const pOracao = p.oracao || p.estudante;
-                    if (pOracao) addToList(pOracao, p.titulo || t.oracao, 'oracao', null, p.id);
+
+                    // --- MÁGICA AQUI: Forçando o nome da oração no envio global ---
+                    let tituloOracao = t.oracao;
+                    if (p === oracaoInicial) tituloOracao = `${t.oracao} (inicial)`;
+                    else if (p === oracaoFinal) tituloOracao = `${t.oracao} (final)`;
+
+                    if (pOracao) {
+                        addToList(
+                            pOracao,
+                            tituloOracao,
+                            'oracao',
+                            null,
+                            p.id
+                        );
+                    }
+
                 } else if (isEstudo(p)) {
                     const dir = p.dirigente || p.estudante;
                     const lei = p.leitor || sem.leitor;
-                    if (dir) addToList(dir, `${t.dirigente} - ${p.titulo || 'Estudo'}`, 'dirigente', null, p.id);
-                    if (lei) addToList(lei, `${t.leitor} - ${p.titulo || 'Estudo'}`, 'leitor', null, p.id);
+                    if (dir) {
+                        addToList(
+                            dir,
+                            `${t.dirigente} - ${p.titulo || 'Estudo'}`,
+                            'dirigente',
+                            null,
+                            p.id
+                        );
+                    }
+                    if (lei) {
+                        addToList(
+                            lei,
+                            `${t.leitor} - ${p.titulo || 'Estudo'}`,
+                            'leitor',
+                            null,
+                            p.id
+                        );
+                    }
                 } else if (p.estudante) {
-                    addToList(p.estudante, p.titulo || 'Parte', 'resp', p.ajudante, p.id);
-                    if (p.ajudante) addToList(p.ajudante, `${t.ajudante} - ${p.titulo}`, 'ajud', null, p.id);
+                    addToList(
+                        p.estudante,
+                        p.titulo || 'Parte',
+                        'resp',
+                        p.ajudante,
+                        p.id,
+                        p.sala
+                    );
+                    if (p.ajudante) {
+                        addToList(
+                            p.ajudante,
+                            `${t.ajudante} - ${p.titulo}`,
+                            'ajud',
+                            null,
+                            p.id,
+                            p.sala
+                        );
+                    }
                 }
             });
         });
@@ -122,7 +199,7 @@ const RevisarEnviarNotificarTab = ({
             }
 
             setProgresso(prev => ({ ...prev, enviados: contEnviados, erros: contErros }));
-            // Delay de 500ms para evitar estourar o limite de requisições do EmailJS
+            // Delay de 500ms para evitar estourar limites da API
             await new Promise(resolve => setTimeout(resolve, 500));
         }
 
@@ -227,7 +304,7 @@ const RevisarEnviarNotificarTab = ({
                         <Send size={18} /> Disparo Automático de E-mails
                     </h4>
                     <p className="text-xs text-indigo-600 mt-1 max-w-lg">
-                        Envia todas as designações não notificadas de uma só vez. Alunos sem e-mail cadastrado serão ignorados automaticamente.
+                        Envia todas as designações não notificadas de uma só vez usando o modelo S-89 Oficial no corpo do E-mail.
                     </p>
 
                     {enviandoGlobal && (
@@ -334,11 +411,20 @@ const RevisarEnviarNotificarTab = ({
                         });
 
                         const emailPayloadResp = {
-                            aluno: estudante,
-                            ajudante: ajud,
-                            dataReuniaoFormatada,
-                            parteTitulo: tituloParte,
-                            sala: p.sala || 'Principal'
+                            Nome: estudante.nome,
+                            Ajudante: ajud?.nome || "—",
+                            Data: dataReuniaoFormatada,
+                            Desig: tituloParte,
+                            Sala: p.sala || 'Principal',
+                            Link: buildAgendaLink({
+                                config,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: tituloParte,
+                                responsavelNome: estudante.nome,
+                                ajudanteNome: ajud?.nome
+                            }),
+                            email_destino: estudante.email
                         };
 
                         let msgAjud = null;
@@ -369,11 +455,19 @@ const RevisarEnviarNotificarTab = ({
                             });
 
                             emailPayloadAjud = {
-                                aluno: ajud,
-                                ajudante: null,
-                                dataReuniaoFormatada,
-                                parteTitulo: `${t.ajudante} - ${tituloParte}`,
-                                sala: p.sala || 'Principal'
+                                Nome: ajud.nome,
+                                Ajudante: "—",
+                                Data: dataReuniaoFormatada,
+                                Desig: `${t.ajudante} - ${tituloParte}`,
+                                Sala: p.sala || 'Principal',
+                                Link: buildAgendaLink({
+                                    config,
+                                    semana: sem.semana,
+                                    dataISO,
+                                    tituloParte: `${t.ajudante} - ${tituloParte}`,
+                                    responsavelNome: ajud.nome
+                                }),
+                                email_destino: ajud.email
                             };
                         }
 
@@ -429,9 +523,14 @@ const RevisarEnviarNotificarTab = ({
                         const pessoa = p?.oracao || p?.estudante;
                         if (!pessoa) return null;
 
-                        const tituloParte = p?.titulo || t.oracao;
-                        const descricao = (p?.descricao ?? '').toString().trim();
-                        const min = (p?.tempo ?? '').toString().trim();
+                        // AQUI ESTÁ A MÁGICA PARA A ORAÇÃO:
+                        // Ignora o texto de "Cântico e Comentários"
+                        // e usa APENAS "Oração (inicial)" ou "Oração (final)"
+                        const tituloParte = tituloTopoOverride || t.oracao;
+
+                        // Zera a descrição e os minutos pra oração, pois não é necessário na designação
+                        const descricao = '';
+                        const min = '';
 
                         const msg = montarMensagemDesignacao({
                             t,
@@ -456,11 +555,19 @@ const RevisarEnviarNotificarTab = ({
                         });
 
                         const emailPayload = {
-                            aluno: pessoa,
-                            ajudante: null,
-                            dataReuniaoFormatada,
-                            parteTitulo: tituloParte,
-                            sala: 'Principal'
+                            Nome: pessoa.nome,
+                            Ajudante: "—",
+                            Data: dataReuniaoFormatada,
+                            Desig: tituloParte,
+                            Sala: 'Principal',
+                            Link: buildAgendaLink({
+                                config,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: tituloParte,
+                                responsavelNome: pessoa.nome
+                            }),
+                            email_destino: pessoa.email
                         };
 
                         return renderCardPessoa({
@@ -508,11 +615,19 @@ const RevisarEnviarNotificarTab = ({
                             });
 
                             const emailPayload = {
-                                aluno: dirigente,
-                                ajudante: null,
-                                dataReuniaoFormatada,
-                                parteTitulo: tituloFinal,
-                                sala: 'Principal'
+                                Nome: dirigente.nome,
+                                Ajudante: "—",
+                                Data: dataReuniaoFormatada,
+                                Desig: tituloFinal,
+                                Sala: 'Principal',
+                                Link: buildAgendaLink({
+                                    config,
+                                    semana: sem.semana,
+                                    dataISO,
+                                    tituloParte: tituloFinal,
+                                    responsavelNome: dirigente.nome
+                                }),
+                                email_destino: dirigente.email
                             };
 
                             cards.push(
@@ -554,11 +669,19 @@ const RevisarEnviarNotificarTab = ({
                             });
 
                             const emailPayload = {
-                                aluno: leitor,
-                                ajudante: null,
-                                dataReuniaoFormatada,
-                                parteTitulo: tituloFinal,
-                                sala: 'Principal'
+                                Nome: leitor.nome,
+                                Ajudante: "—",
+                                Data: dataReuniaoFormatada,
+                                Desig: tituloFinal,
+                                Sala: 'Principal',
+                                Link: buildAgendaLink({
+                                    config,
+                                    semana: sem.semana,
+                                    dataISO,
+                                    tituloParte: tituloFinal,
+                                    responsavelNome: leitor.nome
+                                }),
+                                email_destino: leitor.email
                             };
 
                             cards.push(
@@ -651,11 +774,19 @@ const RevisarEnviarNotificarTab = ({
                                         });
 
                                         const emailPayload = {
-                                            aluno: sem.presidente,
-                                            ajudante: null,
-                                            dataReuniaoFormatada,
-                                            parteTitulo: tituloParte,
-                                            sala: 'Principal'
+                                            Nome: sem.presidente.nome,
+                                            Ajudante: "—",
+                                            Data: dataReuniaoFormatada,
+                                            Desig: tituloParte,
+                                            Sala: 'Principal',
+                                            Link: buildAgendaLink({
+                                                config,
+                                                semana: sem.semana,
+                                                dataISO,
+                                                tituloParte: tituloParte,
+                                                responsavelNome: sem.presidente.nome
+                                            }),
+                                            email_destino: sem.presidente.email
                                         };
 
                                         return renderCardPessoa({
