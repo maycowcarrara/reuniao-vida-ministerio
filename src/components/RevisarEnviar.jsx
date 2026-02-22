@@ -8,7 +8,6 @@ import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
 import { getI18n } from '../utils/revisarEnviar/translations';
 import { getMeetingDateISOFromSemana, formatarDataFolha } from '../utils/revisarEnviar/dates';
 import { buildWhatsappHref, buildMailtoHref } from '../utils/revisarEnviar/links';
-import { montarMensagemDesignacao } from '../utils/revisarEnviar/messages';
 import { addHistorico, tipoOracaoToDb } from '../utils/revisarEnviar/historico';
 
 const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
@@ -80,13 +79,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     // --- AJUSTE 1: Definir startIndex padrão para a semana ativa mais antiga ---
     useEffect(() => {
         if (historicoSelect.length > 0) {
-            // Procura a última semana (no array invertido) que NÃO está arquivada
-            // Como o array é [Futuro ... Passado], a última ativa é a "mais antiga ativa" (a próxima reunião)
             let indexMaisAntigaAtiva = -1;
 
-            // Percorre de trás para frente (do passado para o futuro no array invertido)
-            // Na verdade, historicoSelect é [Newest ... Oldest]
-            // Queremos o índice mais alto (mais antigo) que ainda seja !arquivada.
             for (let i = historicoSelect.length - 1; i >= 0; i--) {
                 if (!historicoSelect[i].arquivada) {
                     indexMaisAntigaAtiva = i;
@@ -102,18 +96,39 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         }
     }, [historicoSelect]);
 
-
     const realStartIndex = historicoOrdenado.length - 1 - startIndex;
     const startSeguro = Math.max(0, realStartIndex);
 
-    // --- Seleção de semanas para impressão (tabs) ---
-    // --- Seleção de semanas para impressão (chips) ---
     const getSemanaKey = (sem, idx) =>
         (sem?.id ?? sem?.dataReuniao ?? sem?.semana ?? String(idx)).toString();
 
+    // --- MÁGICA DA HIDRATAÇÃO ---
+    // Atualiza os dados de contato do aluno com base na lista de alunos mais recente!
     const semanasDisponiveisBase = useMemo(() => {
-        return historicoOrdenado.slice(startSeguro);
-    }, [historicoOrdenado, startSeguro]);
+        const hidratar = (snap) => {
+            if (!snap || !snap.id) return snap;
+            const fresco = alunos.find(a => a.id === snap.id);
+            // Pega o snapshot antigo, mas sobrescreve com dados frescos se o aluno ainda existir
+            return fresco ? { ...snap, ...fresco } : snap;
+        };
+
+        return historicoOrdenado.slice(startSeguro).map(sem => {
+            const newSem = { ...sem };
+            if (newSem.presidente) newSem.presidente = hidratar(newSem.presidente);
+            if (newSem.leitor) newSem.leitor = hidratar(newSem.leitor);
+            if (newSem.partes) {
+                newSem.partes = newSem.partes.map(p => ({
+                    ...p,
+                    estudante: hidratar(p.estudante),
+                    ajudante: hidratar(p.ajudante),
+                    oracao: hidratar(p.oracao),
+                    dirigente: hidratar(p.dirigente),
+                    leitor: hidratar(p.leitor),
+                }));
+            }
+            return newSem;
+        });
+    }, [historicoOrdenado, startSeguro, alunos]);
 
     const semanasDisponiveis = useMemo(() => {
         if (filtroSemanas === 'todas') return semanasDisponiveisBase;
@@ -121,31 +136,19 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         return semanasDisponiveisBase.filter(s => !s?.arquivada); // ativas (default)
     }, [semanasDisponiveisBase, filtroSemanas]);
 
-
     const [printSelecionadas, setPrintSelecionadas] = useState({});
 
-    /**
-     * CORREÇÃO IMPORTANTE:
-     * - O dropdown muda "qtdSemanas" (semanas por folha), mas NÃO deve destruir a seleção das tabs.
-     * - Só deve auto-selecionar quando:
-     * a) muda a semana inicial (startSeguro), OU
-     * b) não há nada selecionado ainda.
-     * - Se o usuário clicou em "Limpar", respeitar a seleção vazia (até ele selecionar de novo).
-     */
     const prevStartSeguroRef = useRef(startSeguro);
     const userClearedRef = useRef(false);
 
     useEffect(() => {
         const startChanged = prevStartSeguroRef.current !== startSeguro;
 
-        // se o usuário limpou e não mudou o start, não repopula
         if (!startChanged && userClearedRef.current) return;
 
-        // se não mudou o start e já existe seleção, não repopula ao trocar dropdown
         const hasAnySelected = Object.values(printSelecionadas).some(Boolean);
         if (!startChanged && hasAnySelected) return;
 
-        // se mudou o start, reseta o "cleared" e faz seleção default de acordo com o dropdown
         if (startChanged) userClearedRef.current = false;
 
         const base = semanasDisponiveis.slice(0, qtdSemanas);
@@ -184,37 +187,24 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             return !!printSelecionadas[k];
         });
 
-        // Se o usuário limpou, não força fallback (imprime nada)
         if (userClearedRef.current) return [];
 
-        // Fallback: imprime 1 "folha cheia" conforme dropdown
         return marcadas.length ? marcadas : semanasDisponiveis.slice(0, qtdSemanas);
     }, [semanasDisponiveis, printSelecionadas, qtdSemanas]);
 
-    // Para mensagens: manter 1 semana por vez (a semana foco do select)
-    const semanasParaNotificar = useMemo(() => {
-        return historicoOrdenado.slice(startSeguro, startSeguro + 1);
-    }, [historicoOrdenado, startSeguro]);
-
-
     const getDataReuniaoISO = (sem) => {
-        // 1. Verifica se existe um evento anual configurado para esta semana (batendo pela data de início)
-        // O formato no banco é "dataInicio": "2026-02-09"
         const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
 
         if (eventoEspecial) {
-            // Se for Visita ou Assembleia, usamos a dataInput definida nas configurações (ex: 2026-02-10)
             if (eventoEspecial.dataInput) {
                 return eventoEspecial.dataInput;
             }
         }
 
-        // 2. Se já tiver data fixa salva na própria semana (fallback manual)
         if (sem?.dataReuniao && sem.dataReuniao !== sem.dataInicio) {
             return sem.dataReuniao;
         }
 
-        // 3. Lógica padrão (calcula baseado no dia da reunião configurado: Segunda, Quarta, etc.)
         return (
             getMeetingDateISOFromSemana({
                 semanaStr: sem?.semana,
@@ -259,7 +249,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     partTitle: 'text-[10px] font-medium',
                     names: 'text-[10px] font-medium',
                     meta: 'text-[9px]',
-
                 };
             case 5:
                 return {
@@ -282,7 +271,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         paginas.push(semanasParaImprimir.slice(i, i + layout.semanasPorPag));
     }
 
-    // --- LOGICA DE NOTIFICAÇÃO ---
     const enviarZap = (aluno, msg) => {
         const href = buildWhatsappHref(aluno?.telefone, msg);
         if (!href) return alert(t.alunoSemTelefone);
@@ -295,7 +283,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         window.open(href, '_blank');
     };
 
-    // --- status helpers (tempo de execução) ---
     const buildMsgKey = ({ dataISO, semana, parteId, pessoaId, role }) => {
         return [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
     };
@@ -312,7 +299,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
     const isSent = (key, channel) => Boolean(sentMap?.[key]?.[channel]);
 
-    // --- GRAVAR HISTÓRICO COM PADRONIZAÇÃO DE TERMOS ---
     const gravarHistorico = () => {
         if (typeof onAlunosChange !== 'function') {
             alert(t.erroSemCallback);
@@ -323,17 +309,36 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             return;
         }
 
-        const ok = window.confirm(t.confirmarGravar);
+        const msgConfirmacao = lang === 'es'
+            ? "¿Desea guardar el historial? Esto actualizará las fechas y eliminará automáticamente a los hermanos que hayan sido sustituidos."
+            : "Deseja gravar o histórico? Isso atualizará as datas e removerá automaticamente os irmãos que foram substituídos.";
+
+        const ok = window.confirm(t.confirmarGravar || msgConfirmacao);
         if (!ok) return;
 
         let novosAlunos = [...alunos];
         let gravouAlgo = false;
 
+        // 1. PASSO DE LIMPEZA INTELIGENTE
+        const datasParaLimpar = semanasParaImprimir
+            .map(sem => getDataReuniaoISO(sem))
+            .filter(Boolean);
+
+        if (datasParaLimpar.length > 0) {
+            novosAlunos = novosAlunos.map(aluno => {
+                if (!aluno.historico || !Array.isArray(aluno.historico)) return aluno;
+                return {
+                    ...aluno,
+                    historico: aluno.historico.filter(h => !datasParaLimpar.includes(h.data))
+                };
+            });
+        }
+
+        // 3. PASSO DE GRAVAÇÃO
         semanasParaImprimir.forEach((sem) => {
             const data = getDataReuniaoISO(sem);
             if (!data) return;
 
-            // 1. PRESIDENTE (Sempre "presidente")
             if (sem?.presidente?.id) {
                 novosAlunos = addHistorico(novosAlunos, sem.presidente.id, {
                     data,
@@ -343,54 +348,41 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 gravouAlgo = true;
             }
 
-            // Loop nas partes
             (sem?.partes || []).forEach((p) => {
                 const tituloLower = (p.titulo || '').toLowerCase();
                 const secaoLower = (p.secao || '').toLowerCase();
 
-                // Variável para definir o termo exato a ser gravado
                 let termoGravacao = '';
 
-                // A. ORAÇÕES
                 if (isOracao(p)) {
                     termoGravacao = 'oracao';
                 }
-                // B. TESOUROS (Parte 1, Joias, Leitura)
                 else if (secaoLower === 'tesouros') {
-                    if (tituloLower.includes('joias')) {
+                    if (tituloLower.includes('joias') || tituloLower.includes('joyas')) {
                         termoGravacao = 'joias';
-                    } else if (tituloLower.includes('leitura')) {
+                    } else if (tituloLower.includes('leitura') || tituloLower.includes('lectura')) {
                         termoGravacao = 'leitura';
                     } else {
-                        // Se é Tesouros e não é joias nem leitura, é a Parte 1 (Discurso)
                         termoGravacao = 'tesouros';
                     }
                 }
-                // C. MINISTÉRIO
                 else if (secaoLower === 'ministerio') {
-                    // NOVA REGRA: Se for discurso no ministério, grava como 'discurso'
                     if (tituloLower.includes('discurso')) {
                         termoGravacao = 'discurso';
                     } else {
-                        termoGravacao = 'ministerio'; // Iniciando conversas, etc.
+                        termoGravacao = 'ministerio';
                     }
                 }
-                // D. VIDA CRISTÃ e ESTUDO
-                else if (secaoLower === 'vida' || isEstudo(p) || tituloLower.includes('estudo')) {
-                    if (isEstudo(p) || tituloLower.includes('estudo bíblico')) {
+                else if (secaoLower === 'vida' || isEstudo(p) || tituloLower.includes('estudo') || tituloLower.includes('estudio')) {
+                    if (isEstudo(p) || tituloLower.includes('estudo bíblico') || tituloLower.includes('estudio bíblico')) {
                         termoGravacao = 'estudobiblico';
                     } else {
                         termoGravacao = 'vidacrista';
                     }
                 }
 
-                // --- APLICAR A GRAVAÇÃO ---
-
-                // 1. Gravar o Principal (Estudante, Dirigente, Orador)
                 if (termoGravacao) {
-                    // Tenta achar quem é o principal nessa parte
                     const principal = p.dirigente || p.oracao || p.estudante;
-
                     if (principal?.id) {
                         novosAlunos = addHistorico(novosAlunos, principal.id, {
                             data,
@@ -401,18 +393,15 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     }
                 }
 
-                // 2. Gravar o Ajudante (Sempre "ajudante")
                 if (p.ajudante?.id) {
                     novosAlunos = addHistorico(novosAlunos, p.ajudante.id, {
                         data,
                         parte: 'ajudante',
-                        ajudante: p.estudante?.nome || '', // Referência de quem ele ajudou
+                        ajudante: p.estudante?.nome || '',
                     });
                     gravouAlgo = true;
                 }
 
-                // 3. Gravar o Leitor do Estudo (Sempre "leitor")
-                // Só grava leitor se a parte for o Estudo Bíblico
                 if (termoGravacao === 'estudobiblico') {
                     const leitor = p.leitor || sem.leitor;
                     if (leitor?.id) {
@@ -434,6 +423,15 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         onAlunosChange(novosAlunos);
         alert(t.okGravou);
+    };
+
+    const handlePrint = () => {
+        try {
+            window.print();
+        } catch (e) {
+            console.error("Erro ao imprimir", e);
+            alert("Não foi possível abrir a janela de impressão do seu navegador.");
+        }
     };
 
     const renderPartes5Semanas = (semana) => {
@@ -542,14 +540,14 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     qtdSemanas={qtdSemanas}
                     setQtdSemanas={setQtdSemanas}
                     historicoSelect={historicoSelect}
-                    showWeekTabs={abaAtiva === 'imprimir'}
+                    showWeekTabs={true} /* MÁGICA: SEMPRE EXIBE OS CHIPS DE SELEÇÃO! */
                     semanasDisponiveis={semanasDisponiveis}
                     getSemanaKey={getSemanaKey}
                     printSelecionadas={printSelecionadas}
                     toggleSemanaPrint={toggleSemanaPrint}
                     selecionarTodasPrint={selecionarTodasPrint}
                     limparPrint={limparPrint}
-                    onPrint={() => window.print()}
+                    onPrint={handlePrint}
                     onGravarHistorico={gravarHistorico}
                 />
             </div>
@@ -571,7 +569,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                     const dataISO = getDataReuniaoISO(semana);
                                     const horarioExib = config?.horarioReuniao ?? config?.horario ?? '';
 
-                                    // --- CORREÇÃO: Cruza com a configuração global para saber se é visita ---
                                     const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === semana.dataInicio);
                                     const isVisita = semana.evento === 'visita' || eventoEspecial?.tipo === 'visita';
 
@@ -588,13 +585,11 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                 >
                                                     <h2 className={`${layout.h1} font-bold uppercase tracking-tighter flex items-center justify-center gap-2`}>
                                                         {semana.semana}
-                                                        {/* --- AJUSTE 2: BADGE VISITA SC (ESTILO E TEXTO) --- */}
                                                         {isVisita && (
                                                             <span className="text-[9px] bg-white text-blue-700 px-2 py-0.5 rounded border border-blue-700 font-bold uppercase tracking-widest">
                                                                 VISITA DO SC
                                                             </span>
                                                         )}
-                                                        {/* ----------------------------------- */}
                                                     </h2>
                                                     {qtdSemanas === 5 ? (
                                                         <p className="text-[13px] font-extrabold text-gray-500 uppercase">
@@ -602,7 +597,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                         </p>
                                                     ) : (
                                                         <p className={`${layout.h2} font-bold text-gray-500 uppercase`}>
-                                                            {/* --- AJUSTE 3: ORDEM DATA | HORA | CONGREGAÇÃO --- */}
                                                             {formatarDataFolha(dataISO, lang)} | {horarioExib} | {config?.nome_cong}
                                                         </p>
                                                     )}
@@ -803,7 +797,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             {/* ABA NOTIFICAR */}
             {abaAtiva === 'notificar' && (
                 <RevisarEnviarNotificarTab
-                    semanasParaNotificar={semanasParaNotificar}
+                    semanasParaNotificar={semanasParaImprimir} /* MÁGICA: USA O ARRAY SELECIONADO DOS CHIPS! */
                     config={config}
                     lang={lang}
                     t={t}

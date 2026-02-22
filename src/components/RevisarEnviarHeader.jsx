@@ -38,42 +38,48 @@ const RevisarEnviarHeader = ({
             <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
                 {/* ESQUERDA */}
                 <div className="min-w-0 flex flex-col gap-2">
-                    {/* selects */}
+                    {/* selects e filtros */}
                     <div className="flex flex-wrap items-end gap-4">
-                        <div className="flex flex-col min-w-[220px]">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                {t.labelInicio}
-                            </span>
-                            <select
-                                className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
-                                value={startIndex}
-                                onChange={(e) => setStartIndex(Number(e.target.value))}
-                            >
-                                {historicoSelect.map((h, i) => (
-                                    <option key={i} value={i}>
-                                        {h.semana}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        
+                        {/* --- MÁGICA AQUI: Oculta os selects no modo Notificar --- */}
+                        {abaAtiva === 'imprimir' && (
+                            <>
+                                <div className="flex flex-col min-w-[220px]">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                        {t.labelInicio}
+                                    </span>
+                                    <select
+                                        className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
+                                        value={startIndex}
+                                        onChange={(e) => setStartIndex(Number(e.target.value))}
+                                    >
+                                        {historicoSelect.map((h, i) => (
+                                            <option key={i} value={i}>
+                                                {h.semana}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                        <div className="flex flex-col min-w-[200px]">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                {t.labelLayout}
-                            </span>
-                            <select
-                                className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
-                                value={qtdSemanas}
-                                onChange={(e) => setQtdSemanas(Number(e.target.value))}
-                            >
-                                <option value={1}>{t.layoutOpcoes?.[0] ?? '1 semana'}</option>
-                                <option value={2}>{t.layoutOpcoes?.[1] ?? '2 semanas'}</option>
-                                <option value={4}>{t.layoutOpcoes?.[2] ?? '4 semanas'}</option>
-                                <option value={5}>{t.layoutOpcoes?.[3] ?? '5 semanas (compacto)'}</option>
-                            </select>
-                        </div>
+                                <div className="flex flex-col min-w-[200px]">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                        {t.labelLayout}
+                                    </span>
+                                    <select
+                                        className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
+                                        value={qtdSemanas}
+                                        onChange={(e) => setQtdSemanas(Number(e.target.value))}
+                                    >
+                                        <option value={1}>{t.layoutOpcoes?.[0] ?? '1 semana'}</option>
+                                        <option value={2}>{t.layoutOpcoes?.[1] ?? '2 semanas'}</option>
+                                        <option value={4}>{t.layoutOpcoes?.[2] ?? '4 semanas'}</option>
+                                        <option value={5}>{t.layoutOpcoes?.[3] ?? '5 semanas (compacto)'}</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
 
-                        {/* filtro Ativas/Arquivadas/Todas */}
+                        {/* filtro Ativas/Arquivadas/Todas (Este continua visível) */}
                         <div className="flex flex-col">
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                                 {L('labelSemanas', 'Semanas:')}
@@ -121,7 +127,7 @@ const RevisarEnviarHeader = ({
 
                     {/* Chips semanas */}
                     {showWeekTabs && (
-                        <div className="bg-white rounded-lg border p-2">
+                        <div className="bg-white rounded-lg border p-2 mt-2">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
                                 <div className="text-[10px] font-black uppercase text-gray-400">
                                     {selectedCount} {L('selecionadas', 'selecionada(s)')}
@@ -148,7 +154,7 @@ const RevisarEnviarHeader = ({
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 mt-2">
                                 {semanasDisponiveis.map((s, i) => {
                                     const k = getSemanaKey(s, i);
                                     const on = !!printSelecionadas?.[k];
@@ -188,15 +194,17 @@ const RevisarEnviarHeader = ({
                     )}
                 </div>
 
-                {/* DIREITA */}
+                {/* DIREITA (Botões de Ação) */}
                 <div className="flex flex-col items-stretch md:items-end gap-3">
                     <div className="flex flex-col gap-2 w-full md:w-[230px]">
-                        <button
-                            onClick={onPrint}
-                            className="w-full whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition active:scale-95"
-                        >
-                            {t.btnImprimir}
-                        </button>
+                        {abaAtiva === 'imprimir' && (
+                            <button
+                                onClick={onPrint}
+                                className="w-full whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition active:scale-95"
+                            >
+                                {t.btnImprimir}
+                            </button>
+                        )}
 
                         <button
                             onClick={onGravarHistorico}

@@ -358,23 +358,18 @@ const Designar = ({
         if (slotAtivo?.parteId === parteId) setSlotAtivo(null);
     };
 
-    // --- NOVO LAYOUT DO BOTÃO DE SLOT: CORES VERDE E VERMELHO CLARINHO ---
     const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx }) => {
         const isEmpty = !value;
         const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
 
-        // Se estiver ATIVO (clicado), mostra Azul Escuro como sempre.
-        // Se estiver VAZIO, fica Vermelho Clarinho.
-        // Se estiver PREENCHIDO (e não ativo), fica Verde Clarinho.
         const currentColorClass = active
             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
             : isEmpty
-                ? 'border-red-200 bg-red-50 hover:border-red-400 border-dashed'
-                : 'border-green-200 bg-green-50 hover:border-green-400 shadow-sm';
+                ? 'border-red-200 bg-red-50 hover:border-red-300 border-dashed'
+                : 'border-green-200 bg-green-50 hover:border-green-300 shadow-sm';
 
-        const textColorClass = isEmpty ? 'text-red-400' : 'text-green-800';
+        const textColorClass = isEmpty ? 'text-red-400' : 'text-green-900';
         const labelColorClass = isEmpty ? 'text-red-300' : 'text-green-600';
-        const iconColorClass = isEmpty ? 'text-red-300' : 'text-green-500';
 
         return (
             <div
@@ -413,7 +408,7 @@ const Designar = ({
                     </div>
                 </button>
                 {onSuggest && (
-                    <button type="button" onClick={onSuggest} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100" title="Sugestão Inteligente">
+                    <button type="button" onClick={onSuggest} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100" title={lang === 'es' ? "Sugerencia Inteligente" : "Sugestão Inteligente"}>
                         <Lightbulb size={12} />
                     </button>
                 )}
@@ -426,12 +421,21 @@ const Designar = ({
         const headerClass = isLinhaInicialFinal(parte) ? 'bg-gray-200 text-gray-800' : SECOES_META[secKey]?.header || SECOES_META.vida.header;
         const isCantico = isCanticoIntermediario(parte);
 
+        // --- LÓGICA DE DISCURSO NO MINISTÉRIO (BILINGUE) ---
+        const tituloNormalizado = (parte?.titulo || '').toLowerCase();
+        const tipoNormalizado = (parte?.tipo || '').toLowerCase();
+
+        // Verifica se é discurso em PT ou ES
+        const isDiscurso = tituloNormalizado.includes('discurso') || tipoNormalizado.includes('discurso');
+
+        // Se for discurso dentro do Ministério, NÃO precisa de ajudante.
+        const requiresAjudante = secKey === 'ministerio' && !isDiscurso;
+
         return (
             <div key={parte.id} className="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all">
                 <div className={`${headerClass} px-3 py-1.5 flex justify-between items-start gap-3`}>
                     <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm leading-tight">{parte.titulo}</p>
-                        {/* A DESCRIÇÃO VOLTOU AQUI, EMBAIXO DO TÍTULO */}
                         {!!parte.descricao && (
                             <p className={`text-[10px] mt-0.5 line-clamp-2 leading-tight ${isLinhaInicialFinal(parte) ? 'text-gray-500' : 'text-white/70'}`}>
                                 {parte.descricao}
@@ -447,7 +451,7 @@ const Designar = ({
 
                 {isCantico ? (
                     <div className="p-2 text-[11px] text-center text-gray-400 italic bg-gray-50 border-t border-gray-100">
-                        Nenhuma designação necessária
+                        {lang === 'es' ? "Ninguna asignación necesaria" : "Nenhuma designação necessária"}
                     </div>
                 ) : isLinhaInicialFinal(parte) ? (
                     <div className="p-2">
@@ -465,9 +469,19 @@ const Designar = ({
                         {renderSlotButton({ label: TT.leitor, value: parte.leitor, onClick: () => setSlotAtivo({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'leitor' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'leitor', parteId: parte.id }); }, slotCtx: { key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
                     </div>
                 ) : (
-                    <div className={`p-2 grid gap-1.5 ${secKey === 'ministerio' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                    <div className={`p-2 grid gap-1.5 ${requiresAjudante ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                         {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); }, slotCtx: { key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
-                        {secKey === 'ministerio' && renderSlotButton({ label: TT.ajudante, value: parte.ajudante, onClick: () => setSlotAtivo({ key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'ajudante' && slotAtivo?.parteId === parte.id, emptyText: 'Opcional', onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'ajudante', parteId: parte.id }); }, slotCtx: { key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+
+                        {/* Exibe o Ajudante apenas se não for um discurso */}
+                        {requiresAjudante && renderSlotButton({
+                            label: TT.ajudante,
+                            value: parte.ajudante,
+                            onClick: () => setSlotAtivo({ key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }),
+                            active: slotAtivo?.key === 'ajudante' && slotAtivo?.parteId === parte.id,
+                            emptyText: lang === 'es' ? 'Opcional' : 'Opcional',
+                            onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'ajudante', parteId: parte.id }); },
+                            slotCtx: { key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }
+                        })}
                     </div>
                 )}
             </div>
@@ -498,7 +512,7 @@ const Designar = ({
                         </button>
 
                         <button type="button" onClick={selecionarTodasVisiveis} className="px-3 py-1.5 rounded-full text-xs font-bold border bg-gray-100 hover:bg-gray-200 transition text-gray-700 shadow-sm">{TT.filtroTodas}</button>
-                        <button type="button" onClick={limparSelecaoVisiveis} className="px-3 py-1.5 rounded-full text-xs font-bold border bg-white hover:bg-gray-100 transition text-gray-700 shadow-sm">Limpar</button>
+                        <button type="button" onClick={limparSelecaoVisiveis} className="px-3 py-1.5 rounded-full text-xs font-bold border bg-white hover:bg-gray-100 transition text-gray-700 shadow-sm">{lang === 'es' ? 'Limpiar' : 'Limpar'}</button>
                     </div>
 
                     <div className="flex flex-wrap gap-2 lg:max-w-[40%]">
@@ -549,6 +563,7 @@ const Designar = ({
                         setSemanaAtivaIndex={setSemanaAtivaIndex}
                         getSemanaKey={getSemanaKey}
                         TT={TT}
+                        lang={lang}
                     />
 
                     {/* COLUNA CENTRAL */}
@@ -564,7 +579,7 @@ const Designar = ({
                                 {listaFiltradaPorFlag.length === 0 ? (
                                     <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
                                         <Archive size={32} className="mx-auto mb-2 opacity-30" />
-                                        <p className="text-sm font-medium">Nenhuma semana encontrada neste filtro.</p>
+                                        <p className="text-sm font-medium">{lang === 'es' ? "Ninguna semana encontrada en este filtro." : "Nenhuma semana encontrada neste filtro."}</p>
                                     </div>
                                 ) : semanasParaExibir.length === 0 ? (
                                     <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
@@ -581,13 +596,10 @@ const Designar = ({
                                         const isVisita = tipoEvento === 'visita';
                                         const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
 
-                                        // ALTERNÂNCIA DE CORES NAS SEMANAS:
-                                        // Semanas pares: fundo branco. Semanas ímpares: fundo azul muito claro (slate-50).
-                                        // A borda também fica sutilmente diferente.
-                                        const cardBgClass = isVisita ? 'bg-blue-50 border-blue-200' 
-                                                          : isAssembly ? 'bg-yellow-50 border-yellow-200' 
-                                                          : (idx % 2 === 0) ? 'bg-white border-gray-200 shadow-sm' 
-                                                          : 'bg-slate-50 border-slate-200';
+                                        const cardBgClass = isVisita ? 'bg-blue-50 border-blue-200'
+                                            : isAssembly ? 'bg-yellow-50 border-yellow-200'
+                                                : (idx % 2 === 0) ? 'bg-white border-gray-200 shadow-sm'
+                                                    : 'bg-slate-50 border-slate-200';
 
                                         return (
                                             <div id={`semana-${key}`} key={key} className={`scroll-mt-40 rounded-2xl border p-2.5 space-y-2.5 transition-all ${cardBgClass}`}>
@@ -653,15 +665,14 @@ const Designar = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
-                                                                className={`bg-white py-2 px-3 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${
-                                                                    dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx 
-                                                                        ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" 
-                                                                        : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx 
-                                                                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100" 
+                                                                className={`bg-white py-2 px-3 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx
+                                                                        ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]"
+                                                                        : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx
+                                                                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
                                                                             : sem.presidente
                                                                                 ? "border-green-200 bg-green-50"
                                                                                 : "border-red-200 bg-red-50 border-dashed"
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 <div className="flex flex-row items-center justify-between gap-2">
                                                                     <div className="flex items-center gap-1.5 w-24 shrink-0">
@@ -689,7 +700,7 @@ const Designar = ({
                                                                         <div className={`rounded-lg overflow-hidden border ${SECOES_META[secKey].border} shadow-sm`}>
                                                                             <div className={`${SECOES_META[secKey].header} px-3 py-1.5 flex items-center justify-between`}>
                                                                                 <span className="text-[10px] font-black tracking-widest uppercase">{SECOES_META[secKey].titulo}</span>
-                                                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${SECOES_META[secKey].pill}`}>{partesSecao.length} itens</span>
+                                                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${SECOES_META[secKey].pill}`}>{partesSecao.length} {lang === 'es' ? 'ítems' : 'itens'}</span>
                                                                             </div>
                                                                         </div>
                                                                         {partesSecao.length === 0 ? (
@@ -715,7 +726,7 @@ const Designar = ({
 
                     {/* BARRA LATERAL ALUNOS COM DRAG AND DROP */}
                     <SidebarAlunos
-                        TT={TT} buildSlotLabel={() => slotAtivo ? `Designando ${slotAtivo.key}` : TT.alunos}
+                        TT={TT} buildSlotLabel={() => slotAtivo ? `${lang === 'es' ? 'Asignando' : 'Designando'} ${slotAtivo.key}` : TT.alunos}
                         alunosFiltrados={alunosFiltrados} slotAtivo={slotAtivo} setSlotAtivo={setSlotAtivo}
                         termoBusca={termoBusca} setTermoBusca={setTermoBusca}
                         ordenacaoChave={ordenacaoChave} setOrdenacaoChave={setOrdenacaoChave}
@@ -726,7 +737,6 @@ const Designar = ({
                         getHistoricoRecente={getHistoricoRecente} isAlunoDuplicadoBySemanaKey={isAlunoDuplicadoBySemanaKey}
                         getSemanaKeyByFilteredIndex={getSemanaKeyByFilteredIndex} getSemanaIndexContexto={getSemanaIndexContexto}
                         getCargoInfo={getCargoInfo}
-
                         setDraggedAluno={setDraggedAluno}
                         semanasSelecionadas={semanasSelecionadas}
                         dragOverSlot={dragOverSlot}

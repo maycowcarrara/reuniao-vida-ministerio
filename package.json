@@ -1,9 +1,10 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "3.8.51",
+  "version": "3.9.64",
   "type": "module",
   "scripts": {
+    "predev": "npm version patch --no-git-tag-version",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

@@ -39,7 +39,11 @@ export default function Dashboard({
             atencaoSub: "Sem designação há mais de 4 meses",
             nunca: "Nunca designado",
             dias: "dias",
-            tudoEmDia: "Excelente! Nenhum aluno esquecido."
+            tudoEmDia: "Excelente! Nenhum aluno esquecido.",
+            visaoMes: "Designações (Próx. 4 Semanas)",
+            pendentesMes: "pendentes no mês",
+            completoMes: "Mês completo!",
+            faltando: "Falta preencher:"
         },
         es: {
             alunosTitulo: "Resumen de Estudiantes",
@@ -58,7 +62,11 @@ export default function Dashboard({
             atencaoSub: "Sin asignación por más de 4 meses",
             nunca: "Nunca asignado",
             dias: "días",
-            tudoEmDia: "¡Excelente! Ningún estudiante olvidado."
+            tudoEmDia: "¡Excelente! Ningún estudiante olvidado.",
+            visaoMes: "Asignaciones (Próx. 4 Semanas)",
+            pendentesMes: "pendientes en el mes",
+            completoMes: "¡Mes completo!",
+            faltando: "Falta rellenar:"
         }
     }[lang];
 
@@ -70,16 +78,23 @@ export default function Dashboard({
         const dataLimitePassado = new Date(hoje);
         dataLimitePassado.setDate(hoje.getDate() - 30);
 
-        // 1. Próxima Reunião
+        // 1. Ordernar Reuniões Ativas
         const ativas = listaProgramacoes
             .filter(s => !s.arquivada)
-            .sort((a, b) => new Date(a.dataReuniao) - new Date(b.dataReuniao));
+            .sort((a, b) => new Date(a.dataReuniao || a.dataInicio) - new Date(b.dataReuniao || b.dataInicio));
 
-        const proxima = ativas.find(s => {
+        // Encontrar a próxima reunião
+        const proximaIdx = ativas.findIndex(s => {
+            if (!s.dataReuniao) return false;
             const [ano, mes, dia] = s.dataReuniao.split('-').map(Number);
             const dataReuniao = new Date(ano, mes - 1, dia);
             return dataReuniao >= hoje;
-        }) || ativas[0];
+        });
+
+        const proxima = proximaIdx !== -1 ? ativas[proximaIdx] : ativas[0];
+        
+        // Obter as próximas 4 reuniões para calcular o progresso do mês
+        const proximasSemanas = proximaIdx !== -1 ? ativas.slice(proximaIdx, proximaIdx + 4) : [];
 
         // 2. Eventos Agendados
         const eventosAgendados = (config?.eventosAnuais || [])
@@ -100,22 +115,87 @@ export default function Dashboard({
             .filter(ev => ev.dataObjeto >= dataLimitePassado)
             .sort((a, b) => a.dataObjeto - b.dataObjeto);
 
-        // 3. Pendências
+        // 3. Pendências (CALCULADORA INTELIGENTE PARA AS PRÓXIMAS 4 SEMANAS)
         let partesTotais = 0;
         let partesPreenchidas = 0;
-        const isSemReuniao = proxima?.evento && proxima.evento !== 'visita' && proxima.evento !== 'normal';
+        let partesFaltando = []; // <-- NOVIDADE: Armazena O QUE está faltando
 
-        if (proxima && !isSemReuniao) {
-            if (proxima.presidente) partesPreenchidas++; partesTotais++;
-            proxima.partes?.forEach(p => {
-                if (p.estudante !== undefined) { partesTotais++; if (p.estudante) partesPreenchidas++; }
-                if (p.ajudante !== undefined) { partesTotais++; if (p.ajudante) partesPreenchidas++; }
-                if (p.leitor !== undefined) { partesTotais++; if (p.leitor) partesPreenchidas++; }
+        const normalizeStr = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        proximasSemanas.forEach(sem => {
+            const isSemReuniao = sem.evento && sem.evento !== 'visita' && sem.evento !== 'normal';
+            if (isSemReuniao) return;
+
+            const semanaLabel = sem.semana?.split(' -')[0] || '';
+
+            // Presidente
+            partesTotais++; 
+            if (sem.presidente?.id || sem.presidente?.nome) {
+                partesPreenchidas++;
+            } else {
+                partesFaltando.push(`${semanaLabel}: Presidente`);
+            }
+
+            sem.partes?.forEach(parte => {
+                const tipo = normalizeStr(parte?.tipo);
+                const titulo = normalizeStr(parte?.titulo);
+                const secao = normalizeStr(parte?.secao);
+                const rawInfo = `${tipo} ${titulo} ${secao}`;
+                const tituloCurto = parte.titulo?.split(' - ')[0] || 'Parte';
+
+                // Ignora Cânticos Puros
+                const isCantico = tipo.includes('cantico') || tipo.includes('cancion') || titulo.includes('cantico') || titulo.includes('cancion');
+                const isOracao = tipo.includes('oracao') || tipo.includes('oracion') || titulo.includes('oracao') || titulo.includes('oracion');
+                
+                if (isCantico && !isOracao) return; 
+
+                if (isOracao) {
+                    partesTotais++;
+                    if (parte.oracao?.id || parte.oracao?.nome || parte.estudante?.id || parte.estudante?.nome) {
+                        partesPreenchidas++;
+                    } else {
+                        partesFaltando.push(`${semanaLabel}: Oração`);
+                    }
+                } else if (rawInfo.includes('estudo biblico') || rawInfo.includes('estudio biblico')) {
+                    partesTotais += 2; // Dirigente e Leitor
+                    
+                    if (parte.dirigente?.id || parte.dirigente?.nome) partesPreenchidas++;
+                    else partesFaltando.push(`${semanaLabel}: Dirigente (${tituloCurto})`);
+
+                    if (parte.leitor?.id || parte.leitor?.nome) partesPreenchidas++;
+                    else partesFaltando.push(`${semanaLabel}: Leitor (${tituloCurto})`);
+
+                } else {
+                    // Parte Normal (Estudante sempre é cobrado)
+                    partesTotais++;
+                    if (parte.estudante?.id || parte.estudante?.nome) {
+                        partesPreenchidas++;
+                    } else {
+                        partesFaltando.push(`${semanaLabel}: Estudante (${tituloCurto})`);
+                    }
+
+                    // Ajudante: Só existe em "Faça Seu Melhor no Ministério"
+                    if (secao.includes('minist')) {
+                        const isDiscurso = rawInfo.includes('discurso');
+                        const isLeitura = rawInfo.includes('leitura');
+                        const isExplicando = rawInfo.includes('explicando'); // Explicando suas crenças (Discurso)
+                        
+                        // MÁGICA AQUI: Se for discurso ou leitura, o ajudante NÃO é exigido na matemática!
+                        if (!isDiscurso && !isLeitura && !isExplicando) {
+                            partesTotais++;
+                            if (parte.ajudante?.id || parte.ajudante?.nome) {
+                                partesPreenchidas++;
+                            } else {
+                                partesFaltando.push(`${semanaLabel}: Ajudante (${tituloCurto})`);
+                            }
+                        }
+                    }
+                }
             });
-        }
+        });
 
         const pendentes = partesTotais - partesPreenchidas;
-        const progresso = partesTotais > 0 ? (partesPreenchidas / partesTotais) * 100 : (isSemReuniao ? 100 : 0);
+        const progresso = partesTotais > 0 ? (partesPreenchidas / partesTotais) * 100 : (proximasSemanas.length > 0 ? 100 : 0);
 
         // 4. Estatísticas de Alunos & SAÚDE DA CONGREGAÇÃO
         const totalAlunos = alunos.length;
@@ -163,7 +243,7 @@ export default function Dashboard({
         });
 
         return {
-            proxima, ativas, pendentes, progresso, eventosAgendados,
+            proxima, ativas, pendentes, progresso, eventosAgendados, partesFaltando,
             totalAlunos, totalAtivos, totalDesabilitados,
             countAnciaos, countServos, countIrmas,
             usadosNoTrimestre, precisandoAtencao
@@ -276,22 +356,38 @@ export default function Dashboard({
                                 </div>
 
                                 {!stats.proxima.evento?.includes('assembleia') && stats.proxima.evento !== 'congresso' && (
-                                    <div className="bg-white/10 rounded-xl p-4 min-w-[220px] backdrop-blur-sm">
-                                        <div className="flex justify-between items-end mb-2">
-                                            <span className="text-sm font-medium text-blue-100">{txt.status}</span>
+                                    <div className="bg-white/10 rounded-xl p-4 min-w-[220px] backdrop-blur-sm flex flex-col">
+                                        <div className="flex justify-between items-end mb-2 gap-4">
+                                            <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wider leading-tight w-24">
+                                                {localTxt.visaoMes}
+                                            </span>
                                             <span className="text-2xl font-bold">{Math.round(stats.progresso)}%</span>
                                         </div>
-                                        <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden">
+                                        <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden shrink-0">
                                             <div className={`h-full transition-all duration-1000 ${stats.progresso === 100 ? 'bg-green-400' : 'bg-yellow-400'}`} style={{ width: `${stats.progresso}%` }} />
                                         </div>
-                                        <div className="mt-3 flex items-center gap-2 text-sm">
+                                        
+                                        {/* NOVO: LISTA DE PENDÊNCIAS DEDO-DURO */}
+                                        <div className="mt-3 flex-1 flex flex-col justify-start">
                                             {stats.pendentes === 0 ? (
-                                                <span className="flex items-center gap-1 text-green-300 font-bold"><CheckCircle size={16} /> {txt.completo}</span>
+                                                <span className="flex items-center gap-1 text-green-300 font-bold text-sm"><CheckCircle size={16} /> {localTxt.completoMes}</span>
                                             ) : (
-                                                <span className="flex items-center gap-1 text-yellow-300 font-bold"><AlertTriangle size={16} /> {stats.pendentes} {txt.pendentes}</span>
+                                                <>
+                                                    <span className="flex items-center gap-1 text-yellow-300 font-bold text-sm mb-2"><AlertTriangle size={16} /> {stats.pendentes} {localTxt.pendentesMes}</span>
+                                                    
+                                                    <div className="bg-black/20 rounded p-2 overflow-y-auto custom-scroll flex-1 min-h-[50px] max-h-[80px]">
+                                                        <p className="text-[9px] font-bold text-blue-200 uppercase tracking-wider mb-1">{localTxt.faltando}</p>
+                                                        <ul className="text-[10px] text-white leading-tight space-y-1 list-disc pl-3">
+                                                            {stats.partesFaltando.map((falta, i) => (
+                                                                <li key={i}>{falta}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </>
                                             )}
                                         </div>
-                                        <button onClick={() => setAbaAtiva('designar')} className="mt-4 w-full bg-white text-blue-700 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition flex items-center justify-center gap-2">
+
+                                        <button onClick={() => setAbaAtiva('designar')} className="mt-4 w-full bg-white text-blue-700 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition flex items-center justify-center gap-2 shrink-0">
                                             {txt.gerenciar} <ArrowRight size={14} />
                                         </button>
                                     </div>
@@ -354,7 +450,7 @@ export default function Dashboard({
                                         ))}
                                         {stats.precisandoAtencao.length > 3 && (
                                             <button onClick={() => setAbaAtiva('alunos')} className="w-full text-center text-[10px] text-red-500 font-bold hover:text-red-700 pt-1">
-                                                + {stats.precisandoAtencao.length - 3} outros...
+                                                + {stats.precisandoAtencao.length - 3} {lang === 'es' ? 'otros' : 'outros'}...
                                             </button>
                                         )}
                                     </div>
