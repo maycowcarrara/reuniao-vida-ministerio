@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { CalendarDays, Loader2 } from 'lucide-react';
 
 const RevisarEnviarHeader = ({
     t,
@@ -28,10 +29,28 @@ const RevisarEnviarHeader = ({
     // Ações
     onPrint,
     onGravarHistorico,
+
+    // NOVA AÇÃO: Função que virá do componente pai (index.jsx)
+    onSyncGoogleCalendar,
 }) => {
     const selectedCount = Object.values(printSelecionadas || {}).filter(Boolean).length;
-
     const L = (key, fallback) => (t?.[key] ?? fallback);
+
+    // Estado local apenas para controlar a animação de carregamento do botão
+    const [sincronizando, setSincronizando] = useState(false);
+
+    const handleSyncClick = async () => {
+        if (!onSyncGoogleCalendar) {
+            alert("A função de sincronização ainda não foi conectada.");
+            return;
+        }
+        setSincronizando(true);
+        try {
+            await onSyncGoogleCalendar();
+        } finally {
+            setSincronizando(false);
+        }
+    };
 
     return (
         <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 no-print shrink-0">
@@ -40,7 +59,7 @@ const RevisarEnviarHeader = ({
                 <div className="min-w-0 flex flex-col gap-2">
                     {/* selects e filtros */}
                     <div className="flex flex-wrap items-end gap-4">
-                        
+
                         {/* --- MÁGICA AQUI: Oculta os selects no modo Notificar --- */}
                         {abaAtiva === 'imprimir' && (
                             <>
@@ -91,8 +110,8 @@ const RevisarEnviarHeader = ({
                                     aria-pressed={filtroSemanas === 'ativas'}
                                     onClick={() => setFiltroSemanas('ativas')}
                                     className={`px-2 text-[11px] font-bold ${filtroSemanas === 'ativas'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     {L('filtroAtivas', 'Ativas')}
@@ -103,8 +122,8 @@ const RevisarEnviarHeader = ({
                                     aria-pressed={filtroSemanas === 'arquivadas'}
                                     onClick={() => setFiltroSemanas('arquivadas')}
                                     className={`px-2 text-[11px] font-bold border-l ${filtroSemanas === 'arquivadas'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     {L('filtroArquivadas', 'Arquivadas')}
@@ -115,8 +134,8 @@ const RevisarEnviarHeader = ({
                                     aria-pressed={filtroSemanas === 'todas'}
                                     onClick={() => setFiltroSemanas('todas')}
                                     className={`px-2 text-[11px] font-bold border-l ${filtroSemanas === 'todas'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     {L('filtroTodas', 'Todas')}
@@ -213,6 +232,17 @@ const RevisarEnviarHeader = ({
                         >
                             {t.btnGravarHistorico}
                         </button>
+
+                        {/* NOVO BOTÃO: SINCRONIZAR COM GOOGLE AGENDA */}
+                        <button
+                            onClick={handleSyncClick}
+                            disabled={sincronizando}
+                            className="w-full whitespace-nowrap bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                            title="Enviar as designações ativas para o seu Google Agenda"
+                        >
+                            {sincronizando ? <Loader2 className="animate-spin" size={16} /> : <CalendarDays size={16} />}
+                            {sincronizando ? 'Sincronizando...' : 'Enviar para Agenda'}
+                        </button>
                     </div>
 
                     <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-[230px]">
@@ -221,8 +251,8 @@ const RevisarEnviarHeader = ({
                             aria-pressed={abaAtiva === 'imprimir'}
                             onClick={() => setAbaAtiva('imprimir')}
                             className={`flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold transition ${abaAtiva === 'imprimir'
-                                    ? 'bg-white text-blue-700 shadow-sm'
-                                    : 'text-gray-500'
+                                ? 'bg-white text-blue-700 shadow-sm'
+                                : 'text-gray-500'
                                 }`}
                         >
                             {t.abaVisualizar}
@@ -233,8 +263,8 @@ const RevisarEnviarHeader = ({
                             aria-pressed={abaAtiva === 'notificar'}
                             onClick={() => setAbaAtiva('notificar')}
                             className={`flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold transition ${abaAtiva === 'notificar'
-                                    ? 'bg-white text-green-700 shadow-sm'
-                                    : 'text-gray-500'
+                                ? 'bg-white text-green-700 shadow-sm'
+                                : 'text-gray-500'
                                 }`}
                         >
                             {t.abaNotificar}

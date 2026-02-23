@@ -25,6 +25,9 @@ import { getMeetingDateISOFromSemana, formatarDataFolha } from '../../utils/revi
 import { buildWhatsappHref, buildMailtoHref } from '../../utils/revisarEnviar/links';
 import { addHistorico, tipoOracaoToDb } from '../../utils/revisarEnviar/historico';
 
+// IMPORTANTE: Importando a função de sincronização do Google Agenda
+import { sincronizarAgendaGoogle } from '../../services/calendarSync';
+
 const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const hasHistorico = Array.isArray(historico) && historico.length > 0;
     const { lang, t } = getI18n(config);
@@ -633,6 +636,15 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     limparPrint={limparPrint}
                     onPrint={handlePrint}
                     onGravarHistorico={gravarHistorico}
+                    // AQUI ENTRA A MÁGICA DO GOOGLE AGENDA:
+                    onSyncGoogleCalendar={async () => {
+                        const resultado = await sincronizarAgendaGoogle(semanasParaImprimir, config);
+                        if (resultado.sucesso) {
+                            alert(`Sucesso! ${resultado.quantidade} partes adicionadas à sua agenda.`);
+                        } else {
+                            alert(`Erro na sincronização: ${resultado.erro}`);
+                        }
+                    }}
                 />
             </div>
 
