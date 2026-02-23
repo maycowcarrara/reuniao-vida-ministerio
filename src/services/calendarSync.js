@@ -7,7 +7,7 @@ export const iniciarSincronizacao = async () => {
     
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     provider.addScope('https://www.googleapis.com/auth/calendar.readonly'); // Necessário para ler a lista de agendas
-    provider.setCustomParameters({ prompt: 'consent' });
+    //provider.setCustomParameters({ prompt: 'consent' });
 
     try {
         const result = await signInWithPopup(auth, provider);
