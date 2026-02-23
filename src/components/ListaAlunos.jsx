@@ -3,7 +3,7 @@ import {
     Search, Edit2, Clock, User, Phone, Mail,
     X, History, UserPlus, SortAsc, SortDesc, Globe, UsersRound, UserRound,
     FilterX, FileJson, Download, FileText, FileSpreadsheet, Printer, ChevronDown,
-    LayoutGrid, List, StickyNote, Trash2
+    LayoutGrid, List, StickyNote, Trash2, Calendar
 } from 'lucide-react';
 
 // --- MAPEADOR DE CARGOS ---
@@ -32,9 +32,15 @@ const TRANSLATIONS = {
             tipo: "Privilégio / Tipo",
             tel: "WhatsApp",
             mail: "E-mail",
-            obs: "Observações"
+            obs: "Observações",
+            datasIndisponiveis: "Datas Indisponíveis (Férias/Viagem)",
+            dataInicio: "Data de Início",
+            dataFim: "Data de Fim",
+            motivo: "Motivo",
+            motivoPlaceholder: "Ex: Viagem, Trabalho...",
+            semDatas: "Nenhuma data de ausência registrada."
         },
-        card: { nunca: "Estreia", diasAtras: "dias atrás", com: "Com", semObs: "Sem observações" },
+        card: { nunca: "Estreia", diasAtras: "dias atrás", com: "Com", semObs: "Sem observações", ausente: "Ausência Programada" },
         modal: { editar: "Editar Aluno", novo: "Novo Cadastro", salvar: "Salvar", cancelar: "Cancelar", historico: "Histórico Completo", excluir: "Excluir" },
         filtros: { todos: "Todos" },
         msg: {
@@ -55,9 +61,15 @@ const TRANSLATIONS = {
             tipo: "Privilegio / Tipo",
             tel: "WhatsApp",
             mail: "E-mail",
-            obs: "Observaciones"
+            obs: "Observaciones",
+            datasIndisponiveis: "Fechas No Disponibles (Vacaciones/Viaje)",
+            dataInicio: "Fecha de Inicio",
+            dataFim: "Fecha de Fin",
+            motivo: "Motivo",
+            motivoPlaceholder: "Ej: Viaje, Trabajo...",
+            semDatas: "Sin fechas de ausencia registradas."
         },
-        card: { nunca: "Estreno", diasAtras: "días atrás", com: "Con", semObs: "Sin observaciones" },
+        card: { nunca: "Estreno", diasAtras: "días atrás", com: "Con", semObs: "Sin observaciones", ausente: "Ausencia Programada" },
         modal: { editar: "Editar Estudiante", novo: "Nuevo Registro", salvar: "Guardar", cancelar: "Cancelar", historico: "Historial Completo", excluir: "Eliminar" },
         filtros: { todos: "Todos" },
         msg: {
@@ -92,6 +104,9 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     const [menuExportOpen, setMenuExportOpen] = useState(false);
     const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
     const [alunoHistorico, setAlunoHistorico] = useState(null);
+
+    // Estado para o formulário de nova data indisponível
+    const [novaDataIndisponivel, setNovaDataIndisponivel] = useState({ inicio: '', fim: '', motivo: '' });
 
     const [viewMode, setViewMode] = useState(() => {
         try { return localStorage.getItem('jw_alunos_view') || 'grid'; } catch { return 'grid'; }
@@ -155,6 +170,16 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         const hoje = new Date();
         const diff = hoje - d;
         return Math.floor(diff / 86400000);
+    };
+
+    const verificarAusenciaAtiva = (aluno) => {
+        if (!aluno.datasIndisponiveis || !Array.isArray(aluno.datasIndisponiveis) || aluno.datasIndisponiveis.length === 0) return false;
+
+        // Pega a data de hoje no formato YYYY-MM-DD
+        const hojeISO = new Date().toISOString().split('T')[0];
+
+        // Retorna true APENAS se hoje estiver DENTRO do período da viagem
+        return aluno.datasIndisponiveis.some(d => d.inicio <= hojeISO && d.fim >= hojeISO);
     };
 
     const buildWhatsappHref = (telefone, nome) => {
@@ -242,8 +267,9 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     };
 
     const openNovo = () => {
-        const base = { id: null, nome: '', tipo: 'irma', telefone: '', email: '', observacoes: '', historico: [] };
+        const base = { id: null, nome: '', tipo: 'irma', telefone: '', email: '', observacoes: '', historico: [], datasIndisponiveis: [] };
         setAlunoEmEdicao(base);
+        setNovaDataIndisponivel({ inicio: '', fim: '', motivo: '' });
         setModalFormOpen(true);
     };
 
@@ -255,8 +281,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             telefone: aluno.telefone || '',
             email: aluno.email || '',
             observacoes: aluno.observacoes || '',
-            historico: Array.isArray(aluno.historico) ? aluno.historico : []
+            historico: Array.isArray(aluno.historico) ? aluno.historico : [],
+            datasIndisponiveis: Array.isArray(aluno.datasIndisponiveis) ? aluno.datasIndisponiveis : []
         });
+        setNovaDataIndisponivel({ inicio: '', fim: '', motivo: '' });
         setModalFormOpen(true);
     };
 
@@ -268,7 +296,8 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             telefone: (alunoEmEdicao.telefone || '').trim(),
             email: (alunoEmEdicao.email || '').trim(),
             observacoes: (alunoEmEdicao.observacoes || '').trim(),
-            tipo: alunoEmEdicao.tipo || 'irma'
+            tipo: alunoEmEdicao.tipo || 'irma',
+            datasIndisponiveis: alunoEmEdicao.datasIndisponiveis || []
         };
 
         if (!clean.nome) return;
@@ -397,13 +426,21 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                         const d = calcularDias(ult.data);
                         const whatsappHref = buildWhatsappHref(aluno.telefone, aluno.nome);
                         const podeExcluir = aluno.tipo === 'desab';
+                        const estaAusente = verificarAusenciaAtiva(aluno);
 
                         return (
                             <div key={aluno.id} className="print-card bg-white border border-gray-100 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all flex flex-col relative overflow-hidden group">
                                 <div className={`absolute top-0 left-0 w-1.5 h-full ${info.gen === 'F' ? 'bg-pink-400' : 'bg-blue-500'}`} />
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="min-w-0 pr-1 flex-1">
-                                        <h3 className="font-bold text-gray-800 text-sm leading-tight break-words pr-5">{aluno.nome}</h3>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <h3 className="font-bold text-gray-800 text-sm leading-tight break-words">{aluno.nome}</h3>
+                                            {estaAusente && (
+                                                <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-1 border border-orange-200" title={t.card.ausente}>
+                                                    <Calendar size={8} /> Ausente
+                                                </span>
+                                            )}
+                                        </div>
                                         <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-md border mt-1.5 inline-block tracking-tighter ${info.cor}`}>{info[lang]}</span>
                                     </div>
                                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all no-print">
@@ -444,6 +481,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                         const d = calcularDias(ult.data);
                         const whatsappHref = buildWhatsappHref(aluno.telefone, aluno.nome);
                         const podeExcluir = aluno.tipo === 'desab';
+                        const estaAusente = verificarAusenciaAtiva(aluno);
 
                         return (
                             <div key={aluno.id} className="print-card bg-white border border-gray-100 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all flex flex-col relative overflow-hidden group">
@@ -453,6 +491,11 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <h3 className="font-bold text-gray-800 text-sm truncate">{aluno.nome}</h3>
+                                                {estaAusente && (
+                                                    <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-1 border border-orange-200" title={t.card.ausente}>
+                                                        <Calendar size={8} /> Ausente
+                                                    </span>
+                                                )}
                                                 <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-md border inline-block tracking-tighter ${info.cor}`}>{info[lang]}</span>
                                             </div>
                                             <div className="mt-1 text-[11px] text-gray-500 flex flex-wrap gap-x-3 gap-y-1">
@@ -504,7 +547,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                         </div>
                         <div className="p-5 max-h-[60vh] overflow-y-auto space-y-2">
                             <p className="font-black text-gray-800 border-b pb-2 mb-2">{alunoHistorico.nome}</p>
-                            
+
                             {/* ORDENANDO O HISTÓRICO: DO MAIS NOVO PARA O MAIS ANTIGO */}
                             {(alunoHistorico.historico || [])
                                 .slice() // Cria uma cópia para não mutar o estado original
@@ -521,7 +564,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                                     </div>
                                 ))
                             }
-                            
+
                             {(!alunoHistorico.historico || alunoHistorico.historico.length === 0) && (
                                 <p className="text-xs text-gray-400 italic py-2">Nenhum histórico registrado.</p>
                             )}
@@ -541,16 +584,82 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                             </div>
                             <button onClick={() => setModalFormOpen(false)} className="p-1 hover:bg-white/10 rounded-lg"><X size={20} /></button>
                         </div>
-                        <form onSubmit={handleSalvar} className="p-6 space-y-4">
-                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, tipo: e.target.value })}>{Object.keys(CARGOS_MAP).map(key => (<option key={key} value={key}>{CARGOS_MAP[key][lang]}</option>))}</select></div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder="(xx) xxxxx-xxxx" /></div>
-                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.mail}</label><input type="email" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.email || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, email: e.target.value })} placeholder="email@exemplo.com" /></div>
-                            </div>
-                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={3} className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={lang === 'pt' ? 'Ex.: horários, limitações, preferências...' : 'Ej.: horarios, limitaciones, preferencias...'} /></div>
-                            <div className="flex gap-2 justify-end pt-2"><button type="button" onClick={() => setModalFormOpen(false)} className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase hover:text-gray-600">{t.modal.cancelar}</button><button type="submit" className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all hover:bg-blue-600">{t.modal.salvar}</button></div>
-                        </form>
+
+                        <div className="p-6 overflow-y-auto max-h-[75vh] custom-scrollbar">
+                            <form id="form-aluno" onSubmit={handleSalvar} className="space-y-4">
+                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, tipo: e.target.value })}>{Object.keys(CARGOS_MAP).map(key => (<option key={key} value={key}>{CARGOS_MAP[key][lang]}</option>))}</select></div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder="(xx) xxxxx-xxxx" /></div>
+                                    <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.mail}</label><input type="email" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.email || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, email: e.target.value })} placeholder="email@exemplo.com" /></div>
+                                </div>
+                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={2} className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={lang === 'pt' ? 'Ex.: horários, limitações, preferências...' : 'Ej.: horarios, limitaciones, preferencias...'} /></div>
+
+                                {/* SEÇÃO: DATAS INDISPONÍVEIS */}
+                                <div className="space-y-2 pt-4 border-t border-gray-100 mt-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1.5">
+                                        <Calendar size={12} /> {t.campos.datasIndisponiveis}
+                                    </label>
+
+                                    {/* Lista de Datas Cadastradas */}
+                                    {(alunoEmEdicao.datasIndisponiveis || []).length > 0 ? (
+                                        <div className="space-y-1.5 mb-2 max-h-24 overflow-y-auto custom-scrollbar pr-1">
+                                            {alunoEmEdicao.datasIndisponiveis.map((dt, idx) => (
+                                                <div key={idx} className="flex justify-between items-center bg-orange-50 border border-orange-100 text-orange-800 text-xs px-2.5 py-1.5 rounded-lg">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold">{dt.inicio.split('-').reverse().join('/')} até {dt.fim.split('-').reverse().join('/')}</span>
+                                                        {dt.motivo && <span className="text-[9px] opacity-80">{dt.motivo}</span>}
+                                                    </div>
+                                                    <button type="button" onClick={() => {
+                                                        const newDates = [...alunoEmEdicao.datasIndisponiveis];
+                                                        newDates.splice(idx, 1);
+                                                        setAlunoEmEdicao({ ...alunoEmEdicao, datasIndisponiveis: newDates });
+                                                    }} className="text-orange-400 hover:text-red-500 p-1 transition-colors">
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-[10px] text-gray-400 italic px-1">{t.campos.semDatas}</p>
+                                    )}
+
+                                    {/* Adicionar Nova Data */}
+                                    <div className="flex flex-wrap gap-2 items-end bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                                        <div className="flex-1 min-w-[100px]">
+                                            <label className="text-[9px] font-bold text-gray-500 mb-0.5 block">{t.campos.dataInicio}</label>
+                                            <input type="date" className="w-full px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.inicio} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, inicio: e.target.value })} />
+                                        </div>
+                                        <div className="flex-1 min-w-[100px]">
+                                            <label className="text-[9px] font-bold text-gray-500 mb-0.5 block">{t.campos.dataFim}</label>
+                                            <input type="date" className="w-full px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.fim} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, fim: e.target.value })} />
+                                        </div>
+                                        <div className="w-full flex gap-2 items-end mt-1">
+                                            <div className="flex-1">
+                                                <label className="text-[9px] font-bold text-gray-500 mb-0.5 block">{t.campos.motivo}</label>
+                                                <input type="text" placeholder={t.campos.motivoPlaceholder} className="w-full px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.motivo} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, motivo: e.target.value })} />
+                                            </div>
+                                            <button type="button" onClick={() => {
+                                                if (novaDataIndisponivel.inicio && novaDataIndisponivel.fim) {
+                                                    setAlunoEmEdicao({
+                                                        ...alunoEmEdicao,
+                                                        datasIndisponiveis: [...(alunoEmEdicao.datasIndisponiveis || []), novaDataIndisponivel].sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+                                                    });
+                                                    setNovaDataIndisponivel({ inicio: '', fim: '', motivo: '' });
+                                                }
+                                            }} className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${novaDataIndisponivel.inicio && novaDataIndisponivel.fim ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`} disabled={!novaDataIndisponivel.inicio || !novaDataIndisponivel.fim}>
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-2 justify-end rounded-b-3xl">
+                            <button type="button" onClick={() => setModalFormOpen(false)} className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase hover:text-gray-600">{t.modal.cancelar}</button>
+                            <button type="submit" form="form-aluno" className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all hover:bg-blue-600">{t.modal.salvar}</button>
+                        </div>
                     </div>
                 </div>
             )}

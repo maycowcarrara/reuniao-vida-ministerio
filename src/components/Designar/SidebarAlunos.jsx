@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, FilterX, Search, SortAsc, SortDesc, User, UserRound, UsersRound, AlertTriangle, Clock, GripVertical } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { X, FilterX, Search, SortAsc, SortDesc, User, UserRound, UsersRound, AlertTriangle, Clock, GripVertical, CalendarX } from 'lucide-react';
 
 const SidebarAlunos = ({
     TT, buildSlotLabel, alunosFiltrados, slotAtivo, setSlotAtivo,
@@ -24,7 +24,9 @@ const SidebarAlunos = ({
             duplicadoMesma: "Duplicado na MESMA semana",
             duplicadoOutra: "Já tem parte em outra semana selecionada no mês",
             nestaSemana: "Nesta Semana",
-            outraSemana: "Outra Semana (Mês)"
+            outraSemana: "Outra Semana (Mês)",
+            ausente: "Ausente",
+            indisponivel: "Indisponível nesta data"
         },
         es: {
             limpar: "Limpiar",
@@ -37,7 +39,9 @@ const SidebarAlunos = ({
             duplicadoMesma: "Duplicado en la MISMA semana",
             duplicadoOutra: "Ya tiene asignación en otra semana seleccionada",
             nestaSemana: "En esta Semana",
-            outraSemana: "Otra Semana (Mes)"
+            outraSemana: "Otra Semana (Mes)",
+            ausente: "Ausente",
+            indisponivel: "No disponible en esta fecha"
         }
     }[lang] || localTx.pt;
 
@@ -50,6 +54,85 @@ const SidebarAlunos = ({
         return "bg-gray-100 text-gray-700 border-gray-200"; // Recente (<= 50 dias) -> Cinza
     };
 
+    // --- HELPER INFALÍVEL PARA CHECAR FÉRIAS/VIAGENS ---
+    const verificarIndisponibilidade = (aluno, semanaKey) => {
+        if (!semanaKey || !aluno?.datasIndisponiveis || !Array.isArray(aluno.datasIndisponiveis) || aluno.datasIndisponiveis.length === 0) return null;
+
+        try {
+            let dataBaseStr = null;
+            const key = String(semanaKey).toLowerCase();
+            
+            // 1. Tenta formato ISO direto (ex: 2026-03-02) se existir
+            if (/^\d{4}-\d{2}-\d{2}/.test(key)) {
+                dataBaseStr = key.substring(0, 10);
+            } else {
+                // 2. Extrai matematicamente o dia e o mês do texto (ex: "9-15-de-março---ISAÍAS...")
+                const matchDia = key.match(/^(\d{1,2})/); // Pega o primeiro dia (ex: 9)
+                const matchMes = key.match(/(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/);
+                
+                if (matchDia && matchMes) {
+                    const meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+                    const dia = parseInt(matchDia[1], 10);
+                    const mesIdx = meses.indexOf(matchMes[1]);
+                    
+                    let ano = new Date().getFullYear(); // Assume o ano atual
+                    const mesAtual = new Date().getMonth();
+                    
+                    // Ajuste caso estejamos em Dezembro planejando Janeiro, etc.
+                    if (mesAtual === 11 && mesIdx === 0) ano++;
+                    if (mesAtual === 0 && mesIdx === 11) ano--;
+                    
+                    // Monta uma data real perfeita "YYYY-MM-DD"
+                    dataBaseStr = `${ano}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+                }
+            }
+
+            if (!dataBaseStr) return null;
+
+            // Transforma a data base em UTC para evitar pegadinhas de Fuso Horário
+            const [sAno, sMes, sDia] = dataBaseStr.split('-');
+            const dInicioSemana = new Date(Date.UTC(sAno, sMes - 1, sDia));
+            
+            // A semana da reunião tem 7 dias. Adicionamos 6 dias para pegar o fim dela.
+            const dFimSemana = new Date(Date.UTC(sAno, sMes - 1, sDia));
+            dFimSemana.setUTCDate(dFimSemana.getUTCDate() + 6);
+            
+            const strFimSemana = `${dFimSemana.getUTCFullYear()}-${String(dFimSemana.getUTCMonth() + 1).padStart(2, '0')}-${String(dFimSemana.getUTCDate()).padStart(2, '0')}`;
+
+            for (const dt of aluno.datasIndisponiveis) {
+                if (!dt.inicio || !dt.fim) continue;
+                
+                // Formato limpo das datas de férias cadastradas
+                const vInicio = String(dt.inicio).substring(0, 10);
+                const vFim = String(dt.fim).substring(0, 10);
+
+                // MÁGICA: Verifica se os blocos de tempo se chocam (Overlap algorítmico)
+                // Se a semana Começa antes ou junto das Férias acabarem E a Semana Termina depois ou junto das Férias começarem
+                if (dataBaseStr <= vFim && strFimSemana >= vInicio) {
+                    return dt; // Bateu! Está de férias nessa semana.
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao validar datas de indisponibilidade:", e);
+            return null;
+        }
+        return null;
+    };
+
+    // Obtém o contexto atual da semana fora do loop para otimização
+    const semanaIdxCtx = typeof getSemanaIndexContexto === 'function' ? getSemanaIndexContexto() : null;
+    const currentSemanaKey = typeof getSemanaKeyByFilteredIndex === 'function' ? getSemanaKeyByFilteredIndex(semanaIdxCtx) : null;
+
+    // Reordenamos a lista para empurrar os indisponíveis para o final absoluto da lista
+    // MAS APENAS se houver um slot ativo (campo selecionado)
+    const alunosProcessados = useMemo(() => {
+        return [...alunosFiltrados].sort((a, b) => {
+            const indA = (slotAtivo && verificarIndisponibilidade(a, currentSemanaKey)) ? 1 : 0;
+            const indB = (slotAtivo && verificarIndisponibilidade(b, currentSemanaKey)) ? 1 : 0;
+            return indA - indB; // Se A=1 e B=0, A vai para o fim.
+        });
+    }, [alunosFiltrados, currentSemanaKey, slotAtivo]);
+
     return (
         <div className="lg:w-80 shrink-0 w-full lg:sticky lg:top-20 self-start">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden">
@@ -57,7 +140,7 @@ const SidebarAlunos = ({
                     <div className="flex flex-col">
                         <span>{buildSlotLabel()}</span>
                         <span className="text-[9px] opacity-60 font-normal">
-                            {alunosFiltrados.length} {TT.registros}
+                            {alunosProcessados.length} {TT.registros}
                         </span>
                     </div>
 
@@ -144,29 +227,31 @@ const SidebarAlunos = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scroll bg-gray-50/20">
-                    {alunosFiltrados.length === 0 ? (
+                    {alunosProcessados.length === 0 ? (
                         <div className="text-center py-10 text-gray-400">
                             <Search size={32} className="mx-auto mb-2 opacity-30" />
                             <p className="text-xs">{localTx.nenhumAluno}</p>
                         </div>
                     ) : (
-                        alunosFiltrados.map((aluno) => {
-                            const semanaIdxFiltrado = getSemanaIndexContexto();
-                            const semanaKey = getSemanaKeyByFilteredIndex(semanaIdxFiltrado);
-
+                        alunosProcessados.map((aluno) => {
                             let duplicadoMesmaSemana = false;
                             let duplicadoOutraSemana = false;
 
-                            if (semanaKey && isAlunoDuplicadoBySemanaKey(aluno?.id, semanaKey)) {
-                                duplicadoMesmaSemana = true;
-                            }
+                            // Verifica indisponibilidade (Férias/Viagem) SÓ SE tiver um slotAtivo
+                            const indisponivel = slotAtivo ? verificarIndisponibilidade(aluno, currentSemanaKey) : null;
 
-                            if (semanasSelecionadas) {
-                                const chavesAtivas = Object.keys(semanasSelecionadas).filter(k => semanasSelecionadas[k] && k !== semanaKey);
-                                for (const k of chavesAtivas) {
-                                    if (isAlunoDuplicadoBySemanaKey(aluno?.id, k)) {
-                                        duplicadoOutraSemana = true;
-                                        break;
+                            if (!indisponivel) {
+                                if (currentSemanaKey && isAlunoDuplicadoBySemanaKey(aluno?.id, currentSemanaKey)) {
+                                    duplicadoMesmaSemana = true;
+                                }
+
+                                if (semanasSelecionadas) {
+                                    const chavesAtivas = Object.keys(semanasSelecionadas).filter(k => semanasSelecionadas[k] && k !== currentSemanaKey);
+                                    for (const k of chavesAtivas) {
+                                        if (isAlunoDuplicadoBySemanaKey(aluno?.id, k)) {
+                                            duplicadoOutraSemana = true;
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -175,44 +260,56 @@ const SidebarAlunos = ({
                             const historicoRecente = getHistoricoRecente(aluno, 6);
                             const cargoKey = aluno?.tipo;
                             const cargoInfo = getCargoInfo(cargoKey);
-                            const podeClicar = !!slotAtivo;
+
+                            // Pode clicar apenas se o slot estiver ativo e o aluno não estiver indisponível
+                            const isClickable = !!slotAtivo && !indisponivel;
 
                             let borderColor = "border-gray-200";
-                            if (duplicadoMesmaSemana) borderColor = "border-red-300";
+                            if (indisponivel) borderColor = "border-gray-200";
+                            else if (duplicadoMesmaSemana) borderColor = "border-red-300";
                             else if (duplicadoOutraSemana) borderColor = "border-orange-300";
 
                             return (
                                 <div
                                     key={aluno?.id || aluno?.nome}
                                     className={[
-                                        "w-full text-left rounded-xl border transition relative group shadow-sm flex bg-white hover:shadow-md hover:border-blue-300",
+                                        "w-full text-left rounded-xl border transition relative group shadow-sm flex",
+                                        indisponivel ? "bg-gray-100/60 opacity-60 grayscale-[30%]" : "bg-white hover:shadow-md hover:border-blue-300",
                                         borderColor
                                     ].join(" ")}
+                                    title={indisponivel ? localTx.indisponivel : ''}
                                 >
-                                    <div
-                                        className="w-8 flex items-center justify-center bg-gray-50 border-r border-gray-100 rounded-l-xl cursor-grab active:cursor-grabbing hover:bg-gray-100"
-                                        draggable={true}
-                                        onDragStart={() => setDraggedAluno && setDraggedAluno(aluno)}
-                                        onDragEnd={() => setDraggedAluno && setDraggedAluno(null)}
-                                        title={localTx.arrasteAqui}
-                                    >
-                                        <GripVertical size={16} className="text-gray-400" />
-                                    </div>
+                                    {!indisponivel ? (
+                                        <div
+                                            className="w-8 flex items-center justify-center bg-gray-50 border-r border-gray-100 rounded-l-xl cursor-grab active:cursor-grabbing hover:bg-gray-100"
+                                            draggable={true}
+                                            onDragStart={() => setDraggedAluno && setDraggedAluno(aluno)}
+                                            onDragEnd={() => setDraggedAluno && setDraggedAluno(null)}
+                                            title={localTx.arrasteAqui}
+                                        >
+                                            <GripVertical size={16} className="text-gray-400" />
+                                        </div>
+                                    ) : (
+                                        <div className="w-8 flex items-center justify-center bg-gray-100 border-r border-gray-200 rounded-l-xl cursor-not-allowed">
+                                            <CalendarX size={16} className="text-gray-300" />
+                                        </div>
+                                    )}
 
                                     <button
                                         type="button"
-                                        className={`flex-1 p-2.5 flex flex-col gap-1 text-left ${podeClicar ? 'cursor-pointer' : 'cursor-default'}`}
+                                        className={`flex-1 p-2.5 flex flex-col gap-1 text-left ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            if (!podeClicar) return;
+                                            if (!isClickable) return;
+
                                             if (duplicadoMesmaSemana) {
                                                 const ok = window.confirm(TT.confirmarDuplicado || "Já designado nesta semana. Usar mesmo assim?");
                                                 if (!ok) return;
                                             }
                                             atribuirAluno(aluno);
                                         }}
-                                        title={duplicadoMesmaSemana ? localTx.duplicadoMesma : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara}
+                                        title={indisponivel ? localTx.indisponivel : duplicadoMesmaSemana ? localTx.duplicadoMesma : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara}
                                     >
                                         <div className="flex items-start justify-between gap-2 w-full">
                                             <div className="min-w-0">
@@ -229,7 +326,7 @@ const SidebarAlunos = ({
                                                 </span>
                                                 {typeof dias === 'number' ? (
                                                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5 ${getBadgeDiasColor(dias)}`}>
-                                                        <Clock size={10} /> 
+                                                        <Clock size={10} />
                                                         {dias < 0 ? `Futuro` : `${dias} ${TT.dias}`}
                                                     </span>
                                                 ) : (
@@ -240,7 +337,16 @@ const SidebarAlunos = ({
                                             </div>
                                         </div>
 
-                                        {(duplicadoMesmaSemana || duplicadoOutraSemana) && (
+                                        {/* TAG DE INDISPONÍVEL */}
+                                        {indisponivel && (
+                                            <div className="mt-0.5">
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200 inline-flex items-center gap-0.5">
+                                                    <CalendarX size={10} /> {localTx.ausente}{indisponivel.motivo ? `: ${indisponivel.motivo}` : ''}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {!indisponivel && (duplicadoMesmaSemana || duplicadoOutraSemana) && (
                                             <div className="flex gap-1 mt-0.5">
                                                 {duplicadoMesmaSemana && (
                                                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 inline-flex items-center gap-0.5">
@@ -261,7 +367,7 @@ const SidebarAlunos = ({
                                             </div>
                                         )}
 
-                                        {historicoRecente.length > 0 && (
+                                        {!indisponivel && historicoRecente.length > 0 && (
                                             <div className="mt-1.5 border-t border-gray-100 pt-1.5 w-full space-y-0.5">
                                                 {historicoRecente.map((hist, i) => (
                                                     <div key={i} className="flex justify-between items-center text-[9px] text-gray-400">
@@ -274,7 +380,10 @@ const SidebarAlunos = ({
                                                 ))}
                                             </div>
                                         )}
-                                        <div className="absolute inset-y-0 right-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-xl" />
+
+                                        {!indisponivel && (
+                                            <div className="absolute inset-y-0 right-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-xl" />
+                                        )}
                                     </button>
                                 </div>
                             );
