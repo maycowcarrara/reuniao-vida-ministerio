@@ -251,18 +251,21 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             case 1:
                 return {
                     semanasPorPag: 1,
+                    // h1 e h2 controlam o cabeçalho principal da semana
+                    h1: 'text-xl',
+                    h2: 'text-sm',
                     sectionTitle: 'text-lg font-bold mt-6 mb-4 border-b border-gray-400 uppercase tracking-wide',
                     partTitle: 'text-base font-semibold',
-                    description: 'text-[11px] leading-snug text-gray-600 mt-0.5 print:text-[9.5px] print:leading-tight',
+                    description: 'text-[12px] leading-snug text-gray-800 mt-0.5 print:text-[9.5px] print:leading-tight',
                     names: 'text-base font-semibold text-right',
-                    meta: 'text-sm text-gray-600',
+                    meta: 'text-sm text-gray-800',
                     grid: 'grid-cols-[80px_1fr_220px] gap-x-6',
                 };
             case 2:
                 return {
                     semanasPorPag: 2,
                     // h1 e h2 controlam o cabeçalho principal da semana
-                    h1: 'text-xl', 
+                    h1: 'text-xl',
                     h2: 'text-sm',
                     // Títulos das seções (Tesouros, Ministério, etc)
                     sectionTitle: 'text-[16px] font-bold mt-4 mb-2 border-b-2 border-gray-300 uppercase tracking-wide',
@@ -506,19 +509,19 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         const oracaoInicial = partes.find((p) => isOracao(p) && getOracaoPos(p) === 'inicio');
         const oracaoFinal = partes.find((p) => isOracao(p) && getOracaoPos(p) === 'final');
-        
+
         // Filtramos para IGNORAR orações e cânticos
         const partesReais = partes.filter((p) => {
             if (isOracao(p)) return false;
 
             const tipo = (p?.tipo ?? p?.type ?? '').toString().toLowerCase();
             const titulo = (p?.titulo ?? '').toString().toLowerCase();
-            
-            const ehCantico = tipo.includes('cantico') || 
-                              tipo.includes('cântico') || 
-                              titulo.includes('cantico') || 
-                              titulo.includes('cântico');
-            
+
+            const ehCantico = tipo.includes('cantico') ||
+                tipo.includes('cântico') ||
+                titulo.includes('cantico') ||
+                titulo.includes('cântico');
+
             return !ehCantico;
         });
 
@@ -546,7 +549,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
             // 🔍 MÁGICA AQUI: Extrai o número do começo do título (ex: "5. Leitura" -> "5")
             const tituloStr = (parte?.titulo || '').trim();
-            const matchNumero = tituloStr.match(/^(\d+)/); 
+            const matchNumero = tituloStr.match(/^(\d+)/);
             const numeroExtraido = matchNumero ? matchNumero[1] : null;
 
             linhas.push({
@@ -554,7 +557,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 pessoaTexto: nomes,
                 tempo: parte?.tempo,
                 // Prioridade 1: Número do Título | Prioridade 2: Banco de dados
-                numero: numeroExtraido || parte?.num || parte?.numero || '' 
+                numero: numeroExtraido || parte?.num || parte?.numero || ''
             });
         });
 
@@ -573,7 +576,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         return (
             <div className="week-5-grid">
                 {linhas.map((item, idx) => {
-                    
+
                     let numExibicao = '';
                     if (item.tipo === 'parte') {
                         if (item.numero) {
@@ -760,7 +763,9 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                             grid items-start border-b border-gray-100
                                                                             ${qtdSemanas === 1
                                                                                 ? 'grid-cols-[48px_1fr_240px] gap-x-4 py-2'
-                                                                                : 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5'
+                                                                                : qtdSemanas === 2
+                                                                                    ? 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5' /* <-- Aumentado apenas para 2 semanas (200px) */
+                                                                                    : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5' /* <-- Mantém original para 4 semanas (150px) */
                                                                             }
                                                                         `}
                                                                     >
@@ -795,12 +800,21 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                         <div
                                                                             className={`
                                                                                 text-right flex flex-col items-end
-                                                                                ${qtdSemanas === 1 ? 'min-w-[260px] gap-1' : 'min-w-[200px]'}
+                                                                                ${qtdSemanas === 1
+                                                                                    ? 'min-w-[260px] gap-1'
+                                                                                    : qtdSemanas === 2
+                                                                                        ? 'min-w-[200px]' /* <-- Aumentado apenas para 2 semanas (200px) */
+                                                                                        : 'min-w-[140px]' /* <-- Mantém original para 4 semanas (140px) */
+                                                                                }
                                                                             `}
                                                                         >
 
                                                                             <span className={`${layout.names} text-black`}>
-                                                                                {isEbc ? `${t.dirigente}: ` : ''}
+                                                                                {isEbc
+                                                                                    ? `${t.dirigente}: `
+                                                                                    : isOracao(parte)
+                                                                                        ? `${t.oracao}: `
+                                                                                        : ''}
                                                                                 {designadoPrincipal?.nome || ''}
                                                                             </span>
 
