@@ -4,10 +4,15 @@ import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 export const iniciarSincronizacao = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-    
+
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     provider.addScope('https://www.googleapis.com/auth/calendar.readonly'); // Necessário para ler a lista de agendas
     //provider.setCustomParameters({ prompt: 'consent' });
+
+    // 🔥 O SEGREDO ESTÁ AQUI: Diz pro Google usar a mesma conta que já está logada no Firebase
+    if (auth.currentUser && auth.currentUser.email) {
+        provider.setCustomParameters({ login_hint: auth.currentUser.email });
+    }
 
     try {
         const result = await signInWithPopup(auth, provider);
@@ -91,7 +96,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 });
 
                 eventosCriados++;
-                dataHoraAtual = dataHoraFim; 
+                dataHoraAtual = dataHoraFim;
             }
         }
 
