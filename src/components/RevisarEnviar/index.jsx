@@ -795,7 +795,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                         <div
                                                                             className={`
                                                                                 text-right flex flex-col items-end
-                                                                                ${qtdSemanas === 1 ? 'min-w-[260px] gap-1' : 'min-w-[140px]'}
+                                                                                ${qtdSemanas === 1 ? 'min-w-[260px] gap-1' : 'min-w-[200px]'}
                                                                             `}
                                                                         >
 
