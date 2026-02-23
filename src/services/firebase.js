@@ -7,12 +7,12 @@ import {
 } from "firebase/firestore";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDuW-J-vBJgyaRkXA-aYJwfN03RxLhaoyY",
-    authDomain: "vidaeministerio.firebaseapp.com",
-    projectId: "vidaeministerio",
-    storageBucket: "vidaeministerio.firebasestorage.app",
-    messagingSenderId: "275725526035",
-    appId: "1:275725526035:web:448fb316a8f2a6d9180be6"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
