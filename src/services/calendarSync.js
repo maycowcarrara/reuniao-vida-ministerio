@@ -1,65 +1,87 @@
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
-export const sincronizarAgendaGoogle = async (reunioes, configuracoes) => {
+// 1. Função para Autenticar e pegar os Calendários do usuário
+export const iniciarSincronizacao = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
     
-    // Pede permissão específica para ler/escrever na Agenda do Google
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
-    // Força a tela de consentimento para garantir que pegaremos o token fresco
+    provider.addScope('https://www.googleapis.com/auth/calendar.readonly'); // Necessário para ler a lista de agendas
     provider.setCustomParameters({ prompt: 'consent' });
 
     try {
-        // 1. Autenticação e resgate do Token
         const result = await signInWithPopup(auth, provider);
         const credential = GoogleAuthProvider.credentialFromResult(result);
         const token = credential.accessToken;
 
-        if (!token) throw new Error("Não foi possível obter o token de acesso da Google.");
+        if (!token) throw new Error("Não foi possível obter o token de acesso.");
 
+        // Busca as agendas disponíveis na conta do Google logada
+        const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (!data.items) throw new Error("Nenhum calendário encontrado na sua conta.");
+
+        // Retorna o token e a lista limpa de calendários para a interface montar o select
+        return {
+            sucesso: true,
+            token,
+            calendarios: data.items.map(cal => ({
+                id: cal.id,
+                nome: cal.summaryOverride || cal.summary,
+                principal: cal.primary || false
+            }))
+        };
+
+    } catch (error) {
+        console.error("Erro ao conectar com Google Agenda:", error);
+        return { sucesso: false, erro: error.message };
+    }
+};
+
+// 2. Função que pega a escolha do usuário e envia os eventos
+export const enviarEventosParaAgenda = async (token, calendarId, reunioes, configuracoes) => {
+    try {
         let eventosCriados = 0;
         const horarioPadrao = configuracoes?.horario || "19:30";
 
-        // 2. Loop pelas semanas
         for (const reuniao of reunioes) {
-            if (!reuniao.dataReuniao || !reuniao.partes) continue;
+            // MÁGICA 1: Agora usamos a dataExata (Quarta, Quinta) calculada lá na interface!
+            if (!reuniao.dataExata || !reuniao.partes) continue;
 
-            // Transforma "2026-03-02" e "19:30" em uma Data JavaScript real
             const [hora, minuto] = horarioPadrao.split(':');
-            let dataHoraAtual = new Date(`${reuniao.dataReuniao}T${hora}:${minuto}:00`);
+            let dataHoraAtual = new Date(`${reuniao.dataExata}T${hora}:${minuto}:00`);
 
-            // 3. Loop pelas partes daquela semana
             for (const parte of reuniao.partes) {
                 const duracao = parseInt(parte.tempo || "5", 10);
                 const dataHoraFim = new Date(dataHoraAtual.getTime() + (duracao * 60000));
 
-                // Se não tem ninguém designado, apenas avança o relógio e pula para a próxima parte (ex: cântico)
                 if (!parte.estudante && !parte.oracao && !parte.leitor && !parte.dirigente) {
                     dataHoraAtual = dataHoraFim;
                     continue;
                 }
 
-                // Extrai quem vai fazer a parte
                 let pessoa = parte.estudante?.nome || parte.oracao?.nome || parte.leitor?.nome || parte.dirigente?.nome || "Designado";
                 let ajudanteStr = parte.ajudante?.nome ? ` (com ${parte.ajudante.nome})` : '';
 
-                // Monta o Evento no padrão que o Google Agenda exige
                 const eventoGoogle = {
                     summary: `[RVM] ${parte.titulo} - ${pessoa}${ajudanteStr}`,
                     description: `${parte.descricao || ''}\n\nGerado pelo Gerenciador RVM.`,
                     start: {
                         dateTime: dataHoraAtual.toISOString(),
-                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Pega o fuso horário local
+                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
                     },
                     end: {
                         dateTime: dataHoraFim.toISOString(),
                         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
                     },
-                    colorId: "9" // Azul (para destacar na agenda)
+                    colorId: "9" // Cor Azul Blueberry
                 };
 
-                // Envia para a API do Google Calendar
-                await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                // Envia para o calendário específico que o usuário escolheu
+                await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -69,7 +91,6 @@ export const sincronizarAgendaGoogle = async (reunioes, configuracoes) => {
                 });
 
                 eventosCriados++;
-                // Avança o relógio para que a próxima parte comece exatamente quando essa terminar
                 dataHoraAtual = dataHoraFim; 
             }
         }
@@ -77,7 +98,7 @@ export const sincronizarAgendaGoogle = async (reunioes, configuracoes) => {
         return { sucesso: true, quantidade: eventosCriados };
 
     } catch (error) {
-        console.error("Erro ao sincronizar com Google Agenda:", error);
+        console.error("Erro ao enviar eventos:", error);
         return { sucesso: false, erro: error.message };
     }
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { CalendarDays, Loader2 } from 'lucide-react';
+import { CalendarDays, Loader2, Calendar } from 'lucide-react';
+import { iniciarSincronizacao } from '../../services/calendarSync';
 
 const RevisarEnviarHeader = ({
     t,
@@ -29,38 +30,61 @@ const RevisarEnviarHeader = ({
     // Ações
     onPrint,
     onGravarHistorico,
-
-    // NOVA AÇÃO: Função que virá do componente pai (index.jsx)
-    onSyncGoogleCalendar,
+    
+    // Callback para executar o salvamento de fato
+    onConfirmSync, 
 }) => {
     const selectedCount = Object.values(printSelecionadas || {}).filter(Boolean).length;
     const L = (key, fallback) => (t?.[key] ?? fallback);
 
-    // Estado local apenas para controlar a animação de carregamento do botão
+    // Estados do Modal do Google Agenda
     const [sincronizando, setSincronizando] = useState(false);
+    const [modalCalendario, setModalCalendario] = useState(false);
+    const [calendarios, setCalendarios] = useState([]);
+    const [calendarioSelecionado, setCalendarioSelecionado] = useState('');
+    const [tokenGoogle, setTokenGoogle] = useState(null);
+    const [enviando, setEnviando] = useState(false);
 
+    // Etapa 1: Abre a janela do Google, pega o token e as agendas
     const handleSyncClick = async () => {
-        if (!onSyncGoogleCalendar) {
-            alert("A função de sincronização ainda não foi conectada.");
-            return;
-        }
+        if (!onConfirmSync) return;
         setSincronizando(true);
         try {
-            await onSyncGoogleCalendar();
+            const res = await iniciarSincronizacao();
+            if (res.sucesso) {
+                setTokenGoogle(res.token);
+                setCalendarios(res.calendarios);
+                // Pré-seleciona a agenda principal
+                const principal = res.calendarios.find(c => c.principal);
+                setCalendarioSelecionado(principal ? principal.id : res.calendarios[0].id);
+                setModalCalendario(true);
+            } else {
+                alert(`Erro ao acessar o Google: ${res.erro}`);
+            }
         } finally {
             setSincronizando(false);
         }
     };
 
+    // Etapa 2: O usuário clicou em Confirmar dentro do Modal
+    const handleConfirmar = async () => {
+        setEnviando(true);
+        try {
+            await onConfirmSync(tokenGoogle, calendarioSelecionado);
+            setModalCalendario(false);
+        } finally {
+            setEnviando(false);
+        }
+    };
+
     return (
-        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 no-print shrink-0">
+        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 no-print shrink-0 relative">
             <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
                 {/* ESQUERDA */}
                 <div className="min-w-0 flex flex-col gap-2">
                     {/* selects e filtros */}
                     <div className="flex flex-wrap items-end gap-4">
-
-                        {/* --- MÁGICA AQUI: Oculta os selects no modo Notificar --- */}
+                        
                         {abaAtiva === 'imprimir' && (
                             <>
                                 <div className="flex flex-col min-w-[220px]">
@@ -110,8 +134,8 @@ const RevisarEnviarHeader = ({
                                     aria-pressed={filtroSemanas === 'ativas'}
                                     onClick={() => setFiltroSemanas('ativas')}
                                     className={`px-2 text-[11px] font-bold ${filtroSemanas === 'ativas'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     {L('filtroAtivas', 'Ativas')}
@@ -122,8 +146,8 @@ const RevisarEnviarHeader = ({
                                     aria-pressed={filtroSemanas === 'arquivadas'}
                                     onClick={() => setFiltroSemanas('arquivadas')}
                                     className={`px-2 text-[11px] font-bold border-l ${filtroSemanas === 'arquivadas'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     {L('filtroArquivadas', 'Arquivadas')}
@@ -134,8 +158,8 @@ const RevisarEnviarHeader = ({
                                     aria-pressed={filtroSemanas === 'todas'}
                                     onClick={() => setFiltroSemanas('todas')}
                                     className={`px-2 text-[11px] font-bold border-l ${filtroSemanas === 'todas'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     {L('filtroTodas', 'Todas')}
@@ -233,7 +257,6 @@ const RevisarEnviarHeader = ({
                             {t.btnGravarHistorico}
                         </button>
 
-                        {/* NOVO BOTÃO: SINCRONIZAR COM GOOGLE AGENDA */}
                         <button
                             onClick={handleSyncClick}
                             disabled={sincronizando}
@@ -241,7 +264,7 @@ const RevisarEnviarHeader = ({
                             title="Enviar as designações ativas para o seu Google Agenda"
                         >
                             {sincronizando ? <Loader2 className="animate-spin" size={16} /> : <CalendarDays size={16} />}
-                            {sincronizando ? 'Sincronizando...' : 'Enviar para Agenda'}
+                            {sincronizando ? 'Conectando...' : 'Sincronizar Agenda'}
                         </button>
                     </div>
 
@@ -251,8 +274,8 @@ const RevisarEnviarHeader = ({
                             aria-pressed={abaAtiva === 'imprimir'}
                             onClick={() => setAbaAtiva('imprimir')}
                             className={`flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold transition ${abaAtiva === 'imprimir'
-                                ? 'bg-white text-blue-700 shadow-sm'
-                                : 'text-gray-500'
+                                    ? 'bg-white text-blue-700 shadow-sm'
+                                    : 'text-gray-500'
                                 }`}
                         >
                             {t.abaVisualizar}
@@ -263,8 +286,8 @@ const RevisarEnviarHeader = ({
                             aria-pressed={abaAtiva === 'notificar'}
                             onClick={() => setAbaAtiva('notificar')}
                             className={`flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold transition ${abaAtiva === 'notificar'
-                                ? 'bg-white text-green-700 shadow-sm'
-                                : 'text-gray-500'
+                                    ? 'bg-white text-green-700 shadow-sm'
+                                    : 'text-gray-500'
                                 }`}
                         >
                             {t.abaNotificar}
@@ -272,6 +295,60 @@ const RevisarEnviarHeader = ({
                     </div>
                 </div>
             </div>
+
+            {/* MODAL DE SELEÇÃO DE CALENDÁRIO */}
+            {modalCalendario && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print text-left">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+                        <div className="bg-indigo-600 p-4 flex justify-between items-center text-white">
+                            <h3 className="font-bold text-sm flex items-center gap-2">
+                                <CalendarDays size={18} /> Escolha a Agenda
+                            </h3>
+                            <button onClick={() => !enviando && setModalCalendario(false)} className="hover:text-indigo-200"><X size={20} /></button>
+                        </div>
+                        
+                        <div className="p-6 space-y-4">
+                            <p className="text-xs text-gray-500">
+                                Encontramos as seguintes agendas na sua conta do Google. Em qual delas você deseja salvar os blocos de horário da reunião?
+                            </p>
+                            
+                            <div className="relative">
+                                <Calendar size={14} className="absolute left-3 top-3.5 text-gray-400" />
+                                <select 
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-3 text-sm font-bold text-gray-800 outline-none focus:border-indigo-500 cursor-pointer"
+                                    value={calendarioSelecionado}
+                                    onChange={(e) => setCalendarioSelecionado(e.target.value)}
+                                    disabled={enviando}
+                                >
+                                    {calendarios.map(cal => (
+                                        <option key={cal.id} value={cal.id}>
+                                            {cal.nome} {cal.principal ? '(Principal)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
+                                <button 
+                                    onClick={() => setModalCalendario(false)} 
+                                    disabled={enviando}
+                                    className="px-4 py-2 text-xs font-bold text-gray-400 hover:bg-gray-100 rounded-xl"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={handleConfirmar} 
+                                    disabled={enviando}
+                                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-95"
+                                >
+                                    {enviando ? <Loader2 className="animate-spin" size={14} /> : null}
+                                    {enviando ? 'Enviando Eventos...' : 'Confirmar e Salvar'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
