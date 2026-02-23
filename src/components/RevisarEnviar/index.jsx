@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { 
-    Printer, 
-    MessageCircle, 
-    BookOpen, 
-    Archive, 
-    Mail, 
-    CheckCircle, 
-    Briefcase, 
-    Tent, 
-    UsersRound, 
+import {
+    Printer,
+    MessageCircle,
+    BookOpen,
+    Archive,
+    Mail,
+    CheckCircle,
+    Briefcase,
+    Tent,
+    UsersRound,
     Edit2,
     Trash2,
     Clock,
@@ -20,19 +20,19 @@ import RevisarEnviarHeader from './RevisarEnviarHeader';
 import "./revisarEnviar.print.css";
 import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
 
-import { getI18n } from '../utils/revisarEnviar/translations';
-import { getMeetingDateISOFromSemana, formatarDataFolha } from '../utils/revisarEnviar/dates';
-import { buildWhatsappHref, buildMailtoHref } from '../utils/revisarEnviar/links';
-import { addHistorico, tipoOracaoToDb } from '../utils/revisarEnviar/historico';
+import { getI18n } from '../../utils/revisarEnviar/translations';
+import { getMeetingDateISOFromSemana, formatarDataFolha } from '../../utils/revisarEnviar/dates';
+import { buildWhatsappHref, buildMailtoHref } from '../../utils/revisarEnviar/links';
+import { addHistorico, tipoOracaoToDb } from '../../utils/revisarEnviar/historico';
 
 const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const hasHistorico = Array.isArray(historico) && historico.length > 0;
     const { lang, t } = getI18n(config);
 
     const [startIndex, setStartIndex] = useState(0);
-    const [qtdSemanas, setQtdSemanas] = useState(1); 
+    const [qtdSemanas, setQtdSemanas] = useState(1);
     const [abaAtiva, setAbaAtiva] = useState('imprimir');
-    const [filtroSemanas, setFiltroSemanas] = useState('ativas'); 
+    const [filtroSemanas, setFiltroSemanas] = useState('ativas');
     const [sentMap, setSentMap] = useState({});
 
     // Sobrescrevendo o texto do botão para o novo conceito de Sincronizar
@@ -43,7 +43,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
     // --- HELPERS DE TIPO E DETECÇÃO ---
     const getTipo = (p) => (p?.tipo ?? p?.type ?? '').toString();
-    
+
     const isOracao = (p) => {
         const tipo = getTipo(p).toLowerCase();
         return tipo.includes('oracao') || tipo.includes('oração') || tipo.includes('oración');
@@ -85,12 +85,12 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         const eEbc = isEstudo(parte);
         const eOra = isOracao(parte);
 
-        const principal = eEbc 
-            ? (parte.dirigente || parte.estudante) 
-            : eOra 
-                ? (parte.oracao || parte.estudante) 
+        const principal = eEbc
+            ? (parte.dirigente || parte.estudante)
+            : eOra
+                ? (parte.oracao || parte.estudante)
                 : parte.estudante;
-        
+
         const ajudante = parte.ajudante;
         const leitor = eEbc ? (parte.leitor || semana?.leitor) : null;
 
@@ -167,7 +167,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const semanasDisponiveis = useMemo(() => {
         if (filtroSemanas === 'todas') return semanasDisponiveisBase;
         if (filtroSemanas === 'arquivadas') return semanasDisponiveisBase.filter(s => !!s?.arquivada);
-        return semanasDisponiveisBase.filter(s => !s?.arquivada); 
+        return semanasDisponiveisBase.filter(s => !s?.arquivada);
     }, [semanasDisponiveisBase, filtroSemanas]);
 
     // --- SELEÇÃO DE SEMANAS (CHIPS) ---
@@ -261,11 +261,19 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             case 2:
                 return {
                     semanasPorPag: 2,
-                    sectionTitle: 'text-[11px] font-bold mt-2 mb-1 border-b border-gray-300 uppercase tracking-wide',
-                    partTitle: 'text-[11px] font-semibold',
-                    description: 'text-[9px] leading-tight text-gray-500 mt-0.5 print:text-[8px]',
-                    names: 'text-[10px]',
-                    meta: 'text-[9px]',
+                    // h1 e h2 controlam o cabeçalho principal da semana
+                    h1: 'text-xl', 
+                    h2: 'text-sm',
+                    // Títulos das seções (Tesouros, Ministério, etc)
+                    sectionTitle: 'text-[16px] font-bold mt-4 mb-2 border-b-2 border-gray-300 uppercase tracking-wide',
+                    // Título de cada parte (Ex: Leitura da Bíblia)
+                    partTitle: 'text-[14px] font-semibold',
+                    // Descrição (quando houver)
+                    description: 'text-[12px] leading-snug text-gray-600 mt-0.5 print:text-[10px]',
+                    // Nomes dos designados
+                    names: 'text-[13px] font-medium',
+                    // Ajudante e Leitor (textos menores abaixo do nome principal)
+                    meta: 'text-[12px]',
                 };
             case 4:
                 return {
@@ -315,7 +323,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         window.open(href, '_blank');
     };
 
-    const buildMsgKey = ({ dataISO, semana, parteId, pessoaId, role }) => 
+    const buildMsgKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
         [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
 
     const markSent = (key, channel) => {
@@ -353,14 +361,14 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
             const [ano, mes, dia] = dataBase.split('-').map(Number);
             const start = new Date(ano, mes - 1, dia); // Segunda-feira
-            
+
             const end = new Date(ano, mes - 1, dia);
             end.setDate(start.getDate() + 6); // Domingo
 
             return { start, end, label: dataBase };
         }).filter(Boolean);
 
-        console.log("Semanas identificadas para limpeza (Intervalos):", 
+        console.log("Semanas identificadas para limpeza (Intervalos):",
             rangesParaLimpar.map(r => `Semana ${r.label}: De ${r.start.toLocaleDateString()} a ${r.end.toLocaleDateString()}`)
         );
 
@@ -376,7 +384,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
                     // Verifica se a data do histórico cai dentro de alguma das semanas
                     const caiNaSemana = rangesParaLimpar.some(range => hDate >= range.start && hDate <= range.end);
-                    
+
                     if (caiNaSemana) {
                         console.log(`[LIXEIRA] Apagando registro -> Aluno: ${aluno.nome} | Parte: ${h.parte} | Data antiga: ${h.data}`);
                     }
@@ -498,7 +506,21 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         const oracaoInicial = partes.find((p) => isOracao(p) && getOracaoPos(p) === 'inicio');
         const oracaoFinal = partes.find((p) => isOracao(p) && getOracaoPos(p) === 'final');
-        const partesSemOracao = partes.filter((p) => !isOracao(p));
+        
+        // Filtramos para IGNORAR orações e cânticos
+        const partesReais = partes.filter((p) => {
+            if (isOracao(p)) return false;
+
+            const tipo = (p?.tipo ?? p?.type ?? '').toString().toLowerCase();
+            const titulo = (p?.titulo ?? '').toString().toLowerCase();
+            
+            const ehCantico = tipo.includes('cantico') || 
+                              tipo.includes('cântico') || 
+                              titulo.includes('cantico') || 
+                              titulo.includes('cântico');
+            
+            return !ehCantico;
+        });
 
         const linhas = [];
 
@@ -508,10 +530,11 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 label: t.oracao,
                 pessoa: oracaoInicial?.oracao || oracaoInicial?.estudante,
                 tempo: oracaoInicial?.tempo,
+                numero: '' // Oração não recebe número
             });
         }
 
-        partesSemOracao.forEach((parte) => {
+        partesReais.forEach((parte) => {
             const eEstudo = isEstudo(parte);
             const principal = eEstudo ? parte?.dirigente || parte?.estudante : parte?.estudante;
             const ajudante = parte?.ajudante;
@@ -521,10 +544,17 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             if (ajudante?.nome) nomes += ` / ${nomeCurto(ajudante.nome)}`;
             if (leitor?.nome) nomes += ` • ${t.leitor}: ${nomeCurto(leitor.nome)}`;
 
+            // 🔍 MÁGICA AQUI: Extrai o número do começo do título (ex: "5. Leitura" -> "5")
+            const tituloStr = (parte?.titulo || '').trim();
+            const matchNumero = tituloStr.match(/^(\d+)/); 
+            const numeroExtraido = matchNumero ? matchNumero[1] : null;
+
             linhas.push({
                 tipo: 'parte',
                 pessoaTexto: nomes,
                 tempo: parte?.tempo,
+                // Prioridade 1: Número do Título | Prioridade 2: Banco de dados
+                numero: numeroExtraido || parte?.num || parte?.numero || '' 
             });
         });
 
@@ -534,24 +564,44 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 label: `${t.oracao} (${t.final || 'final'})`,
                 pessoa: oracaoFinal?.oracao || oracaoFinal?.estudante,
                 tempo: oracaoFinal?.tempo,
+                numero: '' // Oração não recebe número
             });
         }
 
+        let contadorPartesReais = 1;
+
         return (
             <div className="week-5-grid">
-                {linhas.map((item, idx) => (
-                    <div key={idx} className="week-5-item">
-                        <span className="week-5-num">{idx + 1}.</span>
-                        {item?.tempo && (
-                            <span className="week-5-time">{item.tempo}m</span>
-                        )}
-                        <span className="week-5-name">
-                            {item.tipo.startsWith('oracao')
-                                ? `${item.label}: ${item.pessoa?.nome || '—'}`
-                                : item.pessoaTexto}
-                        </span>
-                    </div>
-                ))}
+                {linhas.map((item, idx) => {
+                    
+                    let numExibicao = '';
+                    if (item.tipo === 'parte') {
+                        if (item.numero) {
+                            numExibicao = item.numero;
+                            // Se achou um número real, calibra o nosso contador automático para o próximo número!
+                            contadorPartesReais = parseInt(item.numero, 10) + 1;
+                        } else {
+                            // Se o título não tinha número, usa o contador automático
+                            numExibicao = contadorPartesReais++;
+                        }
+                    }
+
+                    return (
+                        <div key={idx} className="week-5-item">
+                            <span className="week-5-num">
+                                {numExibicao ? `${numExibicao}.` : ''}
+                            </span>
+                            {item?.tempo && (
+                                <span className="week-5-time">{item.tempo}m</span>
+                            )}
+                            <span className="week-5-name">
+                                {item.tipo.startsWith('oracao')
+                                    ? `${item.label}: ${item.pessoa?.nome || '—'}`
+                                    : item.pessoaTexto}
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         );
     };
@@ -571,7 +621,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     qtdSemanas={qtdSemanas}
                     setQtdSemanas={setQtdSemanas}
                     historicoSelect={historicoSelect}
-                    showWeekTabs={true} 
+                    showWeekTabs={true}
                     semanasDisponiveis={semanasDisponiveis}
                     getSemanaKey={getSemanaKey}
                     printSelecionadas={printSelecionadas}
@@ -710,7 +760,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                             grid items-start border-b border-gray-100
                                                                             ${qtdSemanas === 1
                                                                                 ? 'grid-cols-[48px_1fr_240px] gap-x-4 py-2'
-                                                                                : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5'
+                                                                                : 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5'
                                                                             }
                                                                         `}
                                                                     >

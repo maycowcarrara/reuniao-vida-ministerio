@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { CheckCircle, Mail, MessageCircle, Briefcase, Tent, UsersRound, Loader2, Send } from 'lucide-react';
 
-import { formatarDataFolha } from '../utils/revisarEnviar/dates';
-import { montarMensagemDesignacao } from '../utils/revisarEnviar/messages';
-import { enviarEmailAutomatico } from '../utils/revisarEnviar/enviadorEmail';
-import { buildAgendaLink } from '../utils/revisarEnviar/links';
+import { formatarDataFolha } from '../../utils/revisarEnviar/dates';
+import { montarMensagemDesignacao } from '../../utils/revisarEnviar/messages';
+import { enviarEmailAutomatico } from '../../utils/revisarEnviar/enviadorEmail';
+import { buildAgendaLink } from '../../utils/revisarEnviar/links';
 
 const SECAO_UI = {
     tesouros: { chip: 'bg-slate-600', wrap: 'border-slate-200 bg-slate-50', text: 'text-slate-900' },
