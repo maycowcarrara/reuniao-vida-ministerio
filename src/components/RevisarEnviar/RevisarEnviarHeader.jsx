@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarDays, Loader2, Calendar } from 'lucide-react';
+import { CalendarDays, Loader2, Calendar, X } from 'lucide-react';
 import { iniciarSincronizacao } from '../../services/calendarSync';
 
 const RevisarEnviarHeader = ({

@@ -373,10 +373,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             return { start, end, label: dataBase };
         }).filter(Boolean);
 
-        console.log("Semanas identificadas para limpeza (Intervalos):",
-            rangesParaLimpar.map(r => `Semana ${r.label}: De ${r.start.toLocaleDateString()} a ${r.end.toLocaleDateString()}`)
-        );
-
         if (rangesParaLimpar.length > 0) {
             novosAlunos = novosAlunos.map(aluno => {
                 if (!aluno.historico || !Array.isArray(aluno.historico)) return aluno;
@@ -635,12 +631,14 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     limparPrint={limparPrint}
                     onPrint={handlePrint}
                     onGravarHistorico={gravarHistorico}
-                    // NOVA MÁGICA: Data Correta + Calendário Escolhido
+                    
+                    // 👉 NOVA MÁGICA LIGADA CORRETAMENTE: Data Correta + Calendário Escolhido
                     onConfirmSync={async (tokenGoogle, calendarId) => {
                         const reunioesComDataExata = semanasParaImprimir.map(sem => ({
                             ...sem,
-                            dataExata: getDataReuniaoISO(sem) // Pega a data de quarta, quinta etc.
+                            dataExata: getDataReuniaoISO(sem) // Lê das config Quarta, Quinta, etc.
                         }));
+                        
                         const resultado = await enviarEventosParaAgenda(tokenGoogle, calendarId, reunioesComDataExata, config);
 
                         if (resultado.sucesso) {
