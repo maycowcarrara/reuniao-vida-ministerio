@@ -138,7 +138,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         const ordenado = [...hist].sort((a, b) => {
             const da = a?.data ? new Date(a.data).getTime() : 0;
             const db = b?.data ? new Date(b.data).getTime() : 0;
-            return db - da;
+            return db - da; // Decrescente (Mais novo primeiro)
         });
 
         const last = ordenado[0] || {};
@@ -168,6 +168,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         return `https://wa.me/${waNumber}?text=${msg}`;
     };
 
+    // PROCESSAMENTO PARA LISTA NA TELA
     const alunosProcessados = useMemo(() => {
         const buscaNorm = normalizar(termo);
 
@@ -200,7 +201,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 const res = diasA - diasB;
                 return ordemCrescente ? res : res * -1;
             });
-    }, [alunos, termo, filtrosTiposAtivos, filtroGenero, ordenacao, ordemCrescente]);
+    }, [alunos, termo, filtrosTiposAtivos, filtroGenero, ordenacao, ordemCrescente, CARGOS_MAP]);
 
     // --- EXPORTAÇÃO ---
     const baixar = (blob, nome) => {
@@ -284,9 +285,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         setModalFormOpen(false);
     };
 
-    // --- LÓGICA DE EXCLUSÃO (Modificada para exigir status 'desab') ---
     const handleExcluir = async (aluno) => {
-        // Verifica se é desabilitado
         if (aluno.tipo !== 'desab') {
             alert(t.msg.erroSoDesabilitados);
             return;
@@ -330,10 +329,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                     <div className="flex gap-2 items-center">
                         <div className="flex border border-gray-100 rounded-xl overflow-hidden bg-gray-50/60">
                             <button type="button" onClick={() => setViewMode('grid')} className={`px-3 py-2 text-[10px] font-black uppercase flex items-center gap-1.5 transition ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-white'}`} title={t.visualizacao.grade}>
-                                <LayoutGrid size={14} /> {t.visualizacao.grade}
+                                <LayoutGrid size={14} /> <span className="hidden sm:inline">{t.visualizacao.grade}</span>
                             </button>
                             <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 text-[10px] font-black uppercase flex items-center gap-1.5 border-l border-gray-100 transition ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-white'}`} title={t.visualizacao.lista}>
-                                <List size={14} /> {t.visualizacao.lista}
+                                <List size={14} /> <span className="hidden sm:inline">{t.visualizacao.lista}</span>
                             </button>
                         </div>
 
@@ -343,7 +342,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
 
                         <div className="relative">
                             <button onClick={() => setMenuExportOpen(!menuExportOpen)} className="bg-blue-50 text-blue-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-2">
-                                <Download size={14} /> {t.exportar} <ChevronDown size={12} />
+                                <Download size={14} /> <span className="hidden sm:inline">{t.exportar}</span> <ChevronDown size={12} />
                             </button>
                             {menuExportOpen && (
                                 <div className="absolute right-0 mt-2 w-52 bg-white border rounded-2xl shadow-2xl z-[150] overflow-hidden animate-in fade-in zoom-in duration-150">
@@ -397,7 +396,6 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                         const ult = getUltimoRegistro(aluno);
                         const d = calcularDias(ult.data);
                         const whatsappHref = buildWhatsappHref(aluno.telefone, aluno.nome);
-                        // Verifica se pode excluir (apenas desabilitados)
                         const podeExcluir = aluno.tipo === 'desab';
 
                         return (
@@ -411,8 +409,6 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all no-print">
                                         <button onClick={() => openEditar(aluno)} className="p-1.5 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-lg border shadow-sm" title={t.modal.editar}><Edit2 size={12} /></button>
                                         <button onClick={() => { setAlunoHistorico(aluno); setModalHistoryOpen(true); }} className="p-1.5 bg-gray-50 text-gray-400 hover:text-orange-500 rounded-lg border shadow-sm" title={t.modal.historico}><History size={12} /></button>
-
-                                        {/* BOTÃO EXCLUIR CONDICIONAL (Grade) */}
                                         <button
                                             onClick={() => handleExcluir(aluno)}
                                             className={`p-1.5 rounded-lg border shadow-sm transition-colors ${podeExcluir ? "bg-white text-red-500 hover:bg-red-50 border-red-100" : "bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed"}`}
@@ -422,7 +418,6 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                                         </button>
                                     </div>
                                 </div>
-                                {/* Resto do card (contatos, obs, data) */}
                                 <div className="space-y-1 mb-3 text-[11px] font-medium text-gray-500 pl-1">
                                     {aluno.telefone && (whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="flex items-center gap-1.5" title="WhatsApp"><Phone size={11} className="text-green-500" /> {aluno.telefone}</a> : <div className="flex items-center gap-1.5"><Phone size={11} className="text-green-500" /> {aluno.telefone}</div>)}
                                     {aluno.email && <a href={`mailto:${aluno.email}`} className="flex items-center gap-2 text-[10px] truncate" title="E-mail"><Mail size={11} className="text-blue-400" /> {aluno.email}</a>}
@@ -448,7 +443,6 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                         const ult = getUltimoRegistro(aluno);
                         const d = calcularDias(ult.data);
                         const whatsappHref = buildWhatsappHref(aluno.telefone, aluno.nome);
-                        // Verifica se pode excluir (apenas desabilitados)
                         const podeExcluir = aluno.tipo === 'desab';
 
                         return (
@@ -471,8 +465,6 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                                             <div className="hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-all no-print">
                                                 <button onClick={() => openEditar(aluno)} className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-xl border shadow-sm" title={t.modal.editar}><Edit2 size={14} /></button>
                                                 <button onClick={() => { setAlunoHistorico(aluno); setModalHistoryOpen(true); }} className="p-2 bg-gray-50 text-gray-400 hover:text-orange-500 rounded-xl border shadow-sm" title={t.modal.historico}><History size={14} /></button>
-
-                                                {/* BOTÃO EXCLUIR CONDICIONAL (Lista) */}
                                                 <button
                                                     onClick={() => handleExcluir(aluno)}
                                                     className={`p-2 rounded-xl border shadow-sm transition-colors ${podeExcluir ? "bg-white text-red-500 hover:bg-red-50 border-red-100" : "bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed"}`}
@@ -488,8 +480,6 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                                     <div className="flex sm:hidden gap-2 mt-3 no-print">
                                         <button onClick={() => openEditar(aluno)} className="flex-1 py-2 rounded-xl border bg-gray-50 text-gray-700 font-black text-[10px] uppercase">{t.modal.editar}</button>
                                         <button onClick={() => { setAlunoHistorico(aluno); setModalHistoryOpen(true); }} className="flex-1 py-2 rounded-xl border bg-orange-50 text-orange-700 font-black text-[10px] uppercase">{t.modal.historico}</button>
-
-                                        {/* BOTÃO EXCLUIR CONDICIONAL (Mobile) */}
                                         <button
                                             onClick={() => handleExcluir(aluno)}
                                             className={`flex-1 py-2 rounded-xl border font-black text-[10px] uppercase ${podeExcluir ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-300 cursor-not-allowed"}`}
@@ -504,7 +494,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 </div>
             )}
 
-            {/* MODAL HISTÓRICO */}
+            {/* MODAL HISTÓRICO COM ORDENAÇÃO DECRESCENTE */}
             {modalHistoryOpen && alunoHistorico && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (e.target === e.currentTarget) setModalHistoryOpen(false); }}>
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
@@ -514,12 +504,27 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                         </div>
                         <div className="p-5 max-h-[60vh] overflow-y-auto space-y-2">
                             <p className="font-black text-gray-800 border-b pb-2 mb-2">{alunoHistorico.nome}</p>
-                            {(alunoHistorico.historico || []).map((h, i) => (
-                                <div key={i} className="flex justify-between items-start text-xs border-b border-gray-50 pb-2">
-                                    <div className="pr-4"><p className="font-bold text-gray-700">{h.parte}</p>{h.ajudante && <p className="text-[10px] text-blue-500 italic font-bold mt-1">{t.card.com}: {h.ajudante}</p>}</div>
-                                    <span className="text-[10px] font-bold font-mono text-gray-400 bg-gray-50 px-2 py-0.5 rounded">{h.data?.split('-').reverse().join('/')}</span>
-                                </div>
-                            ))}
+                            
+                            {/* ORDENANDO O HISTÓRICO: DO MAIS NOVO PARA O MAIS ANTIGO */}
+                            {(alunoHistorico.historico || [])
+                                .slice() // Cria uma cópia para não mutar o estado original
+                                .sort((a, b) => new Date(b.data || 0).getTime() - new Date(a.data || 0).getTime())
+                                .map((h, i) => (
+                                    <div key={i} className="flex justify-between items-start text-xs border-b border-gray-50 pb-2">
+                                        <div className="pr-4">
+                                            <p className="font-bold text-gray-700">{h.parte}</p>
+                                            {h.ajudante && <p className="text-[10px] text-blue-500 italic font-bold mt-1">{t.card.com}: {h.ajudante}</p>}
+                                        </div>
+                                        <span className="text-[10px] font-bold font-mono text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
+                                            {h.data ? h.data.split('-').reverse().join('/') : '--/--'}
+                                        </span>
+                                    </div>
+                                ))
+                            }
+                            
+                            {(!alunoHistorico.historico || alunoHistorico.historico.length === 0) && (
+                                <p className="text-xs text-gray-400 italic py-2">Nenhum histórico registrado.</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -530,7 +535,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (e.target === e.currentTarget) setModalFormOpen(false); }}>
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="bg-gradient-to-r from-blue-700 to-blue-600 p-5 flex justify-between items-center text-white">
-                            <div><h3 className="font-black text-sm leading-tight">{alunoEmEdicao.id ? t.modal.editar : t.modal.novo}</h3><p className="text-[10px] opacity-80 mt-1">{alunoEmEdicao.id ? `ID #${alunoEmEdicao.id}` : '—'}</p></div>
+                            <div>
+                                <h3 className="font-black text-sm leading-tight">{alunoEmEdicao.id ? t.modal.editar : t.modal.novo}</h3>
+                                <p className="text-[10px] opacity-80 mt-1">{alunoEmEdicao.id ? `ID #${alunoEmEdicao.id}` : '—'}</p>
+                            </div>
                             <button onClick={() => setModalFormOpen(false)} className="p-1 hover:bg-white/10 rounded-lg"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleSalvar} className="p-6 space-y-4">

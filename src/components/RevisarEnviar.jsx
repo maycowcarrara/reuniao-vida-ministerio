@@ -1,5 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Printer, MessageCircle, BookOpen, Archive, Mail, CheckCircle, Briefcase, Tent, UsersRound } from 'lucide-react';
+import { 
+    Printer, 
+    MessageCircle, 
+    BookOpen, 
+    Archive, 
+    Mail, 
+    CheckCircle, 
+    Briefcase, 
+    Tent, 
+    UsersRound, 
+    Edit2,
+    Trash2,
+    Clock,
+    Plus,
+    RotateCcw
+} from 'lucide-react';
 
 import RevisarEnviarHeader from './RevisarEnviarHeader';
 import "./revisarEnviar.print.css";
@@ -15,22 +30,31 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const { lang, t } = getI18n(config);
 
     const [startIndex, setStartIndex] = useState(0);
-    const [qtdSemanas, setQtdSemanas] = useState(1); // dropdown: semanas por folha (1/2/4/5)
+    const [qtdSemanas, setQtdSemanas] = useState(1); 
     const [abaAtiva, setAbaAtiva] = useState('imprimir');
-
-    const [filtroSemanas, setFiltroSemanas] = useState('ativas'); // 'ativas' | 'arquivadas' | 'todas'
-
-    // marcação em tempo de execução do que já foi clicado (WA / email)
+    const [filtroSemanas, setFiltroSemanas] = useState('ativas'); 
     const [sentMap, setSentMap] = useState({});
 
-    const getTipo = (p) => (p?.tipo ?? p?.type ?? '').toString();
-    const isOracao = (p) =>
-        getTipo(p).toLowerCase().includes('oracao') ||
-        getTipo(p).toLowerCase().includes('oração') ||
-        getTipo(p).toLowerCase().includes('oración');
-    const isEstudo = (p) => getTipo(p).toLowerCase() === 'estudo';
+    // Sobrescrevendo o texto do botão para o novo conceito de Sincronizar
+    const tModificado = {
+        ...t,
+        btnGravarHistorico: lang === 'es' ? 'Sincronizar Historial' : 'Sincronizar Histórico'
+    };
 
-    // detecta se uma oração é "inicial" ou "final" (por tipo/título)
+    // --- HELPERS DE TIPO E DETECÇÃO ---
+    const getTipo = (p) => (p?.tipo ?? p?.type ?? '').toString();
+    
+    const isOracao = (p) => {
+        const tipo = getTipo(p).toLowerCase();
+        return tipo.includes('oracao') || tipo.includes('oração') || tipo.includes('oración');
+    };
+
+    const isEstudo = (p) => {
+        const tipo = getTipo(p).toLowerCase();
+        const titulo = (p?.titulo ?? '').toLowerCase();
+        return tipo === 'estudo' || titulo.includes('estudo bíblico') || titulo.includes('estudio bíblico');
+    };
+
     const getOracaoPos = (p) => {
         const tipo = getTipo(p).toLowerCase();
         const titulo = (p?.titulo ?? '').toString().toLowerCase();
@@ -41,30 +65,48 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         return null;
     };
 
-    // === UTILITÁRIOS PARA 5 SEMANAS ===
     const nomeCurto = (nome = '') => {
         const partes = nome.trim().split(/\s+/);
         if (partes.length === 1) return partes[0];
         return `${partes[0]} ${partes[partes.length - 1][0]}.`;
     };
 
-    const montarLinhaCompacta = (semana, secao) => {
-        return (semana?.partes || [])
-            .filter(p => p.secao === secao && !isOracao(p))
-            .map((p, idx) => {
-                const pessoa =
-                    p?.estudante ||
-                    p?.dirigente ||
-                    p?.oracao ||
-                    null;
-
-                const nome = pessoa ? nomeCurto(pessoa.nome) : '';
-                return `${idx + 1}. ${p.titulo} – ${nome}`;
-            })
-            .join(' | ');
+    // --- HELPERS DE RENDERIZAÇÃO ---
+    const getSecaoChip = (secao) => {
+        const txtSecoes = t.secoes || {};
+        const lower = (secao || '').toLowerCase();
+        if (lower === 'tesouros') return { label: txtSecoes.tesouros || 'Tesouros', cls: 're-chip-tesouros' };
+        if (lower === 'ministerio') return { label: txtSecoes.ministerio || 'Ministério', cls: 're-chip-ministerio' };
+        if (lower === 'vida') return { label: txtSecoes.vida || 'Vida Cristã', cls: 're-chip-vida' };
+        return { label: secao, cls: 're-chip-outros' };
     };
 
-    // --- PREPARAÇÃO E ORDENAÇÃO ---
+    const montarNomesLista = ({ parte, semana }) => {
+        const eEbc = isEstudo(parte);
+        const eOra = isOracao(parte);
+
+        const principal = eEbc 
+            ? (parte.dirigente || parte.estudante) 
+            : eOra 
+                ? (parte.oracao || parte.estudante) 
+                : parte.estudante;
+        
+        const ajudante = parte.ajudante;
+        const leitor = eEbc ? (parte.leitor || semana?.leitor) : null;
+
+        let str = principal?.nome || '—';
+
+        if (ajudante?.nome) {
+            str += ` / ${nomeCurto(ajudante.nome)}`;
+        }
+        if (leitor?.nome) {
+            str += ` • L: ${nomeCurto(leitor.nome)}`;
+        }
+
+        return str;
+    };
+
+    // --- PROCESSAMENTO E ORDENAÇÃO ---
     const historicoOrdenado = useMemo(() => {
         return [...historico].sort((a, b) => {
             const dA = a?.dataReuniao ? new Date(a.dataReuniao) : new Date(0);
@@ -73,21 +115,18 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         });
     }, [historico]);
 
-    // historicoSelect: Do mais novo para o mais antigo (para o dropdown)
     const historicoSelect = useMemo(() => [...historicoOrdenado].reverse(), [historicoOrdenado]);
 
-    // --- AJUSTE 1: Definir startIndex padrão para a semana ativa mais antiga ---
+    // Auto-ajuste do startIndex para a reunião mais próxima
     useEffect(() => {
         if (historicoSelect.length > 0) {
             let indexMaisAntigaAtiva = -1;
-
             for (let i = historicoSelect.length - 1; i >= 0; i--) {
                 if (!historicoSelect[i].arquivada) {
                     indexMaisAntigaAtiva = i;
                     break;
                 }
             }
-
             if (indexMaisAntigaAtiva !== -1) {
                 setStartIndex(indexMaisAntigaAtiva);
             } else {
@@ -99,16 +138,11 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const realStartIndex = historicoOrdenado.length - 1 - startIndex;
     const startSeguro = Math.max(0, realStartIndex);
 
-    const getSemanaKey = (sem, idx) =>
-        (sem?.id ?? sem?.dataReuniao ?? sem?.semana ?? String(idx)).toString();
-
-    // --- MÁGICA DA HIDRATAÇÃO ---
-    // Atualiza os dados de contato do aluno com base na lista de alunos mais recente!
+    // --- MÁGICA DA HIDRATAÇÃO (Dados Sempre Atualizados) ---
     const semanasDisponiveisBase = useMemo(() => {
         const hidratar = (snap) => {
             if (!snap || !snap.id) return snap;
             const fresco = alunos.find(a => a.id === snap.id);
-            // Pega o snapshot antigo, mas sobrescreve com dados frescos se o aluno ainda existir
             return fresco ? { ...snap, ...fresco } : snap;
         };
 
@@ -133,17 +167,17 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const semanasDisponiveis = useMemo(() => {
         if (filtroSemanas === 'todas') return semanasDisponiveisBase;
         if (filtroSemanas === 'arquivadas') return semanasDisponiveisBase.filter(s => !!s?.arquivada);
-        return semanasDisponiveisBase.filter(s => !s?.arquivada); // ativas (default)
+        return semanasDisponiveisBase.filter(s => !s?.arquivada); 
     }, [semanasDisponiveisBase, filtroSemanas]);
 
+    // --- SELEÇÃO DE SEMANAS (CHIPS) ---
     const [printSelecionadas, setPrintSelecionadas] = useState({});
-
     const prevStartSeguroRef = useRef(startSeguro);
     const userClearedRef = useRef(false);
+    const getSemanaKey = (sem, idx) => (sem?.id ?? sem?.dataReuniao ?? sem?.semana ?? String(idx)).toString();
 
     useEffect(() => {
         const startChanged = prevStartSeguroRef.current !== startSeguro;
-
         if (!startChanged && userClearedRef.current) return;
 
         const hasAnySelected = Object.values(printSelecionadas).some(Boolean);
@@ -159,7 +193,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         setPrintSelecionadas(next);
 
         prevStartSeguroRef.current = startSeguro;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startSeguro, semanasDisponiveis, qtdSemanas]);
 
     const toggleSemanaPrint = (key) => {
@@ -187,21 +220,19 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             return !!printSelecionadas[k];
         });
 
-        if (userClearedRef.current) return [];
-
+        if (userClearedRef.current && marcadas.length === 0) return [];
         return marcadas.length ? marcadas : semanasDisponiveis.slice(0, qtdSemanas);
     }, [semanasDisponiveis, printSelecionadas, qtdSemanas]);
 
+    // --- CÁLCULO DE DATA ---
     const getDataReuniaoISO = (sem) => {
-        const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
+        const dataReferencia = sem.dataInicio || sem.dataReuniao || sem.data;
+        const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === dataReferencia);
 
-        if (eventoEspecial) {
-            if (eventoEspecial.dataInput) {
-                return eventoEspecial.dataInput;
-            }
-        }
+        if (eventoEspecial?.dataInput) return eventoEspecial.dataInput;
 
-        if (sem?.dataReuniao && sem.dataReuniao !== sem.dataInicio) {
+        const hasDataInicio = !!sem?.dataInicio;
+        if (hasDataInicio && sem?.dataReuniao && sem.dataReuniao !== sem.dataInicio) {
             return sem.dataReuniao;
         }
 
@@ -209,11 +240,12 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             getMeetingDateISOFromSemana({
                 semanaStr: sem?.semana,
                 config,
-                isoFallback: sem?.dataReuniao
-            }) || null
+                isoFallback: sem?.dataReuniao || sem?.dataInicio
+            }) || sem?.dataReuniao || sem?.dataInicio
         );
     };
 
+    // --- CONFIGURAÇÃO DE LAYOUTS ---
     const getLayoutConfig = (qtd) => {
         switch (qtd) {
             case 1:
@@ -283,9 +315,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         window.open(href, '_blank');
     };
 
-    const buildMsgKey = ({ dataISO, semana, parteId, pessoaId, role }) => {
-        return [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
-    };
+    const buildMsgKey = ({ dataISO, semana, parteId, pessoaId, role }) => 
+        [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
 
     const markSent = (key, channel) => {
         setSentMap((prev) => ({
@@ -299,79 +330,100 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
     const isSent = (key, channel) => Boolean(sentMap?.[key]?.[channel]);
 
+
+    // --- SINCRONIZAR HISTÓRICO COM VARREDURA DE SEMANA COMPLETA E DEBUG ---
     const gravarHistorico = () => {
-        if (typeof onAlunosChange !== 'function') {
-            alert(t.erroSemCallback);
-            return;
-        }
-        if (!Array.isArray(alunos) || alunos.length === 0) {
-            alert(t.nadaParaGravar);
-            return;
-        }
+        if (!Array.isArray(alunos) || alunos.length === 0) return alert(t.nadaParaGravar);
 
         const msgConfirmacao = lang === 'es'
-            ? "¿Desea guardar el historial? Esto actualizará las fechas y eliminará automáticamente a los hermanos que hayan sido sustituidos."
-            : "Deseja gravar o histórico? Isso atualizará as datas e removerá automaticamente os irmãos que foram substituídos.";
+            ? "¿Desea sincronizar el historial? Esto eliminará automáticamente versiones anteriores en estas semanas para evitar duplicados."
+            : "Deseja sincronizar o histórico? Isso apagará as versões anteriores das datas destas semanas para não gerar histórico duplicado.";
 
-        const ok = window.confirm(t.confirmarGravar || msgConfirmacao);
-        if (!ok) return;
+        if (!window.confirm(msgConfirmacao)) return;
 
         let novosAlunos = [...alunos];
         let gravouAlgo = false;
 
-        // 1. PASSO DE LIMPEZA INTELIGENTE
-        const datasParaLimpar = semanasParaImprimir
-            .map(sem => getDataReuniaoISO(sem))
-            .filter(Boolean);
+        console.log("=== INICIANDO SINCRONIZAÇÃO DE HISTÓRICO ===");
 
-        if (datasParaLimpar.length > 0) {
+        // 1. PASSO DE LIMPEZA INTELIGENTE POR INTERVALO DE SEMANA
+        const rangesParaLimpar = semanasParaImprimir.map(sem => {
+            const dataBase = sem.dataInicio || sem.dataReuniao || sem.data;
+            if (!dataBase) return null;
+
+            const [ano, mes, dia] = dataBase.split('-').map(Number);
+            const start = new Date(ano, mes - 1, dia); // Segunda-feira
+            
+            const end = new Date(ano, mes - 1, dia);
+            end.setDate(start.getDate() + 6); // Domingo
+
+            return { start, end, label: dataBase };
+        }).filter(Boolean);
+
+        console.log("Semanas identificadas para limpeza (Intervalos):", 
+            rangesParaLimpar.map(r => `Semana ${r.label}: De ${r.start.toLocaleDateString()} a ${r.end.toLocaleDateString()}`)
+        );
+
+        if (rangesParaLimpar.length > 0) {
             novosAlunos = novosAlunos.map(aluno => {
                 if (!aluno.historico || !Array.isArray(aluno.historico)) return aluno;
+
+                const historicoLimpo = aluno.historico.filter(h => {
+                    if (!h.data) return true; // Se não tem data, não apaga
+
+                    const [hAno, hMes, hDia] = h.data.split('-').map(Number);
+                    const hDate = new Date(hAno, hMes - 1, hDia);
+
+                    // Verifica se a data do histórico cai dentro de alguma das semanas
+                    const caiNaSemana = rangesParaLimpar.some(range => hDate >= range.start && hDate <= range.end);
+                    
+                    if (caiNaSemana) {
+                        console.log(`[LIXEIRA] Apagando registro -> Aluno: ${aluno.nome} | Parte: ${h.parte} | Data antiga: ${h.data}`);
+                    }
+
+                    // Retorna "false" (remover) se a data cair na semana.
+                    return !caiNaSemana;
+                });
+
                 return {
                     ...aluno,
-                    historico: aluno.historico.filter(h => !datasParaLimpar.includes(h.data))
+                    historico: historicoLimpo
                 };
             });
         }
 
-        // 3. PASSO DE GRAVAÇÃO
+        console.log("=== LIMPEZA CONCLUÍDA. INICIANDO GRAVAÇÃO DE NOVOS DADOS ===");
+
+        // 2. PASSO DE GRAVAÇÃO
         semanasParaImprimir.forEach((sem) => {
-            const data = getDataReuniaoISO(sem);
+            const data = getDataReuniaoISO(sem); // Data exata da reunião
             if (!data) return;
 
+            // PRESIDENTE
             if (sem?.presidente?.id) {
                 novosAlunos = addHistorico(novosAlunos, sem.presidente.id, {
                     data,
                     parte: 'presidente',
                     ajudante: '',
                 });
+                console.log(`[GRAVADO] ${sem.presidente.nome} -> presidente (${data})`);
                 gravouAlgo = true;
             }
 
+            // Loop nas partes
             (sem?.partes || []).forEach((p) => {
                 const tituloLower = (p.titulo || '').toLowerCase();
                 const secaoLower = (p.secao || '').toLowerCase();
-
                 let termoGravacao = '';
 
-                if (isOracao(p)) {
-                    termoGravacao = 'oracao';
-                }
+                if (isOracao(p)) termoGravacao = 'oracao';
                 else if (secaoLower === 'tesouros') {
-                    if (tituloLower.includes('joias') || tituloLower.includes('joyas')) {
-                        termoGravacao = 'joias';
-                    } else if (tituloLower.includes('leitura') || tituloLower.includes('lectura')) {
-                        termoGravacao = 'leitura';
-                    } else {
-                        termoGravacao = 'tesouros';
-                    }
+                    if (tituloLower.includes('joias') || tituloLower.includes('joyas')) termoGravacao = 'joias';
+                    else if (tituloLower.includes('leitura') || tituloLower.includes('lectura')) termoGravacao = 'leitura';
+                    else termoGravacao = 'tesouros';
                 }
                 else if (secaoLower === 'ministerio') {
-                    if (tituloLower.includes('discurso')) {
-                        termoGravacao = 'discurso';
-                    } else {
-                        termoGravacao = 'ministerio';
-                    }
+                    termoGravacao = tituloLower.includes('discurso') ? 'discurso' : 'ministerio';
                 }
                 else if (secaoLower === 'vida' || isEstudo(p) || tituloLower.includes('estudo') || tituloLower.includes('estudio')) {
                     if (isEstudo(p) || tituloLower.includes('estudo bíblico') || tituloLower.includes('estudio bíblico')) {
@@ -381,6 +433,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     }
                 }
 
+                // Salva Principal
                 if (termoGravacao) {
                     const principal = p.dirigente || p.oracao || p.estudante;
                     if (principal?.id) {
@@ -389,19 +442,23 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                             parte: termoGravacao,
                             ajudante: p.ajudante?.nome || '',
                         });
+                        console.log(`[GRAVADO] ${principal.nome} -> ${termoGravacao} (${data})`);
                         gravouAlgo = true;
                     }
                 }
 
+                // Salva Ajudante
                 if (p.ajudante?.id) {
                     novosAlunos = addHistorico(novosAlunos, p.ajudante.id, {
                         data,
                         parte: 'ajudante',
                         ajudante: p.estudante?.nome || '',
                     });
+                    console.log(`[GRAVADO] ${p.ajudante.nome} -> ajudante (${data})`);
                     gravouAlgo = true;
                 }
 
+                // Salva Leitor de EBC
                 if (termoGravacao === 'estudobiblico') {
                     const leitor = p.leitor || sem.leitor;
                     if (leitor?.id) {
@@ -410,19 +467,21 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                             parte: 'leitor',
                             ajudante: '',
                         });
+                        console.log(`[GRAVADO] ${leitor.nome} -> leitor (${data})`);
                         gravouAlgo = true;
                     }
                 }
             });
         });
 
-        if (!gravouAlgo) {
-            alert(t.nadaParaGravar);
-            return;
-        }
+        console.log("=== SINCRONIZAÇÃO TOTAL FINALIZADA ===");
 
-        onAlunosChange(novosAlunos);
-        alert(t.okGravou);
+        if (gravouAlgo) {
+            onAlunosChange(novosAlunos);
+            alert(lang === 'es' ? '¡Historial sincronizado con éxito!' : 'Histórico sincronizado com sucesso!');
+        } else {
+            alert(t.nadaParaGravar);
+        }
     };
 
     const handlePrint = () => {
@@ -437,55 +496,30 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const renderPartes5Semanas = (semana) => {
         const partes = semana?.partes || [];
 
-        const nomePrimeiroUltimo = (nome = '') => {
-            const p = nome.trim().split(/\s+/);
-            if (p.length <= 1) return nome;
-            return `${p[0]} ${p[p.length - 1]}`;
-        };
-
-        const oracaoInicial = partes.find(
-            (p) => isOracao(p) && getOracaoPos(p) === 'inicio'
-        );
-
-        const oracaoFinal = partes.find(
-            (p) => isOracao(p) && getOracaoPos(p) === 'final'
-        );
-
+        const oracaoInicial = partes.find((p) => isOracao(p) && getOracaoPos(p) === 'inicio');
+        const oracaoFinal = partes.find((p) => isOracao(p) && getOracaoPos(p) === 'final');
         const partesSemOracao = partes.filter((p) => !isOracao(p));
 
         const linhas = [];
 
-        // 🔹 Oração inicial (primeira linha)
         if (oracaoInicial) {
-            const pessoa = oracaoInicial?.oracao || oracaoInicial?.estudante;
             linhas.push({
                 tipo: 'oracao-inicial',
                 label: t.oracao,
-                pessoa,
+                pessoa: oracaoInicial?.oracao || oracaoInicial?.estudante,
                 tempo: oracaoInicial?.tempo,
             });
         }
 
-        // 🔹 Partes normais
         partesSemOracao.forEach((parte) => {
             const eEstudo = isEstudo(parte);
-
-            const principal = eEstudo
-                ? parte?.dirigente || parte?.estudante
-                : parte?.estudante;
-
+            const principal = eEstudo ? parte?.dirigente || parte?.estudante : parte?.estudante;
             const ajudante = parte?.ajudante;
             const leitor = eEstudo ? parte?.leitor || semana?.leitor : null;
 
             let nomes = principal?.nome || '—';
-
-            if (ajudante?.nome) {
-                nomes += ` / ${nomePrimeiroUltimo(ajudante.nome)}`;
-            }
-
-            if (leitor?.nome) {
-                nomes += ` • ${t.leitor}: ${nomePrimeiroUltimo(leitor.nome)}`;
-            }
+            if (ajudante?.nome) nomes += ` / ${nomeCurto(ajudante.nome)}`;
+            if (leitor?.nome) nomes += ` • ${t.leitor}: ${nomeCurto(leitor.nome)}`;
 
             linhas.push({
                 tipo: 'parte',
@@ -494,13 +528,11 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             });
         });
 
-        // 🔹 Oração final (última linha)
         if (oracaoFinal) {
-            const pessoa = oracaoFinal?.oracao || oracaoFinal?.estudante;
             linhas.push({
                 tipo: 'oracao-final',
                 label: `${t.oracao} (${t.final || 'final'})`,
-                pessoa,
+                pessoa: oracaoFinal?.oracao || oracaoFinal?.estudante,
                 tempo: oracaoFinal?.tempo,
             });
         }
@@ -510,11 +542,9 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 {linhas.map((item, idx) => (
                     <div key={idx} className="week-5-item">
                         <span className="week-5-num">{idx + 1}.</span>
-
                         {item?.tempo && (
                             <span className="week-5-time">{item.tempo}m</span>
                         )}
-
                         <span className="week-5-name">
                             {item.tipo.startsWith('oracao')
                                 ? `${item.label}: ${item.pessoa?.nome || '—'}`
@@ -527,10 +557,11 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     };
 
     return (
-        <div className="space-y-6 h-full flex flex-col">
+        <div className="space-y-6 h-full flex flex-col relative">
+
             <div className="no-print">
                 <RevisarEnviarHeader
-                    t={t}
+                    t={tModificado}
                     abaAtiva={abaAtiva}
                     setAbaAtiva={setAbaAtiva}
                     startIndex={startIndex}
@@ -540,7 +571,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     qtdSemanas={qtdSemanas}
                     setQtdSemanas={setQtdSemanas}
                     historicoSelect={historicoSelect}
-                    showWeekTabs={true} /* MÁGICA: SEMPRE EXIBE OS CHIPS DE SELEÇÃO! */
+                    showWeekTabs={true} 
                     semanasDisponiveis={semanasDisponiveis}
                     getSemanaKey={getSemanaKey}
                     printSelecionadas={printSelecionadas}
@@ -567,7 +598,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                             >
                                 {semanasDaPagina.map((semana, idxSem) => {
                                     const dataISO = getDataReuniaoISO(semana);
-                                    const horarioExib = config?.horarioReuniao ?? config?.horario ?? '';
+                                    const horarioExib = config?.horarioReuniao ?? config?.horario ?? '19:30';
 
                                     const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === semana.dataInicio);
                                     const isVisita = semana.evento === 'visita' || eventoEspecial?.tipo === 'visita';
@@ -638,16 +669,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                     firstTipo.toLowerCase().includes('oración'));
 
                                                             const sectionChanged = idxPart === 0 || (prev && prev.secao !== parte.secao);
-
-                                                            const tipo = getTipo(parte);
-                                                            const showDescOk =
-                                                                layout.showDesc &&
-                                                                parte.descricao &&
-                                                                !(
-                                                                    tipo.toLowerCase().includes('oracao') ||
-                                                                    tipo.toLowerCase().includes('oração') ||
-                                                                    tipo.toLowerCase().includes('oración')
-                                                                );
 
                                                             const isEbc = isEstudo(parte);
                                                             const designadoPrincipal = isEbc
@@ -797,7 +818,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             {/* ABA NOTIFICAR */}
             {abaAtiva === 'notificar' && (
                 <RevisarEnviarNotificarTab
-                    semanasParaNotificar={semanasParaImprimir} /* MÁGICA: USA O ARRAY SELECIONADO DOS CHIPS! */
+                    semanasParaNotificar={semanasParaImprimir}
                     config={config}
                     lang={lang}
                     t={t}
