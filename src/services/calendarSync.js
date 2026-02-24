@@ -46,7 +46,7 @@ export const iniciarSincronizacao = async () => {
     }
 };
 
-// 2. Função que pega a escolha do usuário e envia os eventos
+// 2. Função que recebe a escolha do utilizador e envia os eventos
 export const enviarEventosParaAgenda = async (token, calendarId, reunioes, configuracoes) => {
     try {
         let eventosCriados = 0;
@@ -57,82 +57,151 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
 
             const [hora, minuto] = horarioPadrao.split(':');
             let dataHoraAtual = new Date(`${reuniao.dataExata}T${hora}:${minuto}:00`);
+            const dataHoraInicioReuniao = new Date(dataHoraAtual);
 
-            for (const parte of reuniao.partes) {
+            const partesProcessadas = [];
+            const programacaoLinhas = [];
+
+            // 1. O Presidente da Reunião
+            const presidente = reuniao.presidente;
+            if (presidente?.nome) {
+                programacaoLinhas.push({
+                    id: 'presidente',
+                    texto: `👔 Presidente: ${presidente.nome}`
+                });
+            }
+
+            // 2. Processar todas as partes para calcular horários e montar a lista da programação
+            reuniao.partes.forEach((parte, index) => {
                 const duracao = parseInt(parte.tempo || "5", 10);
-                const dataHoraFim = new Date(dataHoraAtual.getTime() + (duracao * 60000));
+                const start = new Date(dataHoraAtual);
+                const end = new Date(start.getTime() + (duracao * 60000));
+                dataHoraAtual = end;
 
-                if (!parte.estudante && !parte.oracao && !parte.leitor && !parte.dirigente) {
-                    dataHoraAtual = dataHoraFim;
-                    continue;
-                }
-
-                let pessoa = parte.estudante?.nome || parte.oracao?.nome || parte.leitor?.nome || parte.dirigente?.nome || "Designado";
+                let pessoa = parte.estudante?.nome || parte.oracao?.nome || parte.leitor?.nome || parte.dirigente?.nome || "";
                 let ajudanteStr = parte.ajudante?.nome ? ` (com ${parte.ajudante.nome})` : '';
+                let nomesExibicao = pessoa ? ` - ${pessoa}${ajudanteStr}` : '';
 
-                // Coletar os e-mails dos envolvidos nesta parte (Pode ser 1, 2 ou mais pessoas)
-                const convidados = [];
-                const adicionarConvidado = (aluno) => {
-                    if (aluno && aluno.email && !convidados.find(c => c.email === aluno.email)) {
-                        convidados.push({ email: aluno.email });
+                // Ajuste de Nomes (Oração Inicial e Final)
+                const tipo = (parte.tipo || '').toLowerCase();
+                const tituloOriginal = (parte.titulo || '');
+                const tituloLower = tituloOriginal.toLowerCase();
+                const ehOracao = tipo.includes('oracao') || tipo.includes('oração');
+                
+                let tituloExibicao = tituloOriginal;
+                if (ehOracao) {
+                    // Se estiver no começo da reunião (pelo nome ou sendo uma das 2 primeiras partes)
+                    if (tituloLower.includes('inicial') || tituloLower.includes('inicio') || tituloLower.includes('abertura') || index <= 1) {
+                        tituloExibicao = 'Oração Inicial';
+                    } else {
+                        tituloExibicao = 'Oração Final'; // Garante o nome correto no título!
                     }
-                };
-
-                // Adiciona todos que tiverem e-mail
-                adicionarConvidado(parte.estudante);
-                adicionarConvidado(parte.ajudante);
-                adicionarConvidado(parte.oracao);
-                adicionarConvidado(parte.leitor);
-                adicionarConvidado(parte.dirigente);
-
-                const eventoGoogle = {
-                    summary: `[RVM] ${parte.titulo} - ${pessoa}${ajudanteStr}`,
-                    description: `${parte.descricao || ''}\n\nGerado pelo Gerenciador RVM.`,
-                    start: {
-                        dateTime: dataHoraAtual.toISOString(),
-                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                    },
-                    end: {
-                        dateTime: dataHoraFim.toISOString(),
-                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                    },
-
-                    // Define a cor baseada na seção da reunião
-                    colorId: (() => {
-                        const secao = (parte.secao || '').toLowerCase();
-                        if (secao === 'tesouros') return "8"; // Cinza
-                        if (secao === 'ministerio') return "6"; // Laranja
-                        if (secao === 'vida' || (parte.titulo || '').toLowerCase().includes('estudo')) return "11"; // Vermelho
-                        return "9"; // Azul (Padrão para oração, cânticos, presidente)
-                    })(),
-
-                    // 🔥 MÁGICA DOS LEMBRETES FORÇADOS
-                    reminders: {
-                        useDefault: false, // Desliga o padrão do celular do irmão
-                        overrides: [
-                            { method: 'popup', minutes: 2880 }, // Apita 2 dias antes (48h * 60m)
-                            { method: 'popup', minutes: 120 }   // Apita 2 horas antes (2h * 60m)
-                        ]
-                    }
-                };
-
-                // Se encontrou algum e-mail, adiciona no evento
-                if (convidados.length > 0) {
-                    eventoGoogle.attendees = convidados;
                 }
 
-                // Envia com comando para disparar o e-mail de notificação para os convidados
-                await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(eventoGoogle)
+                // Formatar hora para exibir na lista (ex: "19:30")
+                const horaFormatada = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                programacaoLinhas.push({
+                    id: `parte_${index}`,
+                    texto: `🕒 ${horaFormatada} | ${tituloExibicao}${nomesExibicao}`
                 });
 
+                partesProcessadas.push({
+                    parteOriginal: parte,
+                    start,
+                    end,
+                    tituloExibicao,
+                    pessoa,
+                    ajudanteStr,
+                    id: `parte_${index}`,
+                    vazia: !pessoa
+                });
+            });
+
+            const dataHoraFimReuniao = new Date(dataHoraAtual); // Fim de tudo
+
+            // Função auxiliar para gerar a descrição em HTML com a linha certa destacada
+            const gerarDescricaoHTML = (idDestacado, detalhesExtra) => {
+                let html = `<h3>📋 Programação da Reunião:</h3><br>`;
+                
+                programacaoLinhas.forEach(linha => {
+                    if (linha.id === idDestacado) {
+                        html += `<b>👉 ${linha.texto} 👈</b><br>`; // Destaca em negrito
+                    } else {
+                        html += `${linha.texto}<br>`;
+                    }
+                });
+
+                if (detalhesExtra) {
+                    html += `<br><b>📝 Detalhes da sua parte:</b><br>${detalhesExtra.replace(/\n/g, '<br>')}<br>`;
+                }
+                html += `<br><i>🤖 Gerado automaticamente pelo Gerenciador RVM.</i>`;
+                return html;
+            };
+
+            const requestsParaEnviar = [];
+
+            // 3. Criar evento ÚNICO para o PRESIDENTE (Cobre o tempo total da reunião)
+            if (presidente?.nome) {
+                const convidadosPres = [];
+                if (presidente.email) convidadosPres.push({ email: presidente.email });
+
+                const eventoPres = {
+                    summary: `[RVM] Presidente da Reunião - ${presidente.nome}`,
+                    description: gerarDescricaoHTML('presidente', 'Você é o presidente da reunião desta semana.'),
+                    start: { dateTime: dataHoraInicioReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                    end: { dateTime: dataHoraFimReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                    colorId: "9", // Azul
+                    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 2880 }, { method: 'popup', minutes: 120 }] }
+                };
+                if (convidadosPres.length > 0) eventoPres.attendees = convidadosPres;
+                requestsParaEnviar.push(eventoPres);
+            }
+
+            // 4. Criar eventos Individuais para cada PARTE (incluindo as orações bem nomeadas)
+            for (const p of partesProcessadas) {
+                if (p.vazia) continue; // Pula caso não tenha ninguém designado (ex: Cântico)
+
+                const convidados = [];
+                const addConv = (aluno) => { 
+                    if (aluno?.email && !convidados.find(c => c.email === aluno.email)) {
+                        convidados.push({ email: aluno.email }); 
+                    }
+                };
+                
+                addConv(p.parteOriginal.estudante);
+                addConv(p.parteOriginal.ajudante);
+                addConv(p.parteOriginal.oracao);
+                addConv(p.parteOriginal.leitor);
+                addConv(p.parteOriginal.dirigente);
+
+                // Define a cor
+                let cor = "9"; 
+                const secao = (p.parteOriginal.secao || '').toLowerCase();
+                if (secao === 'tesouros') cor = "8";
+                else if (secao === 'ministerio') cor = "6";
+                else if (secao === 'vida' || (p.tituloExibicao).toLowerCase().includes('estudo')) cor = "11";
+
+                const eventoParte = {
+                    summary: `[RVM] ${p.tituloExibicao} - ${p.pessoa}${p.ajudanteStr}`,
+                    description: gerarDescricaoHTML(p.id, p.parteOriginal.descricao),
+                    start: { dateTime: p.start.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                    end: { dateTime: p.end.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                    colorId: cor,
+                    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 2880 }, { method: 'popup', minutes: 120 }] }
+                };
+                if (convidados.length > 0) eventoParte.attendees = convidados;
+                requestsParaEnviar.push(eventoParte);
+            }
+
+            // 5. Disparar todos os eventos para o Google!
+            for (const evt of requestsParaEnviar) {
+                await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(evt)
+                });
                 eventosCriados++;
-                dataHoraAtual = dataHoraFim;
             }
         }
 
