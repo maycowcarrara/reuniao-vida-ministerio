@@ -1,15 +1,13 @@
+// 1. Função para Autenticar e pegar os Calendários do usuário
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
-// 1. Função para Autenticar e pegar os Calendários do usuário
 export const iniciarSincronizacao = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-
+    
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
-    provider.addScope('https://www.googleapis.com/auth/calendar.readonly'); // Necessário para ler a lista de agendas
-    //provider.setCustomParameters({ prompt: 'consent' });
+    provider.addScope('https://www.googleapis.com/auth/calendar.readonly'); 
 
-    // 🔥 O SEGREDO ESTÁ AQUI: Diz pro Google usar a mesma conta que já está logada no Firebase
     if (auth.currentUser && auth.currentUser.email) {
         provider.setCustomParameters({ login_hint: auth.currentUser.email });
     }
@@ -21,7 +19,6 @@ export const iniciarSincronizacao = async () => {
 
         if (!token) throw new Error("Não foi possível obter o token de acesso.");
 
-        // Busca as agendas disponíveis na conta do Google logada
         const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -29,7 +26,6 @@ export const iniciarSincronizacao = async () => {
 
         if (!data.items) throw new Error("Nenhum calendário encontrado na sua conta.");
 
-        // Retorna o token e a lista limpa de calendários para a interface montar o select
         return {
             sucesso: true,
             token,
@@ -46,14 +42,38 @@ export const iniciarSincronizacao = async () => {
     }
 };
 
-// 2. Função que recebe a escolha do utilizador e envia os eventos
+// 2. Função que recebe a escolha do utilizador e envia/atualiza os eventos
 export const enviarEventosParaAgenda = async (token, calendarId, reunioes, configuracoes) => {
     try {
-        let eventosCriados = 0;
+        let eventosProcessados = 0;
         const horarioPadrao = configuracoes?.horario || "19:30";
+
+        // 🔥 FUNÇÃO INTELIGENTE DE ENVIO (Cria ou Atualiza)
+        const enviarParaGoogle = async (evento) => {
+            // Tenta CRIAR (POST)
+            let res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(evento)
+            });
+
+            // Se retornar 409 (Conflict), significa que o evento já existe! Então vamos ATUALIZAR (PUT)
+            if (res.status === 409) {
+                res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${evento.id}?sendUpdates=all`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(evento)
+                });
+            }
+            
+            if (res.ok) eventosProcessados++;
+        };
 
         for (const reuniao of reunioes) {
             if (!reuniao.dataExata || !reuniao.partes) continue;
+
+            // Cria uma base para o ID Único (Google exige letras minúsculas a-v e números)
+            const baseIdUnico = `rvm${reuniao.dataExata.replace(/-/g, '')}`;
 
             const [hora, minuto] = horarioPadrao.split(':');
             let dataHoraAtual = new Date(`${reuniao.dataExata}T${hora}:${minuto}:00`);
@@ -71,9 +91,18 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 });
             }
 
-            // 2. Processar todas as partes para calcular horários e montar a lista da programação
+            // 2. Processar todas as partes
             reuniao.partes.forEach((parte, index) => {
-                const duracao = parseInt(parte.tempo || "5", 10);
+                let duracao = parseInt(parte.tempo || "5", 10);
+                
+                const tituloLower = (parte.titulo || '').toLowerCase();
+                const secaoLower = (parte.secao || '').toLowerCase();
+                
+                const ehLeitura = tituloLower.includes('leitura da bíblia') || tituloLower.includes('leitura da biblia') || tituloLower.includes('lectura de la biblia');
+                const ehMinisterio = secaoLower === 'ministerio';
+                
+                if (ehLeitura || ehMinisterio) duracao += 1; 
+
                 const start = new Date(dataHoraAtual);
                 const end = new Date(start.getTime() + (duracao * 60000));
                 dataHoraAtual = end;
@@ -82,91 +111,74 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 let ajudanteStr = parte.ajudante?.nome ? ` (com ${parte.ajudante.nome})` : '';
                 let nomesExibicao = pessoa ? ` - ${pessoa}${ajudanteStr}` : '';
 
-                // Ajuste de Nomes (Oração Inicial e Final)
                 const tipo = (parte.tipo || '').toLowerCase();
                 const tituloOriginal = (parte.titulo || '');
-                const tituloLower = tituloOriginal.toLowerCase();
                 const ehOracao = tipo.includes('oracao') || tipo.includes('oração');
                 
                 let tituloExibicao = tituloOriginal;
                 if (ehOracao) {
-                    // Se estiver no começo da reunião (pelo nome ou sendo uma das 2 primeiras partes)
                     if (tituloLower.includes('inicial') || tituloLower.includes('inicio') || tituloLower.includes('abertura') || index <= 1) {
                         tituloExibicao = 'Oração Inicial';
                     } else {
-                        tituloExibicao = 'Oração Final'; // Garante o nome correto no título!
+                        tituloExibicao = 'Oração Final';
                     }
                 }
 
-                // Formatar hora para exibir na lista (ex: "19:30")
                 const horaFormatada = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const tempoOriginal = parseInt(parte.tempo || "5", 10);
+                const tempoVisual = (ehLeitura || ehMinisterio) ? `${tempoOriginal}m + 1m` : `${duracao}m`;
                 
                 programacaoLinhas.push({
-                    id: `parte_${index}`,
-                    texto: `🕒 ${horaFormatada} | ${tituloExibicao}${nomesExibicao}`
+                    id: `parte${index}`,
+                    texto: `🕒 ${horaFormatada} (${tempoVisual}) | ${tituloExibicao}${nomesExibicao}`
                 });
 
                 partesProcessadas.push({
-                    parteOriginal: parte,
-                    start,
-                    end,
-                    tituloExibicao,
-                    pessoa,
-                    ajudanteStr,
-                    id: `parte_${index}`,
-                    vazia: !pessoa
+                    parteOriginal: parte, start, end, tituloExibicao, pessoa, ajudanteStr,
+                    id: `parte${index}`, vazia: !pessoa
                 });
             });
 
-            const dataHoraFimReuniao = new Date(dataHoraAtual); // Fim de tudo
+            const dataHoraFimReuniao = new Date(dataHoraAtual); 
 
-            // Função auxiliar para gerar a descrição em HTML com a linha certa destacada
             const gerarDescricaoHTML = (idDestacado, detalhesExtra) => {
                 let html = `<h3>📋 Programação da Reunião:</h3><br>`;
-                
                 programacaoLinhas.forEach(linha => {
-                    if (linha.id === idDestacado) {
-                        html += `<b>👉 ${linha.texto} 👈</b><br>`; // Destaca em negrito
-                    } else {
-                        html += `${linha.texto}<br>`;
-                    }
+                    if (linha.id === idDestacado) html += `<b>👉 ${linha.texto} 👈</b><br>`;
+                    else html += `${linha.texto}<br>`;
                 });
-
-                if (detalhesExtra) {
-                    html += `<br><b>📝 Detalhes da sua parte:</b><br>${detalhesExtra.replace(/\n/g, '<br>')}<br>`;
-                }
+                if (detalhesExtra) html += `<br><b>📝 Detalhes da sua parte:</b><br>${detalhesExtra.replace(/\n/g, '<br>')}<br>`;
                 html += `<br><i>🤖 Gerado automaticamente pelo Gerenciador RVM.</i>`;
                 return html;
             };
 
             const requestsParaEnviar = [];
 
-            // 3. Criar evento ÚNICO para o PRESIDENTE (Cobre o tempo total da reunião)
+            // 3. Criar evento do PRESIDENTE (Início a Fim da Reunião)
             if (presidente?.nome) {
                 const convidadosPres = [];
                 if (presidente.email) convidadosPres.push({ email: presidente.email });
 
                 const eventoPres = {
+                    id: `${baseIdUnico}presidente`, // 🔥 ID ÚNICO
                     summary: `[RVM] Presidente da Reunião - ${presidente.nome}`,
                     description: gerarDescricaoHTML('presidente', 'Você é o presidente da reunião desta semana.'),
                     start: { dateTime: dataHoraInicioReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     end: { dateTime: dataHoraFimReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-                    colorId: "9", // Azul
+                    colorId: "9", 
                     reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 2880 }, { method: 'popup', minutes: 120 }] }
                 };
                 if (convidadosPres.length > 0) eventoPres.attendees = convidadosPres;
                 requestsParaEnviar.push(eventoPres);
             }
 
-            // 4. Criar eventos Individuais para cada PARTE (incluindo as orações bem nomeadas)
+            // 4. Criar eventos Individuais
             for (const p of partesProcessadas) {
-                if (p.vazia) continue; // Pula caso não tenha ninguém designado (ex: Cântico)
+                if (p.vazia) continue;
 
                 const convidados = [];
                 const addConv = (aluno) => { 
-                    if (aluno?.email && !convidados.find(c => c.email === aluno.email)) {
-                        convidados.push({ email: aluno.email }); 
-                    }
+                    if (aluno?.email && !convidados.find(c => c.email === aluno.email)) convidados.push({ email: aluno.email }); 
                 };
                 
                 addConv(p.parteOriginal.estudante);
@@ -175,7 +187,6 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 addConv(p.parteOriginal.leitor);
                 addConv(p.parteOriginal.dirigente);
 
-                // Define a cor
                 let cor = "9"; 
                 const secao = (p.parteOriginal.secao || '').toLowerCase();
                 if (secao === 'tesouros') cor = "8";
@@ -183,6 +194,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 else if (secao === 'vida' || (p.tituloExibicao).toLowerCase().includes('estudo')) cor = "11";
 
                 const eventoParte = {
+                    id: `${baseIdUnico}${p.id}`, // 🔥 ID ÚNICO (ex: rvm20260302parte3)
                     summary: `[RVM] ${p.tituloExibicao} - ${p.pessoa}${p.ajudanteStr}`,
                     description: gerarDescricaoHTML(p.id, p.parteOriginal.descricao),
                     start: { dateTime: p.start.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
@@ -194,18 +206,13 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 requestsParaEnviar.push(eventoParte);
             }
 
-            // 5. Disparar todos os eventos para o Google!
+            // 5. Enviar / Atualizar um por um
             for (const evt of requestsParaEnviar) {
-                await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(evt)
-                });
-                eventosCriados++;
+                await enviarParaGoogle(evt);
             }
         }
 
-        return { sucesso: true, quantidade: eventosCriados };
+        return { sucesso: true, quantidade: eventosProcessados };
 
     } catch (error) {
         console.error("Erro ao enviar eventos:", error);
