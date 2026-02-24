@@ -53,7 +53,6 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
         const horarioPadrao = configuracoes?.horario || "19:30";
 
         for (const reuniao of reunioes) {
-            // MÁGICA 1: Agora usamos a dataExata (Quarta, Quinta) calculada lá na interface!
             if (!reuniao.dataExata || !reuniao.partes) continue;
 
             const [hora, minuto] = horarioPadrao.split(':');
@@ -71,6 +70,21 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 let pessoa = parte.estudante?.nome || parte.oracao?.nome || parte.leitor?.nome || parte.dirigente?.nome || "Designado";
                 let ajudanteStr = parte.ajudante?.nome ? ` (com ${parte.ajudante.nome})` : '';
 
+                // Coletar os e-mails dos envolvidos nesta parte (Pode ser 1, 2 ou mais pessoas)
+                const convidados = [];
+                const adicionarConvidado = (aluno) => {
+                    if (aluno && aluno.email && !convidados.find(c => c.email === aluno.email)) {
+                        convidados.push({ email: aluno.email });
+                    }
+                };
+
+                // Adiciona todos que tiverem e-mail
+                adicionarConvidado(parte.estudante);
+                adicionarConvidado(parte.ajudante);
+                adicionarConvidado(parte.oracao);
+                adicionarConvidado(parte.leitor);
+                adicionarConvidado(parte.dirigente);
+
                 const eventoGoogle = {
                     summary: `[RVM] ${parte.titulo} - ${pessoa}${ajudanteStr}`,
                     description: `${parte.descricao || ''}\n\nGerado pelo Gerenciador RVM.`,
@@ -82,11 +96,33 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                         dateTime: dataHoraFim.toISOString(),
                         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
                     },
-                    colorId: "9" // Cor Azul Blueberry
+
+                    // Define a cor baseada na seção da reunião
+                    colorId: (() => {
+                        const secao = (parte.secao || '').toLowerCase();
+                        if (secao === 'tesouros') return "8"; // Cinza
+                        if (secao === 'ministerio') return "6"; // Laranja
+                        if (secao === 'vida' || (parte.titulo || '').toLowerCase().includes('estudo')) return "11"; // Vermelho
+                        return "9"; // Azul (Padrão para oração, cânticos, presidente)
+                    })(),
+
+                    // 🔥 MÁGICA DOS LEMBRETES FORÇADOS
+                    reminders: {
+                        useDefault: false, // Desliga o padrão do celular do irmão
+                        overrides: [
+                            { method: 'popup', minutes: 2880 }, // Apita 2 dias antes (48h * 60m)
+                            { method: 'popup', minutes: 120 }   // Apita 2 horas antes (2h * 60m)
+                        ]
+                    }
                 };
 
-                // Envia para o calendário específico que o usuário escolheu
-                await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
+                // Se encontrou algum e-mail, adiciona no evento
+                if (convidados.length > 0) {
+                    eventoGoogle.attendees = convidados;
+                }
+
+                // Envia com comando para disparar o e-mail de notificação para os convidados
+                await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
