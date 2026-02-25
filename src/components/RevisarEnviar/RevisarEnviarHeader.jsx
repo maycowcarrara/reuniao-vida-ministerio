@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarDays, Loader2, Calendar, X } from 'lucide-react';
+import { CalendarDays, Loader2, Calendar, X, Printer, Save } from 'lucide-react';
 import { iniciarSincronizacao } from '../../services/calendarSync';
 
 const RevisarEnviarHeader = ({
@@ -55,15 +55,13 @@ const RevisarEnviarHeader = ({
                 setTokenGoogle(res.token);
                 setCalendarios(res.calendarios);
 
-                // 🔥 NOVIDADE: Verifica se tem uma agenda salva na memória do navegador
+                // Verifica se tem uma agenda salva na memória do navegador
                 const agendaSalva = localStorage.getItem('rvm_saved_calendar_id');
                 const agendaSalvaExiste = res.calendarios.find(c => c.id === agendaSalva);
 
                 if (agendaSalvaExiste) {
-                    // Se achou a salva, pré-seleciona ela
                     setCalendarioSelecionado(agendaSalva);
                 } else {
-                    // Se não, faz o padrão: pega a principal
                     const principal = res.calendarios.find(c => c.principal);
                     setCalendarioSelecionado(principal ? principal.id : res.calendarios[0].id);
                 }
@@ -83,7 +81,7 @@ const RevisarEnviarHeader = ({
     const handleConfirmar = async () => {
         setEnviando(true);
         try {
-            // 🔥 NOVIDADE: Salva a escolha do usuário na memória para a próxima vez
+            // Salva a escolha do usuário na memória para a próxima vez
             localStorage.setItem('rvm_saved_calendar_id', calendarioSelecionado);
 
             await onConfirmSync(tokenGoogle, calendarioSelecionado);
@@ -94,225 +92,213 @@ const RevisarEnviarHeader = ({
     };
 
     return (
-        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 no-print shrink-0 relative">
-            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                {/* ESQUERDA */}
-                <div className="min-w-0 flex flex-col gap-2">
-                    {/* selects e filtros */}
-                    <div className="flex flex-wrap items-end gap-4">
+        <div className="bg-white p-4 md:p-5 rounded-3xl shadow-sm border border-gray-100 no-print shrink-0 relative flex flex-col gap-5">
+            
+            {/* LINHA 1: ABAS E BOTÕES DE AÇÃO PRINCIPAIS */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                
+                {/* Abas Visualizar / Notificar */}
+                <div className="flex bg-gray-100 p-1 rounded-xl w-full lg:w-auto shrink-0 shadow-inner">
+                    <button
+                        type="button"
+                        aria-pressed={abaAtiva === 'imprimir'}
+                        onClick={() => setAbaAtiva('imprimir')}
+                        className={`flex-1 lg:flex-none px-5 py-2 rounded-lg text-xs font-bold transition-all ${
+                            abaAtiva === 'imprimir'
+                                ? 'bg-white text-blue-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        {t.abaVisualizar || 'Visualizar'}
+                    </button>
 
-                        {abaAtiva === 'imprimir' && (
-                            <>
-                                <div className="flex flex-col min-w-[220px]">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                        {t.labelInicio}
-                                    </span>
-                                    <select
-                                        className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
-                                        value={startIndex}
-                                        onChange={(e) => setStartIndex(Number(e.target.value))}
-                                    >
-                                        {historicoSelect.map((h, i) => (
-                                            <option key={i} value={i}>
-                                                {h.semana}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="flex flex-col min-w-[200px]">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                        {t.labelLayout}
-                                    </span>
-                                    <select
-                                        className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none cursor-pointer"
-                                        value={qtdSemanas}
-                                        onChange={(e) => setQtdSemanas(Number(e.target.value))}
-                                    >
-                                        <option value={1}>{t.layoutOpcoes?.[0] ?? '1 semana'}</option>
-                                        <option value={2}>{t.layoutOpcoes?.[1] ?? '2 semanas'}</option>
-                                        <option value={4}>{t.layoutOpcoes?.[2] ?? '4 semanas'}</option>
-                                        <option value={5}>{t.layoutOpcoes?.[3] ?? '5 semanas (compacto)'}</option>
-                                    </select>
-                                </div>
-                            </>
-                        )}
-
-                        {/* filtro Ativas/Arquivadas/Todas (Este continua visível) */}
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                {L('labelSemanas', 'Semanas:')}
-                            </span>
-
-                            <div className="flex border rounded-full overflow-hidden h-8">
-                                <button
-                                    type="button"
-                                    aria-pressed={filtroSemanas === 'ativas'}
-                                    onClick={() => setFiltroSemanas('ativas')}
-                                    className={`px-2 text-[11px] font-bold ${filtroSemanas === 'ativas'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                                        }`}
-                                >
-                                    {L('filtroAtivas', 'Ativas')}
-                                </button>
-
-                                <button
-                                    type="button"
-                                    aria-pressed={filtroSemanas === 'arquivadas'}
-                                    onClick={() => setFiltroSemanas('arquivadas')}
-                                    className={`px-2 text-[11px] font-bold border-l ${filtroSemanas === 'arquivadas'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                                        }`}
-                                >
-                                    {L('filtroArquivadas', 'Arquivadas')}
-                                </button>
-
-                                <button
-                                    type="button"
-                                    aria-pressed={filtroSemanas === 'todas'}
-                                    onClick={() => setFiltroSemanas('todas')}
-                                    className={`px-2 text-[11px] font-bold border-l ${filtroSemanas === 'todas'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                                        }`}
-                                >
-                                    {L('filtroTodas', 'Todas')}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Chips semanas */}
-                    {showWeekTabs && (
-                        <div className="bg-white rounded-lg border p-2 mt-2">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                                <div className="text-[10px] font-black uppercase text-gray-400">
-                                    {selectedCount} {L('selecionadas', 'selecionada(s)')}
-                                </div>
-
-                                <div className="flex items-center gap-1.5">
-                                    <button
-                                        type="button"
-                                        onClick={selecionarTodasPrint}
-                                        className="px-2 py-1 rounded-full text-xs font-bold border bg-gray-100 hover:bg-gray-200 transition"
-                                        title={L('titleSelecionarTodas', 'Selecionar todas')}
-                                    >
-                                        {L('btnTodas', 'Todas')}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={limparPrint}
-                                        className="px-2 py-1 rounded-full text-xs font-bold border bg-white hover:bg-gray-100 transition"
-                                        title={L('titleLimparSelecao', 'Limpar seleção')}
-                                    >
-                                        {L('btnLimpar', 'Limpar')}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {semanasDisponiveis.map((s, i) => {
-                                    const k = getSemanaKey(s, i);
-                                    const on = !!printSelecionadas?.[k];
-                                    const isArq = !!s?.arquivada;
-
-                                    return (
-                                        <button
-                                            key={k}
-                                            type="button"
-                                            onClick={() => toggleSemanaPrint(k)}
-                                            className={[
-                                                'px-3 py-1 rounded-full text-xs font-bold border transition whitespace-nowrap inline-flex items-center gap-2 max-w-full',
-                                                on
-                                                    ? 'bg-blue-600 text-white border-blue-600'
-                                                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50',
-                                            ].join(' ')}
-                                            title={s.semana}
-                                        >
-                                            <span className="truncate">{s.semana}</span>
-
-                                            {isArq && (
-                                                <span className="text-[10px] font-black px-2 py-0.5 rounded bg-black/10">
-                                                    {L('badgeArquivada', 'Arquivada')}
-                                                </span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {semanasDisponiveis.length === 0 && (
-                                <div className="text-xs text-gray-400 italic mt-2">
-                                    {L('nenhumaSemanaFiltro', 'Nenhuma semana para este filtro.')}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <button
+                        type="button"
+                        aria-pressed={abaAtiva === 'notificar'}
+                        onClick={() => setAbaAtiva('notificar')}
+                        className={`flex-1 lg:flex-none px-5 py-2 rounded-lg text-xs font-bold transition-all ${
+                            abaAtiva === 'notificar'
+                                ? 'bg-white text-green-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        {t.abaNotificar || 'Notificar'}
+                    </button>
                 </div>
 
-                {/* DIREITA (Botões de Ação) */}
-                <div className="flex flex-col items-stretch md:items-end gap-3">
-                    <div className="flex flex-col gap-2 w-full md:w-[230px]">
-                        {abaAtiva === 'imprimir' && (
-                            <button
-                                onClick={onPrint}
-                                className="w-full whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition active:scale-95"
-                            >
-                                {t.btnImprimir}
-                            </button>
-                        )}
-
+                {/* Botões de Ação */}
+                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                    {abaAtiva === 'imprimir' && (
                         <button
-                            onClick={onGravarHistorico}
-                            className="w-full whitespace-nowrap bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition active:scale-95"
-                            title={t.btnGravarHistorico}
+                            onClick={onPrint}
+                            className="flex-1 lg:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95"
                         >
-                            {t.btnGravarHistorico}
+                            <Printer size={14} /> {t.btnImprimir || 'Imprimir'}
                         </button>
+                    )}
 
-                        <button
-                            onClick={handleSyncClick}
-                            disabled={sincronizando}
-                            className="w-full whitespace-nowrap bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-                            title="Enviar as designações ativas para o seu Google Agenda"
-                        >
-                            {sincronizando ? <Loader2 className="animate-spin" size={16} /> : <CalendarDays size={16} />}
-                            {sincronizando ? 'Conectando...' : 'Sincronizar Agenda'}
-                        </button>
-                    </div>
+                    <button
+                        onClick={onGravarHistorico}
+                        className="flex-1 lg:flex-none px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-full text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95"
+                        title={t.btnGravarHistorico}
+                    >
+                        <Save size={14} /> {t.btnGravarHistorico || 'Sincronizar Histórico'}
+                    </button>
 
-                    <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-[230px]">
-                        <button
-                            type="button"
-                            aria-pressed={abaAtiva === 'imprimir'}
-                            onClick={() => setAbaAtiva('imprimir')}
-                            className={`flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold transition ${abaAtiva === 'imprimir'
-                                ? 'bg-white text-blue-700 shadow-sm'
-                                : 'text-gray-500'
-                                }`}
-                        >
-                            {t.abaVisualizar}
-                        </button>
-
-                        <button
-                            type="button"
-                            aria-pressed={abaAtiva === 'notificar'}
-                            onClick={() => setAbaAtiva('notificar')}
-                            className={`flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold transition ${abaAtiva === 'notificar'
-                                ? 'bg-white text-green-700 shadow-sm'
-                                : 'text-gray-500'
-                                }`}
-                        >
-                            {t.abaNotificar}
-                        </button>
-                    </div>
+                    <button
+                        onClick={handleSyncClick}
+                        disabled={sincronizando}
+                        className="flex-1 lg:flex-none px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                        title="Enviar as designações ativas para o seu Google Agenda"
+                    >
+                        {sincronizando ? <Loader2 className="animate-spin" size={14} /> : <CalendarDays size={14} />}
+                        {sincronizando ? 'Conectando...' : 'Sincronizar Agenda'}
+                    </button>
                 </div>
             </div>
 
-            {/* MODAL DE SELEÇÃO DE CALENDÁRIO */}
+            {/* LINHA 2: SELECTS E FILTROS */}
+            <div className="flex flex-wrap items-end gap-4">
+                
+                {/* Filtro Ativas/Arquivadas/Todas */}
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 px-1">
+                        {L('labelSemanas', 'Filtro:')}
+                    </span>
+                    <div className="flex border border-gray-200 rounded-full overflow-hidden shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => setFiltroSemanas('ativas')}
+                            className={`px-4 py-1.5 text-xs font-bold transition-colors ${
+                                filtroSemanas === 'ativas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'
+                            }`}
+                        >
+                            {L('filtroAtivas', 'Ativas')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFiltroSemanas('arquivadas')}
+                            className={`px-4 py-1.5 text-xs font-bold border-l border-gray-200 transition-colors ${
+                                filtroSemanas === 'arquivadas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'
+                            }`}
+                        >
+                            {L('filtroArquivadas', 'Arquivadas')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFiltroSemanas('todas')}
+                            className={`px-4 py-1.5 text-xs font-bold border-l border-gray-200 transition-colors ${
+                                filtroSemanas === 'todas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'
+                            }`}
+                        >
+                            {L('filtroTodas', 'Todas')}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Aparece Apenas na aba de Imprimir */}
+                {abaAtiva === 'imprimir' && (
+                    <>
+                        <div className="flex flex-col min-w-[200px] flex-1 lg:flex-none">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 px-1">
+                                {t.labelInicio || 'A partir de:'}
+                            </span>
+                            <select
+                                className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-full px-4 py-1.5 outline-none cursor-pointer focus:ring-2 focus:ring-blue-100 shadow-sm"
+                                value={startIndex}
+                                onChange={(e) => setStartIndex(Number(e.target.value))}
+                            >
+                                {historicoSelect.map((h, i) => (
+                                    <option key={i} value={i}>
+                                        {h.semana}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col min-w-[200px] flex-1 lg:flex-none">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 px-1">
+                                {t.labelLayout || 'Layout de Impressão:'}
+                            </span>
+                            <select
+                                className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-full px-4 py-1.5 outline-none cursor-pointer focus:ring-2 focus:ring-blue-100 shadow-sm"
+                                value={qtdSemanas}
+                                onChange={(e) => setQtdSemanas(Number(e.target.value))}
+                            >
+                                <option value={1}>{t.layoutOpcoes?.[0] ?? '1 semana por página'}</option>
+                                <option value={2}>{t.layoutOpcoes?.[1] ?? '2 semanas por página'}</option>
+                                <option value={4}>{t.layoutOpcoes?.[2] ?? '4 semanas por página'}</option>
+                                <option value={5}>{t.layoutOpcoes?.[3] ?? '5 semanas (compacto)'}</option>
+                            </select>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* LINHA 3: CAIXA DE SEMANAS COM TODAS/LIMPAR */}
+            {showWeekTabs && (
+                <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm mt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                        <div className="text-[10px] font-black uppercase text-gray-400">
+                            {selectedCount} {L('selecionadas', 'semana(s) selecionada(s)')}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={selecionarTodasPrint}
+                                className="px-3 py-1 rounded-full text-xs font-bold border bg-gray-100 hover:bg-gray-200 transition text-gray-700 shadow-sm"
+                            >
+                                {L('btnTodas', 'Todas')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={limparPrint}
+                                className="px-3 py-1 rounded-full text-xs font-bold border bg-white hover:bg-gray-100 transition text-gray-700 shadow-sm"
+                            >
+                                {L('btnLimpar', 'Limpar')}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {semanasDisponiveis.map((s, i) => {
+                            const k = getSemanaKey(s, i);
+                            const on = !!printSelecionadas?.[k];
+                            const isArq = !!s?.arquivada;
+
+                            return (
+                                <button
+                                    key={k}
+                                    type="button"
+                                    onClick={() => toggleSemanaPrint(k)}
+                                    className={[
+                                        'px-3 py-1.5 rounded-full text-xs font-bold border transition-all whitespace-nowrap inline-flex items-center gap-1.5 shadow-sm max-w-full',
+                                        on
+                                            ? 'bg-blue-600 text-white border-blue-700'
+                                            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                    ].join(' ')}
+                                    title={s.semana}
+                                >
+                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">{s.semana?.split(' -')[0] || s.semana}</span>
+                                    {isArq && (
+                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>
+                                            {L('badgeArquivada', 'Arquivada')}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+
+                        {semanasDisponiveis.length === 0 && (
+                            <div className="text-xs text-gray-400 italic py-1">
+                                {L('nenhumaSemanaFiltro', 'Nenhuma semana para este filtro.')}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE SELEÇÃO DE CALENDÁRIO GOOGLE */}
             {modalCalendario && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print text-left">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
@@ -348,7 +334,7 @@ const RevisarEnviarHeader = ({
                                 <button
                                     onClick={() => setModalCalendario(false)}
                                     disabled={enviando}
-                                    className="px-4 py-2 text-xs font-bold text-gray-400 hover:bg-gray-100 rounded-xl"
+                                    className="px-4 py-2 text-xs font-bold text-gray-400 hover:bg-gray-100 rounded-xl transition"
                                 >
                                     Cancelar
                                 </button>

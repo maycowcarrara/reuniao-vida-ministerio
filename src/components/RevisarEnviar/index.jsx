@@ -119,23 +119,35 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
     const historicoSelect = useMemo(() => [...historicoOrdenado].reverse(), [historicoOrdenado]);
 
-    // Auto-ajuste do startIndex para a reunião mais próxima
+    // 🔥 MÁGICA AQUI: Auto-ajuste do startIndex agora respeita o filtro selecionado (Ativas vs Arquivadas)
     useEffect(() => {
         if (historicoSelect.length > 0) {
-            let indexMaisAntigaAtiva = -1;
+            let indexMaisAntiga = -1;
+            
             for (let i = historicoSelect.length - 1; i >= 0; i--) {
-                if (!historicoSelect[i].arquivada) {
-                    indexMaisAntigaAtiva = i;
+                const isArq = !!historicoSelect[i].arquivada;
+                
+                if (filtroSemanas === 'ativas' && !isArq) {
+                    indexMaisAntiga = i;
+                    break;
+                }
+                if (filtroSemanas === 'arquivadas' && isArq) {
+                    indexMaisAntiga = i;
+                    break;
+                }
+                if (filtroSemanas === 'todas') {
+                    indexMaisAntiga = i; // Pega a primeira geral
                     break;
                 }
             }
-            if (indexMaisAntigaAtiva !== -1) {
-                setStartIndex(indexMaisAntigaAtiva);
+
+            if (indexMaisAntiga !== -1) {
+                setStartIndex(indexMaisAntiga);
             } else {
                 setStartIndex(0);
             }
         }
-    }, [historicoSelect]);
+    }, [historicoSelect, filtroSemanas]);
 
     const realStartIndex = historicoOrdenado.length - 1 - startIndex;
     const startSeguro = Math.max(0, realStartIndex);
@@ -253,7 +265,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             case 1:
                 return {
                     semanasPorPag: 1,
-                    // h1 e h2 controlam o cabeçalho principal da semana
                     h1: 'text-xl',
                     h2: 'text-sm',
                     sectionTitle: 'text-lg font-bold mt-6 mb-4 border-b border-gray-400 uppercase tracking-wide',
@@ -266,18 +277,12 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             case 2:
                 return {
                     semanasPorPag: 2,
-                    // h1 e h2 controlam o cabeçalho principal da semana
                     h1: 'text-xl',
                     h2: 'text-sm',
-                    // Títulos das seções (Tesouros, Ministério, etc)
                     sectionTitle: 'text-[16px] font-bold mt-4 mb-2 border-b-2 border-gray-300 uppercase tracking-wide',
-                    // Título de cada parte (Ex: Leitura da Bíblia)
                     partTitle: 'text-[14px] font-semibold',
-                    // Descrição (quando houver)
                     description: 'text-[12px] leading-snug text-gray-600 mt-0.5 print:text-[10px]',
-                    // Nomes dos designados
                     names: 'text-[13px] font-medium',
-                    // Ajudante e Leitor (textos menores abaixo do nome principal)
                     meta: 'text-[12px]',
                 };
             case 4:
@@ -342,7 +347,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     };
 
     const isSent = (key, channel) => Boolean(sentMap?.[key]?.[channel]);
-
 
     // --- SINCRONIZAR HISTÓRICO COM VARREDURA DE SEMANA COMPLETA E DEBUG ---
     const gravarHistorico = () => {
@@ -778,8 +782,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                             ${qtdSemanas === 1
                                                                                 ? 'grid-cols-[48px_1fr_240px] gap-x-4 py-2'
                                                                                 : qtdSemanas === 2
-                                                                                    ? 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5' /* <-- Aumentado apenas para 2 semanas (200px) */
-                                                                                    : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5' /* <-- Mantém original para 4 semanas (150px) */
+                                                                                    ? 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5' 
+                                                                                    : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5' 
                                                                             }
                                                                         `}
                                                                     >
@@ -817,8 +821,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                                 ${qtdSemanas === 1
                                                                                     ? 'min-w-[260px] gap-1'
                                                                                     : qtdSemanas === 2
-                                                                                        ? 'min-w-[200px]' /* <-- Aumentado apenas para 2 semanas (200px) */
-                                                                                        : 'min-w-[140px]' /* <-- Mantém original para 4 semanas (140px) */
+                                                                                        ? 'min-w-[200px]' 
+                                                                                        : 'min-w-[140px]' 
                                                                                 }
                                                                             `}
                                                                         >

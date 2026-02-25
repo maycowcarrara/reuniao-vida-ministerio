@@ -9,6 +9,7 @@ import {
 import ModalSugestao from './ModalSugestao';
 import NavegadorSemanas from './NavegadorSemanas';
 import SidebarAlunos from './SidebarAlunos';
+import DesignarHeader from './DesignarHeader'; // <-- IMPORT DO NOVO CABEÇALHO AQUI
 import {
     SECOES_ORDEM, SECOES_META, normalizar, normalizarSecao,
     tipoLower, isAbertura, isEncerramento, isLinhaInicialFinal,
@@ -421,14 +422,10 @@ const Designar = ({
         const headerClass = isLinhaInicialFinal(parte) ? 'bg-gray-200 text-gray-800' : SECOES_META[secKey]?.header || SECOES_META.vida.header;
         const isCantico = isCanticoIntermediario(parte);
 
-        // --- LÓGICA DE DISCURSO NO MINISTÉRIO (BILINGUE) ---
         const tituloNormalizado = (parte?.titulo || '').toLowerCase();
         const tipoNormalizado = (parte?.tipo || '').toLowerCase();
 
-        // Verifica se é discurso em PT ou ES
         const isDiscurso = tituloNormalizado.includes('discurso') || tipoNormalizado.includes('discurso');
-
-        // Se for discurso dentro do Ministério, NÃO precisa de ajudante.
         const requiresAjudante = secKey === 'ministerio' && !isDiscurso;
 
         return (
@@ -472,7 +469,6 @@ const Designar = ({
                     <div className={`p-2 grid gap-1.5 ${requiresAjudante ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                         {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); }, slotCtx: { key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
 
-                        {/* Exibe o Ajudante apenas se não for um discurso */}
                         {requiresAjudante && renderSlotButton({
                             label: TT.ajudante,
                             value: parte.ajudante,
@@ -491,67 +487,27 @@ const Designar = ({
     return (
         <div className="w-full min-h-screen bg-gray-50 relative font-sans text-gray-800">
 
-            <div className="w-full sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200 transition-all">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-
-                    <div className="w-full lg:w-auto flex flex-wrap items-center gap-2 min-w-0">
-                        <div className="flex border rounded-full overflow-hidden shrink-0 shadow-sm">
-                            <button type="button" onClick={() => mudarFiltro('ativas')} className={`px-3 py-1.5 text-xs font-bold transition-colors ${filtroSemanas === 'ativas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{TT.filtroAtivas}</button>
-                            <button type="button" onClick={() => mudarFiltro('arquivadas')} className={`px-3 py-1.5 text-xs font-bold border-l transition-colors ${filtroSemanas === 'arquivadas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{TT.filtroArquivadas}</button>
-                            <button type="button" onClick={() => mudarFiltro('todas')} className={`px-3 py-1.5 text-xs font-bold border-l transition-colors ${filtroSemanas === 'todas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{TT.filtroTodas}</button>
-                        </div>
-
-                        <button type="button" onClick={arquivarSelecionadas} disabled={totalSelecionadas === 0} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition inline-flex items-center gap-1 shadow-sm ${totalSelecionadas === 0 ? 'bg-gray-50 text-gray-400 cursor-not-allowed border-gray-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'}`} title={TT.arquivar}>
-                            <Archive size={14} /> {TT.arquivar}
-                        </button>
-                        <button type="button" onClick={restaurarSelecionadas} disabled={totalSelecionadas === 0} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition inline-flex items-center gap-1 shadow-sm ${totalSelecionadas === 0 ? 'bg-gray-50 text-gray-400 cursor-not-allowed border-gray-100' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200'}`} title={TT.restaurar}>
-                            <RotateCcw size={14} /> {TT.restaurar}
-                        </button>
-                        <button type="button" onClick={apagarArquivadas} className="px-3 py-1.5 rounded-full text-xs font-bold border bg-red-50 text-red-700 hover:bg-red-100 border-red-200 transition shadow-sm" title={TT.apagarArquivadas}>
-                            {TT.apagarArquivadas}
-                        </button>
-
-                        <button type="button" onClick={selecionarTodasVisiveis} className="px-3 py-1.5 rounded-full text-xs font-bold border bg-gray-100 hover:bg-gray-200 transition text-gray-700 shadow-sm">{TT.filtroTodas}</button>
-                        <button type="button" onClick={limparSelecaoVisiveis} className="px-3 py-1.5 rounded-full text-xs font-bold border bg-white hover:bg-gray-100 transition text-gray-700 shadow-sm">{lang === 'es' ? 'Limpiar' : 'Limpar'}</button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 lg:max-w-[40%]">
-                        {listaFiltradaPorFlag.map((sem, idx) => {
-                            const k = getSemanaKey(sem, idx);
-                            const on = !!semanasSelecionadas?.[k];
-                            const foco = idx === semanaAtivaIndex;
-                            const isArq = !!sem?.arquivada;
-
-                            const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
-                            const tipoEvento = eventoConfig?.tipo || sem.evento || 'normal';
-                            const isVisita = tipoEvento === 'visita';
-                            const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
-
-                            return (
-                                <button
-                                    key={k} type="button"
-                                    onClick={() => {
-                                        userClearedWeeksRef.current = false;
-                                        setSemanasSelecionadas(prev => ({ ...(prev || {}), [k]: !prev?.[k] }));
-                                        setSemanaAtivaIndex(idx);
-                                        setTimeout(() => {
-                                            const el = document.getElementById(`semana-${k}`);
-                                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }, 50);
-                                    }}
-                                    className={`px-3 py-1 rounded-full text-xs font-bold border transition-all whitespace-nowrap inline-flex items-center gap-1.5 shadow-sm ${on ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-gray-700 border-gray-200'} ${foco ? 'ring-2 ring-blue-300 ring-offset-1' : ''}`}
-                                    title={sem?.semana}
-                                >
-                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">{sem?.semana?.split(' -')[0]}</span>
-                                    {isVisita && <Briefcase size={10} className={on ? "text-white" : "text-blue-600"} />}
-                                    {isAssembly && <Tent size={10} className={on ? "text-white" : "text-yellow-600"} />}
-                                    {isArq && <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>{TT.arquivada}</span>}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
+            {/* HEADER IMPORTADO SEPARADO E REFATORADO */}
+            <DesignarHeader
+                TT={TT}
+                lang={lang}
+                config={config}
+                filtroSemanas={filtroSemanas}
+                mudarFiltro={mudarFiltro}
+                totalSelecionadas={totalSelecionadas}
+                arquivarSelecionadas={arquivarSelecionadas}
+                restaurarSelecionadas={restaurarSelecionadas}
+                apagarArquivadas={apagarArquivadas}
+                selecionarTodasVisiveis={selecionarTodasVisiveis}
+                limparSelecaoVisiveis={limparSelecaoVisiveis}
+                listaFiltradaPorFlag={listaFiltradaPorFlag}
+                getSemanaKey={getSemanaKey}
+                semanasSelecionadas={semanasSelecionadas}
+                setSemanasSelecionadas={setSemanasSelecionadas}
+                semanaAtivaIndex={semanaAtivaIndex}
+                setSemanaAtivaIndex={setSemanaAtivaIndex}
+                userClearedWeeksRef={userClearedWeeksRef}
+            />
 
             <div className="w-full max-w-7xl mx-auto py-4">
                 <div className="flex flex-col lg:flex-row gap-6 pb-20 items-start">
@@ -643,7 +599,7 @@ const Designar = ({
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        {/* PRESIDENTE (DROPZONE COM CORES) */}
+                                                        {/* PRESIDENTE */}
                                                         <div
                                                             className="relative group/slot w-full shadow-sm rounded-xl"
                                                             onDragOver={(e) => {
@@ -666,12 +622,12 @@ const Designar = ({
                                                                 type="button"
                                                                 onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
                                                                 className={`bg-white py-2 px-3 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx
-                                                                        ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]"
-                                                                        : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx
-                                                                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                                            : sem.presidente
-                                                                                ? "border-green-200 bg-green-50"
-                                                                                : "border-red-200 bg-red-50 border-dashed"
+                                                                    ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]"
+                                                                    : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx
+                                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                                        : sem.presidente
+                                                                            ? "border-green-200 bg-green-50"
+                                                                            : "border-red-200 bg-red-50 border-dashed"
                                                                     }`}
                                                             >
                                                                 <div className="flex flex-row items-center justify-between gap-2">

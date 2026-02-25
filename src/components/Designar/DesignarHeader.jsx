@@ -1,0 +1,103 @@
+import React from 'react';
+import { Archive, RotateCcw, Trash2, Briefcase, Tent, UsersRound } from 'lucide-react';
+
+const DesignarHeader = ({
+    TT, lang, config,
+    filtroSemanas, mudarFiltro,
+    totalSelecionadas,
+    arquivarSelecionadas, restaurarSelecionadas, apagarArquivadas,
+    selecionarTodasVisiveis, limparSelecaoVisiveis,
+    listaFiltradaPorFlag, getSemanaKey,
+    semanasSelecionadas, setSemanasSelecionadas,
+    semanaAtivaIndex, setSemanaAtivaIndex,
+    userClearedWeeksRef
+}) => {
+    return (
+        <div className="w-full sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200 transition-all">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col gap-3">
+
+                {/* LINHA 1: FILTROS E AÇÕES DE ARQUIVO */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex border rounded-full overflow-hidden shrink-0 shadow-sm">
+                        <button type="button" onClick={() => mudarFiltro('ativas')} className={`px-3 py-1.5 text-xs font-bold transition-colors ${filtroSemanas === 'ativas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{TT.filtroAtivas}</button>
+                        <button type="button" onClick={() => mudarFiltro('arquivadas')} className={`px-3 py-1.5 text-xs font-bold border-l transition-colors ${filtroSemanas === 'arquivadas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{TT.filtroArquivadas}</button>
+                        <button type="button" onClick={() => mudarFiltro('todas')} className={`px-3 py-1.5 text-xs font-bold border-l transition-colors ${filtroSemanas === 'todas' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{TT.filtroTodas}</button>
+                    </div>
+
+                    <button type="button" onClick={arquivarSelecionadas} disabled={totalSelecionadas === 0} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition inline-flex items-center gap-1 shadow-sm ${totalSelecionadas === 0 ? 'bg-gray-50 text-gray-400 cursor-not-allowed border-gray-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'}`} title={TT.arquivar}>
+                        <Archive size={14} /> {TT.arquivar}
+                    </button>
+
+                    <button type="button" onClick={restaurarSelecionadas} disabled={totalSelecionadas === 0} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition inline-flex items-center gap-1 shadow-sm ${totalSelecionadas === 0 ? 'bg-gray-50 text-gray-400 cursor-not-allowed border-gray-100' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200'}`} title={TT.restaurar}>
+                        <RotateCcw size={14} /> {TT.restaurar}
+                    </button>
+
+                    <button type="button" onClick={apagarArquivadas} className="px-3 py-1.5 rounded-full text-xs font-bold border bg-red-50 text-red-700 hover:bg-red-100 border-red-200 transition shadow-sm inline-flex items-center gap-1" title={TT.apagarArquivadas}>
+                        <Trash2 size={14} /> {TT.apagarArquivadas}
+                    </button>
+                </div>
+
+                {/* LINHA 2: CAIXA DE SEMANAS (Idêntico ao Revisar & Enviar) */}
+                <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                        <div className="text-[10px] font-black uppercase text-gray-400">
+                            {totalSelecionadas} {lang === 'es' ? 'semana(s) seleccionada(s)' : 'semana(s) selecionada(s)'}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <button type="button" onClick={selecionarTodasVisiveis} className="px-3 py-1 rounded-full text-xs font-bold border bg-gray-100 hover:bg-gray-200 transition text-gray-700">
+                                {lang === 'es' ? 'Todas' : 'Todas'}
+                            </button>
+                            <button type="button" onClick={limparSelecaoVisiveis} className="px-3 py-1 rounded-full text-xs font-bold border bg-white hover:bg-gray-100 transition text-gray-700">
+                                {lang === 'es' ? 'Limpiar' : 'Limpar'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {listaFiltradaPorFlag.map((sem, idx) => {
+                            const k = getSemanaKey(sem, idx);
+                            const on = !!semanasSelecionadas?.[k];
+                            const foco = idx === semanaAtivaIndex;
+                            const isArq = !!sem?.arquivada;
+
+                            const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
+                            const tipoEvento = eventoConfig?.tipo || sem.evento || 'normal';
+                            const isVisita = tipoEvento === 'visita';
+                            const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
+
+                            return (
+                                <button
+                                    key={k} type="button"
+                                    onClick={() => {
+                                        userClearedWeeksRef.current = false;
+                                        setSemanasSelecionadas(prev => ({ ...(prev || {}), [k]: !prev?.[k] }));
+                                        setSemanaAtivaIndex(idx);
+                                        setTimeout(() => {
+                                            const el = document.getElementById(`semana-${k}`);
+                                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        }, 50);
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all whitespace-nowrap inline-flex items-center gap-1.5 shadow-sm ${on ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'} ${foco ? 'ring-2 ring-blue-300 ring-offset-1' : ''}`}
+                                    title={sem?.semana}
+                                >
+                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">{sem?.semana?.split(' -')[0]}</span>
+                                    {isVisita && <Briefcase size={12} className={on ? "text-white" : "text-blue-600"} />}
+                                    {isAssembly && <Tent size={12} className={on ? "text-white" : "text-yellow-600"} />}
+                                    {isArq && <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>{TT.arquivada}</span>}
+                                </button>
+                            );
+                        })}
+                        {listaFiltradaPorFlag.length === 0 && (
+                            <div className="text-xs text-gray-400 italic py-1">
+                                {lang === 'es' ? 'Ninguna semana para este filtro.' : 'Nenhuma semana para este filtro.'}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+};
+
+export default DesignarHeader;
