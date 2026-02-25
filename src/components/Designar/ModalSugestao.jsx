@@ -14,11 +14,12 @@ const T = {
         todos: "Todos",
         nunca: "Nunca fez",
         futuro: "Futuro",
+        daquiAdias: "Daqui a {DIAS} dias",
         estaFuncao: "esta parte",
         mesesAtras: "meses atrás",
         diasAtras: "dias atrás",
         jaTemParte: "Já tem parte na semana",
-        semResultados: "Nenhum aluno encontrado para este perfil.",
+        semResultados: "Nenhum aluno encontrado para este perfil/privilégio.",
         labels: {
             qualquer: "Qualquer Parte",
             presidente: "Presidente",
@@ -27,12 +28,13 @@ const T = {
             joias: "Joias Espirituais",
             tesouros: "Discurso (Tesouros)",
             vida: "Parte (Vida Cristã)",
-            estudobiblico: "Estudo Bíblico (Dirigente)",
+            estudobiblico: "Estudo Bíblico",
             dirigente: "Dirigente (EBC)",
             leitor: "Leitor (EBC)",
             estudante: "Parte de Estudante",
             ministerio: "Parte de Estudante",
-            discurso: "Discurso (Ministério)"
+            discurso: "Discurso (Ministério)",
+            ajudante: "Ajudante"
         }
     },
     es: {
@@ -44,6 +46,7 @@ const T = {
         todos: "Todos",
         nunca: "Nunca hizo",
         futuro: "Futuro",
+        daquiAdias: "En {DIAS} días",
         estaFuncao: "esta parte",
         mesesAtras: "meses atrás",
         diasAtras: "días atrás",
@@ -57,12 +60,13 @@ const T = {
             joias: "Perlas Escondidas",
             tesouros: "Discurso (Tesoros)",
             vida: "Parte (Vida Cristiana)",
-            estudobiblico: "Estudio Bíblico (Director)",
+            estudobiblico: "Estudio Bíblico",
             dirigente: "Director (EBC)",
             leitor: "Lector (EBC)",
             estudante: "Parte de Estudiante",
             ministerio: "Parte de Estudiante",
-            discurso: "Discurso (Ministerio)"
+            discurso: "Discurso (Ministerio)",
+            ajudante: "Ayudante"
         }
     }
 };
@@ -75,12 +79,12 @@ export default function ModalSugestao({
     historico,
     parteAtual,
     semanaAtual,
-    modalKey, // 'estudante', 'ajudante', 'presidente', 'oracao', etc.
+    modalKey, // 'estudante', 'ajudante', 'presidente', 'oracao', 'dirigente', 'leitor'
     cargosMap,
     lang = 'pt'
 }) {
     const [sugestoes, setSugestoes] = useState([]);
-    const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer' });
+    const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer', isAjudante: false });
 
     const t = T[lang] || T.pt;
 
@@ -92,8 +96,8 @@ export default function ModalSugestao({
 
     // --- 1. DETECTAR O CONTEXTO EXATO DA PARTE CLICADA ---
     const detectarContexto = () => {
-        let ctx = { tipo: 'qualquer', labelKey: 'qualquer', gender: 'todos' };
-
+        let ctx = { tipo: 'qualquer', labelKey: 'qualquer', gender: 'todos', isAjudante: false };
+        
         const tituloNorm = norm(parteAtual?.titulo);
         const secaoNorm = norm(parteAtual?.secao);
 
@@ -102,33 +106,47 @@ export default function ModalSugestao({
         const hasEstudo = tituloNorm.includes('estudo') || tituloNorm.includes('estudio');
         const hasDiscurso = tituloNorm.includes('discurso');
 
+        // MÁGICA 1: Forçar gênero do ajudante para ser igual ao do estudante
+        let forceGender = null;
+        if (modalKey === 'ajudante') {
+            ctx.isAjudante = true;
+            ctx.labelKey = 'ajudante';
+            if (parteAtual?.estudante) {
+                const tipoEstudante = parteAtual.estudante.tipo;
+                forceGender = cargosMap?.[tipoEstudante]?.gen || null;
+            }
+        }
+
         // Casos de chaves diretas (Slots fixos)
-        if (modalKey === 'presidente') return { tipo: 'presidente', labelKey: 'presidente', gender: 'M' };
-        if (modalKey === 'oracao') return { tipo: 'oracao', labelKey: 'oracao', gender: 'M' };
-        if (modalKey === 'dirigente') return { tipo: 'dirigente', labelKey: 'dirigente', gender: 'M' };
-        if (modalKey === 'leitor') return { tipo: 'leitor', labelKey: 'leitor', gender: 'M' };
-
+        if (modalKey === 'presidente') { ctx.tipo = 'presidente'; ctx.labelKey = 'presidente'; ctx.gender = 'M'; }
+        else if (modalKey === 'oracao') { ctx.tipo = 'oracao'; ctx.labelKey = 'oracao'; ctx.gender = 'M'; }
+        else if (modalKey === 'dirigente') { ctx.tipo = 'dirigente'; ctx.labelKey = 'dirigente'; ctx.gender = 'M'; }
+        else if (modalKey === 'leitor') { ctx.tipo = 'leitor'; ctx.labelKey = 'leitor'; ctx.gender = 'M'; }
+        
         // Casos de Estudante/Ajudante dependendo da seção
-        if (secaoNorm.includes('tesouros')) {
-            if (hasLeitura && !hasEstudo) return { tipo: 'leitura', labelKey: 'leitura', gender: 'M' };
-            if (hasJoias) return { tipo: 'joias', labelKey: 'joias', gender: 'M' };
-            return { tipo: 'tesouros', labelKey: 'tesouros', gender: 'M' }; // O Discurso de 10 min
+        else if (secaoNorm.includes('tesouros')) {
+            if (hasLeitura && !hasEstudo) { ctx.tipo = 'leitura'; ctx.labelKey = 'leitura'; ctx.gender = 'M'; }
+            else if (hasJoias) { ctx.tipo = 'joias'; ctx.labelKey = 'joias'; ctx.gender = 'M'; }
+            else { ctx.tipo = 'tesouros'; ctx.labelKey = 'tesouros'; ctx.gender = 'M'; }
+        }
+        else if (secaoNorm.includes('ministerio')) {
+            if (hasDiscurso) { ctx.tipo = 'discurso'; ctx.labelKey = 'discurso'; ctx.gender = 'M'; }
+            else { ctx.tipo = 'ministerio'; ctx.labelKey = 'ministerio'; ctx.gender = 'todos'; }
+        }
+        else if (secaoNorm.includes('vida')) {
+            if (hasEstudo) { ctx.tipo = 'estudobiblico'; ctx.labelKey = 'estudobiblico'; ctx.gender = 'M'; }
+            else { ctx.tipo = 'vida'; ctx.labelKey = 'vida'; ctx.gender = 'todos'; }
         }
 
-        if (secaoNorm.includes('ministerio')) {
-            if (hasDiscurso) return { tipo: 'discurso', labelKey: 'discurso', gender: 'M' };
-            return { tipo: 'ministerio', labelKey: 'ministerio', gender: 'todos' };
-        }
-
-        if (secaoNorm.includes('vida')) {
-            if (hasEstudo) return { tipo: 'estudobiblico', labelKey: 'estudobiblico', gender: 'M' };
-            return { tipo: 'vida', labelKey: 'vida', gender: 'todos' }; // Entrevistas/partes normais
+        // Se for ajudante, aplicamos o gênero forçado do estudante
+        if (forceGender) {
+            ctx.gender = forceGender;
         }
 
         return ctx;
     };
 
-    // --- 2. CALCULAR O HISTÓRICO ISOLADO ---
+    // --- 2. CALCULAR O HISTÓRICO ISOLADO COM BLINDAGEM DE PRIVILÉGIOS ---
     const calcularSugestoes = () => {
         const ctx = detectarContexto();
         setContexto(ctx);
@@ -143,27 +161,65 @@ export default function ModalSugestao({
             });
         }
 
-        // B. Filtrar os alunos iniciais por Gênero e Status
+        // B. FILTRO DE PRIVILÉGIOS (O MOTOR DE REGRAS)
         let listaFiltrada = alunos.filter(aluno => {
-            if (aluno.tipo === 'desab') return false; // Desabilitados nunca entram na sugestão
-
+            if (aluno.tipo === 'desab') return false; // Desabilitados nunca entram
+            
             const cargoInfo = cargosMap?.[aluno.tipo];
             const generoAluno = cargoInfo?.gen || 'M';
-
+            
             if (ctx.gender !== 'todos' && generoAluno !== ctx.gender) return false;
+
+            // REGRAS RIGOROSAS (Baseadas no seu prompt)
+            let allowedRoles = [];
+            
+            if (ctx.isAjudante) {
+                // Ajudantes: Todos, inclui irmãs limitadas
+                allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao', 'irma_exp', 'irma', 'irma_lim'];
+            } else {
+                switch(ctx.tipo) {
+                    case 'presidente':
+                    case 'tesouros':
+                    case 'joias':
+                    case 'estudobiblico':
+                    case 'dirigente':
+                    case 'vida':
+                        // Vida Cristã, Tesouros, Joias, Dirigente e Presidente: Somente Anciãos e Servos
+                        allowedRoles = ['anciao', 'servo'];
+                        break;
+                    case 'oracao':
+                    case 'leitor':
+                    case 'discurso':
+                        // Oração, Leitor e Discurso(Ministério): Varão Hab, Ancião e Servo
+                        allowedRoles = ['anciao', 'servo', 'irmao_hab'];
+                        break;
+                    case 'leitura':
+                        // Leitura: Todos os varões, mesmo não batizados (irmao)
+                        allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao'];
+                        break;
+                    case 'ministerio':
+                        // Ministério principal: Todos, menos irmãs limitadas
+                        allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao', 'irma_exp', 'irma'];
+                        break;
+                    default:
+                        allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao', 'irma_exp', 'irma', 'irma_lim'];
+                        break;
+                }
+            }
+
+            // Se o cargo atual do irmão não estiver na lista permitida, ele é imediatamente desclassificado.
+            if (!allowedRoles.includes(aluno.tipo)) return false;
+
             return true;
         });
 
-        // C. Mapear o Histórico exato para cada aluno
+        // C. Mapear o Histórico exato para cada aluno que passou nos filtros
         listaFiltrada = listaFiltrada.map(aluno => {
             let ultimaData = null;
-            let diasSemFazer = 9999; // 9999 = Nunca fez esta parte específica
+            let diasSemFazer = 9999;
 
-            // Varre o histórico (da lista completa) do mais recente (ou futuro) para o mais antigo
             for (let i = historico.length - 1; i >= 0; i--) {
                 const semana = historico[i];
-                // Aqui removemos a trava do "continue" que ignorava o futuro. Ele agora lê datas futuras normalmente.
-
                 let fezParteEspecifica = false;
 
                 if (ctx.tipo === 'presidente' && semana.presidente?.id === aluno.id) {
@@ -185,7 +241,6 @@ export default function ModalSugestao({
                         const hasEstudo = tNorm.includes('estudo') || tNorm.includes('estudio');
                         const hasDiscurso = tNorm.includes('discurso');
 
-                        // Match cirúrgico baseado no Contexto da aba clicada:
                         if (ctx.tipo === 'oracao' && isOrac) fezParteEspecifica = true;
                         if (ctx.tipo === 'dirigente' && isDirig) fezParteEspecifica = true;
                         if (ctx.tipo === 'leitor' && isLeit) fezParteEspecifica = true;
@@ -200,22 +255,20 @@ export default function ModalSugestao({
                         if (ctx.tipo === 'estudobiblico' && isDirig) fezParteEspecifica = true;
                         if (ctx.tipo === 'vida' && (isEstud || isAjud) && sNorm.includes('vida') && !hasEstudo) fezParteEspecifica = true;
 
-                        if (fezParteEspecifica) break; // Achou a parte exata!
+                        if (fezParteEspecifica) break;
                     }
                 }
 
-                // Se fez a exata parte que estamos pedindo, calcula os dias (Inclusive aceitando datas negativas/futuras)
                 if (fezParteEspecifica) {
                     ultimaData = semana.dataReuniao;
-
-                    // Tratamento seguro contra fuso horário (Força o cálculo ser exato ao meio dia)
+                    
                     const hoje = new Date();
-                    hoje.setHours(12, 0, 0, 0);
+                    hoje.setHours(12, 0, 0, 0); 
                     const dataParte = new Date(semana.dataReuniao + 'T12:00:00');
-
+                    
                     const diffTime = hoje.getTime() - dataParte.getTime();
                     diasSemFazer = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                    break; // Interrompe pois achou a vez mais recente/futura que o aluno fez esta exata parte
+                    break;
                 }
             }
 
@@ -227,42 +280,20 @@ export default function ModalSugestao({
             };
         });
 
-        // D. Filtrar quem NUNCA fez para não sugerir pessoas fora de qualificação
-        listaFiltrada = listaFiltrada.filter(aluno => {
-            // Se já fez na vida, o histórico prova que ele é qualificado, passa direto.
-            if (aluno.diasSemFazer !== 9999) return true;
-
-            // Se nunca fez, checa se o "Cargo/Privilégio" dele permite fazer esta parte (Evita poluir a lista com Publicadores em partes de Ancião)
-            const tipo = aluno.tipo;
-            switch (ctx.tipo) {
-                case 'presidente': return ['anciao'].includes(tipo);
-                case 'tesouros': return ['anciao', 'servo'].includes(tipo);
-                case 'joias': return ['anciao', 'servo', 'irmao_hab'].includes(tipo);
-                case 'estudobiblico':
-                case 'dirigente': return ['anciao', 'servo'].includes(tipo);
-                default: return true;
-            }
-        });
-
-        // E. ORDENAÇÃO MATADORA E INFALÍVEL
+        // D. ORDENAÇÃO MATADORA
         listaFiltrada.sort((a, b) => {
-            // 1. Ocupados hoje vão lá pro final
             if (a.ocupadoAgora && !b.ocupadoAgora) return 1;
             if (!a.ocupadoAgora && b.ocupadoAgora) return -1;
 
-            // 2. Quem "Nunca Fez (9999)" vai pro final da lista
             const aNunca = a.diasSemFazer === 9999;
             const bNunca = b.diasSemFazer === 9999;
             if (aNunca && !bNunca) return 1;
             if (!aNunca && bNunca) return -1;
 
-            // 3. Ambos já fizeram. Ordenação DECRESCENTE baseada em dias.
-            // Exemplos: 150 dias atrás (vem no topo) -> 10 dias (vem depois) -> -5 dias Futuro (vai pro final)
             if (!aNunca && !bNunca) {
-                return b.diasSemFazer - a.diasSemFazer;
+                return b.diasSemFazer - a.diasSemFazer; 
             }
 
-            // 4. Se ambos nunca fizeram, desempate alfabético
             return a.nome.localeCompare(b.nome);
         });
 
@@ -303,8 +334,7 @@ export default function ModalSugestao({
                 <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 custom-scroll relative">
                     {sugestoes.map((aluno, index) => {
                         const meses = aluno.diasSemFazer !== 9999 ? Math.floor(aluno.diasSemFazer / 30) : null;
-
-                        // Linha separadora visual para os que nunca fizeram
+                        
                         const mostrarSeparadorNuncaFez = index > 0 && aluno.diasSemFazer === 9999 && sugestoes[index - 1].diasSemFazer !== 9999;
 
                         return (
@@ -312,7 +342,7 @@ export default function ModalSugestao({
                                 {mostrarSeparadorNuncaFez && (
                                     <div className="flex items-center gap-2 py-2 px-1 opacity-50">
                                         <hr className="flex-1 border-gray-300" />
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><Info size={10} /> {t.nunca}</span>
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><Info size={10}/> {t.nunca}</span>
                                         <hr className="flex-1 border-gray-300" />
                                     </div>
                                 )}
@@ -321,9 +351,9 @@ export default function ModalSugestao({
                                     onClick={() => onSelect(aluno)}
                                     className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left group relative
                                     ${aluno.ocupadoAgora
-                                            ? 'opacity-60 bg-gray-100 cursor-not-allowed border-gray-200'
-                                            : 'bg-white hover:border-blue-500 hover:shadow-md border-gray-200'
-                                        }`}
+                                        ? 'opacity-60 bg-gray-100 cursor-not-allowed border-gray-200'
+                                        : 'bg-white hover:border-blue-500 hover:shadow-md border-gray-200'
+                                    }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0 overflow-hidden border
@@ -356,10 +386,10 @@ export default function ModalSugestao({
                                             </div>
                                         ) : (
                                             <div className="flex flex-col items-end">
-                                                {/* Se diasSemFazer < 0, significa que a designação é para o futuro! */}
+                                                {/* MÁGICA 2: Dias no Futuro legíveis */}
                                                 {aluno.diasSemFazer < 0 ? (
-                                                    <span className="text-sm font-black text-blue-600">
-                                                        {t.futuro || "Futuro"}
+                                                    <span className="text-[13px] font-black text-blue-600">
+                                                        {t.daquiAdias.replace('{DIAS}', Math.abs(aluno.diasSemFazer))}
                                                     </span>
                                                 ) : (
                                                     <span className={`text-sm font-black ${aluno.diasSemFazer > 60 ? 'text-green-600' : 'text-gray-600'}`}>
@@ -378,8 +408,10 @@ export default function ModalSugestao({
                     })}
 
                     {sugestoes.length === 0 && (
-                        <div className="text-center py-10 text-gray-400">
-                            <p>{t.semResultados}</p>
+                        <div className="text-center py-10 text-gray-400 flex flex-col items-center">
+                            <Info size={40} className="mb-3 opacity-20" />
+                            <p className="font-bold text-sm">{t.semResultados}</p>
+                            <p className="text-xs opacity-60 max-w-[250px] mx-auto mt-2">A regra de privilégios para "{t.labels[contexto.labelKey] || contexto.labelKey}" está ocultando irmãos não qualificados.</p>
                         </div>
                     )}
                 </div>
