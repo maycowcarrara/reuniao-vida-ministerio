@@ -28,19 +28,19 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     // Estados de Filtro
     const [termo, setTermo] = useState('');
     const [filtrosTiposAtivos, setFiltrosTiposAtivos] = useState([]);
-    const [filtroGenero, setFiltroGenero] = useState('todos'); 
-    const [filtroEspecial, setFiltroEspecial] = useState('todos'); 
-    const [filtroStatus, setFiltroStatus] = useState('todos'); 
-    
+    const [filtroGenero, setFiltroGenero] = useState('todos');
+    const [filtroEspecial, setFiltroEspecial] = useState('todos');
+    const [filtroStatus, setFiltroStatus] = useState('todos');
+
     // Ordenação
     const [ordenacao, setOrdenacao] = useState('nome');
     const [ordemCrescente, setOrdemCrescente] = useState(true);
-    
+
     // UI States
     const [modalFormOpen, setModalFormOpen] = useState(false);
     const [modalHistoryOpen, setModalHistoryOpen] = useState(false);
     const [menuExportOpen, setMenuExportOpen] = useState(false);
-    
+
     // Dados em Edição/Visualização
     const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
     const [alunoHistorico, setAlunoHistorico] = useState(null);
@@ -69,18 +69,18 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     const stats = useMemo(() => {
         const ativos = (alunos || []).filter(a => a.tipo !== 'desab');
         let irmaos = 0, irmas = 0, ausentes = 0, atrasados = 0;
-        
+
         ativos.forEach(a => {
             const gen = CARGOS_MAP[getCargoKey(a.tipo, CARGOS_MAP)]?.gen;
             if (gen === 'M') irmaos++;
             if (gen === 'F') irmas++;
             if (verificarAusenciaAtiva(a)) ausentes++;
-            
+
             const ult = getUltimoRegistro(a);
             const d = calcularDias(ult.data);
             if (d !== null && d > 60) atrasados++;
         });
-        
+
         return { total: ativos.length, irmaos, irmas, ausentes, atrasados };
     }, [alunos, CARGOS_MAP]);
 
@@ -102,7 +102,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             .filter(a => {
                 const cKey = getCargoKey(a.tipo, CARGOS_MAP);
                 const info = CARGOS_MAP[cKey] || CARGOS_MAP.irmao;
-                
+
                 // 1. Busca por Texto
                 const matchBusca = normalizar(a.nome).includes(buscaNorm) || normalizar(info.pt).includes(buscaNorm) || normalizar(info.es).includes(buscaNorm) || normalizar(a.observacoes || '').includes(buscaNorm);
                 if (!matchBusca) return false;
@@ -153,7 +153,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             // AQUI É A GRANDE SACADA: 
             // O Backup JSON ignora `alunosProcessados` (os visíveis na tela) e força a exportação de `alunos` (o banco de dados bruto e completo, com todos os dados e imagens intactas).
             baixar(new Blob([JSON.stringify({ alunos: alunos }, null, 2)], { type: 'application/json' }), 'backup_alunos_completo.json');
-        } 
+        }
         else {
             // Para CSV e TXT, exportamos só o que foi filtrado na tela
             const rows = alunosProcessados.map(a => {
@@ -170,15 +170,15 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 // Adicionado BOM para o Excel do Windows abrir os acentos perfeitamente no CSV
                 const csv = '\uFEFF' + [Object.keys(rows[0]).join(';'), ...rows.map(o => Object.values(o).join(';'))].join('\n');
                 baixar(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'relatorio_alunos.csv');
-            } 
+            }
             else if (tipo === 'txt') {
                 baixar(new Blob([rows.map(a => `ALUNO: ${a.Nome}\nCARGO: ${a.Cargo}\nCONTATO: ${a.WhatsApp}\nOBS: ${a.Observacoes || "-"}\n----------------`).join('\n')], { type: 'text/plain' }), 'relatorio_alunos.txt');
-            } 
+            }
             else {
                 window.print();
             }
         }
-        
+
         setMenuExportOpen(false);
     };
 
@@ -230,20 +230,20 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             `}</style>
 
             <div className="bg-white p-4 md:p-5 rounded-3xl shadow-sm border border-gray-100 no-print flex flex-col gap-5">
-                
+
                 {/* 1. TOPO: Título e Ações Rápidas */}
                 <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                     <div className="w-full flex justify-between items-center xl:w-auto">
                         <h2 className="text-xl md:text-2xl font-black text-gray-800 flex items-center gap-2"><UsersRound size={26} className="text-blue-600 shrink-0" /> {t.titulo}</h2>
                         <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-tighter xl:ml-6">{alunosProcessados.length} {t.registros}</span>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-2 items-center w-full xl:w-auto">
                         <div className="flex flex-1 xl:flex-none border border-gray-100 rounded-xl overflow-hidden bg-gray-50/60 min-w-[120px]">
                             <button type="button" onClick={() => setViewMode('grid')} className={`flex-1 flex justify-center py-2.5 xl:py-2 text-[10px] font-black uppercase items-center gap-1.5 transition ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-white'}`}><LayoutGrid size={14} /> <span className="hidden sm:inline">{t.visualizacao.grade}</span></button>
                             <button type="button" onClick={() => setViewMode('list')} className={`flex-1 flex justify-center py-2.5 xl:py-2 text-[10px] font-black uppercase items-center gap-1.5 border-l border-gray-100 transition ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-white'}`}><List size={14} /> <span className="hidden sm:inline">{t.visualizacao.lista}</span></button>
                         </div>
-                        
+
                         <div className="relative flex-1 xl:flex-none min-w-[120px]">
                             <button onClick={() => setMenuExportOpen(!menuExportOpen)} className="w-full justify-center bg-blue-50 text-blue-600 px-3 py-2.5 xl:py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-2 transition hover:bg-blue-100"><Download size={14} /> <span>{t.exportar}</span> <ChevronDown size={12} /></button>
                             {menuExportOpen && (
@@ -255,43 +255,43 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                                 </div>
                             )}
                         </div>
-                        
-                        <button onClick={openNovo} className="flex-1 xl:flex-none justify-center bg-blue-600 text-white px-4 py-2.5 xl:py-2 rounded-xl font-black text-[10px] flex items-center gap-1.5 uppercase hover:bg-blue-500 transition shadow-sm hover:shadow-md min-w-[120px]"><Plus size={14}/> {t.novo}</button>
+
+                        <button onClick={openNovo} className="flex-1 xl:flex-none justify-center bg-blue-600 text-white px-4 py-2.5 xl:py-2 rounded-xl font-black text-[10px] flex items-center gap-1.5 uppercase hover:bg-blue-500 transition shadow-sm hover:shadow-md min-w-[120px]"><Plus size={14} /> {t.novo}</button>
                     </div>
                 </div>
 
                 {/* 2. DASHBOARD: Cards Estatísticos */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    <StatCard 
-                        icon={<UsersRound size={18}/>} label={t.estatisticas.total} value={stats.total} 
-                        isActive={!hasActiveFilters || (hasActiveFilters && filtroStatus === 'ativos' && termo === '' && filtrosTiposAtivos.length === 0 && filtroGenero === 'todos' && filtroEspecial === 'todos')} 
-                        onClick={() => { limparFiltros(); setFiltroStatus('ativos'); }} 
-                        colorClass="text-blue-500" activeClass="bg-blue-600 border-blue-600 shadow-lg text-white" 
-                        customClass="col-span-2 sm:col-span-1" 
+                    <StatCard
+                        icon={<UsersRound size={18} />} label={t.estatisticas.total} value={stats.total}
+                        isActive={!hasActiveFilters || (hasActiveFilters && filtroStatus === 'ativos' && termo === '' && filtrosTiposAtivos.length === 0 && filtroGenero === 'todos' && filtroEspecial === 'todos')}
+                        onClick={() => { limparFiltros(); setFiltroStatus('ativos'); }}
+                        colorClass="text-blue-500" activeClass="bg-blue-600 border-blue-600 shadow-lg text-white"
+                        customClass="col-span-2 sm:col-span-1"
                     />
-                    <StatCard 
-                        icon={<User size={18}/>} label={t.estatisticas.irmaos} value={stats.irmaos} 
-                        isActive={filtroGenero === 'M' && filtroEspecial === 'todos'} 
-                        onClick={() => { limparFiltros(); setFiltroGenero('M'); }} 
-                        colorClass="text-cyan-600" activeClass="bg-cyan-600 border-cyan-600 shadow-lg text-white" 
+                    <StatCard
+                        icon={<User size={18} />} label={t.estatisticas.irmaos} value={stats.irmaos}
+                        isActive={filtroGenero === 'M' && filtroEspecial === 'todos'}
+                        onClick={() => { limparFiltros(); setFiltroGenero('M'); }}
+                        colorClass="text-cyan-600" activeClass="bg-cyan-600 border-cyan-600 shadow-lg text-white"
                     />
-                    <StatCard 
-                        icon={<UserRound size={18}/>} label={t.estatisticas.irmas} value={stats.irmas} 
-                        isActive={filtroGenero === 'F' && filtroEspecial === 'todos'} 
-                        onClick={() => { limparFiltros(); setFiltroGenero('F'); }} 
-                        colorClass="text-pink-500" activeClass="bg-pink-500 border-pink-500 shadow-lg text-white" 
+                    <StatCard
+                        icon={<UserRound size={18} />} label={t.estatisticas.irmas} value={stats.irmas}
+                        isActive={filtroGenero === 'F' && filtroEspecial === 'todos'}
+                        onClick={() => { limparFiltros(); setFiltroGenero('F'); }}
+                        colorClass="text-pink-500" activeClass="bg-pink-500 border-pink-500 shadow-lg text-white"
                     />
-                    <StatCard 
-                        icon={<Calendar size={18}/>} label={t.estatisticas.ausentes} value={stats.ausentes} 
-                        isActive={filtroEspecial === 'ausentes'} 
-                        onClick={() => { limparFiltros(); setFiltroEspecial('ausentes'); }} 
-                        colorClass="text-orange-500" activeClass="bg-orange-500 border-orange-500 shadow-lg text-white" 
+                    <StatCard
+                        icon={<Calendar size={18} />} label={t.estatisticas.ausentes} value={stats.ausentes}
+                        isActive={filtroEspecial === 'ausentes'}
+                        onClick={() => { limparFiltros(); setFiltroEspecial('ausentes'); }}
+                        colorClass="text-orange-500" activeClass="bg-orange-500 border-orange-500 shadow-lg text-white"
                     />
-                    <StatCard 
-                        icon={<AlertCircle size={18}/>} label={t.estatisticas.atrasados} value={stats.atrasados} 
-                        isActive={filtroEspecial === 'atrasados'} 
-                        onClick={() => { limparFiltros(); setFiltroEspecial('atrasados'); }} 
-                        colorClass="text-red-500" activeClass="bg-red-500 border-red-500 shadow-lg text-white" 
+                    <StatCard
+                        icon={<AlertCircle size={18} />} label={t.estatisticas.atrasados} value={stats.atrasados}
+                        isActive={filtroEspecial === 'atrasados'}
+                        onClick={() => { limparFiltros(); setFiltroEspecial('atrasados'); }}
+                        colorClass="text-red-500" activeClass="bg-red-500 border-red-500 shadow-lg text-white"
                     />
                 </div>
 
@@ -303,7 +303,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                             <input type="text" placeholder={t.buscaPlaceholder} className="w-full pl-9 pr-4 py-3 lg:py-2 border border-gray-200 rounded-xl outline-none text-xs font-medium bg-gray-50 focus:bg-white focus:border-blue-400 transition" value={termo} onChange={e => setTermo(e.target.value)} />
                         </div>
-                        
+
                         {/* Status (Todos vs Ativos) */}
                         <div className="flex border border-gray-200 rounded-xl overflow-hidden bg-gray-50 w-full lg:w-auto shrink-0">
                             <button onClick={() => setFiltroStatus('todos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 text-[10px] font-black uppercase transition ${filtroStatus === 'todos' ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:bg-white'}`} title="Mostrar todos">{t.filtros.todos}</button>
@@ -318,8 +318,8 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
 
                         {/* Botão Vermelho Gigante de Limpar Filtros */}
                         {hasActiveFilters && (
-                            <button 
-                                onClick={limparFiltros} 
+                            <button
+                                onClick={limparFiltros}
                                 className="w-full lg:w-auto py-3 lg:py-2 px-4 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 hover:bg-red-100 transition shadow-sm animate-in fade-in zoom-in shrink-0"
                             >
                                 <FilterX size={14} /> {t.limparFiltros}
@@ -340,13 +340,13 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             </div>
 
             {/* LISTAGEM DOS ALUNOS */}
-            <div className={viewMode === 'grid' ? "print-area grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" : "print-area space-y-2"}>
+            <div className={viewMode === 'grid' ? "print-area grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3" : "print-area space-y-2"}>
                 {alunosProcessados.length > 0 ? (
                     alunosProcessados.map(aluno => (
-                        viewMode === 'grid' ? 
-                        <AlunoCard key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} /> 
-                        : 
-                        <AlunoListItem key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} />
+                        viewMode === 'grid' ?
+                            <AlunoCard key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} />
+                            :
+                            <AlunoListItem key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} />
                     ))
                 ) : (
                     <div className="col-span-full py-10 flex flex-col items-center justify-center text-gray-400 no-print">

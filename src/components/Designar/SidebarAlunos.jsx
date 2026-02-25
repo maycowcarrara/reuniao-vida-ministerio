@@ -1,115 +1,99 @@
 import React, { useMemo } from 'react';
 import { X, FilterX, Search, SortAsc, SortDesc, User, UserRound, UsersRound, AlertTriangle, Clock, GripVertical, CalendarX } from 'lucide-react';
 
+// Função para gerar as iniciais caso não tenha foto
+const getIniciais = (nome) => {
+    if (!nome) return '';
+    const ignorar = ['de', 'da', 'do', 'dos', 'das'];
+    const partes = nome.trim().split(' ').filter(p => p.length > 0 && !ignorar.includes(p.toLowerCase()));
+    if (partes.length === 0) return '';
+    if (partes.length === 1) return partes[0].charAt(0).toUpperCase();
+    const primeira = partes[0].charAt(0).toUpperCase();
+    const ultima = partes[partes.length - 1].charAt(0).toUpperCase();
+    return `${primeira}${ultima}`;
+};
+
 const SidebarAlunos = ({
     TT, buildSlotLabel, alunosFiltrados, slotAtivo, setSlotAtivo,
     termoBusca, setTermoBusca, ordenacaoChave, setOrdenacaoChave,
     ordemCrescente, setOrdemCrescente, filtroGenero, handleMudarGenero,
-    cargosMap, filtrosTiposAtivos, toggleFiltroTipo, lang,
+    cargosMap, filtrosTiposAtivos, toggleFiltroTipo, setFiltrosTiposAtivos, lang, // <-- Adicionado setFiltrosTiposAtivos aqui
     atribuirAluno, calcularDiasDesdeUltimaParte, getHistoricoRecente,
     isAlunoDuplicadoBySemanaKey, getSemanaKeyByFilteredIndex, getSemanaIndexContexto, getCargoInfo,
     setDraggedAluno, semanasSelecionadas
 }) => {
 
-    // Fallback de textos locais para o que não estava mapeado no TT
     const localTx = {
         pt: {
-            limpar: "Limpar",
-            cancelar: "Cancelar",
-            ouArraste: "ou arraste o aluno",
-            removerDesignacao: "Remover Designação Atual",
-            buscaPlaceholder: "Nome, cargo...",
-            nenhumAluno: "Nenhum aluno encontrado",
-            arrasteAqui: "Arraste por aqui",
-            duplicadoMesma: "Duplicado na MESMA semana",
-            duplicadoOutra: "Já tem parte em outra semana selecionada no mês",
-            nestaSemana: "Nesta Semana",
-            outraSemana: "Outra Semana (Mês)",
-            ausente: "Ausente",
-            indisponivel: "Indisponível nesta data"
+            limpar: "Limpar", cancelar: "Cancelar", ouArraste: "ou arraste o aluno", removerDesignacao: "Remover Designação Atual",
+            buscaPlaceholder: "Nome, cargo...", nenhumAluno: "Nenhum aluno encontrado", arrasteAqui: "Arraste por aqui",
+            duplicadoMesma: "Duplicado na MESMA semana", duplicadoOutra: "Já tem parte em outra semana selecionada no mês",
+            nestaSemana: "Nesta Semana", outraSemana: "Outra Semana", ausente: "Ausente", indisponivel: "Indisponível nesta data",
+            limparTodos: "Limpar Todos os Filtros"
         },
         es: {
-            limpar: "Limpiar",
-            cancelar: "Cancelar",
-            ouArraste: "o arrastre al estudiante",
-            removerDesignacao: "Eliminar Asignación Actual",
-            buscaPlaceholder: "Nombre, cargo...",
-            nenhumAluno: "Ningún estudiante encontrado",
-            arrasteAqui: "Arrastre por aquí",
-            duplicadoMesma: "Duplicado en la MISMA semana",
-            duplicadoOutra: "Ya tiene asignación en otra semana seleccionada",
-            nestaSemana: "En esta Semana",
-            outraSemana: "Otra Semana (Mes)",
-            ausente: "Ausente",
-            indisponivel: "No disponible en esta fecha"
+            limpar: "Limpiar", cancelar: "Cancelar", ouArraste: "o arrastre al estudiante", removerDesignacao: "Eliminar Asignación Actual",
+            buscaPlaceholder: "Nombre, cargo...", nenhumAluno: "Ningún estudiante encontrado", arrasteAqui: "Arrastre por aquí",
+            duplicadoMesma: "Duplicado en la MISMA semana", duplicadoOutra: "Ya tiene asignación en otra semana seleccionada",
+            nestaSemana: "En esta Semana", outraSemana: "Otra Semana", ausente: "Ausente", indisponivel: "No disponible en esta fecha",
+            limparTodos: "Limpiar Todos los Filtros"
         }
     }[lang] || localTx.pt;
 
-    // --- HELPER PARA CORES DO TEMPO DESDE A ÚLTIMA PARTE ---
     const getBadgeDiasColor = (dias) => {
-        if (dias === null || dias === undefined) return "bg-red-50 text-red-700 border-red-200"; // Nunca fez parte -> Vermelho
-        if (dias < 0) return "bg-blue-50 text-blue-700 border-blue-200"; // Data Futura -> Azul
-        if (dias > 90) return "bg-red-50 text-red-700 border-red-200"; // Muito tempo na geladeira -> Vermelho
-        if (dias > 50) return "bg-orange-50 text-orange-700 border-orange-200"; // Mais de 50 dias -> Laranja
-        return "bg-gray-100 text-gray-700 border-gray-200"; // Recente (<= 50 dias) -> Cinza
+        if (dias === null || dias === undefined) return "bg-red-50 text-red-700 border-red-200";
+        if (dias < 0) return "bg-blue-50 text-blue-700 border-blue-200";
+        if (dias > 90) return "bg-red-50 text-red-700 border-red-200";
+        if (dias > 50) return "bg-orange-50 text-orange-700 border-orange-200";
+        return "bg-gray-100 text-gray-700 border-gray-200";
     };
 
-    // --- HELPER INFALÍVEL PARA CHECAR FÉRIAS/VIAGENS ---
     const verificarIndisponibilidade = (aluno, semanaKey) => {
         if (!semanaKey || !aluno?.datasIndisponiveis || !Array.isArray(aluno.datasIndisponiveis) || aluno.datasIndisponiveis.length === 0) return null;
 
         try {
             let dataBaseStr = null;
             const key = String(semanaKey).toLowerCase();
-            
-            // 1. Tenta formato ISO direto (ex: 2026-03-02) se existir
+
             if (/^\d{4}-\d{2}-\d{2}/.test(key)) {
                 dataBaseStr = key.substring(0, 10);
             } else {
-                // 2. Extrai matematicamente o dia e o mês do texto (ex: "9-15-de-março---ISAÍAS...")
-                const matchDia = key.match(/^(\d{1,2})/); // Pega o primeiro dia (ex: 9)
+                const matchDia = key.match(/^(\d{1,2})/);
                 const matchMes = key.match(/(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/);
-                
+
                 if (matchDia && matchMes) {
                     const meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
                     const dia = parseInt(matchDia[1], 10);
                     const mesIdx = meses.indexOf(matchMes[1]);
-                    
-                    let ano = new Date().getFullYear(); // Assume o ano atual
+
+                    let ano = new Date().getFullYear();
                     const mesAtual = new Date().getMonth();
-                    
-                    // Ajuste caso estejamos em Dezembro planejando Janeiro, etc.
+
                     if (mesAtual === 11 && mesIdx === 0) ano++;
                     if (mesAtual === 0 && mesIdx === 11) ano--;
-                    
-                    // Monta uma data real perfeita "YYYY-MM-DD"
+
                     dataBaseStr = `${ano}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                 }
             }
 
             if (!dataBaseStr) return null;
 
-            // Transforma a data base em UTC para evitar pegadinhas de Fuso Horário
             const [sAno, sMes, sDia] = dataBaseStr.split('-');
             const dInicioSemana = new Date(Date.UTC(sAno, sMes - 1, sDia));
-            
-            // A semana da reunião tem 7 dias. Adicionamos 6 dias para pegar o fim dela.
+
             const dFimSemana = new Date(Date.UTC(sAno, sMes - 1, sDia));
             dFimSemana.setUTCDate(dFimSemana.getUTCDate() + 6);
-            
+
             const strFimSemana = `${dFimSemana.getUTCFullYear()}-${String(dFimSemana.getUTCMonth() + 1).padStart(2, '0')}-${String(dFimSemana.getUTCDate()).padStart(2, '0')}`;
 
             for (const dt of aluno.datasIndisponiveis) {
                 if (!dt.inicio || !dt.fim) continue;
-                
-                // Formato limpo das datas de férias cadastradas
+
                 const vInicio = String(dt.inicio).substring(0, 10);
                 const vFim = String(dt.fim).substring(0, 10);
 
-                // MÁGICA: Verifica se os blocos de tempo se chocam (Overlap algorítmico)
-                // Se a semana Começa antes ou junto das Férias acabarem E a Semana Termina depois ou junto das Férias começarem
                 if (dataBaseStr <= vFim && strFimSemana >= vInicio) {
-                    return dt; // Bateu! Está de férias nessa semana.
+                    return dt;
                 }
             }
         } catch (e) {
@@ -119,19 +103,33 @@ const SidebarAlunos = ({
         return null;
     };
 
-    // Obtém o contexto atual da semana fora do loop para otimização
     const semanaIdxCtx = typeof getSemanaIndexContexto === 'function' ? getSemanaIndexContexto() : null;
     const currentSemanaKey = typeof getSemanaKeyByFilteredIndex === 'function' ? getSemanaKeyByFilteredIndex(semanaIdxCtx) : null;
 
-    // Reordenamos a lista para empurrar os indisponíveis para o final absoluto da lista
-    // MAS APENAS se houver um slot ativo (campo selecionado)
     const alunosProcessados = useMemo(() => {
         return [...alunosFiltrados].sort((a, b) => {
             const indA = (slotAtivo && verificarIndisponibilidade(a, currentSemanaKey)) ? 1 : 0;
             const indB = (slotAtivo && verificarIndisponibilidade(b, currentSemanaKey)) ? 1 : 0;
-            return indA - indB; // Se A=1 e B=0, A vai para o fim.
+            return indA - indB;
         });
     }, [alunosFiltrados, currentSemanaKey, slotAtivo]);
+
+    // LÓGICA CONSOLIDADA PARA LIMPAR TODOS OS FILTROS
+    const handleLimparFiltros = () => {
+        if (setTermoBusca) setTermoBusca('');
+        if (handleMudarGenero) handleMudarGenero('todos');
+
+        // Se o componente pai enviou a função de setFiltrosTiposAtivos
+        if (typeof setFiltrosTiposAtivos === 'function') {
+            setFiltrosTiposAtivos([]);
+        }
+        // Fallback: se não tiver enviado, usamos o próprio toggle para desligar um por um
+        else if (typeof toggleFiltroTipo === 'function' && Array.isArray(filtrosTiposAtivos)) {
+            filtrosTiposAtivos.forEach(cKey => toggleFiltroTipo(cKey));
+        }
+    };
+
+    const hasActiveFilters = termoBusca !== '' || filtroGenero !== 'todos' || (filtrosTiposAtivos && filtrosTiposAtivos.length > 0);
 
     return (
         <div className="lg:w-80 shrink-0 w-full lg:sticky lg:top-20 self-start">
@@ -150,7 +148,7 @@ const SidebarAlunos = ({
                                 <X size={16} />
                             </button>
                         )}
-                        <button type="button" onClick={() => { setTermoBusca(''); handleMudarGenero('todos'); }} className="hover:bg-white/20 rounded p-1 transition" title={localTx.limpar}>
+                        <button type="button" onClick={handleLimparFiltros} className="hover:bg-white/20 rounded p-1 transition" title={localTx.limpar}>
                             <FilterX size={16} />
                         </button>
                     </div>
@@ -228,16 +226,23 @@ const SidebarAlunos = ({
 
                 <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scroll bg-gray-50/20">
                     {alunosProcessados.length === 0 ? (
-                        <div className="text-center py-10 text-gray-400">
+                        <div className="text-center py-10 text-gray-400 flex flex-col items-center">
                             <Search size={32} className="mx-auto mb-2 opacity-30" />
-                            <p className="text-xs">{localTx.nenhumAluno}</p>
+                            <p className="text-xs mb-3">{localTx.nenhumAluno}</p>
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={handleLimparFiltros}
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-[10px] font-bold hover:bg-gray-300 transition flex items-center gap-1.5"
+                                >
+                                    <FilterX size={14} /> {localTx.limparTodos}
+                                </button>
+                            )}
                         </div>
                     ) : (
                         alunosProcessados.map((aluno) => {
                             let duplicadoMesmaSemana = false;
                             let duplicadoOutraSemana = false;
 
-                            // Verifica indisponibilidade (Férias/Viagem) SÓ SE tiver um slotAtivo
                             const indisponivel = slotAtivo ? verificarIndisponibilidade(aluno, currentSemanaKey) : null;
 
                             if (!indisponivel) {
@@ -257,11 +262,10 @@ const SidebarAlunos = ({
                             }
 
                             const dias = calcularDiasDesdeUltimaParte(aluno);
-                            const historicoRecente = getHistoricoRecente(aluno, 6);
+                            const historicoRecente = getHistoricoRecente(aluno, 4);
                             const cargoKey = aluno?.tipo;
                             const cargoInfo = getCargoInfo(cargoKey);
 
-                            // Pode clicar apenas se o slot estiver ativo e o aluno não estiver indisponível
                             const isClickable = !!slotAtivo && !indisponivel;
 
                             let borderColor = "border-gray-200";
@@ -279,9 +283,10 @@ const SidebarAlunos = ({
                                     ].join(" ")}
                                     title={indisponivel ? localTx.indisponivel : ''}
                                 >
+                                    {/* ALÇA DE ARRASTAR */}
                                     {!indisponivel ? (
                                         <div
-                                            className="w-8 flex items-center justify-center bg-gray-50 border-r border-gray-100 rounded-l-xl cursor-grab active:cursor-grabbing hover:bg-gray-100"
+                                            className="w-8 flex items-center justify-center bg-gray-50 border-r border-gray-100 rounded-l-xl cursor-grab active:cursor-grabbing hover:bg-gray-100 shrink-0"
                                             draggable={true}
                                             onDragStart={() => setDraggedAluno && setDraggedAluno(aluno)}
                                             onDragEnd={() => setDraggedAluno && setDraggedAluno(null)}
@@ -290,14 +295,15 @@ const SidebarAlunos = ({
                                             <GripVertical size={16} className="text-gray-400" />
                                         </div>
                                     ) : (
-                                        <div className="w-8 flex items-center justify-center bg-gray-100 border-r border-gray-200 rounded-l-xl cursor-not-allowed">
+                                        <div className="w-8 flex items-center justify-center bg-gray-100 border-r border-gray-200 rounded-l-xl cursor-not-allowed shrink-0">
                                             <CalendarX size={16} className="text-gray-300" />
                                         </div>
                                     )}
 
+                                    {/* CORPO CLICÁVEL DO CARD */}
                                     <button
                                         type="button"
-                                        className={`flex-1 p-2.5 flex flex-col gap-1 text-left ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                        className={`flex-1 p-2 flex flex-col gap-1 text-left ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
@@ -311,64 +317,72 @@ const SidebarAlunos = ({
                                         }}
                                         title={indisponivel ? localTx.indisponivel : duplicadoMesmaSemana ? localTx.duplicadoMesma : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara}
                                     >
-                                        <div className="flex items-start justify-between gap-2 w-full">
-                                            <div className="min-w-0">
-                                                <div className="font-bold text-xs text-gray-800 truncate flex items-center gap-1.5">
-                                                    <span className="truncate">{aluno?.nome || TT.semNome}</span>
-                                                    {duplicadoMesmaSemana && <AlertTriangle size={12} className="text-red-500 shrink-0" />}
-                                                    {!duplicadoMesmaSemana && duplicadoOutraSemana && <AlertTriangle size={12} className="text-orange-500 shrink-0" />}
-                                                </div>
+
+                                        {/* CONTAINER PRINCIPAL DO NOME + AVATAR */}
+                                        <div className="flex items-start gap-2.5 w-full">
+
+                                            {/* AVATAR DO ALUNO */}
+                                            <div className={`mt-0.5 w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-[10px] font-black border overflow-hidden ${cargoInfo?.cor || "bg-gray-100 text-gray-700 border-gray-200"}`}>
+                                                {aluno.avatar ? (
+                                                    <img src={aluno.avatar} alt={aluno.nome} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span>{getIniciais(aluno.nome)}</span>
+                                                )}
                                             </div>
 
-                                            <div className="flex flex-wrap items-center gap-1 shrink-0">
-                                                <span className={["text-[9px] font-black px-1.5 py-0.5 rounded-full border", cargoInfo?.cor || "bg-gray-100 text-gray-700 border-gray-200"].join(" ")}>
-                                                    {cargoInfo?.[lang] || cargoInfo?.pt || cargoInfo?.es || cargoKey || "—"}
-                                                </span>
-                                                {typeof dias === 'number' ? (
-                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5 ${getBadgeDiasColor(dias)}`}>
-                                                        <Clock size={10} />
-                                                        {dias < 0 ? `Futuro` : `${dias} ${TT.dias}`}
+                                            {/* INFORMAÇÕES DE NOME E TAGS UNIFICADAS */}
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
+                                                <div className="flex items-center w-full">
+                                                    <span className="font-bold text-xs text-gray-800 truncate" title={aluno?.nome}>{aluno?.nome || TT.semNome}</span>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                                    <span className={["text-[8px] font-black px-1.5 py-0.5 rounded-full border", cargoInfo?.cor || "bg-gray-100 text-gray-700 border-gray-200"].join(" ")}>
+                                                        {cargoInfo?.[lang] || cargoInfo?.pt || cargoInfo?.es || cargoKey || "—"}
                                                     </span>
-                                                ) : (
-                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5 ${getBadgeDiasColor(null)}`}>
-                                                        <Clock size={10} /> {TT.info.nunca}
-                                                    </span>
-                                                )}
+
+                                                    {/* LÓGICA UNIFICADA */}
+                                                    {duplicadoMesmaSemana ? (
+                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 inline-flex items-center gap-0.5" title={localTx.duplicadoMesma}>
+                                                            <AlertTriangle size={8} /> {localTx.nestaSemana}
+                                                        </span>
+                                                    ) : duplicadoOutraSemana ? (
+                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 inline-flex items-center gap-0.5" title={localTx.duplicadoOutra}>
+                                                            <AlertTriangle size={8} /> {localTx.outraSemana}
+                                                        </span>
+                                                    ) : typeof dias === 'number' ? (
+                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5 ${getBadgeDiasColor(dias)}`}>
+                                                            <Clock size={8} />
+                                                            {dias < 0 ? `Futuro` : `${dias} ${TT.dias}`}
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5 ${getBadgeDiasColor(null)}`}>
+                                                            <Clock size={8} /> {TT.info.nunca}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* TAG DE INDISPONÍVEL */}
                                         {indisponivel && (
-                                            <div className="mt-0.5">
+                                            <div className="mt-0.5 w-full">
                                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200 inline-flex items-center gap-0.5">
                                                     <CalendarX size={10} /> {localTx.ausente}{indisponivel.motivo ? `: ${indisponivel.motivo}` : ''}
                                                 </span>
                                             </div>
                                         )}
 
-                                        {!indisponivel && (duplicadoMesmaSemana || duplicadoOutraSemana) && (
-                                            <div className="flex gap-1 mt-0.5">
-                                                {duplicadoMesmaSemana && (
-                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 inline-flex items-center gap-0.5">
-                                                        <AlertTriangle size={10} /> {localTx.nestaSemana}
-                                                    </span>
-                                                )}
-                                                {!duplicadoMesmaSemana && duplicadoOutraSemana && (
-                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 inline-flex items-center gap-0.5">
-                                                        <AlertTriangle size={10} /> {localTx.outraSemana}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-
+                                        {/* OBSERVAÇÕES */}
                                         {!!aluno?.observacoes && (
-                                            <div className="bg-yellow-50 border border-yellow-100 rounded px-1.5 py-1 text-[10px] text-yellow-800 leading-tight italic w-full">
+                                            <div className="bg-yellow-50 border border-yellow-100 rounded px-1.5 py-1 text-[10px] text-yellow-800 leading-tight italic w-full mt-0.5">
                                                 {aluno.observacoes}
                                             </div>
                                         )}
 
+                                        {/* HISTÓRICO RECENTE */}
                                         {!indisponivel && historicoRecente.length > 0 && (
-                                            <div className="mt-1.5 border-t border-gray-100 pt-1.5 w-full space-y-0.5">
+                                            <div className="mt-1 border-t border-gray-100 pt-1 w-full space-y-0.5">
                                                 {historicoRecente.map((hist, i) => (
                                                     <div key={i} className="flex justify-between items-center text-[9px] text-gray-400">
                                                         <span className="shrink-0 mr-2">{hist.data ? new Date(hist.data).toLocaleDateString() : '--/--'}</span>
