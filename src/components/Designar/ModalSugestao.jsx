@@ -19,6 +19,7 @@ const T = {
         mesesAtras: "meses atrás",
         diasAtras: "dias atrás",
         jaTemParte: "Já tem parte na semana",
+        confirmarDuplicado: "Este aluno já tem uma designação nesta semana. Deseja designá-lo para mais esta parte mesmo assim?",
         semResultados: "Nenhum aluno encontrado para este perfil/privilégio.",
         labels: {
             qualquer: "Qualquer Parte",
@@ -51,6 +52,7 @@ const T = {
         mesesAtras: "meses atrás",
         diasAtras: "días atrás",
         jaTemParte: "Ya tiene asignación",
+        confirmarDuplicado: "Este estudiante ya tiene una asignación esta semana. ¿Quieres asignarlo de todos modos?",
         semResultados: "Ningún estudiante encontrado para este perfil.",
         labels: {
             qualquer: "Cualquier Parte",
@@ -97,7 +99,7 @@ export default function ModalSugestao({
     // --- 1. DETECTAR O CONTEXTO EXATO DA PARTE CLICADA ---
     const detectarContexto = () => {
         let ctx = { tipo: 'qualquer', labelKey: 'qualquer', gender: 'todos', isAjudante: false };
-        
+
         const tituloNorm = norm(parteAtual?.titulo);
         const secaoNorm = norm(parteAtual?.secao);
 
@@ -122,7 +124,7 @@ export default function ModalSugestao({
         else if (modalKey === 'oracao') { ctx.tipo = 'oracao'; ctx.labelKey = 'oracao'; ctx.gender = 'M'; }
         else if (modalKey === 'dirigente') { ctx.tipo = 'dirigente'; ctx.labelKey = 'dirigente'; ctx.gender = 'M'; }
         else if (modalKey === 'leitor') { ctx.tipo = 'leitor'; ctx.labelKey = 'leitor'; ctx.gender = 'M'; }
-        
+
         // Casos de Estudante/Ajudante dependendo da seção
         else if (secaoNorm.includes('tesouros')) {
             if (hasLeitura && !hasEstudo) { ctx.tipo = 'leitura'; ctx.labelKey = 'leitura'; ctx.gender = 'M'; }
@@ -164,20 +166,20 @@ export default function ModalSugestao({
         // B. FILTRO DE PRIVILÉGIOS (O MOTOR DE REGRAS)
         let listaFiltrada = alunos.filter(aluno => {
             if (aluno.tipo === 'desab') return false; // Desabilitados nunca entram
-            
+
             const cargoInfo = cargosMap?.[aluno.tipo];
             const generoAluno = cargoInfo?.gen || 'M';
-            
+
             if (ctx.gender !== 'todos' && generoAluno !== ctx.gender) return false;
 
-            // REGRAS RIGOROSAS (Baseadas no seu prompt)
+            // REGRAS RIGOROSAS
             let allowedRoles = [];
-            
+
             if (ctx.isAjudante) {
                 // Ajudantes: Todos, inclui irmãs limitadas
                 allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao', 'irma_exp', 'irma', 'irma_lim'];
             } else {
-                switch(ctx.tipo) {
+                switch (ctx.tipo) {
                     case 'presidente':
                     case 'tesouros':
                     case 'joias':
@@ -207,7 +209,7 @@ export default function ModalSugestao({
                 }
             }
 
-            // Se o cargo atual do irmão não estiver na lista permitida, ele é imediatamente desclassificado.
+            // Se o cargo atual do irmão não estiver na lista permitida, ele é desclassificado.
             if (!allowedRoles.includes(aluno.tipo)) return false;
 
             return true;
@@ -261,11 +263,11 @@ export default function ModalSugestao({
 
                 if (fezParteEspecifica) {
                     ultimaData = semana.dataReuniao;
-                    
+
                     const hoje = new Date();
-                    hoje.setHours(12, 0, 0, 0); 
+                    hoje.setHours(12, 0, 0, 0);
                     const dataParte = new Date(semana.dataReuniao + 'T12:00:00');
-                    
+
                     const diffTime = hoje.getTime() - dataParte.getTime();
                     diasSemFazer = Math.round(diffTime / (1000 * 60 * 60 * 24));
                     break;
@@ -280,7 +282,7 @@ export default function ModalSugestao({
             };
         });
 
-        // D. ORDENAÇÃO MATADORA
+        // D. ORDENAÇÃO
         listaFiltrada.sort((a, b) => {
             if (a.ocupadoAgora && !b.ocupadoAgora) return 1;
             if (!a.ocupadoAgora && b.ocupadoAgora) return -1;
@@ -291,7 +293,7 @@ export default function ModalSugestao({
             if (!aNunca && bNunca) return -1;
 
             if (!aNunca && !bNunca) {
-                return b.diasSemFazer - a.diasSemFazer; 
+                return b.diasSemFazer - a.diasSemFazer;
             }
 
             return a.nome.localeCompare(b.nome);
@@ -334,7 +336,7 @@ export default function ModalSugestao({
                 <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 custom-scroll relative">
                     {sugestoes.map((aluno, index) => {
                         const meses = aluno.diasSemFazer !== 9999 ? Math.floor(aluno.diasSemFazer / 30) : null;
-                        
+
                         const mostrarSeparadorNuncaFez = index > 0 && aluno.diasSemFazer === 9999 && sugestoes[index - 1].diasSemFazer !== 9999;
 
                         return (
@@ -342,22 +344,28 @@ export default function ModalSugestao({
                                 {mostrarSeparadorNuncaFez && (
                                     <div className="flex items-center gap-2 py-2 px-1 opacity-50">
                                         <hr className="flex-1 border-gray-300" />
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><Info size={10}/> {t.nunca}</span>
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><Info size={10} /> {t.nunca}</span>
                                         <hr className="flex-1 border-gray-300" />
                                     </div>
                                 )}
                                 <button
-                                    disabled={aluno.ocupadoAgora}
-                                    onClick={() => onSelect(aluno)}
-                                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left group relative
+                                    onClick={() => {
+                                        // MÁGICA: Permite seleção mesmo ocupado, mediante confirmação
+                                        if (aluno.ocupadoAgora) {
+                                            const confirmacao = window.confirm(t.confirmarDuplicado);
+                                            if (!confirmacao) return;
+                                        }
+                                        onSelect(aluno);
+                                    }}
+                                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left group relative hover:shadow-md
                                     ${aluno.ocupadoAgora
-                                        ? 'opacity-60 bg-gray-100 cursor-not-allowed border-gray-200'
-                                        : 'bg-white hover:border-blue-500 hover:shadow-md border-gray-200'
-                                    }`}
+                                            ? 'bg-red-50/30 border-red-100 hover:border-red-400'
+                                            : 'bg-white border-gray-200 hover:border-blue-500'
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0 overflow-hidden border
-                                            ${aluno.ocupadoAgora ? 'bg-gray-300 text-gray-500 border-gray-300' : 'bg-blue-100 text-blue-700 border-blue-200'}
+                                            ${aluno.ocupadoAgora ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200'}
                                         `}>
                                             {/* Integração com a Foto (Avatar) */}
                                             {aluno.avatar ? (
@@ -386,7 +394,7 @@ export default function ModalSugestao({
                                             </div>
                                         ) : (
                                             <div className="flex flex-col items-end">
-                                                {/* MÁGICA 2: Dias no Futuro legíveis */}
+                                                {/* Dias no Futuro legíveis */}
                                                 {aluno.diasSemFazer < 0 ? (
                                                     <span className="text-[13px] font-black text-blue-600">
                                                         {t.daquiAdias.replace('{DIAS}', Math.abs(aluno.diasSemFazer))}
