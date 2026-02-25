@@ -7,13 +7,13 @@ import {
 } from 'lucide-react';
 
 import ModalSugestao from './ModalSugestao';
-import NavegadorSemanas from './Designar/NavegadorSemanas';
-import SidebarAlunos from './Designar/SidebarAlunos';
+import NavegadorSemanas from './NavegadorSemanas';
+import SidebarAlunos from './SidebarAlunos';
 import {
     SECOES_ORDEM, SECOES_META, normalizar, normalizarSecao,
     tipoLower, isAbertura, isEncerramento, isLinhaInicialFinal,
     isEstudoBiblicoCongregacao, isCanticoIntermediario
-} from './Designar/helpers';
+} from './helpers';
 
 const T_FALLBACK = {
     pt: {
