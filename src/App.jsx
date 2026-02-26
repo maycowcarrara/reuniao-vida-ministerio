@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Globe, X, Maximize, Minimize, WifiOff, Users } from 'lucide-react';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Globe, X, Minimize, WifiOff, Users, Menu } from 'lucide-react';
 
 // Firebase Auth
 import { onAuthStateChanged } from 'firebase/auth';
@@ -30,20 +30,12 @@ function AdminPanel() {
   const { dados: dadosNuvem, loading, usuario, salvarItem, excluirItem, importarBackupParaUsuario, resetarConta } = useGerenciadorDados();
   const [dadosSistema, setDadosSistema] = useState(dadosNuvem);
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [dupModal, setDupModal] = useState({ open: false, existing: null, incoming: null, resolve: null });
 
   const fileInputRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isOnline = useOnlineStatus();
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => console.warn(err.message));
-    } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-    }
-  };
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -57,6 +49,14 @@ function AdminPanel() {
 
   useEffect(() => { if (dadosNuvem) setDadosSistema(dadosNuvem); }, [dadosNuvem]);
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.warn(err.message));
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
+  };
+
   const normalizarIdioma = (idioma) => {
     const v = (idioma || '').toString().trim().toLowerCase();
     if (v.startsWith('pt')) return 'pt';
@@ -66,6 +66,53 @@ function AdminPanel() {
 
   const lang = normalizarIdioma(dadosSistema?.configuracoes?.idioma);
   const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
+  
+  // --- DICIONÁRIO LOCAL DO APP (Alertas e Modais) ---
+  const APP_TEXTS = {
+      pt: {
+          carregando: "Carregando...",
+          backupOk: "✅ Backup restaurado com sucesso!",
+          backupInvalido: "⚠️ Arquivo inválido.",
+          backupSalvo: "✅ Backup salvo com sucesso!",
+          backupErroSalvar: "⚠️ Erro ao salvar backup.",
+          alertaReset1: "⚠️ PERIGO: Isso vai apagar TUDO.\nTem certeza?",
+          alertaReset2: "⚠️ ÚLTIMA CHANCE: Clique em OK para apagar.",
+          bancoLimpo: "✅ Banco limpo!",
+          erroLimpar: "Erro ao limpar.",
+          eventoOk: "✅ Evento agendado!",
+          dupTitulo: "Semana já existe",
+          dupDesc: "O que deseja fazer com a semana duplicada?",
+          btnSubstituir: "Substituir",
+          btnDuplicar: "Duplicar",
+          btnCancelar: "Cancelar",
+          offlineAviso: "Você está offline. Pode continuar editando!",
+          verQuadro: "Ver Quadro",
+          minhaCong: "Minha Congregação",
+          sairTelaCheia: "Sair da Tela Cheia"
+      },
+      es: {
+          carregando: "Cargando...",
+          backupOk: "✅ ¡Copia de seguridad restaurada con éxito!",
+          backupInvalido: "⚠️ Archivo inválido.",
+          backupSalvo: "✅ ¡Copia de seguridad guardada con éxito!",
+          backupErroSalvar: "⚠️ Error al guardar la copia de seguridad.",
+          alertaReset1: "⚠️ PELIGRO: Esto borrará TODO.\n¿Estás seguro?",
+          alertaReset2: "⚠️ ÚLTIMA OPORTUNIDAD: Haz clic en OK para borrar.",
+          bancoLimpo: "✅ ¡Base de datos limpia!",
+          erroLimpar: "Error al limpiar.",
+          eventoOk: "✅ ¡Evento programado!",
+          dupTitulo: "La semana ya existe",
+          dupDesc: "¿Qué deseas hacer con la semana duplicada?",
+          btnSubstituir: "Reemplazar",
+          btnDuplicar: "Duplicar",
+          btnCancelar: "Cancelar",
+          offlineAviso: "Estás desconectado. ¡Puedes seguir editando!",
+          verQuadro: "Ver Tablero",
+          minhaCong: "Mi Congregación",
+          sairTelaCheia: "Salir de Pantalla Completa"
+      }
+  }[lang];
+
   const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
 
   const salvarAlteracao = (novosDados) => {
@@ -94,7 +141,7 @@ function AdminPanel() {
         const file = await handle.getFile();
         const content = await file.text();
         await importarBackupParaUsuario(JSON.parse(content));
-        alert('✅ Backup restaurado com sucesso!');
+        alert(APP_TEXTS.backupOk);
         return;
       }
       if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click(); }
@@ -107,8 +154,8 @@ function AdminPanel() {
     try {
       const content = await file.text();
       await importarBackupParaUsuario(JSON.parse(content));
-      alert('✅ Backup restaurado com sucesso!');
-    } catch (err) { alert('⚠️ Arquivo inválido.'); }
+      alert(APP_TEXTS.backupOk);
+    } catch (err) { alert(APP_TEXTS.backupInvalido); }
   };
 
   const handleSalvarBackup = async () => {
@@ -120,18 +167,18 @@ function AdminPanel() {
         const writable = await handle.createWritable();
         await writable.write(jsonText);
         await writable.close();
-        alert('✅ Backup salvo com sucesso!');
+        alert(APP_TEXTS.backupSalvo);
         return;
       }
       const url = URL.createObjectURL(new Blob([jsonText], { type: 'application/json' }));
       const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
-    } catch (e) { if (e.name !== 'AbortError') alert('⚠️ Erro ao salvar backup.'); }
+    } catch (e) { if (e.name !== 'AbortError') alert(APP_TEXTS.backupErroSalvar); }
   };
 
   const handleResetarTudo = async () => {
-    if (!window.confirm("⚠️ PERIGO: Isso vai apagar TUDO.\nTem certeza?")) return;
-    if (!window.confirm("⚠️ ÚLTIMA CHANCE: Clique em OK para apagar.")) return;
-    try { await resetarConta(); alert("✅ Banco limpo!"); } catch (error) { alert("Erro ao limpar."); }
+    if (!window.confirm(APP_TEXTS.alertaReset1)) return;
+    if (!window.confirm(APP_TEXTS.alertaReset2)) return;
+    try { await resetarConta(); alert(APP_TEXTS.bancoLimpo); } catch (error) { alert(APP_TEXTS.erroLimpar); }
   };
 
   const upsertProgramacaoComConfirmacao = async (novaProg) => {
@@ -198,81 +245,105 @@ function AdminPanel() {
     }
 
     salvarAlteracao({ ...dadosSistema, configuracoes: configAtualizada, historico_reunioes: novasProgramacoes });
-    alert("✅ Evento agendado!");
+    alert(APP_TEXTS.eventoOk);
   };
 
   const handleExcluirSemanaBanco = async (id) => await excluirItem('programacao', id);
   const handleExcluirAlunoBanco = async (id) => await excluirItem('alunos', id);
 
-  if (loading) return <div className="h-screen flex items-center justify-center">Carregando...</div>;
+  if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-500">{APP_TEXTS.carregando}</div>;
   if (!usuario) return <Login />;
 
   return (
-    <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden">
+    <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden relative">
       <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileInputChange} />
 
       {dupModal.open && (
         <div className="fixed inset-0 z-[999] bg-black/60 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden p-5 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold">Semana já existe</h3>
-              <button onClick={() => dupModal.resolve('cancel')}><X size={20} /></button>
+              <h3 className="font-bold text-slate-800">{APP_TEXTS.dupTitulo}</h3>
+              <button onClick={() => dupModal.resolve('cancel')} className="text-slate-400 hover:text-slate-800"><X size={20} /></button>
             </div>
-            <p>O que deseja fazer com a semana duplicada?</p>
+            <p className="text-slate-600">{APP_TEXTS.dupDesc}</p>
             <div className="grid grid-cols-3 gap-2">
-              <button className="bg-blue-600 text-white p-2 rounded" onClick={() => dupModal.resolve('replace')}>Substituir</button>
-              <button className="bg-orange-500 text-white p-2 rounded" onClick={() => dupModal.resolve('duplicate')}>Duplicar</button>
-              <button className="bg-gray-200 p-2 rounded" onClick={() => dupModal.resolve('cancel')}>Cancelar</button>
+              <button className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-xl transition-colors font-bold" onClick={() => dupModal.resolve('replace')}>{APP_TEXTS.btnSubstituir}</button>
+              <button className="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-xl transition-colors font-bold" onClick={() => dupModal.resolve('duplicate')}>{APP_TEXTS.btnDuplicar}</button>
+              <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-xl transition-colors font-bold" onClick={() => dupModal.resolve('cancel')}>{APP_TEXTS.btnCancelar}</button>
             </div>
           </div>
         </div>
       )}
 
       {!isFullscreen && (
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} abaAtiva={abaAtiva} setAbaAtiva={setAbaAtiva} usuario={usuario} handleAbrirBackup={handleAbrirBackup} handleSalvarBackup={handleSalvarBackup} handleResetarTudo={handleResetarTudo} logout={() => auth.signOut()} listaProgramacoes={listaProgramacoes} t={t} toggleFullscreen={toggleFullscreen} />
+        <Sidebar 
+          sidebarOpen={sidebarOpen} 
+          setSidebarOpen={setSidebarOpen} 
+          abaAtiva={abaAtiva} 
+          setAbaAtiva={setAbaAtiva} 
+          usuario={usuario} 
+          handleAbrirBackup={handleAbrirBackup} 
+          handleSalvarBackup={handleSalvarBackup} 
+          handleResetarTudo={handleResetarTudo} 
+          logout={() => auth.signOut()} 
+          listaProgramacoes={listaProgramacoes} 
+          t={t} 
+          lang={lang} // PASSANDO IDIOMA PRO SIDEBAR
+          toggleFullscreen={toggleFullscreen} 
+        />
       )}
 
       {!isOnline && (
         <div className="bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 z-[9999] shadow-md transition-all">
           <WifiOff size={16} />
-          <span>Você está offline. Pode continuar editando!</span>
+          <span>{APP_TEXTS.offlineAviso}</span>
         </div>
       )}
 
-      <main className={`flex-1 flex flex-col min-w-0 bg-gray-50 h-screen overflow-hidden relative ${isFullscreen ? 'fullscreen-active' : ''}`}>
+      <main className={`flex-1 flex flex-col min-w-0 bg-slate-50 h-screen overflow-hidden relative ${isFullscreen ? 'fullscreen-active' : ''}`}>
+        
         {!isFullscreen && (
-          <header className="h-14 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0 z-40">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-bold text-gray-800 capitalize">
+          <header className="h-14 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 border-b shrink-0 z-30">
+            
+            <div className="flex items-center gap-3 md:gap-4">
+              <h2 className="text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none">
                 {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
               </h2>
-              <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+              
+              <div className="hidden sm:flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                 <Globe size={12} className="text-blue-600" />
                 <span className="text-[10px] font-black uppercase text-blue-800">{lang}</span>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              {/* NOVO BOTÃO DE ACESSO AO QUADRO PÚBLICO AQUI */}
-              <a 
-                href="/quadro" 
-                target="_blank" 
-                rel="noreferrer"
-                className="hidden sm:flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 text-xs font-bold hover:bg-indigo-100 transition-colors"
+            <div className="flex items-center gap-3 md:gap-4">
+              
+              <Link 
+                to="/quadro" 
+                title={APP_TEXTS.verQuadro}
+                className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors"
               >
-                <Users size={14} /> Ver Quadro Público
-              </a>
+                <Users size={18} /> 
+                <span className="hidden sm:block text-xs font-bold">{APP_TEXTS.verQuadro}</span>
+              </Link>
 
-              <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden md:block">
-                {dadosSistema?.configuracoes?.nome_cong || 'Minha Congregação'}
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:block">
+                {dadosSistema?.configuracoes?.nome_cong || APP_TEXTS.minhaCong}
               </div>
+
+              <button 
+                className="md:hidden p-1.5 -mr-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu size={24} />
+              </button>
             </div>
           </header>
         )}
 
         {isFullscreen && (
-          <button onClick={toggleFullscreen} className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-full shadow-2xl hover:bg-gray-700 transition-all opacity-50 hover:opacity-100 no-print">
-            <Minimize size={20} /> <span className="text-sm font-medium">Sair da Tela Cheia</span>
+          <button onClick={toggleFullscreen} className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-slate-800 text-white px-4 py-3 rounded-full shadow-2xl hover:bg-slate-700 transition-all opacity-50 hover:opacity-100 no-print">
+            <Minimize size={20} /> <span className="text-sm font-medium">{APP_TEXTS.sairTelaCheia}</span>
           </button>
         )}
 
@@ -292,20 +363,24 @@ function AdminPanel() {
 // ============================================================================
 // 2. WRAPPER DO QUADRO PÚBLICO
 // ============================================================================
-function QuadroPublicoWrapper() {
+function QuadroPublicoWrapper({ usuario }) {
   const { dados, loading } = useQuadroPublico(); 
+
+  // Ajusta idioma do loading dinamicamente
+  const lang = (dados?.configuracoes?.idioma || 'pt').toString().trim().toLowerCase().startsWith('es') ? 'es' : 'pt';
+  const loadingText = lang === 'es' ? 'Cargando Tablero...' : 'Carregando Quadro...';
 
   if (loading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-500 font-sans">
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 font-sans">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-        Carregando Quadro...
+        <p className="font-bold text-sm tracking-wider uppercase">{loadingText}</p>
       </div>
     );
   }
   const programacoes = Array.isArray(dados?.historico_reunioes) ? dados.historico_reunioes : [];
   const config = dados?.configuracoes || {};
-  return <QuadroPublico programacoes={programacoes} config={config} />;
+  return <QuadroPublico programacoes={programacoes} config={config} usuario={usuario} />;
 }
 
 // ============================================================================
@@ -314,7 +389,6 @@ function QuadroPublicoWrapper() {
 function App() {
   const [usuarioVerificado, setUsuarioVerificado] = useState(undefined);
 
-  // Fica observando em background se tem alguém logado no Google
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuarioVerificado(user);
@@ -322,7 +396,6 @@ function App() {
     return unsubscribe;
   }, []);
 
-  // Tela rápida enquanto o Firebase decide se tá logado
   if (usuarioVerificado === undefined) {
     return <div className="h-screen bg-slate-50"></div>; 
   }
@@ -330,16 +403,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        
-        {/* A MÁGICA ACONTECE AQUI: O "/" decide sozinho pra onde mandar a pessoa */}
         <Route path="/" element={
           usuarioVerificado ? <Navigate to="/admin" replace /> : <Navigate to="/quadro" replace />
         } />
-        
-        <Route path="/quadro" element={<QuadroPublicoWrapper />} />
+        <Route path="/quadro" element={<QuadroPublicoWrapper usuario={usuarioVerificado} />} />
         <Route path="/admin/*" element={<AdminPanel />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-        
       </Routes>
     </BrowserRouter>
   );

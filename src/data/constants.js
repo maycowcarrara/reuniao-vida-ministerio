@@ -38,6 +38,7 @@ export const TRANSLATIONS = {
         ordem: { nome: "Nome", dias: "Tempo" },
         inicio: "Início",
         ajustes: "Ajustes",
+        configuracoes: "Configurações",
         dashboard: {
             titulo: "Painel de Controle",
             visaoGeral: "Visão geral da",
@@ -103,6 +104,7 @@ export const TRANSLATIONS = {
         ordem: { nome: "Nombre", dias: "Tiempo" },
         inicio: "Inicio",
         ajustes: "Ajustes",
+        configuracoes: "Ajustes",
         dashboard: {
             titulo: "Panel de Control",
             visaoGeral: "Visión general de la",

@@ -1,12 +1,22 @@
 import React, { useState, useRef } from 'react';
-import { Settings, Download, Upload, AlertTriangle, FileJson, Trash2 } from 'lucide-react';
+import {
+    Settings,
+    Download,
+    Upload,
+    AlertTriangle,
+    FileJson,
+    Building2,
+    Calendar as CalendarIcon,
+    Clock,
+    Globe,
+    ChevronDown
+} from 'lucide-react';
 
 export default function Configuracoes({ dados, salvarAlteracao, t, lang, importarBackup, resetarConta }) {
-
     const fileInputRef = useRef(null);
     const [processando, setProcessando] = useState(false);
 
-    // --- TRADUÇÕES LOCAIS (Para garantir que tudo fique traduzido) ---
+    // --- TRADUÇÕES LOCAIS ---
     const TEXTOS = {
         pt: {
             titulo: "Ajustes do Sistema",
@@ -15,12 +25,12 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
             horario: "Horário",
             idioma: "Idioma do Sistema",
             backupTitulo: "Backup e Segurança",
-            backupDesc: "Baixe uma cópia completa dos seus dados para o seu computador.",
+            backupDesc: "Baixe uma cópia completa dos seus dados para o seu dispositivo.",
             btnBaixar: "Baixar Backup (JSON)",
             zonaPerigo: "Zona de Restauração",
-            restaurarTitulo: "Restaurar Backup do Computador",
-            restaurarDesc: "Apaga os dados atuais da sua conta e importa um arquivo de backup (.json) do seu computador.",
-            btnRestaurar: "Selecionar Arquivo e Restaurar",
+            restaurarTitulo: "Restaurar Backup",
+            restaurarDesc: "Apaga os dados atuais da sua conta e importa um arquivo de backup do seu dispositivo.",
+            btnRestaurar: "Restaurar Arquivo",
             confirmarRestauracao: "⚠️ PERIGO: Isso vai APAGAR todos os dados da sua conta atual e substituir pelo arquivo selecionado.\n\nTem certeza que deseja continuar?",
             sucesso: "✅ Backup restaurado com sucesso!",
             erro: "Erro ao restaurar: ",
@@ -33,12 +43,12 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
             horario: "Horario",
             idioma: "Idioma del Sistema",
             backupTitulo: "Copia de Seguridad",
-            backupDesc: "Descargue una copia completa de sus datos a su computadora.",
+            backupDesc: "Descargue una copia completa de sus datos a su dispositivo.",
             btnBaixar: "Descargar Respaldo (JSON)",
             zonaPerigo: "Zona de Restauración",
-            restaurarTitulo: "Restaurar Respaldo desde PC",
-            restaurarDesc: "Borra los datos actuales de su cuenta e importa un archivo de respaldo (.json) desde su computadora.",
-            btnRestaurar: "Seleccionar Archivo y Restaurar",
+            restaurarTitulo: "Restaurar Respaldo",
+            restaurarDesc: "Borra los datos actuales de su cuenta e importa un archivo de respaldo desde su dispositivo.",
+            btnRestaurar: "Restaurar Archivo",
             confirmarRestauracao: "⚠️ PELIGRO: Esto BORRARÁ todos los datos de su cuenta actual y los reemplazará con el archivo seleccionado.\n\n¿Está seguro de continuar?",
             sucesso: "✅ ¡Respaldo restaurado con éxito!",
             erro: "Error al restaurar: ",
@@ -74,7 +84,7 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
         const jsonString = JSON.stringify(backupCompleto, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
-        
+
         const link = document.createElement('a');
         link.href = url;
         link.download = nomeArquivo;
@@ -100,17 +110,14 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
             const text = await file.text();
             const jsonImportado = JSON.parse(text);
 
-            // 1. Limpa a conta do usuário atual
             if (resetarConta) {
-                await resetarConta(); 
+                await resetarConta();
             }
 
-            // 2. Importa os novos dados
             await importarBackup(jsonImportado);
-            
+
             alert(T.sucesso);
-            // Limpa o input para permitir selecionar o mesmo arquivo novamente se necessário
-            e.target.value = ''; 
+            e.target.value = '';
 
         } catch (error) {
             console.error(error);
@@ -121,118 +128,165 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
     };
 
     return (
-        <div className="bg-white p-8 rounded-2xl shadow-sm border max-w-lg mx-auto space-y-8 animate-in fade-in zoom-in duration-300 mb-10">
+        <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 sm:p-6">
+
             {/* Input Invisível para Arquivo */}
-            <input 
-                type="file" 
+            <input
+                type="file"
                 ref={fileInputRef}
                 accept=".json"
                 style={{ display: 'none' }}
                 onChange={handleArquivoSelecionado}
             />
 
-            <h3 className="font-bold border-b pb-2 flex items-center gap-2 text-jw-blue">
-                <Settings size={18} /> {T.titulo}
-            </h3>
-
-            {/* --- CONFIGURAÇÕES GERAIS --- */}
-            <div className="space-y-4">
-                <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{T.congregacao}</label>
-                    <input
-                        type="text"
-                        value={dados?.configuracoes?.nome_cong || ''}
-                        onChange={(e) => atualizarConfig('nome_cong', e.target.value)}
-                        className="w-full p-2.5 border rounded-lg mt-1 outline-none focus:ring-2 focus:ring-blue-100"
-                    />
+            {/* Cabeçalho da Página */}
+            <div className="flex items-center gap-3 mb-6 sm:mb-8">
+                <div className="bg-blue-600 p-2.5 sm:p-3 rounded-2xl shadow-lg shadow-blue-200 shrink-0">
+                    <Settings className="text-white w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">{T.titulo}</h2>
+                    <p className="text-xs sm:text-sm font-medium text-slate-500">Gerencie as preferências locais</p>
+                </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-3">
+            {/* BLOCO 1: INFORMAÇÕES DA CONGREGAÇÃO */}
+            <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 space-y-5 sm:space-y-6 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
+
+                <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-2 sm:mb-4">
+                    Preferências Gerais
+                </h3>
+
+                <div className="space-y-4 sm:space-y-5">
                     <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{T.dia}</label>
-                        <select
-                            value={dados?.configuracoes?.dia_reuniao || 'Segunda-feira'}
-                            onChange={(e) => atualizarConfig('dia_reuniao', e.target.value)}
-                            className="w-full p-2.5 border rounded-lg mt-1 bg-white outline-none"
-                        >
-                            {T.dias.map(d => (
-                                <option key={d} value={d}>{d}</option>
-                            ))}
-                        </select>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 ml-1">
+                            {T.congregacao}
+                        </label>
+                        <div className="relative">
+                            <Building2 size={18} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+                            <input
+                                type="text"
+                                placeholder="Ex: Congregação Central"
+                                value={dados?.configuracoes?.nome_cong || ''}
+                                onChange={(e) => atualizarConfig('nome_cong', e.target.value)}
+                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-slate-800 font-bold text-base sm:text-sm"
+                            />
+                        </div>
                     </div>
 
-                    <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{T.horario}</label>
-                        <input
-                            type="time"
-                            value={dados?.configuracoes?.horario || '19:30'}
-                            onChange={(e) => atualizarConfig('horario', e.target.value)}
-                            className="w-full p-2.5 border rounded-lg mt-1 outline-none"
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 ml-1">
+                                {T.dia}
+                            </label>
+                            <div className="relative">
+                                <CalendarIcon size={18} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+                                <select
+                                    value={dados?.configuracoes?.dia_reuniao || 'Segunda-feira'}
+                                    onChange={(e) => atualizarConfig('dia_reuniao', e.target.value)}
+                                    className="w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-800 font-bold appearance-none cursor-pointer text-base sm:text-sm"
+                                >
+                                    {T.dias.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                                <ChevronDown size={18} className="absolute right-4 top-3.5 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 ml-1">
+                                {T.horario}
+                            </label>
+                            <div className="relative">
+                                <Clock size={18} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+                                <input
+                                    type="time"
+                                    value={dados?.configuracoes?.horario || '19:30'}
+                                    onChange={(e) => atualizarConfig('horario', e.target.value)}
+                                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-800 font-bold cursor-pointer text-base sm:text-sm"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="pt-4 border-t">
-                <label className="text-[10px] font-black text-gray-400 uppercase">{T.idioma}</label>
-                <div className="flex gap-2 mt-2">
+            {/* BLOCO 2: IDIOMA */}
+            <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
+                <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4 sm:mb-5">
+                    <Globe size={18} className="text-indigo-500" /> {T.idioma}
+                </h3>
+
+                <div className="bg-slate-100 p-1.5 rounded-2xl flex flex-row gap-1">
                     <button
                         onClick={() => atualizarConfig('idioma', 'pt')}
-                        className={`flex-1 p-3 rounded-lg border font-bold ${lang === 'pt' ? 'bg-blue-600 text-white shadow-lg border-blue-600' : 'bg-gray-50'}`}
+                        className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${lang === 'pt' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
+                            }`}
                     >
-                        Português
+                        🇧🇷 Português
                     </button>
-
                     <button
                         onClick={() => atualizarConfig('idioma', 'es')}
-                        className={`flex-1 p-3 rounded-lg border font-bold ${lang === 'es' ? 'bg-blue-600 text-white shadow-lg border-blue-600' : 'bg-gray-50'}`}
+                        className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${lang === 'es' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
+                            }`}
                     >
-                        Español
+                        🇪🇸 Español
                     </button>
                 </div>
             </div>
 
-            {/* --- EXPORTAR --- */}
-            <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2 text-green-800">
-                    <Download size={18} />
-                    <h3 className="font-bold">{T.backupTitulo}</h3>
-                </div>
-                <p className="text-sm text-green-700 mb-4">
-                    {T.backupDesc}
-                </p>
-                <button
-                    onClick={realizarBackup}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors"
-                >
-                    <FileJson size={18} />
-                    {T.btnBaixar}
-                </button>
-            </div>
+            {/* BLOCO 3: SEGURANÇA E DADOS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
 
-            {/* --- IMPORTAR / RESTAURAR --- */}
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2 text-red-800">
-                    <AlertTriangle size={18} />
-                    <h3 className="font-bold">{T.restaurarTitulo}</h3>
+                {/* Exportar */}
+                <div className="bg-emerald-50 border-2 border-emerald-100 p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] flex flex-col justify-between transition-colors hover:border-emerald-200">
+                    <div>
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-600 mb-4">
+                            <Download size={20} className="sm:w-6 sm:h-6" />
+                        </div>
+                        <h3 className="font-black text-emerald-900 text-base sm:text-lg mb-1.5">{T.backupTitulo}</h3>
+                        <p className="text-xs sm:text-sm text-emerald-700 font-medium mb-6 leading-relaxed">
+                            {T.backupDesc}
+                        </p>
+                    </div>
+                    <button
+                        onClick={realizarBackup}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm sm:text-base"
+                    >
+                        <FileJson size={18} /> {T.btnBaixar}
+                    </button>
                 </div>
-                <p className="text-sm text-red-700 mb-4">
-                    {T.restaurarDesc}
-                </p>
-                <button
-                    onClick={abrirSeletorArquivo}
-                    disabled={processando}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow flex items-center justify-center gap-2 transition-colors"
-                >
-                    {processando ? (
-                        <span>Carregando...</span>
-                    ) : (
-                        <>
-                            <Upload size={18} />
-                            {T.btnRestaurar}
-                        </>
-                    )}
-                </button>
+
+                {/* Importar */}
+                <div className="bg-rose-50 border-2 border-rose-100 p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] flex flex-col justify-between transition-colors hover:border-rose-200">
+                    <div>
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-100 rounded-xl sm:rounded-2xl flex items-center justify-center text-rose-600 mb-4">
+                            <AlertTriangle size={20} className="sm:w-6 sm:h-6" />
+                        </div>
+                        <h3 className="font-black text-rose-900 text-base sm:text-lg mb-1.5">{T.restaurarTitulo}</h3>
+                        <p className="text-xs sm:text-sm text-rose-700 font-medium mb-6 leading-relaxed">
+                            {T.restaurarDesc}
+                        </p>
+                    </div>
+                    <button
+                        onClick={abrirSeletorArquivo}
+                        disabled={processando}
+                        className="w-full bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-rose-200 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm sm:text-base"
+                    >
+                        {processando ? (
+                            <span className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Processando
+                            </span>
+                        ) : (
+                            <>
+                                <Upload size={18} /> {T.btnRestaurar}
+                            </>
+                        )}
+                    </button>
+                </div>
+
             </div>
         </div>
     );
