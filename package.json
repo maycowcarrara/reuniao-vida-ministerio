@@ -1,7 +1,7 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "3.9.105",
+  "version": "3.9.107",
   "type": "module",
   "scripts": {
     "predev": "npm version patch --no-git-tag-version",
@@ -22,7 +22,8 @@
     "lodash": "^4.17.21",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

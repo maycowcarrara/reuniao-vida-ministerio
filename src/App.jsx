@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Globe, X, Maximize, Minimize } from 'lucide-react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Globe, X, Maximize, Minimize, WifiOff } from 'lucide-react';
 
 // Componentes
 import Dashboard from './components/Dashboard';
@@ -10,6 +11,8 @@ import RevisarEnviar from './components/RevisarEnviar';
 import Configuracoes from './components/Configuracoes';
 import Login from './components/Login';
 import Sidebar from './components/Sidebar';
+import QuadroPublico from './components/QuadroPublico';
+import Home from './components/Home';
 
 // Hooks e Serviços
 import { useGerenciadorDados } from './hooks/useGerenciadorDados';
@@ -17,7 +20,12 @@ import { auth } from './services/firebase';
 import { CARGOS_MAP, TRANSLATIONS } from './data/constants';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 
-function App() {
+
+// ============================================================================
+// 1. O SEU SISTEMA ATUAL (AGORA SE CHAMA ADMIN PANEL)
+// Todo o seu código de administração ficou intacto aqui dentro.
+// ============================================================================
+function AdminPanel() {
   const {
     dados: dadosNuvem,
     loading,
@@ -34,7 +42,6 @@ function App() {
   const [dupModal, setDupModal] = useState({ open: false, existing: null, incoming: null, resolve: null });
 
   const fileInputRef = useRef(null);
-
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = () => {
@@ -53,22 +60,18 @@ function App() {
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       setIsFullscreen(isFull);
-      // Mantém o comportamento de fechar o menu ao voltar, se desejar
       if (isFull) setSidebarOpen(false);
     };
-
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // --- Sincronização Inicial ---
   useEffect(() => {
     if (dadosNuvem) {
       setDadosSistema(dadosNuvem);
     }
   }, [dadosNuvem]);
 
-  // --- Helpers de Idioma e Dados ---
   const normalizarIdioma = (idioma) => {
     const v = (idioma || '').toString().trim().toLowerCase();
     if (v.startsWith('pt')) return 'pt';
@@ -80,25 +83,16 @@ function App() {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
   const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
 
-  // --- Funções de Salvamento ---
   const salvarAlteracao = (novosDados) => {
     setDadosSistema(novosDados);
-
     if (novosDados.configuracoes) salvarItem('configuracoes', 'geral', novosDados.configuracoes);
-
     if (Array.isArray(novosDados.alunos)) {
-      novosDados.alunos.forEach(a => {
-        if (a.id) salvarItem('alunos', a.id, a);
-      });
+      novosDados.alunos.forEach(a => { if (a.id) salvarItem('alunos', a.id, a); });
     }
-
     if (Array.isArray(novosDados.historico_reunioes)) {
       novosDados.historico_reunioes.forEach(p => {
         const semanaStr = String(p.semana || '').trim();
-        if (semanaStr) {
-          const idSeguro = semanaStr.replace(/[\/\s,.]/g, '-');
-          salvarItem('programacao', idSeguro, p);
-        }
+        if (semanaStr) salvarItem('programacao', semanaStr.replace(/[\/\s,.]/g, '-'), p);
       });
     }
   };
@@ -110,7 +104,6 @@ function App() {
     salvarAlteracao({ ...dadosSistema, historico_reunioes: next });
   };
 
-  // --- Lógica de Backup ---
   const handleAbrirBackup = async () => {
     try {
       if (window.showOpenFilePicker) {
@@ -163,34 +156,23 @@ function App() {
     try { await resetarConta(); alert("✅ Banco limpo!"); } catch (error) { alert("Erro ao limpar."); }
   };
 
-  // --- Lógica de Duplicação e Importação ---
   const upsertProgramacaoComConfirmacao = async (novaProg) => {
-    // 1. Normalizar dados básicos
     let nextProg = { ...novaProg, semana: (novaProg.semana || '').trim() };
-
-    // 2. Verificar se existe EVENTO ESPECIAL agendado para esta semana
     const eventosAgendados = dadosSistema?.configuracoes?.eventosAnuais || [];
     const eventoNestaData = eventosAgendados.find(ev => ev.dataInicio === nextProg.dataInicio);
 
     if (eventoNestaData) {
-      // APLICAR REGRA AUTOMATICAMENTE NA IMPORTAÇÃO
-      console.log("Aplicando regra de evento agendado:", eventoNestaData.tipo);
       nextProg.evento = eventoNestaData.tipo;
       nextProg.dataEventoEspecial = eventoNestaData.dataInput;
-
       if (eventoNestaData.tipo === 'visita') {
         const dataBase = new Date(nextProg.dataInicio + 'T12:00:00');
-        dataBase.setDate(dataBase.getDate() + 1); // Terça
+        dataBase.setDate(dataBase.getDate() + 1);
         nextProg.dataReuniao = dataBase.toISOString().split('T')[0];
-      } else if (eventoNestaData.tipo === 'normal') {
-        nextProg.dataReuniao = nextProg.dataInicio;
       } else {
-        // Assembleias/Congressos mantêm data base para ordenação
         nextProg.dataReuniao = nextProg.dataInicio;
       }
     }
 
-    // 3. Lógica de conflito existente
     const keyNova = nextProg.semana.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const idxAtual = listaProgramacoes.findIndex(p =>
       (p.semana || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === keyNova
@@ -215,35 +197,22 @@ function App() {
     }
   };
 
-  // --- NOVA LÓGICA DE EVENTOS (AGORA PERSISTENTE) ---
   const handleDefinirEvento = (dataInput, tipoEvento) => {
     if (!dataInput) return;
-
-    // 1. Calcular a Segunda-feira
     const dataAlvo = new Date(dataInput + 'T12:00:00');
     const diaSemana = dataAlvo.getDay();
     const diffParaSegunda = dataAlvo.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
     const dataSegunda = new Date(dataAlvo.setDate(diffParaSegunda));
     const stringSegunda = dataSegunda.toISOString().split('T')[0];
 
-    // 2. SALVAR NAS CONFIGURAÇÕES (O "Calendário Anual")
     const novosEventos = [...(dadosSistema?.configuracoes?.eventosAnuais || [])];
-
-    // Remove evento anterior dessa semana (se houver) e adiciona o novo
     const listaLimpa = novosEventos.filter(ev => ev.dataInicio !== stringSegunda);
 
     if (tipoEvento !== 'normal') {
-      listaLimpa.push({
-        dataInicio: stringSegunda,
-        dataInput: dataInput, // Data exata (ex: sábado da assembleia)
-        tipo: tipoEvento
-      });
+      listaLimpa.push({ dataInicio: stringSegunda, dataInput: dataInput, tipo: tipoEvento });
     }
 
-    // Atualiza Configurações primeiro
     const configAtualizada = { ...dadosSistema.configuracoes, eventosAnuais: listaLimpa };
-
-    // 3. SE A SEMANA JÁ EXISTIR, ATUALIZA ELA TAMBÉM
     const idx = listaProgramacoes.findIndex(s => s.dataInicio === stringSegunda);
     let novasProgramacoes = [...listaProgramacoes];
 
@@ -251,7 +220,6 @@ function App() {
       const semana = { ...novasProgramacoes[idx] };
       semana.evento = tipoEvento;
       semana.dataEventoEspecial = dataInput;
-
       if (tipoEvento === 'visita') {
         const dataBase = new Date(stringSegunda + 'T12:00:00');
         dataBase.setDate(dataBase.getDate() + 1);
@@ -262,26 +230,12 @@ function App() {
       novasProgramacoes[idx] = semana;
     }
 
-    // Salva tudo de uma vez
-    salvarAlteracao({
-      ...dadosSistema,
-      configuracoes: configAtualizada,
-      historico_reunioes: novasProgramacoes
-    });
-
-    alert("✅ Evento agendado! Será aplicado nas semanas existentes e futuras importações.");
+    salvarAlteracao({ ...dadosSistema, configuracoes: configAtualizada, historico_reunioes: novasProgramacoes });
+    alert("✅ Evento agendado!");
   };
 
-  //EXCLUIR SEMANA
-  const handleExcluirSemanaBanco = async (id) => {
-    // 'programacao' é o nome da coleção no Firebase definida no seu hook
-    await excluirItem('programacao', id);
-  };
-
-  // Excluir Aluno (Para passar ao componente ListaAlunos)
-  const handleExcluirAlunoBanco = async (id) => {
-    await excluirItem('alunos', id);
-  };
+  const handleExcluirSemanaBanco = async (id) => await excluirItem('programacao', id);
+  const handleExcluirAlunoBanco = async (id) => await excluirItem('alunos', id);
 
   if (loading) return <div className="h-screen flex items-center justify-center">Carregando...</div>;
   if (!usuario) return <Login />;
@@ -307,38 +261,23 @@ function App() {
         </div>
       )}
 
-      {/* SÓ MOSTRA O SIDEBAR SE NÃO ESTIVER EM TELA CHEIA */}
       {!isFullscreen && (
         <Sidebar
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          abaAtiva={abaAtiva}
-          setAbaAtiva={setAbaAtiva}
-          usuario={usuario}
-          handleAbrirBackup={handleAbrirBackup}
-          handleSalvarBackup={handleSalvarBackup}
-          handleResetarTudo={handleResetarTudo}
-          logout={() => auth.signOut()}
-          listaProgramacoes={listaProgramacoes}
-          t={t}
-          toggleFullscreen={toggleFullscreen}
+          sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} abaAtiva={abaAtiva} setAbaAtiva={setAbaAtiva}
+          usuario={usuario} handleAbrirBackup={handleAbrirBackup} handleSalvarBackup={handleSalvarBackup}
+          handleResetarTudo={handleResetarTudo} logout={() => auth.signOut()} listaProgramacoes={listaProgramacoes}
+          t={t} toggleFullscreen={toggleFullscreen}
         />
       )}
 
-      {/* BANNER OFFLINE (Aparece apenas quando não há internet) */}
       {!isOnline && (
         <div className="bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 z-[9999] shadow-md transition-all">
           <WifiOff size={16} />
-          <span>
-            Você está offline. Pode continuar editando! Suas alterações serão sincronizadas quando a conexão voltar.
-          </span>
+          <span>Você está offline. Pode continuar editando! Suas alterações serão sincronizadas quando a conexão voltar.</span>
         </div>
       )}
 
-      {/* Adicionamos a classe 'fullscreen-active' condicionalmente para o CSS atuar */}
       <main className={`flex-1 flex flex-col min-w-0 bg-gray-50 h-screen overflow-hidden relative ${isFullscreen ? 'fullscreen-active' : ''}`}>
-
-        {/* Só exibe o Header se NÃO estiver em tela cheia */}
         {!isFullscreen && (
           <header className="h-14 bg-white shadow-sm flex items-center justify-between px-6 border-b shrink-0 z-40">
             <div className="flex items-center gap-4">
@@ -356,7 +295,6 @@ function App() {
           </header>
         )}
 
-        {/* Botão flutuante para ajudar o usuário a SAIR da tela cheia sem precisar apertar ESC */}
         {isFullscreen && (
           <button
             onClick={toggleFullscreen}
@@ -368,72 +306,61 @@ function App() {
         )}
 
         <div className="flex-1 overflow-y-auto scroll-smooth">
-          {abaAtiva === 'dashboard' && (
-            <Dashboard
-              listaProgramacoes={listaProgramacoes}
-              alunos={dadosSistema?.alunos || []}
-              config={dadosSistema?.configuracoes}
-              setAbaAtiva={setAbaAtiva}
-              onDefinirEvento={handleDefinirEvento}
-              t={t}
-            />
-          )}
-
-          {abaAtiva === 'importar' && (
-            <Importador
-              onImportComplete={async (d) => {
-                await upsertProgramacaoComConfirmacao(d);
-                setAbaAtiva('designar');
-              }}
-              idioma={lang}
-            />
-          )}
-
-          {abaAtiva === 'designar' && (
-            <Designar
-              listaProgramacoes={listaProgramacoes}
-              setListaProgramacoes={setListaProgramacoes}
-              alunos={dadosSistema?.alunos || []}
-              cargosMap={CARGOS_MAP}
-              lang={lang}
-              t={t}
-              config={dadosSistema?.configuracoes}
-              onExcluirSemana={handleExcluirSemanaBanco}
-            />
-          )}
-
-          {abaAtiva === 'revisar' && (
-            <RevisarEnviar
-              historico={listaProgramacoes}
-              alunos={dadosSistema?.alunos || []}
-              config={dadosSistema?.configuracoes}
-              onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
-            />
-          )}
-
-          {abaAtiva === 'alunos' && (
-            <ListaAlunos
-              alunos={dadosSistema?.alunos || []}
-              setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })}
-              config={dadosSistema?.configuracoes}
-              cargosMap={CARGOS_MAP}
-              onExcluirAluno={handleExcluirAlunoBanco}
-            />
-          )}
-
-          {abaAtiva === 'configuracoes' && (
-            <Configuracoes
-              dados={dadosSistema}
-              salvarAlteracao={salvarAlteracao}
-              t={t}
-              lang={lang}
-              importarBackup={importarBackupParaUsuario}
-              resetarConta={resetarConta}
-            />
-          )}
+          {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} />}
+          {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
+          {abaAtiva === 'designar' && <Designar listaProgramacoes={listaProgramacoes} setListaProgramacoes={setListaProgramacoes} alunos={dadosSistema?.alunos || []} cargosMap={CARGOS_MAP} lang={lang} t={t} config={dadosSistema?.configuracoes} onExcluirSemana={handleExcluirSemanaBanco} />}
+          {abaAtiva === 'revisar' && <RevisarEnviar historico={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })} />}
+          {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
+          {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}
         </div>
       </main>
     </div>
+  );
+}
+
+// ============================================================================
+// 2. WRAPPER DO QUADRO PÚBLICO
+// Usado para buscar os dados independentemente da navegação
+// ============================================================================
+function QuadroPublicoWrapper() {
+  const { dados, loading } = useGerenciadorDados();
+
+  if (loading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-500 font-sans">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+        Carregando Quadro...
+      </div>
+    );
+  }
+
+  const programacoes = Array.isArray(dados?.historico_reunioes) ? dados.historico_reunioes : [];
+  const config = dados?.configuracoes || {};
+
+  return <QuadroPublico programacoes={programacoes} config={config} />;
+}
+
+// 3. APLICATIVO PRINCIPAL (ROTEADOR)
+// ============================================================================
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        
+        {/* ROTA PRINCIPAL (TELA DE BOAS-VINDAS) */}
+        <Route path="/" element={<Home />} />
+
+        {/* ROTA PÚBLICA */}
+        <Route path="/quadro" element={<QuadroPublicoWrapper />} />
+        
+        {/* ROTA PRIVADA DO ADMINISTRADOR */}
+        <Route path="/admin/*" element={<AdminPanel />} />
+        
+        {/* REDIRECIONA QUEM DIGITAR ALGO ERRADO PARA O INÍCIO */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+        
+      </Routes>
+    </BrowserRouter>
   );
 }
 
