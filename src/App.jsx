@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Globe, X, Maximize, Minimize, WifiOff } from 'lucide-react';
+import { Globe, X, Maximize, Minimize, WifiOff, Users } from 'lucide-react';
+
+// Firebase Auth
+import { onAuthStateChanged } from 'firebase/auth';
 
 // Componentes
 import Dashboard from './components/Dashboard';
@@ -11,32 +14,20 @@ import RevisarEnviar from './components/RevisarEnviar';
 import Configuracoes from './components/Configuracoes';
 import Login from './components/Login';
 import Sidebar from './components/Sidebar';
-import QuadroPublico from './components/QuadroPublico';
-import Home from './components/Home';
+import QuadroPublico from './components/QuadroPublico'; 
 
 // Hooks e Serviços
 import { useGerenciadorDados } from './hooks/useGerenciadorDados';
+import { useQuadroPublico } from './hooks/useQuadroPublico';
 import { auth } from './services/firebase';
 import { CARGOS_MAP, TRANSLATIONS } from './data/constants';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { useQuadroPublico } from './hooks/useQuadroPublico';
-
 
 // ============================================================================
-// 1. O SEU SISTEMA ATUAL (AGORA SE CHAMA ADMIN PANEL)
-// Todo o seu código de administração ficou intacto aqui dentro.
+// 1. ADMIN PANEL (Seu Sistema de Gerenciamento)
 // ============================================================================
 function AdminPanel() {
-  const {
-    dados: dadosNuvem,
-    loading,
-    usuario,
-    salvarItem,
-    excluirItem,
-    importarBackupParaUsuario,
-    resetarConta
-  } = useGerenciadorDados();
-
+  const { dados: dadosNuvem, loading, usuario, salvarItem, excluirItem, importarBackupParaUsuario, resetarConta } = useGerenciadorDados();
   const [dadosSistema, setDadosSistema] = useState(dadosNuvem);
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -44,18 +35,15 @@ function AdminPanel() {
 
   const fileInputRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const isOnline = useOnlineStatus();
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.warn(`Erro ao tentar entrar em tela cheia: ${err.message}`);
-      });
+      document.documentElement.requestFullscreen().catch(err => console.warn(err.message));
     } else {
       if (document.exitFullscreen) document.exitFullscreen();
     }
   };
-
-  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -67,11 +55,7 @@ function AdminPanel() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  useEffect(() => {
-    if (dadosNuvem) {
-      setDadosSistema(dadosNuvem);
-    }
-  }, [dadosNuvem]);
+  useEffect(() => { if (dadosNuvem) setDadosSistema(dadosNuvem); }, [dadosNuvem]);
 
   const normalizarIdioma = (idioma) => {
     const v = (idioma || '').toString().trim().toLowerCase();
@@ -87,9 +71,7 @@ function AdminPanel() {
   const salvarAlteracao = (novosDados) => {
     setDadosSistema(novosDados);
     if (novosDados.configuracoes) salvarItem('configuracoes', 'geral', novosDados.configuracoes);
-    if (Array.isArray(novosDados.alunos)) {
-      novosDados.alunos.forEach(a => { if (a.id) salvarItem('alunos', a.id, a); });
-    }
+    if (Array.isArray(novosDados.alunos)) novosDados.alunos.forEach(a => { if (a.id) salvarItem('alunos', a.id, a); });
     if (Array.isArray(novosDados.historico_reunioes)) {
       novosDados.historico_reunioes.forEach(p => {
         const semanaStr = String(p.semana || '').trim();
@@ -115,13 +97,8 @@ function AdminPanel() {
         alert('✅ Backup restaurado com sucesso!');
         return;
       }
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-        fileInputRef.current.click();
-      }
-    } catch (e) {
-      if (e.name !== 'AbortError') console.error(e);
-    }
+      if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click(); }
+    } catch (e) { if (e.name !== 'AbortError') console.error(e); }
   };
 
   const handleFileInputChange = async (e) => {
@@ -175,24 +152,15 @@ function AdminPanel() {
     }
 
     const keyNova = nextProg.semana.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const idxAtual = listaProgramacoes.findIndex(p =>
-      (p.semana || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === keyNova
-    );
+    const idxAtual = listaProgramacoes.findIndex(p => (p.semana || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === keyNova);
 
-    if (idxAtual === -1) {
-      setListaProgramacoes(prev => [...prev, nextProg]);
-      return;
-    }
+    if (idxAtual === -1) { setListaProgramacoes(prev => [...prev, nextProg]); return; }
 
     const choice = await new Promise(resolve => setDupModal({ open: true, existing: listaProgramacoes[idxAtual], incoming: nextProg, resolve }));
     setDupModal({ open: false, existing: null, incoming: null, resolve: null });
 
     if (choice === 'replace') {
-      setListaProgramacoes(prev => {
-        const out = [...prev];
-        out[idxAtual] = { ...out[idxAtual], ...nextProg };
-        return out;
-      });
+      setListaProgramacoes(prev => { const out = [...prev]; out[idxAtual] = { ...out[idxAtual], ...nextProg }; return out; });
     } else if (choice === 'duplicate') {
       setListaProgramacoes(prev => [...prev, { ...nextProg, semana: `${nextProg.semana} (cópia)` }]);
     }
@@ -209,9 +177,7 @@ function AdminPanel() {
     const novosEventos = [...(dadosSistema?.configuracoes?.eventosAnuais || [])];
     const listaLimpa = novosEventos.filter(ev => ev.dataInicio !== stringSegunda);
 
-    if (tipoEvento !== 'normal') {
-      listaLimpa.push({ dataInicio: stringSegunda, dataInput: dataInput, tipo: tipoEvento });
-    }
+    if (tipoEvento !== 'normal') listaLimpa.push({ dataInicio: stringSegunda, dataInput: dataInput, tipo: tipoEvento });
 
     const configAtualizada = { ...dadosSistema.configuracoes, eventosAnuais: listaLimpa };
     const idx = listaProgramacoes.findIndex(s => s.dataInicio === stringSegunda);
@@ -263,18 +229,13 @@ function AdminPanel() {
       )}
 
       {!isFullscreen && (
-        <Sidebar
-          sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} abaAtiva={abaAtiva} setAbaAtiva={setAbaAtiva}
-          usuario={usuario} handleAbrirBackup={handleAbrirBackup} handleSalvarBackup={handleSalvarBackup}
-          handleResetarTudo={handleResetarTudo} logout={() => auth.signOut()} listaProgramacoes={listaProgramacoes}
-          t={t} toggleFullscreen={toggleFullscreen}
-        />
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} abaAtiva={abaAtiva} setAbaAtiva={setAbaAtiva} usuario={usuario} handleAbrirBackup={handleAbrirBackup} handleSalvarBackup={handleSalvarBackup} handleResetarTudo={handleResetarTudo} logout={() => auth.signOut()} listaProgramacoes={listaProgramacoes} t={t} toggleFullscreen={toggleFullscreen} />
       )}
 
       {!isOnline && (
         <div className="bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 z-[9999] shadow-md transition-all">
           <WifiOff size={16} />
-          <span>Você está offline. Pode continuar editando! Suas alterações serão sincronizadas quando a conexão voltar.</span>
+          <span>Você está offline. Pode continuar editando!</span>
         </div>
       )}
 
@@ -290,19 +251,28 @@ function AdminPanel() {
                 <span className="text-[10px] font-black uppercase text-blue-800">{lang}</span>
               </div>
             </div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-              {dadosSistema?.configuracoes?.nome_cong || 'Minha Congregação'}
+            
+            <div className="flex items-center gap-4">
+              {/* NOVO BOTÃO DE ACESSO AO QUADRO PÚBLICO AQUI */}
+              <a 
+                href="/quadro" 
+                target="_blank" 
+                rel="noreferrer"
+                className="hidden sm:flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 text-xs font-bold hover:bg-indigo-100 transition-colors"
+              >
+                <Users size={14} /> Ver Quadro Público
+              </a>
+
+              <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden md:block">
+                {dadosSistema?.configuracoes?.nome_cong || 'Minha Congregação'}
+              </div>
             </div>
           </header>
         )}
 
         {isFullscreen && (
-          <button
-            onClick={toggleFullscreen}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-full shadow-2xl hover:bg-gray-700 transition-all opacity-50 hover:opacity-100 no-print"
-          >
-            <Minimize size={20} />
-            <span className="text-sm font-medium">Sair da Tela Cheia</span>
+          <button onClick={toggleFullscreen} className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-full shadow-2xl hover:bg-gray-700 transition-all opacity-50 hover:opacity-100 no-print">
+            <Minimize size={20} /> <span className="text-sm font-medium">Sair da Tela Cheia</span>
           </button>
         )}
 
@@ -321,11 +291,9 @@ function AdminPanel() {
 
 // ============================================================================
 // 2. WRAPPER DO QUADRO PÚBLICO
-// Usado para buscar os dados independentemente da navegação
 // ============================================================================
 function QuadroPublicoWrapper() {
-  // 👇 AGORA ELE USA O BUSCADOR PÚBLICO
-  const { dados, loading } = useQuadroPublico();
+  const { dados, loading } = useQuadroPublico(); 
 
   if (loading) {
     return (
@@ -335,32 +303,43 @@ function QuadroPublicoWrapper() {
       </div>
     );
   }
-
   const programacoes = Array.isArray(dados?.historico_reunioes) ? dados.historico_reunioes : [];
   const config = dados?.configuracoes || {};
-
   return <QuadroPublico programacoes={programacoes} config={config} />;
 }
 
-// 3. APLICATIVO PRINCIPAL (ROTEADOR)
+// ============================================================================
+// 3. APLICATIVO PRINCIPAL (ROTEADOR INTELIGENTE)
 // ============================================================================
 function App() {
+  const [usuarioVerificado, setUsuarioVerificado] = useState(undefined);
+
+  // Fica observando em background se tem alguém logado no Google
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUsuarioVerificado(user);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Tela rápida enquanto o Firebase decide se tá logado
+  if (usuarioVerificado === undefined) {
+    return <div className="h-screen bg-slate-50"></div>; 
+  }
+
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* ROTA PRINCIPAL (TELA DE BOAS-VINDAS) */}
-        <Route path="/" element={<Home />} />
-
-        {/* ROTA PÚBLICA */}
+        
+        {/* A MÁGICA ACONTECE AQUI: O "/" decide sozinho pra onde mandar a pessoa */}
+        <Route path="/" element={
+          usuarioVerificado ? <Navigate to="/admin" replace /> : <Navigate to="/quadro" replace />
+        } />
+        
         <Route path="/quadro" element={<QuadroPublicoWrapper />} />
-
-        {/* ROTA PRIVADA DO ADMINISTRADOR */}
         <Route path="/admin/*" element={<AdminPanel />} />
-
-        {/* REDIRECIONA QUEM DIGITAR ALGO ERRADO PARA O INÍCIO */}
         <Route path="*" element={<Navigate to="/" replace />} />
-
+        
       </Routes>
     </BrowserRouter>
   );

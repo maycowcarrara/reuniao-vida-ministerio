@@ -40,10 +40,10 @@ export default function Login() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 relative font-sans">
 
-            {/* Botão Voltar para a Tela Inicial (Novo) */}
-            <div className="absolute top-6 left-6">
-                <Link to="/" className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition font-bold text-sm bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200">
-                    <ArrowLeft size={16} /> Voltar ao Início
+            {/* Botão Voltar para o Quadro Público */}
+            <div className="absolute top-6 left-6 z-50">
+                <Link to="/quadro" className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition font-bold text-sm bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                    <ArrowLeft size={16} /> Voltar ao Quadro
                 </Link>
             </div>
 
