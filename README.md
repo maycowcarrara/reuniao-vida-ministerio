@@ -1,107 +1,124 @@
+# 📅 Gerenciador da Reunião Vida e Ministério
 
-# 📅 Gerenciador da Reunião Vida e Ministério (V3)
+> Um sistema intuitivo, moderno e focado em produtividade para auxiliar o Superintendente da Reunião Vida e Ministério na gestão de designações, notificações e impressão de programações.
 
-> Um sistema moderno, inteligente e sincronizado na nuvem para auxiliar na gestão das designações da Reunião Vida e Ministério.
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 Sobre o Projeto
+## 🎯 Objetivo do Projeto
 
-O **Gerenciador da Reunião Vida e Ministério** evoluiu de uma ferramenta local para uma **Web App Progressiva (PWA)** robusta. Ele automatiza o fluxo de trabalho do superintendente, desde a importação da programação até a notificação dos alunos, garantindo que os dados estejam seguros na nuvem, mas acessíveis offline.
+Desenvolver uma ferramenta ágil baseada em nuvem (Firebase - Serverless) que garante que **usuários leigos** possam operar o sistema com extrema facilidade. O foco absoluto é a **Experiência do Usuário (UX)**, automação de tarefas repetitivas, prevenção de erros de designação e flexibilidade na geração de relatórios e impressões.
 
-O foco é a  **Experiência do Usuário (UX)** , reduzindo horas de trabalho manual para minutos de gerenciamento intuitivo.
+---
 
 ## ✨ Funcionalidades Principais
 
-### 🧠 Inteligência e Automação
+### 👥 Gestão Inteligente de Alunos
 
-* **Parser Inteligente:** Importa a programação diretamente do JW.org (HTML ou Texto). O sistema entende automaticamente seções ("Tesouros", "Vida Cristã"), tempos e cânticos, suportando  **Português e Espanhol** .
-* **Assistente de Sugestão:** Um algoritmo que sugere o melhor aluno para cada parte, baseando-se na data da última designação e no histórico, promovendo um rodízio justo.
-* **Detecção de Conflitos:** Alerta visual imediato se um aluno já estiver designado para outra parte na mesma semana.
+- **Cadastro Completo:** Nome, contato, privilégios teocráticos e suporte a **Foto de Perfil (Avatar)** via *Copy & Paste* (com compressão automática em Base64).
+- **Gestão de Ausências:** Possibilidade de cadastrar períodos de férias ou viagens. O sistema bloqueia automaticamente a designação do aluno nessas datas.
+- **Painel Estatístico Dinâmico:** Visualização rápida de totais de alunos, divididos por gênero, ausentes na semana e lista de alunos "esquecidos" (há mais de 60 dias sem parte).
 
-### ☁️ Sincronização e Dados
+### 🤖 Motor de Designação e Programação
 
-* **Backend Firebase:** Autenticação segura (Google/Email) e banco de dados Firestore em tempo real.
-* **Modo Offline (PWA):** Graças ao cache persistente do Firestore, o app funciona mesmo sem internet e sincroniza quando a conexão volta.
-* **Backup e Restauração:** Ferramentas para exportar/importar dados em JSON ou resetar a conta com segurança.
+- **Sugestão Algorítmica:** Um motor inteligente que sugere o melhor aluno para uma parte com base em:
+  - **Privilégios:** (Ex: Apenas Anciãos/Servos para Tesouros e Orações).
+  - **Gênero:** Força o ajudante a ser do mesmo gênero do estudante automaticamente.
+  - **Rodízio Justo:** Prioriza matematicamente quem está há mais tempo sem receber partes.
+- **Interface Drag & Drop:** Arraste alunos da barra lateral diretamente para os "slots" da programação.
+- **Validação de Conflitos (Anti-Duplicação):** Alertas visuais em tempo real se um aluno for designado para duas partes na mesma semana (mesmo que em abas diferentes).
 
-### 🖨️ Impressão e Comunicação
+### 📢 Integrações e Notificações
 
-* **Layouts de Impressão Flexíveis:**
-  * Folha Padrão (Semelhante ao original).
-  * Modo Econômico (4 ou 5 semanas por página A4).
-* **Notificações em 1 Clique:** Botões dedicados para enviar designações via **WhatsApp** (com link direto) ou  **E-mail** , já com o texto da mensagem formatado.
+- **Sincronização com Google Agenda:** Envio das partes designadas diretamente para o Google Calendar do Superintendente com apenas um clique.
+- **WhatsApp Automático:** Geração de mensagens preenchidas com nome, data, parte e ajudante, prontas para envio em um clique via `wa.me`.
+- **E-mail:** Integração nativa para envio de designações via `mailto`.
 
----
+### 🖨️ Impressão e Quadro de Anúncios
 
-## 🛠️ Stack Tecnológica
+Geração nativa de PDFs perfeitos para folha A4 com layouts dinâmicos:
 
-O projeto foi construído com as tecnologias mais recentes do ecossistema JavaScript (2025):
-
-* **Core:** React 19 + Vite.
-* **Estilização:** Tailwind CSS v4 (Configuração "Zero-runtime" otimizada).
-* **Ícones:** Lucide React.
-* **Manipulação de Dados:** Lodash & Date-fns.
-* **Parsing:** Cheerio (para processamento robusto de HTML/Texto).
-* **Backend as a Service:** Firebase Authentication & Firestore.
+1. **Layout Padrão (1 a 2 semanas):** Estilo visual semelhante às planilhas tradicionais, com cores oficiais e formatação amigável.
+2. **Layout Condensado (4 a 5 semanas):** Versão econômica de alta densidade para agrupar o mês inteiro em uma única folha de papel.
 
 ---
 
-## 📂 Estrutura do Projeto
+## 🚀 Próximos Passos (Roadmap)
 
-**Bash**
+Apesar de altamente funcional, o projeto continua em evolução:
 
+1. **Importação Automatizada:** Crawler para buscar a programação automaticamente do site oficial (JW.org), eliminando o "copiar e colar".
+2. **Agrupamento Familiar:** Ligar cadastros de marido e esposa para facilitar designações casadas ou evitar conflitos de cuidado com filhos.
+3. **Modo PWA Avançado:** Aprimorar o *Progressive Web App* para funcionamento 100% offline com sincronização posterior com o Firebase.
+4. **Quadro de Anúncios Público:** Uma rota de visualização web *read-only* para os irmãos consultarem a programação atualizada no celular sem precisarem de PDF.
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+- **Frontend:** React.js + Vite
+- **Estilização e UX:** Tailwind CSS + Lucide Icons
+- **Backend & Persistência:** Firebase (JSON Tree / Serverless)
+- **Integrações:** Google Calendar API
+- **Arquitetura Visual:** CSS Print `@media print` nativo para performance e responsividade em impressões.
+
+---
+
+## 📂 Estrutura de Dados (Exemplo)
+
+O sistema utiliza uma estrutura JSON leve e otimizada:
+
+```json
+{
+  "configuracoes": {
+    "nome_cong": "Sua Congregação",
+    "horario": "19:30",
+    "idioma": "pt"
+  },
+  "alunos": [
+    {
+      "id": "uuid",
+      "nome": "João Silva",
+      "tipo": "anciao",
+      "telefone": "5511999999999",
+      "avatar": "data:image/jpeg;base64,/9j/4AAQSkZJ...", 
+      "datasIndisponiveis": [
+        { "inicio": "2024-12-20", "fim": "2025-01-05", "motivo": "Férias" }
+      ],
+      "historico": [ 
+        { "data": "2024-10-10", "parte": "leitura", "ajudante": "" } 
+      ]
+    }
+  ]
+}
 ```
-src/
-├── components/       # Componentes de UI (Dashboard, Designar, Impressão)
-├── data/             # Constantes e dados estáticos
-├── hooks/            # Hooks customizados (useGerenciadorDados)
-├── services/         # Configuração do Firebase
-├── utils/            # Lógica pura
-│   ├── importador/   # Parsers e Regex para o JW.org
-│   └── revisarEnviar/# Geradores de links (Zap/Mail) e datas
-└── App.jsx           # Componente Raiz e Roteamento
-```
 
----
+## 🔧 Como Executar Localmente
 
-## 🔧 Instalação e Configuração
+Certifique-se de ter o [Node.js](https://nodejs.org/) instalado.
 
-### Pré-requisitos
-
-* Node.js (v18+)
-* Conta no Firebase (Google Cloud)
-
-### Passo a Passo
-
-1. **Clone o repositório:**
+1. Clone o repositório:
    **Bash**
 
    ```
-   git clone https://github.com/seu-usuario/reuniao-vida-ministerio.git
+   git clone [https://github.com/seu-usuario/reuniao-vida-ministerio.git](https://github.com/seu-usuario/reuniao-vida-ministerio.git)
+   ```
+2. Entre na pasta:
+   **Bash**
+
+   ```
    cd reuniao-vida-ministerio
    ```
-2. **Instale as dependências:**
+3. Instale as dependências:
    **Bash**
 
    ```
    npm install
    ```
-3. **Configuração do Firebase:**
-
-   * Crie um projeto no [Firebase Console](https://console.firebase.google.com/).
-   * Habilite o **Authentication** e o  **Firestore Database** .
-   * Substitua as credenciais em `src/services/firebase.js` com as do seu projeto:
-
-   **JavaScript**
-
-   ```
-   const firebaseConfig = {
-     apiKey: "SUA_API_KEY",
-     authDomain: "SEU_PROJECT.firebaseapp.com",
-     projectId: "SEU_PROJECT_ID",
-     // ...
-   };
-   ```
-4. **Execute localmente:**
+4. Configure as chaves do Firebase e do Google Calendar no seu `.env` local.
+5. Rode o projeto:
    **Bash**
 
    ```
@@ -110,37 +127,10 @@ src/
 
 ---
 
-## 📖 Guia de Uso Rápido
-
-1. **Dashboard:** Visão geral da semana atual e atalhos rápidos.
-2. **Importar:** Copie o texto da reunião no site JW.org e cole na área de importação. O sistema processará as partes automaticamente.
-3. **Designar:**
-   * Clique nos "slots" vazios.
-   * Use a **Lâmpada 💡** para ver sugestões automáticas baseadas no histórico.
-   * Observe os alertas ⚠️ de conflito.
-4. **Revisar e Enviar:**
-   * Selecione quantas semanas deseja imprimir por folha.
-   * Clique nos ícones de WhatsApp/Email para notificar os designados.
-   * Grave o histórico para atualizar a contagem de "dias desde a última parte".
-
----
-
-## 🛡️ Aviso Legal
-
-Este software é uma ferramenta auxiliar desenvolvida por voluntários e **não é um aplicativo oficial** da Watch Tower Bible and Tract Society of Pennsylvania. O uso é pessoal e a responsabilidade pelos dados inseridos é do usuário.
-
----
-
 ## 🤝 Contribuição
 
-Pull Requests são bem-vindos! Se você tem ideias para melhorar o algoritmo de sugestão ou novos layouts de impressão:
-
-1. Faça um Fork do projeto.
-2. Crie uma Branch para sua Feature (`git checkout -b feature/NovaFeature`).
-3. Commit suas mudanças (`git commit -m 'Adiciona NovaFeature'`).
-4. Push para a Branch (`git push origin feature/NovaFeature`).
-5. Abra um Pull Request.
+Contribuições são muito bem-vindas! Sinta-se à vontade para abrir *issues* relatando bugs ou sugerir (e implementar) novas funcionalidades baseadas na experiência real de uso nas congregações.
 
 ---
 
-Desenvolvido com ❤️
+**Nota Legal:** Este software não é uma ferramenta oficial da Watch Tower Bible and Tract Society of Pennsylvania. É uma ferramenta auxiliar de código aberto, desenvolvida por voluntários para simplificar o fluxo de trabalho local.

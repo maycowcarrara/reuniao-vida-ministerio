@@ -15,6 +15,7 @@ import Sidebar from './components/Sidebar';
 import { useGerenciadorDados } from './hooks/useGerenciadorDados';
 import { auth } from './services/firebase';
 import { CARGOS_MAP, TRANSLATIONS } from './data/constants';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 
 function App() {
   const {
@@ -45,6 +46,8 @@ function App() {
       if (document.exitFullscreen) document.exitFullscreen();
     }
   };
+
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -320,6 +323,16 @@ function App() {
           t={t}
           toggleFullscreen={toggleFullscreen}
         />
+      )}
+
+      {/* BANNER OFFLINE (Aparece apenas quando não há internet) */}
+      {!isOnline && (
+        <div className="bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 z-[9999] shadow-md transition-all">
+          <WifiOff size={16} />
+          <span>
+            Você está offline. Pode continuar editando! Suas alterações serão sincronizadas quando a conexão voltar.
+          </span>
+        </div>
       )}
 
       {/* Adicionamos a classe 'fullscreen-active' condicionalmente para o CSS atuar */}

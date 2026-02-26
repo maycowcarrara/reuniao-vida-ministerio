@@ -36,6 +36,15 @@ export default defineConfig({
             purpose: 'any maskable'
           }
         ]
+      },
+      // 🔥 ADIÇÃO IMPORTANTE PARA O MODO OFFLINE 🔥
+      workbox: {
+        // Diz para o navegador fazer cache de todos esses tipos de arquivo
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        
+        // Aumenta o limite de tamanho de arquivo de 2MB para 5MB 
+        // Isso impede que o chunk do Firebase seja rejeitado pelo cache offline
+        maximumFileSizeToCacheInBytes: 5000000, 
       }
     })
   ],

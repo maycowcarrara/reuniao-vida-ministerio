@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import {
-    getFirestore,
     initializeFirestore,
-    persistentLocalCache
+    persistentLocalCache,
+    persistentMultipleTabManager
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -21,7 +21,9 @@ export const auth = getAuth(app);
 
 // Configuração corrigida de persistência (Cache Offline)
 export const db = initializeFirestore(app, {
-    localCache: persistentLocalCache() // Configuração padrão moderna
+    localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager() // Permite abrir em várias abas offline
+    })
 });
 
 export const googleProvider = new GoogleAuthProvider();
