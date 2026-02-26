@@ -6,8 +6,8 @@ export function useQuadroPublico() {
     const [dados, setDados] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // O seu UID correto!
-    const ADMIN_UID = "X8GNogUkSlNyzsjjyRHIlXA31FL2";
+    // O seu UID
+    const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
 
     useEffect(() => {
         async function fetchDadosPublicos() {

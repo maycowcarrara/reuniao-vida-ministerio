@@ -1,9 +1,9 @@
 import emailjs from '@emailjs/browser';
 
-// ⚠️ Substitua por suas chaves do painel do EmailJS
-const EMAILJS_SERVICE_ID = 'service_4d8dhmn';
-const EMAILJS_TEMPLATE_ID = 'template_5pwkzpm';
-const EMAILJS_PUBLIC_KEY = 'phZazVled2m73w2RW';
+// 🔒 Puxando as chaves de forma segura do arquivo .env
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 export const enviarEmailAutomatico = async (payload) => {
     // Validação de segurança: se não tem e-mail, não tenta enviar

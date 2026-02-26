@@ -7,7 +7,7 @@ import {
     setDoc,
     deleteDoc,
     writeBatch,
-    getDocs // <--- Importação nova necessária
+    getDocs
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -163,6 +163,6 @@ export function useGerenciadorDados() {
         salvarItem,
         excluirItem,
         importarBackupParaUsuario,
-        resetarConta // <--- Exportando a nova função
+        resetarConta
     };
 }
