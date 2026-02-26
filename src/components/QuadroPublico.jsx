@@ -21,10 +21,23 @@ import { Link } from 'react-router-dom';
 // FUNÇÕES AUXILIARES (HELPERS)
 // ============================================================================
 
+// --- FUNÇÃO CORRIGIDA ---
 const extrairNumeroCantico = (texto) => {
     if (!texto) return '';
-    const match = texto.match(/\d+/);
-    return match ? match[0] : '';
+    // Procura pela palavra "cântico" (com ou sem acento, case insensitive), 
+    // seguida opcionalmente de espaços, e captura os números seguintes.
+    const regex = /c[âa]ntico\s*(\d+)/i;
+    const match = texto.match(regex);
+
+    // Se encontrou o padrão "cântico X", retorna o grupo capturado (o número)
+    if (match && match[1]) {
+        return match[1];
+    }
+
+    // Fallback: se a palavra "cântico" não existir, mas o tipo da parte for cantico,
+    // ele tenta pegar o último número da string para evitar pegar minutos.
+    const numbers = texto.match(/\d+/g);
+    return numbers ? numbers[numbers.length - 1] : '';
 };
 
 const formatarData = (dataISO) => {
@@ -233,8 +246,8 @@ export default function QuadroPublico({ programacoes, config }) {
 
                             return (
                                 <div key={idx} className={`bg-white rounded-3xl shadow-sm border overflow-hidden transition-all duration-300 ${isVisita ? 'border-blue-500' :
-                                        estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200' :
-                                            isEspecial ? 'border-amber-500' : 'border-slate-200'
+                                    estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200' :
+                                        isEspecial ? 'border-amber-500' : 'border-slate-200'
                                     }`}>
 
                                     {/* BANNERS ESPECIAIS */}
