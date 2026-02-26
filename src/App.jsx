@@ -19,6 +19,7 @@ import { useGerenciadorDados } from './hooks/useGerenciadorDados';
 import { auth } from './services/firebase';
 import { CARGOS_MAP, TRANSLATIONS } from './data/constants';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { useQuadroPublico } from './hooks/useQuadroPublico';
 
 
 // ============================================================================
@@ -323,7 +324,8 @@ function AdminPanel() {
 // Usado para buscar os dados independentemente da navegação
 // ============================================================================
 function QuadroPublicoWrapper() {
-  const { dados, loading } = useGerenciadorDados();
+  // 👇 AGORA ELE USA O BUSCADOR PÚBLICO
+  const { dados, loading } = useQuadroPublico();
 
   if (loading) {
     return (
@@ -346,19 +348,19 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        
+
         {/* ROTA PRINCIPAL (TELA DE BOAS-VINDAS) */}
         <Route path="/" element={<Home />} />
 
         {/* ROTA PÚBLICA */}
         <Route path="/quadro" element={<QuadroPublicoWrapper />} />
-        
+
         {/* ROTA PRIVADA DO ADMINISTRADOR */}
         <Route path="/admin/*" element={<AdminPanel />} />
-        
+
         {/* REDIRECIONA QUEM DIGITAR ALGO ERRADO PARA O INÍCIO */}
         <Route path="*" element={<Navigate to="/" replace />} />
-        
+
       </Routes>
     </BrowserRouter>
   );
