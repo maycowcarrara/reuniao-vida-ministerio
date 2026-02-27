@@ -49,7 +49,7 @@ const obterDataExata = (dataSegundaISO, diaConfig) => {
     const diasMap = {
         'Segunda-feira': 0, 'Terça-feira': 1, 'Quarta-feira': 2,
         'Quinta-feira': 3, 'Sexta-feira': 4, 'Sábado': 5, 'Domingo': 6,
-        'Lunes': 0, 'Martes': 1, 'Miércoles': 2, 'Jueves': 3, 'Viernes': 4, 'Sábado': 5, 'Domingo': 6
+        'Lunes': 0, 'Martes': 1, 'Miércoles': 2, 'Jueves': 3, 'Viernes': 4
     };
     const add = diasMap[diaConfig] || 0;
     const dt = new Date(dataSegundaISO + 'T12:00:00');
@@ -408,8 +408,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                         <button
                             onClick={() => setModoTempoReal(!modoTempoReal)}
                             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 shrink-0 ${modoTempoReal
-                                    ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
-                                    : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
+                                ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
+                                : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
                                 }`}
                             title="Modo Tempo Real"
                         >
@@ -471,9 +471,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                 <div
                                     key={idx}
                                     className={`bg-white rounded-3xl shadow-sm border overflow-hidden ${isVisita ? 'border-blue-500' :
-                                            isAssembleia ? 'border-purple-500' :
-                                                estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200 shadow-md' :
-                                                    isEspecial ? 'border-amber-500' : 'border-slate-200'
+                                        isAssembleia ? 'border-purple-500' :
+                                            estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200 shadow-md' :
+                                                isEspecial ? 'border-amber-500' : 'border-slate-200'
                                         }`}
                                 >
                                     {/* BANNERS ESPECIAIS */}
@@ -609,7 +609,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                     </div>
 
                                                                     <div className={`w-3 h-3 mt-1.5 rounded-full ring-4 ring-white shrink-0 z-10 shadow-sm transition-colors duration-500 ${isAcontecendo ? 'bg-emerald-500 animate-pulse' :
-                                                                            jaPassou ? 'bg-emerald-400' : 'bg-slate-200'
+                                                                        jaPassou ? 'bg-emerald-400' : 'bg-slate-200'
                                                                         }`}></div>
 
                                                                     <div className="flex-1 pb-2">
