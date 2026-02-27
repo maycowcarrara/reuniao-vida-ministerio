@@ -17,9 +17,19 @@ import {
     CheckCircle2,
     X,
     PlayCircle,
-    Download // NOVO ÍCONE PARA INSTALAÇÃO PWA
+    Download
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+// ============================================================================
+// CAPTURADOR GLOBAL DO PWA (Resolve o bug do React ser mais lento que o Chrome)
+// ============================================================================
+let globalDeferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); // Impede o prompt nativo de aparecer logo
+    globalDeferredPrompt = e; // Guarda o evento na "gaveta"
+    window.dispatchEvent(new Event('pwa-pronto')); // Avisa o React que o evento chegou
+});
 
 // ============================================================================
 // FUNÇÕES AUXILIARES (HELPERS)
@@ -211,22 +221,27 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         }
     }[lang];
 
-    // --- EFEITOS GERAIS E INTERCETOR DE INSTALAÇÃO PWA ---
+    // --- EFEITOS GERAIS E CAPTURADOR PWA ---
     useEffect(() => {
         const timer = setInterval(() => setAgora(new Date()), 10000);
 
-        // Listener para verificar se o app pode ser instalado
-        const handleBeforeInstallPrompt = (e) => {
-            e.preventDefault(); // Impede o navegador de mostrar o prompt nativo imediatamente
-            setDeferredPrompt(e);
-            setShowInstallBanner(true); // Exibe o nosso banner personalizado
+        // Verifica se o evento já foi capturado pela "armadilha global" antes do React carregar
+        const checkPrompt = () => {
+            if (globalDeferredPrompt) {
+                setDeferredPrompt(globalDeferredPrompt);
+                setShowInstallBanner(true);
+            }
         };
 
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        // Verifica imediatamente ao montar
+        checkPrompt();
+
+        // Fica à escuta caso o evento venha depois
+        window.addEventListener('pwa-pronto', checkPrompt);
 
         return () => {
             clearInterval(timer);
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener('pwa-pronto', checkPrompt);
         };
     }, []);
 
@@ -238,6 +253,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                 setShowInstallBanner(false);
             }
             setDeferredPrompt(null);
+            globalDeferredPrompt = null;
         }
     };
 
@@ -346,12 +362,10 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             <header className="bg-blue-700 text-white shadow-md z-50 shrink-0">
                 <div className="px-4 py-4 max-w-2xl mx-auto space-y-4">
 
-                    {/* LINHA 1: TÍTULOS, TAGS E BOTÃO ADMIN */}
                     <div className="flex justify-between items-start">
                         <div>
                             <h1 className="text-lg font-black leading-none tracking-tight">{config?.nome_cong || 'Sua Congregação'}</h1>
 
-                            {/* TAGS COMPACTAS INTEGRADAS NO SUBTÍTULO PARA POUPAR ESPAÇO */}
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 <p className="text-blue-200 text-[9px] font-bold uppercase tracking-[0.1em] opacity-90">
                                     Vida e Ministério
@@ -387,7 +401,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                         )}
                     </div>
 
-                    {/* LINHA 2: PESQUISA E BOTÃO DE TEMPO REAL */}
                     <div className="flex gap-2 w-full">
                         <div className="relative flex-1 group">
                             <Search size={16} className="absolute left-3 top-3 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
@@ -408,8 +421,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                         <button
                             onClick={() => setModoTempoReal(!modoTempoReal)}
                             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 shrink-0 ${modoTempoReal
-                                ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
-                                : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
+                                    ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
+                                    : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
                                 }`}
                             title="Modo Tempo Real"
                         >
@@ -471,9 +484,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                 <div
                                     key={idx}
                                     className={`bg-white rounded-3xl shadow-sm border overflow-hidden ${isVisita ? 'border-blue-500' :
-                                        isAssembleia ? 'border-purple-500' :
-                                            estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200 shadow-md' :
-                                                isEspecial ? 'border-amber-500' : 'border-slate-200'
+                                            isAssembleia ? 'border-purple-500' :
+                                                estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200 shadow-md' :
+                                                    isEspecial ? 'border-amber-500' : 'border-slate-200'
                                         }`}
                                 >
                                     {/* BANNERS ESPECIAIS */}
@@ -569,13 +582,17 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                         {modoTempoReal && !sem.termosBuscados && sem.partes?.length > 0 && (() => {
                                                             const meetingStarted = isHoje && agora >= sem.partes[0]?.startObj;
                                                             return (
-                                                                <div className="flex gap-3 relative items-start mb-6">
-                                                                    <div className={`absolute left-[57px] top-4 bottom-[-1.5rem] w-0.5 transition-colors duration-500 ${meetingStarted ? 'bg-emerald-400' : 'bg-slate-200'}`}></div>
+                                                                <div className="flex gap-2 relative">
                                                                     <div className="w-[40px] shrink-0 text-right pt-0.5">
                                                                         <span className="text-[11px] font-black text-blue-500 tracking-tighter">{sem.meetingStartTimeStr}</span>
                                                                     </div>
-                                                                    <div className={`w-3 h-3 mt-1.5 rounded-full ring-4 ring-white z-10 shrink-0 shadow-sm transition-colors duration-500 ${meetingStarted ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
-                                                                    <div className="flex-1">
+
+                                                                    <div className="relative w-4 flex justify-center shrink-0">
+                                                                        <div className={`absolute top-3 bottom-[-1.5rem] w-[2px] transition-colors duration-500 ${meetingStarted ? 'bg-emerald-400' : 'bg-slate-200'}`}></div>
+                                                                        <div className={`w-3 h-3 mt-1.5 rounded-full z-10 shrink-0 shadow-sm transition-colors duration-500 ${meetingStarted ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
+                                                                    </div>
+
+                                                                    <div className="flex-1 pb-6">
                                                                         <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 shadow-sm">
                                                                             <PlayCircle size={10} className="text-blue-500" /> {T.inicioReuniao}
                                                                         </span>
@@ -599,8 +616,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                                                             return modoTempoReal ? (
                                                                 /* === MODO TEMPO REAL === */
-                                                                <div key={i} className={`flex gap-3 relative items-start mb-6 ${jaPassou ? 'opacity-60 grayscale-[30%]' : ''}`}>
-                                                                    <div className={`absolute left-[57px] top-4 bottom-[-1.5rem] w-0.5 transition-colors duration-500 ${jaPassou ? 'bg-emerald-400' : 'bg-slate-200'}`}></div>
+                                                                <div key={i} className={`flex gap-2 relative ${jaPassou ? 'opacity-60 grayscale-[30%]' : ''}`}>
 
                                                                     <div className="w-[40px] shrink-0 text-right pt-0.5">
                                                                         <span className={`text-[11px] font-black tracking-tighter ${jaPassou ? 'text-slate-400' : isAcontecendo ? 'text-emerald-600' : 'text-slate-600'}`}>
@@ -608,11 +624,14 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                         </span>
                                                                     </div>
 
-                                                                    <div className={`w-3 h-3 mt-1.5 rounded-full ring-4 ring-white shrink-0 z-10 shadow-sm transition-colors duration-500 ${isAcontecendo ? 'bg-emerald-500 animate-pulse' :
-                                                                        jaPassou ? 'bg-emerald-400' : 'bg-slate-200'
-                                                                        }`}></div>
+                                                                    <div className="relative w-4 flex justify-center shrink-0">
+                                                                        <div className={`absolute top-3 bottom-[-1.5rem] w-[2px] transition-colors duration-500 ${jaPassou ? 'bg-emerald-400' : 'bg-slate-200'}`}></div>
+                                                                        <div className={`w-3 h-3 mt-1.5 rounded-full z-10 shrink-0 shadow-sm transition-colors duration-500 ${isAcontecendo ? 'bg-emerald-500 animate-pulse ring-4 ring-emerald-100' :
+                                                                                jaPassou ? 'bg-emerald-400' : 'bg-slate-300'
+                                                                            }`}></div>
+                                                                    </div>
 
-                                                                    <div className="flex-1 pb-2">
+                                                                    <div className="flex-1 pb-6">
                                                                         <div className="flex flex-wrap items-center gap-2 mb-1">
                                                                             {label && (
                                                                                 <span className={`inline-block text-[8px] font-black px-2 py-0.5 rounded uppercase ${jaPassou ? 'bg-slate-200 text-slate-500' : label.css}`}>
@@ -644,15 +663,19 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                 </div>
                                                             ) : (
                                                                 /* === MODO NORMAL === */
-                                                                <div key={i} className="flex gap-3 relative mb-6">
-                                                                    <div className={i === sem.partes.length - 1 ? "hidden" : "absolute left-[19px] top-12 bottom-[-1.5rem] w-0.5 bg-slate-200"}></div>
+                                                                <div key={i} className="flex gap-3 relative">
 
-                                                                    <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-100 flex flex-col items-center justify-center shrink-0 z-10 shadow-sm">
-                                                                        <span className="text-[10px] font-black text-slate-600 leading-none">{parte.tempo}</span>
-                                                                        <span className="text-[7px] font-bold text-slate-400 uppercase mt-0.5">min</span>
+                                                                    <div className="relative w-10 flex justify-center shrink-0">
+                                                                        {i !== sem.partes.length - 1 && (
+                                                                            <div className="absolute top-10 bottom-[-1.5rem] w-[2px] bg-slate-200"></div>
+                                                                        )}
+                                                                        <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-100 flex flex-col items-center justify-center z-10 shadow-sm">
+                                                                            <span className="text-[10px] font-black text-slate-600 leading-none">{parte.tempo}</span>
+                                                                            <span className="text-[7px] font-bold text-slate-400 uppercase mt-0.5">min</span>
+                                                                        </div>
                                                                     </div>
 
-                                                                    <div className="flex-1 space-y-2">
+                                                                    <div className="flex-1 pb-6 space-y-2">
                                                                         {label && (
                                                                             <span className={`inline-block text-[10px] font-black px-2 py-0.5 rounded uppercase ${label.css}`}>
                                                                                 {label.txt}
@@ -700,11 +723,13 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                                                         {/* NÓ DE TÉRMINO DA REUNIÃO */}
                                                         {modoTempoReal && !sem.termosBuscados && sem.partes?.length > 0 && (
-                                                            <div className="flex gap-3 relative items-start mt-0 pb-4">
+                                                            <div className="flex gap-2 relative mt-[-0.5rem] pb-4">
                                                                 <div className="w-[40px] shrink-0 text-right pt-0.5">
                                                                     <span className="text-[11px] font-black text-rose-500 tracking-tighter">{sem.meetingEndTimeStr}</span>
                                                                 </div>
-                                                                <div className="w-3 h-3 mt-1.5 rounded-full bg-rose-500 ring-4 ring-white z-10 shrink-0 shadow-sm"></div>
+                                                                <div className="relative w-4 flex justify-center shrink-0">
+                                                                    <div className="w-3 h-3 mt-1.5 rounded-full bg-rose-500 z-10 shrink-0 shadow-sm"></div>
+                                                                </div>
                                                                 <div className="flex-1">
                                                                     <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 shadow-sm">
                                                                         <CheckCircle2 size={10} className="text-rose-500" /> {T.fimReuniao}
@@ -728,7 +753,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                     <p className="text-slate-500 font-bold text-[9px] uppercase tracking-widest mb-4">
                         {T.atualizado}
                     </p>
-                    {/* BOTÃO DO RODAPÉ SE ADAPTA AO ESTADO DO USUÁRIO TAMBÉM */}
                     <Link
                         to="/admin"
                         className="flex items-center gap-1.5 bg-slate-200/50 hover:bg-slate-200 px-4 py-2 rounded-xl text-[10px] font-black uppercase text-slate-500 hover:text-slate-700 transition-colors"
