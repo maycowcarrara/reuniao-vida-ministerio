@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa' 
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({ 
+    VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
@@ -22,18 +22,14 @@ export default defineConfig({
           {
             src: '/pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
             src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'maskable'
           }
         ]
       },
@@ -41,10 +37,10 @@ export default defineConfig({
       workbox: {
         // Diz para o navegador fazer cache de todos esses tipos de arquivo
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
-        
+
         // Aumenta o limite de tamanho de arquivo de 2MB para 5MB 
         // Isso impede que o chunk do Firebase seja rejeitado pelo cache offline
-        maximumFileSizeToCacheInBytes: 5000000, 
+        maximumFileSizeToCacheInBytes: 5000000,
       }
     })
   ],
