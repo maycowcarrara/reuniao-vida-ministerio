@@ -16,7 +16,8 @@ import {
     Clock,
     CheckCircle2,
     X,
-    PlayCircle
+    PlayCircle,
+    Download // NOVO ÍCONE PARA INSTALAÇÃO PWA
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -120,7 +121,6 @@ const gerarLinkAgenda = (parte, dataSemanaISO) => {
 // COMPONENTE PRINCIPAL
 // ============================================================================
 
-// AGORA O COMPONENTE RECEBE O "usuario" vindo do App.jsx
 export default function QuadroPublico({ programacoes, config, usuario }) {
     const [busca, setBusca] = useState('');
     const [autenticado, setAutenticado] = useState(false);
@@ -129,6 +129,10 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const [semanaExpandida, setSemanaExpandida] = useState(0);
     const [modoTempoReal, setModoTempoReal] = useState(false);
     const [agora, setAgora] = useState(new Date());
+
+    // --- ESTADOS DO PWA (INSTALAÇÃO) ---
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showInstallBanner, setShowInstallBanner] = useState(false);
 
     const SENHA_CONGREGACAO = "2026";
 
@@ -141,8 +145,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             btnAcesso: "Acessar Agora",
             placeholderBusca: "Filtrar por nome...",
             btnTempoReal: "Tempo Real",
-            avisoFiltro: "Filtrando suas partes",
-            avisoTempoReal: "Modo Cronograma Ativo",
+            tagCronograma: "Cronograma",
+            tagFiltro: "Filtro",
             nenhumaReuniao: "Nenhuma reunião futura",
             visita: "Visita do Superintendente de Circuito",
             assembleia: "Semana de Assembleia",
@@ -164,7 +168,10 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             leitor: "Leitor",
             atualizado: "Atualizado em Tempo Real",
             acessoSuper: "Acesso Superintendente",
-            voltarPainel: "Painel Admin", // NOVO
+            voltarPainel: "Painel Admin",
+            instalarApp: "Instalar Aplicativo",
+            acessoRapido: "Acesso rápido e offline",
+            btnInstalar: "Instalar",
             secoes: { tesouros: "Tesouros", ministerio: "Ministério", vida: "Vida Cristã" }
         },
         es: {
@@ -173,8 +180,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             btnAcesso: "Acceder Ahora",
             placeholderBusca: "Filtrar por nombre...",
             btnTempoReal: "Tiempo Real",
-            avisoFiltro: "Filtrando sus partes",
-            avisoTempoReal: "Modo Cronograma Activo",
+            tagCronograma: "Cronograma",
+            tagFiltro: "Filtro",
             nenhumaReuniao: "No hay reuniones futuras",
             visita: "Visita del Superintendente de Circuito",
             assembleia: "Semana de Asamblea",
@@ -196,15 +203,43 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             leitor: "Lector",
             atualizado: "Actualizado en Tiempo Real",
             acessoSuper: "Acceso Superintendente",
-            voltarPainel: "Panel Admin", // NOVO
+            voltarPainel: "Panel Admin",
+            instalarApp: "Instalar Aplicación",
+            acessoRapido: "Acceso rápido y sin conexión",
+            btnInstalar: "Instalar",
             secoes: { tesouros: "Tesoros", ministerio: "Ministerio", vida: "Vida Cristiana" }
         }
     }[lang];
 
+    // --- EFEITOS GERAIS E INTERCETOR DE INSTALAÇÃO PWA ---
     useEffect(() => {
         const timer = setInterval(() => setAgora(new Date()), 10000);
-        return () => clearInterval(timer);
+
+        // Listener para verificar se o app pode ser instalado
+        const handleBeforeInstallPrompt = (e) => {
+            e.preventDefault(); // Impede o navegador de mostrar o prompt nativo imediatamente
+            setDeferredPrompt(e);
+            setShowInstallBanner(true); // Exibe o nosso banner personalizado
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        return () => {
+            clearInterval(timer);
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        };
     }, []);
+
+    const handleInstallClick = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setShowInstallBanner(false);
+            }
+            setDeferredPrompt(null);
+        }
+    };
 
     const handleLogin = (e) => {
         e.preventDefault();
@@ -309,80 +344,107 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     return (
         <div className="h-screen bg-slate-50 font-sans flex flex-col overflow-hidden">
             <header className="bg-blue-700 text-white shadow-md z-50 shrink-0">
-                <div className="px-4 py-4 max-w-2xl mx-auto">
-                    <div className="flex justify-between items-center mb-3">
+                <div className="px-4 py-4 max-w-2xl mx-auto space-y-4">
+
+                    {/* LINHA 1: TÍTULOS, TAGS E BOTÃO ADMIN */}
+                    <div className="flex justify-between items-start">
                         <div>
                             <h1 className="text-lg font-black leading-none tracking-tight">{config?.nome_cong || 'Sua Congregação'}</h1>
-                            <p className="text-blue-200 text-[9px] font-bold uppercase tracking-[0.1em] mt-1 opacity-90">Vida e Ministério</p>
+
+                            {/* TAGS COMPACTAS INTEGRADAS NO SUBTÍTULO PARA POUPAR ESPAÇO */}
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <p className="text-blue-200 text-[9px] font-bold uppercase tracking-[0.1em] opacity-90">
+                                    Vida e Ministério
+                                </p>
+
+                                {modoTempoReal && (
+                                    <span className="flex items-center gap-1 bg-emerald-500/30 text-emerald-100 border border-emerald-500/50 text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
+                                        <Clock size={8} className="animate-pulse" />
+                                        <span className="hidden sm:inline">{T.tagCronograma}</span>
+                                    </span>
+                                )}
+                                {busca && (
+                                    <span className="flex items-center gap-1 bg-yellow-400/30 text-yellow-100 border border-yellow-400/50 text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
+                                        <Info size={8} />
+                                        <span className="hidden sm:inline">{T.tagFiltro}</span>
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
-                        {/* SE O USUÁRIO ESTIVER LOGADO, MOSTRA O BOTÃO "PAINEL ADMIN" NO TOPO */}
                         {usuario ? (
                             <Link
                                 to="/admin"
-                                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 border border-white/10"
+                                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 border border-white/10 shrink-0"
                             >
                                 <LayoutDashboard size={14} />
                                 <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">{T.voltarPainel}</span>
                             </Link>
                         ) : (
-                            <div className="bg-blue-800/60 p-2 rounded-xl border border-blue-500/30 shadow-inner">
+                            <div className="bg-blue-800/60 p-2 rounded-xl border border-blue-500/30 shadow-inner shrink-0">
                                 <LayoutDashboard size={18} className="text-blue-100" />
                             </div>
                         )}
                     </div>
 
-                    <div className="space-y-2">
-                        <div className="flex gap-2 w-full">
-                            <div className="relative flex-1 group">
-                                <Search size={16} className="absolute left-3 top-3 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder={T.placeholderBusca}
-                                    className="w-full bg-blue-800/40 border border-blue-400/30 text-white placeholder-blue-300 rounded-xl pl-10 pr-10 py-2.5 outline-none focus:ring-4 focus:ring-blue-400/50 focus:bg-blue-900/60 transition-all shadow-inner text-sm"
-                                    value={busca}
-                                    onChange={(e) => setBusca(e.target.value)}
-                                />
-                                {busca && (
-                                    <button onClick={() => setBusca('')} className="absolute right-3 top-3 text-blue-300 hover:text-white transition-colors">
-                                        <X size={16} />
-                                    </button>
-                                )}
-                            </div>
-
-                            <button
-                                onClick={() => setModoTempoReal(!modoTempoReal)}
-                                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 ${modoTempoReal
-                                        ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
-                                        : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
-                                    }`}
-                                title="Modo Tempo Real"
-                            >
-                                <Clock size={16} className={modoTempoReal ? 'animate-pulse' : ''} />
-                                <span className="hidden sm:inline text-[10px] font-black uppercase">{T.btnTempoReal}</span>
-                            </button>
+                    {/* LINHA 2: PESQUISA E BOTÃO DE TEMPO REAL */}
+                    <div className="flex gap-2 w-full">
+                        <div className="relative flex-1 group">
+                            <Search size={16} className="absolute left-3 top-3 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder={T.placeholderBusca}
+                                className="w-full bg-blue-800/40 border border-blue-400/30 text-white placeholder-blue-300 rounded-xl pl-10 pr-10 py-2.5 outline-none focus:ring-4 focus:ring-blue-400/50 focus:bg-blue-900/60 transition-all shadow-inner text-sm"
+                                value={busca}
+                                onChange={(e) => setBusca(e.target.value)}
+                            />
+                            {busca && (
+                                <button onClick={() => setBusca('')} className="absolute right-3 top-3 text-blue-300 hover:text-white transition-colors">
+                                    <X size={16} />
+                                </button>
+                            )}
                         </div>
 
-                        {/* Mensagens dinâmicas */}
-                        <div className="h-6 flex items-center">
-                            {busca ? (
-                                <div className="bg-yellow-400 text-yellow-950 text-[10px] font-black px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm">
-                                    <Info size={14} className="shrink-0" />
-                                    <span className="uppercase tracking-wider">{T.avisoFiltro}</span>
-                                </div>
-                            ) : modoTempoReal ? (
-                                <div className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm border border-emerald-200">
-                                    <Clock size={14} className="shrink-0" />
-                                    <span className="uppercase tracking-wider">{T.avisoTempoReal}</span>
-                                </div>
-                            ) : null}
-                        </div>
+                        <button
+                            onClick={() => setModoTempoReal(!modoTempoReal)}
+                            className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 shrink-0 ${modoTempoReal
+                                    ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
+                                    : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
+                                }`}
+                            title="Modo Tempo Real"
+                        >
+                            <Clock size={16} className={modoTempoReal ? 'animate-pulse' : ''} />
+                            <span className="hidden sm:inline text-[10px] font-black uppercase">{T.btnTempoReal}</span>
+                        </button>
                     </div>
                 </div>
             </header>
 
             <main className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
                 <div className="max-w-2xl mx-auto space-y-6">
+
+                    {/* BANNER DE INSTALAÇÃO PWA */}
+                    {showInstallBanner && (
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-lg flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white/20 p-2 rounded-xl shrink-0">
+                                    <Download size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold">{T.instalarApp}</h4>
+                                    <p className="text-[10px] text-blue-100 mt-0.5">{T.acessoRapido}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button onClick={handleInstallClick} className="bg-white text-blue-700 text-xs font-bold px-3 py-1.5 rounded-lg active:scale-95 transition-transform shadow-sm">
+                                    {T.btnInstalar}
+                                </button>
+                                <button onClick={() => setShowInstallBanner(false)} className="p-1.5 text-blue-200 hover:text-white transition-colors">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {semanasParaExibir.length === 0 ? (
                         <div className="text-center py-20 text-slate-300">
