@@ -21,39 +21,42 @@ body {
   background-color: #f3f4f6;
   color: #1f2937;
   display: block;
-  /* Remove o display: flex centralizado do Vite */
 }
 
 #root {
   width: 100%;
   height: 100%;
   display: flex;
-  /* Para o nosso layout funcionar */
   flex-direction: column;
   margin: 0;
   padding: 0;
   text-align: left;
-  /* Remove alinhamento centralizado */
 }
 
+/* =========================================================
+   🔥 MODO IMPRESSÃO (A VACINA DEFINITIVA)
+========================================================= */
 @media print {
 
-  /* 🔥 Neutraliza o layout flex do app */
-  #app-root {
+  /* Destrava TODAS as camadas desde o HTML até a sua página */
+  html,
+  body,
+  #root,
+  #app-root,
+  main,
+  .overflow-y-auto {
     display: block !important;
     width: auto !important;
     height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  main {
-    display: block !important;
-    width: auto !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Esconde UI global */
+  /* Esconde completamente a UI global */
   .no-print,
   aside,
   nav,
@@ -61,36 +64,29 @@ body {
     display: none !important;
   }
 
-  /* Scrollbar não faz sentido em print */
+  /* Esconde a barra de rolagem */
   ::-webkit-scrollbar {
-    display: none;
+    display: none !important;
   }
-
 }
 
 /* =========================================================
     MODO TELA CHEIA (FULLSCREEN)
 ========================================================= */
-
-/* Quando ativo, reduzimos drasticamente o padding das telas internas 
-   (Dashboard, Designar, etc) para usar 100% da área útil do monitor */
 .fullscreen-active .p-4,
 .fullscreen-active .p-6,
 .fullscreen-active .px-6,
 .fullscreen-active .py-6,
 .fullscreen-active .p-8 {
   padding: 0.5rem !important;
-  /* Deixa apenas uma bordinha mínima */
 }
 
-/* Removemos travas de largura máxima para a programação esticar */
 .fullscreen-active .max-w-7xl,
 .fullscreen-active .max-w-6xl,
 .fullscreen-active .max-w-5xl {
   max-width: 100% !important;
 }
 
-/* Deixa o fundo completamente branco na tela cheia para evitar bordas acinzentadas */
 .fullscreen-active {
   background-color: #ffffff !important;
 }

@@ -21,8 +21,57 @@ const NavegadorSemanas = ({
         }
     }[lang] || { resumo: "Resumo" };
 
+    // Função auxiliar super robusta para extrair a data correta de qualquer semana
+    const getTimestamp = (sem) => {
+        if (!sem) return 0;
+
+        const dataStr = sem.dataInicio || sem.dataReuniao || sem.data;
+
+        if (dataStr) {
+            if (dataStr.includes('-')) {
+                const [ano, mes, dia] = dataStr.split('-');
+                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
+            }
+            if (dataStr.includes('/')) {
+                const [dia, mes, ano] = dataStr.split('/');
+                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
+            }
+        }
+
+        if (sem.semana) {
+            const str = sem.semana.toLowerCase();
+            const meses = [
+                'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
+                'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+            ];
+
+            let mesIndex = 0;
+            for (let i = 0; i < meses.length; i++) {
+                if (str.includes(meses[i])) {
+                    mesIndex = i % 12;
+                    break;
+                }
+            }
+
+            const matchDia = str.match(/^(\d+)/);
+            const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
+
+            const matchAno = str.match(/(20\d{2})/);
+            const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
+
+            return new Date(ano, mesIndex, dia, 12, 0, 0).getTime();
+        }
+
+        return 0;
+    };
+
+    // Mapeamos para preservar o índice original (idx) antes de ordenar
+    const semanasOrdenadas = listaSemanas
+        .map((sem, idx) => ({ sem, originalIndex: idx }))
+        .sort((a, b) => getTimestamp(a.sem) - getTimestamp(b.sem));
+
     return (
-        <div className="hidden xl:flex flex-col w-64 shrink-0 lg:sticky lg:top-20 self-start max-h-[calc(100vh-10rem)] overflow-y-auto bg-white rounded-xl shadow-sm border border-gray-200 custom-scroll">
+        <div className="hidden xl:flex flex-col w-64 shrink-0 lg:sticky lg:top-45 self-start max-h-[calc(100vh-11rem)] overflow-y-auto bg-white rounded-xl shadow-sm border border-gray-200 custom-scroll z-30">
             <div className="p-4 bg-gray-50 border-b border-gray-200 sticky top-0 z-10 flex items-center justify-between">
                 <h3 className="font-bold text-xs text-gray-700 uppercase tracking-widest">
                     {localTx.resumo}
@@ -33,7 +82,7 @@ const NavegadorSemanas = ({
             </div>
 
             <div className="p-2 flex flex-col gap-2">
-                {listaSemanas.map((sem, idx) => {
+                {semanasOrdenadas.map(({ sem, originalIndex: idx }) => {
                     const key = getSemanaKey(sem, idx);
                     const isSelected = semanasSelecionadas[key];
                     if (!isSelected) return null;

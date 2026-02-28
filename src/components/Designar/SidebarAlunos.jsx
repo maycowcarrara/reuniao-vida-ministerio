@@ -132,7 +132,7 @@ const SidebarAlunos = ({
     const hasActiveFilters = termoBusca !== '' || filtroGenero !== 'todos' || (filtrosTiposAtivos && filtrosTiposAtivos.length > 0);
 
     return (
-        <div className="lg:w-80 shrink-0 w-full lg:sticky lg:top-20 self-start">
+        <div className="lg:w-80 shrink-0 w-full lg:sticky lg:top-45 self-start">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 max-h-[calc(100vh-10rem)] flex flex-col overflow-hidden">
                 <div className="p-4 bg-blue-700 text-white text-xs font-bold uppercase tracking-widest flex justify-between items-center shrink-0">
                     <div className="flex flex-col">

@@ -255,7 +255,8 @@ function AdminPanel() {
   if (!usuario) return <Login />;
 
   return (
-    <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden relative">
+    // AS CLASSES DE IMPRESSÃO FORAM ADICIONADAS NESTA DIV (print:block print:h-auto print:overflow-visible)
+    <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden relative print:block print:h-auto print:overflow-visible">
       <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileInputChange} />
 
       {dupModal.open && (
@@ -288,7 +289,7 @@ function AdminPanel() {
           logout={() => auth.signOut()} 
           listaProgramacoes={listaProgramacoes} 
           t={t} 
-          lang={lang} // PASSANDO IDIOMA PRO SIDEBAR
+          lang={lang} 
           toggleFullscreen={toggleFullscreen} 
         />
       )}
@@ -300,10 +301,12 @@ function AdminPanel() {
         </div>
       )}
 
-      <main className={`flex-1 flex flex-col min-w-0 bg-slate-50 h-screen overflow-hidden relative ${isFullscreen ? 'fullscreen-active' : ''}`}>
+      {/* AS CLASSES DE IMPRESSÃO TAMBÉM FORAM ADICIONADAS AQUI NO MAIN */}
+      <main className={`flex-1 flex flex-col min-w-0 bg-slate-50 h-screen overflow-hidden relative print:block print:h-auto print:overflow-visible ${isFullscreen ? 'fullscreen-active' : ''}`}>
         
         {!isFullscreen && (
-          <header className="h-14 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 border-b shrink-0 z-30">
+          // NO-PRINT ADICIONADO AQUI PARA ESCONDER O HEADER
+          <header className="h-14 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 border-b shrink-0 z-30 no-print">
             
             <div className="flex items-center gap-3 md:gap-4">
               <h2 className="text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none">
@@ -347,7 +350,8 @@ function AdminPanel() {
           </button>
         )}
 
-        <div className="flex-1 overflow-y-auto scroll-smooth">
+        {/* PRINT:OVERFLOW-VISIBLE AQUI PARA DEIXAR O CONTEÚDO ROLAR LIVREMENTE */}
+        <div className="flex-1 overflow-y-auto scroll-smooth print:overflow-visible">
           {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} />}
           {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
           {abaAtiva === 'designar' && <Designar listaProgramacoes={listaProgramacoes} setListaProgramacoes={setListaProgramacoes} alunos={dadosSistema?.alunos || []} cargosMap={CARGOS_MAP} lang={lang} t={t} config={dadosSistema?.configuracoes} onExcluirSemana={handleExcluirSemanaBanco} />}

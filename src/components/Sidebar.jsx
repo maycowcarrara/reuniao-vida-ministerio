@@ -66,17 +66,22 @@ export default function Sidebar({
     );
 
     return (
+        // Envolvemos toda a Sidebar + Overlay num Fragmento ou Div print:hidden.
+        // Como o React pede apenas um nó pai, usamos o <> vazio (Fragment), 
+        // mas as tags filhas imediatas recebem print:hidden.
         <>
             {/* OVERLAY ESCURO (Aparece só no celular quando o menu está aberto) */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
+                    // ADICIONADO: print:hidden
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity print:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             <aside
-                className={`fixed right-0 md:relative z-50 h-full flex flex-col bg-jw-blue shadow-2xl md:shadow-xl transition-all duration-300 ease-in-out
+                // ADICIONADO: print:hidden e forcei o no-print
+                className={`no-print print:hidden fixed right-0 md:relative z-50 h-full flex flex-col bg-jw-blue shadow-2xl md:shadow-xl transition-all duration-300 ease-in-out
                 ${sidebarOpen ? 'translate-x-0 w-64' : 'translate-x-full md:translate-x-0 md:w-16'}`}
             >
                 {/* HEADER SIDEBAR - NUVEM SEMPRE VISÍVEL */}

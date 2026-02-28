@@ -12,6 +12,63 @@ const DesignarHeader = ({
     semanaAtivaIndex, setSemanaAtivaIndex,
     userClearedWeeksRef
 }) => {
+
+    // Função auxiliar super robusta para extrair a data correta de qualquer semana
+    const getTimestamp = (sem) => {
+        if (!sem) return 0;
+
+        // 1. Busca a data em qualquer um dos campos mapeados do banco
+        const dataStr = sem.dataInicio || sem.dataReuniao || sem.data;
+
+        if (dataStr) {
+            // Se a data estiver no formato YYYY-MM-DD (Padrão do seu banco)
+            if (dataStr.includes('-')) {
+                const [ano, mes, dia] = dataStr.split('-');
+                // Mês no Javascript começa em 0 (Janeiro = 0, Março = 2)
+                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
+            }
+
+            // Se a data estiver no formato DD/MM/YYYY
+            if (dataStr.includes('/')) {
+                const [dia, mes, ano] = dataStr.split('/');
+                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
+            }
+        }
+
+        // 2. Fallback: Se por algum motivo a semana não tiver data exata, tenta ler a string "23-29 de março"
+        if (sem.semana) {
+            const str = sem.semana.toLowerCase();
+
+            const meses = [
+                'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
+                'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+            ];
+
+            let mesIndex = 0;
+            for (let i = 0; i < meses.length; i++) {
+                if (str.includes(meses[i])) {
+                    mesIndex = i % 12;
+                    break;
+                }
+            }
+
+            const matchDia = str.match(/^(\d+)/);
+            const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
+
+            const matchAno = str.match(/(20\d{2})/);
+            const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
+
+            return new Date(ano, mesIndex, dia, 12, 0, 0).getTime();
+        }
+
+        return 0;
+    };
+
+    // Mapeamos para preservar o índice original (idx) antes de ordenar
+    const semanasOrdenadas = listaFiltradaPorFlag
+        .map((sem, idx) => ({ sem, originalIndex: idx }))
+        .sort((a, b) => getTimestamp(a.sem) - getTimestamp(b.sem));
+
     return (
         <div className="w-full sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200 transition-all">
             <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col gap-3">
@@ -37,7 +94,7 @@ const DesignarHeader = ({
                     </button>
                 </div>
 
-                {/* LINHA 2: CAIXA DE SEMANAS (Idêntico ao Revisar & Enviar) */}
+                {/* LINHA 2: CAIXA DE SEMANAS */}
                 <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
                         <div className="text-[10px] font-black uppercase text-gray-400">
@@ -54,7 +111,7 @@ const DesignarHeader = ({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        {listaFiltradaPorFlag.map((sem, idx) => {
+                        {semanasOrdenadas.map(({ sem, originalIndex: idx }) => {
                             const k = getSemanaKey(sem, idx);
                             const on = !!semanasSelecionadas?.[k];
                             const foco = idx === semanaAtivaIndex;

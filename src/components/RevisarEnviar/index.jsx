@@ -108,25 +108,53 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         return str;
     };
 
-    // --- PROCESSAMENTO E ORDENAÇÃO ---
+    // --- PROCESSAMENTO E ORDENAÇÃO ROBUSTA (AGORA COM TIMESTAMP MATEMÁTICO!) ---
+    const getTimestamp = (sem) => {
+        if (!sem) return 0;
+        const dataStr = sem.dataInicio || sem.dataReuniao || sem.data;
+        if (dataStr) {
+            if (dataStr.includes('-')) {
+                const [ano, mes, dia] = dataStr.split('-');
+                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
+            }
+            if (dataStr.includes('/')) {
+                const [dia, mes, ano] = dataStr.split('/');
+                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
+            }
+        }
+        if (sem.semana) {
+            const str = sem.semana.toLowerCase();
+            const meses = [
+                'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
+                'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+            ];
+            let mesIndex = 0;
+            for (let i = 0; i < meses.length; i++) {
+                if (str.includes(meses[i])) { mesIndex = i % 12; break; }
+            }
+            const matchDia = str.match(/^(\d+)/);
+            const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
+            const matchAno = str.match(/(20\d{2})/);
+            const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
+            return new Date(ano, mesIndex, dia, 12, 0, 0).getTime();
+        }
+        return 0;
+    };
+
     const historicoOrdenado = useMemo(() => {
-        return [...historico].sort((a, b) => {
-            const dA = a?.dataReuniao ? new Date(a.dataReuniao) : new Date(0);
-            const dB = b?.dataReuniao ? new Date(b.dataReuniao) : new Date(0);
-            return dA - dB;
-        });
+        return [...historico].sort((a, b) => getTimestamp(a) - getTimestamp(b));
     }, [historico]);
 
     const historicoSelect = useMemo(() => [...historicoOrdenado].reverse(), [historicoOrdenado]);
 
-    // 🔥 MÁGICA AQUI: Auto-ajuste do startIndex agora respeita o filtro selecionado (Ativas vs Arquivadas)
+    // Auto-ajuste do startIndex agora respeita o filtro selecionado (Ativas vs Arquivadas)
     useEffect(() => {
         if (historicoSelect.length > 0) {
             let indexMaisAntiga = -1;
-            
+
             for (let i = historicoSelect.length - 1; i >= 0; i--) {
                 const isArq = !!historicoSelect[i].arquivada;
-                
+
                 if (filtroSemanas === 'ativas' && !isArq) {
                     indexMaisAntiga = i;
                     break;
@@ -136,7 +164,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     break;
                 }
                 if (filtroSemanas === 'todas') {
-                    indexMaisAntiga = i; // Pega a primeira geral
+                    indexMaisAntiga = i;
                     break;
                 }
             }
@@ -265,7 +293,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             case 1:
                 return {
                     semanasPorPag: 1,
-                    h1: 'text-xl',
+                    h1: 'text-2xl',
                     h2: 'text-sm',
                     sectionTitle: 'text-lg font-bold mt-6 mb-4 border-b border-gray-400 uppercase tracking-wide',
                     partTitle: 'text-base font-semibold',
@@ -277,13 +305,14 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             case 2:
                 return {
                     semanasPorPag: 2,
-                    h1: 'text-xl',
-                    h2: 'text-sm',
-                    sectionTitle: 'text-[16px] font-bold mt-4 mb-2 border-b-2 border-gray-300 uppercase tracking-wide',
-                    partTitle: 'text-[14px] font-semibold',
+                    h1: 'text-xl print:text-[16px] print:leading-none',
+                    h2: 'text-sm print:text-[11px]',
+                    // O segredo está aqui: print:mt-1 e print:mb-0.5 removem os "buracos" entre as seções
+                    sectionTitle: 'text-[16px] print:text-[13px] font-bold mt-4 mb-2 print:mt-1.5 print:mb-0.5 border-b border-gray-300 uppercase tracking-wide',
+                    partTitle: 'text-[14px] print:text-[12px] font-semibold',
                     description: 'text-[12px] leading-snug text-gray-600 mt-0.5 print:text-[10px]',
-                    names: 'text-[13px] font-medium',
-                    meta: 'text-[12px]',
+                    names: 'text-[13px] print:text-[11.5px] font-medium',
+                    meta: 'text-[12px] print:text-[10px]',
                 };
             case 4:
                 return {
@@ -549,7 +578,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             if (ajudante?.nome) nomes += ` / ${nomeCurto(ajudante.nome)}`;
             if (leitor?.nome) nomes += ` • ${t.leitor}: ${nomeCurto(leitor.nome)}`;
 
-            // 🔍 MÁGICA AQUI: Extrai o número do começo do título (ex: "5. Leitura" -> "5")
+            // Extrai o número do começo do título
             const tituloStr = (parte?.titulo || '').trim();
             const matchNumero = tituloStr.match(/^(\d+)/);
             const numeroExtraido = matchNumero ? matchNumero[1] : null;
@@ -558,7 +587,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 tipo: 'parte',
                 pessoaTexto: nomes,
                 tempo: parte?.tempo,
-                // Prioridade 1: Número do Título | Prioridade 2: Banco de dados
                 numero: numeroExtraido || parte?.num || parte?.numero || ''
             });
         });
@@ -583,10 +611,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     if (item.tipo === 'parte') {
                         if (item.numero) {
                             numExibicao = item.numero;
-                            // Se achou um número real, calibra o nosso contador automático para o próximo número!
                             contadorPartesReais = parseInt(item.numero, 10) + 1;
                         } else {
-                            // Se o título não tinha número, usa o contador automático
                             numExibicao = contadorPartesReais++;
                         }
                     }
@@ -612,7 +638,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     };
 
     return (
-        <div className="space-y-6 h-full flex flex-col relative">
+        <div className="space-y-6 flex flex-col relative print:block print:h-auto print:overflow-visible">
 
             <div className="no-print">
                 <RevisarEnviarHeader
@@ -635,14 +661,12 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     limparPrint={limparPrint}
                     onPrint={handlePrint}
                     onGravarHistorico={gravarHistorico}
-                    
-                    // 👉 NOVA MÁGICA LIGADA CORRETAMENTE: Data Correta + Calendário Escolhido
                     onConfirmSync={async (tokenGoogle, calendarId) => {
                         const reunioesComDataExata = semanasParaImprimir.map(sem => ({
                             ...sem,
-                            dataExata: getDataReuniaoISO(sem) // Lê das config Quarta, Quinta, etc.
+                            dataExata: getDataReuniaoISO(sem)
                         }));
-                        
+
                         const resultado = await enviarEventosParaAgenda(tokenGoogle, calendarId, reunioesComDataExata, config);
 
                         if (resultado.sucesso) {
@@ -704,7 +728,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                     )}
 
                                                     {semana?.presidente && (
-                                                        <div className="mt-1 flex justify-center items-center gap-2 text-[11px] font-bold text-gray-800 uppercase">
+                                                        <div className={`mt-1 flex justify-center items-center gap-2 font-bold text-gray-800 uppercase ${qtdSemanas === 1 ? 'text-[14px] mt-2' : 'text-[11px]'}`}>
                                                             <span className="bg-gray-100 px-2 rounded">{t.presidente}:</span>
                                                             <span className="underline decoration-2">{semana.presidente.nome}</span>
                                                         </div>
@@ -782,8 +806,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                             ${qtdSemanas === 1
                                                                                 ? 'grid-cols-[48px_1fr_240px] gap-x-4 py-2'
                                                                                 : qtdSemanas === 2
-                                                                                    ? 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5' 
-                                                                                    : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5' 
+                                                                                    ? 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5 print:py-[1.5px]'
+                                                                                    : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5'
                                                                             }
                                                                         `}
                                                                     >
@@ -821,8 +845,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                                                 ${qtdSemanas === 1
                                                                                     ? 'min-w-[260px] gap-1'
                                                                                     : qtdSemanas === 2
-                                                                                        ? 'min-w-[200px]' 
-                                                                                        : 'min-w-[140px]' 
+                                                                                        ? 'min-w-[200px]'
+                                                                                        : 'min-w-[140px]'
                                                                                 }
                                                                             `}
                                                                         >
