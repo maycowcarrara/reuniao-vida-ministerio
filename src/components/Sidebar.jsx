@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Calendar, Users, LayoutDashboard, Send, Settings,
-    ChevronLeft, LogOut, Home, Maximize, RefreshCw, X, Cloud
+    ChevronLeft, LogOut, Home, Maximize, RefreshCw, X, Cloud, Download
 } from 'lucide-react';
 // Importa o package.json diretamente para ler a versão
 import packageJson from '../../package.json';
@@ -19,6 +19,36 @@ export default function Sidebar({
     toggleFullscreen
 }) {
     const versaoSistema = packageJson.version;
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+    // --- ESCUTA O EVENTO DE INSTALAÇÃO DO PWA ---
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e) => {
+            // Previne o mini-infobar padrão do navegador em dispositivos móveis
+            e.preventDefault();
+            // Guarda o evento para ser disparado pelo nosso botão
+            setDeferredPrompt(e);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        };
+    }, []);
+
+    const handleInstallApp = async () => {
+        if (deferredPrompt) {
+            // Mostra o prompt de instalação do navegador
+            deferredPrompt.prompt();
+            // Aguarda a resposta do usuário
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                // Se aceitou, limpa o prompt e esconde o botão
+                setDeferredPrompt(null);
+            }
+        }
+    };
 
     // --- GARANTIA DE IDIOMA ---
     const currentLang = lang === 'es' ? 'es' : 'pt';
@@ -29,12 +59,14 @@ export default function Sidebar({
             telaCheia: "Tela Cheia",
             versao: "Versão do Sistema",
             sair: "Sair da Conta",
+            instalarApp: "Instalar Aplicativo",
             alertaAtualizacao: `Versão Atual: ${versaoSistema}\n\nDeseja recarregar a página para verificar atualizações no sistema?`
         },
         es: {
             telaCheia: "Pantalla Completa",
             versao: "Versión del Sistema",
             sair: "Cerrar Sesión",
+            instalarApp: "Instalar Aplicación",
             alertaAtualizacao: `Versión Actual: ${versaoSistema}\n\n¿Deseas recargar la página para buscar actualizaciones en el sistema?`
         }
     }[currentLang];
@@ -66,21 +98,16 @@ export default function Sidebar({
     );
 
     return (
-        // Envolvemos toda a Sidebar + Overlay num Fragmento ou Div print:hidden.
-        // Como o React pede apenas um nó pai, usamos o <> vazio (Fragment), 
-        // mas as tags filhas imediatas recebem print:hidden.
         <>
             {/* OVERLAY ESCURO (Aparece só no celular quando o menu está aberto) */}
             {sidebarOpen && (
                 <div
-                    // ADICIONADO: print:hidden
                     className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity print:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             <aside
-                // ADICIONADO: print:hidden e forcei o no-print
                 className={`no-print print:hidden fixed right-0 md:relative z-50 h-full flex flex-col bg-jw-blue shadow-2xl md:shadow-xl transition-all duration-300 ease-in-out
                 ${sidebarOpen ? 'translate-x-0 w-64' : 'translate-x-full md:translate-x-0 md:w-16'}`}
             >
@@ -117,6 +144,17 @@ export default function Sidebar({
                 {/* Rodapé Sidebar (Ações Extras e Usuário) */}
                 {sidebarOpen && (
                     <div className="p-4 bg-blue-900/40 border-t border-blue-500/30 flex flex-col gap-2 shrink-0">
+
+                        {/* Botão de Instalar PWA (Aparece dinamicamente) */}
+                        {deferredPrompt && (
+                            <button
+                                onClick={handleInstallApp}
+                                className="flex w-full items-center gap-3 px-2 py-2 text-sm font-bold text-green-300 hover:text-green-100 hover:bg-green-800/30 border border-green-800/30 rounded-md transition-colors"
+                            >
+                                <Download size={16} />
+                                <span>{SIDEBAR_TEXTS.instalarApp}</span>
+                            </button>
+                        )}
 
                         {/* Botão de Tela Cheia */}
                         <button
