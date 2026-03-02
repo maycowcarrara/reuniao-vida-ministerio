@@ -78,6 +78,10 @@ export default function Dashboard({
         const dataLimitePassado = new Date(hoje);
         dataLimitePassado.setDate(hoje.getDate() - 30);
 
+        // Define um limite estrito de +29 dias (4 semanas redondas)
+        const daquiA4Semanas = new Date(hoje);
+        daquiA4Semanas.setDate(hoje.getDate() + 29);
+
         // 1. Ordernar Reuniões Ativas
         const ativas = listaProgramacoes
             .filter(s => !s.arquivada)
@@ -92,9 +96,21 @@ export default function Dashboard({
         });
 
         const proxima = proximaIdx !== -1 ? ativas[proximaIdx] : ativas[0];
-        
-        // Obter as próximas 4 reuniões para calcular o progresso do mês
-        const proximasSemanas = proximaIdx !== -1 ? ativas.slice(proximaIdx, proximaIdx + 4) : [];
+
+        // CORREÇÃO: Pega apenas as próximas 4 reuniões contanto que a data não ultrapasse os 29 dias
+        const proximasSemanas = [];
+        if (proximaIdx !== -1) {
+            for (let i = proximaIdx; i < ativas.length; i++) {
+                const s = ativas[i];
+                if (!s.dataReuniao) continue;
+                const [ano, mes, dia] = s.dataReuniao.split('-').map(Number);
+                const dataR = new Date(ano, mes - 1, dia);
+                if (dataR <= daquiA4Semanas) {
+                    proximasSemanas.push(s);
+                }
+                if (proximasSemanas.length >= 4) break;
+            }
+        }
 
         // 2. Eventos Agendados
         const eventosAgendados = (config?.eventosAnuais || [])
@@ -115,10 +131,10 @@ export default function Dashboard({
             .filter(ev => ev.dataObjeto >= dataLimitePassado)
             .sort((a, b) => a.dataObjeto - b.dataObjeto);
 
-        // 3. Pendências (CALCULADORA INTELIGENTE PARA AS PRÓXIMAS 4 SEMANAS)
+        // 3. Pendências (CALCULADORA INTELIGENTE)
         let partesTotais = 0;
         let partesPreenchidas = 0;
-        let partesFaltando = []; // <-- NOVIDADE: Armazena O QUE está faltando
+        let partesFaltando = [];
 
         const normalizeStr = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -129,7 +145,7 @@ export default function Dashboard({
             const semanaLabel = sem.semana?.split(' -')[0] || '';
 
             // Presidente
-            partesTotais++; 
+            partesTotais++;
             if (sem.presidente?.id || sem.presidente?.nome) {
                 partesPreenchidas++;
             } else {
@@ -146,8 +162,8 @@ export default function Dashboard({
                 // Ignora Cânticos Puros
                 const isCantico = tipo.includes('cantico') || tipo.includes('cancion') || titulo.includes('cantico') || titulo.includes('cancion');
                 const isOracao = tipo.includes('oracao') || tipo.includes('oracion') || titulo.includes('oracao') || titulo.includes('oracion');
-                
-                if (isCantico && !isOracao) return; 
+
+                if (isCantico && !isOracao) return;
 
                 if (isOracao) {
                     partesTotais++;
@@ -158,7 +174,7 @@ export default function Dashboard({
                     }
                 } else if (rawInfo.includes('estudo biblico') || rawInfo.includes('estudio biblico')) {
                     partesTotais += 2; // Dirigente e Leitor
-                    
+
                     if (parte.dirigente?.id || parte.dirigente?.nome) partesPreenchidas++;
                     else partesFaltando.push(`${semanaLabel}: Dirigente (${tituloCurto})`);
 
@@ -174,13 +190,12 @@ export default function Dashboard({
                         partesFaltando.push(`${semanaLabel}: Estudante (${tituloCurto})`);
                     }
 
-                    // Ajudante: Só existe em "Faça Seu Melhor no Ministério"
+                    // Ajudante
                     if (secao.includes('minist')) {
                         const isDiscurso = rawInfo.includes('discurso');
                         const isLeitura = rawInfo.includes('leitura');
-                        const isExplicando = rawInfo.includes('explicando'); // Explicando suas crenças (Discurso)
-                        
-                        // MÁGICA AQUI: Se for discurso ou leitura, o ajudante NÃO é exigido na matemática!
+                        const isExplicando = rawInfo.includes('explicando');
+
                         if (!isDiscurso && !isLeitura && !isExplicando) {
                             partesTotais++;
                             if (parte.ajudante?.id || parte.ajudante?.nome) {
@@ -209,8 +224,8 @@ export default function Dashboard({
 
         // Cálculos do Painel de Saúde
         const hojeTs = new Date().getTime();
-        const trimestresTs = hojeTs - (90 * 24 * 60 * 60 * 1000); // 90 dias
-        const quatroMesesTs = hojeTs - (120 * 24 * 60 * 60 * 1000); // 120 dias
+        const trimestresTs = hojeTs - (90 * 24 * 60 * 60 * 1000);
+        const quatroMesesTs = hojeTs - (120 * 24 * 60 * 60 * 1000);
 
         let usadosNoTrimestre = 0;
         const precisandoAtencao = [];
@@ -235,7 +250,6 @@ export default function Dashboard({
             }
         });
 
-        // Ordena a lista de esquecidos: os que NUNCA tiveram parte ou há mais tempo
         precisandoAtencao.sort((a, b) => {
             if (a.dias === null) return -1;
             if (b.dias === null) return 1;
@@ -280,7 +294,7 @@ export default function Dashboard({
         return txt.eventos.helpAssembleia;
     };
 
-    // Helper SVG para o círculo de progresso
+    // Helper SVG
     const ProgressRing = ({ percentage }) => {
         const radius = 28;
         const circumference = 2 * Math.PI * radius;
@@ -318,303 +332,297 @@ export default function Dashboard({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* TOP: PAINEL PRINCIPAL (AZUL) */}
+            <div className="w-full">
+                {stats.proxima ? (
+                    <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between gap-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-blue-100 text-xs font-bold uppercase tracking-wider">
+                                    <Activity size={14} /> {txt.proximaReuniao}
+                                </div>
+                                <h2 className="text-3xl font-bold">{stats.proxima.semana}</h2>
 
-                {/* COLUNA ESQUERDA (Principal & Saúde) */}
-                <div className="lg:col-span-2 space-y-6">
-                    {stats.proxima ? (
-                        <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-                            <div className="relative z-10 flex flex-col md:flex-row justify-between gap-6">
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-blue-100 text-xs font-bold uppercase tracking-wider">
-                                        <Activity size={14} /> {txt.proximaReuniao}
-                                    </div>
-                                    <h2 className="text-3xl font-bold">{stats.proxima.semana}</h2>
+                                <div className="text-blue-100 flex flex-col gap-1 mt-2">
+                                    <span className="flex items-center gap-2 text-lg mt-1">
+                                        <Clock size={18} />
+                                        {formatarData(stats.proxima.dataReuniao)}
+                                        {stats.proxima.evento === 'visita' ? '' : ` • ${config?.horario || '19:30'}`}
+                                    </span>
 
-                                    <div className="text-blue-100 flex flex-col gap-1 mt-2">
-                                        <span className="flex items-center gap-2">
-                                            <Clock size={16} />
-                                            {formatarData(stats.proxima.dataReuniao)}
-                                            {stats.proxima.evento === 'visita' ? '' : ` • ${config?.horario || '19:30'}`}
+                                    {stats.proxima.evento && stats.proxima.evento !== 'normal' && (
+                                        <span className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg text-sm font-bold w-fit mt-2">
+                                            {stats.proxima.evento === 'visita' && <Briefcase size={14} />}
+                                            {stats.proxima.evento === 'congresso' && <UsersRound size={14} />}
+                                            {stats.proxima.evento.includes('assembleia') && <Tent size={14} />}
+                                            {getNomeEvento(stats.proxima.evento)}
                                         </span>
-
-                                        {stats.proxima.evento && stats.proxima.evento !== 'normal' && (
-                                            <span className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg text-sm font-bold w-fit mt-1">
-                                                {stats.proxima.evento === 'visita' && <Briefcase size={14} />}
-                                                {stats.proxima.evento === 'congresso' && <UsersRound size={14} />}
-                                                {stats.proxima.evento.includes('assembleia') && <Tent size={14} />}
-                                                {getNomeEvento(stats.proxima.evento)}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {(stats.proxima.evento?.includes('assembleia') || stats.proxima.evento === 'congresso') && (
-                                        <div className="mt-4 bg-yellow-400 text-yellow-900 px-3 py-2 rounded-lg text-xs font-bold shadow-sm inline-block">
-                                            {txt.eventos.avisoSemReuniao}
-                                        </div>
                                     )}
                                 </div>
 
-                                {!stats.proxima.evento?.includes('assembleia') && stats.proxima.evento !== 'congresso' && (
-                                    <div className="bg-white/10 rounded-xl p-4 min-w-[220px] backdrop-blur-sm flex flex-col">
-                                        <div className="flex justify-between items-end mb-2 gap-4">
-                                            <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wider leading-tight w-24">
-                                                {localTxt.visaoMes}
-                                            </span>
-                                            <span className="text-2xl font-bold">{Math.round(stats.progresso)}%</span>
-                                        </div>
-                                        <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden shrink-0">
-                                            <div className={`h-full transition-all duration-1000 ${stats.progresso === 100 ? 'bg-green-400' : 'bg-yellow-400'}`} style={{ width: `${stats.progresso}%` }} />
-                                        </div>
-                                        
-                                        {/* NOVO: LISTA DE PENDÊNCIAS DEDO-DURO */}
-                                        <div className="mt-3 flex-1 flex flex-col justify-start">
-                                            {stats.pendentes === 0 ? (
-                                                <span className="flex items-center gap-1 text-green-300 font-bold text-sm"><CheckCircle size={16} /> {localTxt.completoMes}</span>
-                                            ) : (
-                                                <>
-                                                    <span className="flex items-center gap-1 text-yellow-300 font-bold text-sm mb-2"><AlertTriangle size={16} /> {stats.pendentes} {localTxt.pendentesMes}</span>
-                                                    
-                                                    <div className="bg-black/20 rounded p-2 overflow-y-auto custom-scroll flex-1 min-h-[50px] max-h-[80px]">
-                                                        <p className="text-[9px] font-bold text-blue-200 uppercase tracking-wider mb-1">{localTxt.faltando}</p>
-                                                        <ul className="text-[10px] text-white leading-tight space-y-1 list-disc pl-3">
-                                                            {stats.partesFaltando.map((falta, i) => (
-                                                                <li key={i}>{falta}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        <button onClick={() => setAbaAtiva('designar')} className="mt-4 w-full bg-white text-blue-700 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition flex items-center justify-center gap-2 shrink-0">
-                                            {txt.gerenciar} <ArrowRight size={14} />
-                                        </button>
+                                {(stats.proxima.evento?.includes('assembleia') || stats.proxima.evento === 'congresso') && (
+                                    <div className="mt-4 bg-yellow-400 text-yellow-900 px-3 py-2 rounded-lg text-xs font-bold shadow-sm inline-block">
+                                        {txt.eventos.avisoSemReuniao}
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    ) : (
-                        <div className="bg-gray-100 rounded-2xl p-8 text-center border-2 border-dashed border-gray-300">
-                            <p className="text-gray-500 mb-4">{txt.semReuniaoFutura}</p>
-                            <button onClick={() => setAbaAtiva('importar')} className="bg-blue-600 text-white px-4 py-2 rounded-lg">{txt.importar}</button>
-                        </div>
-                    )}
 
-                    {/* --- NOVO: PAINEL DE SAÚDE DA CONGREGAÇÃO --- */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                        <div className="flex items-center gap-2 mb-4 text-rose-600 font-bold border-b border-gray-50 pb-3">
-                            <HeartPulse size={18} />
-                            <span>{localTxt.saudeTitulo}</span>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                            {/* Gráfico de Rodízio */}
-                            <div className="flex items-center gap-4 bg-green-50/50 border border-green-100 p-4 rounded-xl">
-                                <ProgressRing percentage={stats.totalAtivos > 0 ? Math.round((stats.usadosNoTrimestre / stats.totalAtivos) * 100) : 0} />
-                                <div>
-                                    <h4 className="font-bold text-green-900 text-sm">{localTxt.rodizio}</h4>
-                                    <p className="text-[11px] text-green-700 mt-0.5 leading-tight">{localTxt.rodizioSub}</p>
-                                </div>
-                            </div>
-
-                            {/* Lista de Alunos precisando de atenção */}
-                            <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl flex flex-col h-full">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div>
-                                        <h4 className="font-bold text-red-900 text-sm flex items-center gap-1.5">
-                                            <AlertCircle size={14} className="text-red-600" /> {localTxt.atencao}
-                                        </h4>
-                                        <p className="text-[10px] text-red-700 mt-0.5">{localTxt.atencaoSub}</p>
+                            {!stats.proxima.evento?.includes('assembleia') && stats.proxima.evento !== 'congresso' && (
+                                <div className="bg-white/10 rounded-xl p-5 min-w-[280px] backdrop-blur-sm flex flex-col">
+                                    <div className="flex justify-between items-end mb-2 gap-4">
+                                        <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wider leading-tight w-24">
+                                            {localTxt.visaoMes}
+                                        </span>
+                                        <span className="text-2xl font-bold">{Math.round(stats.progresso)}%</span>
                                     </div>
-                                    <span className="bg-red-200 text-red-800 text-[10px] font-black px-2 py-0.5 rounded-full">
-                                        {stats.precisandoAtencao.length}
-                                    </span>
-                                </div>
-
-                                {stats.precisandoAtencao.length === 0 ? (
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center p-2 text-green-600">
-                                        <ThumbsUp size={24} className="mb-2 opacity-50" />
-                                        <p className="text-xs font-medium">{localTxt.tudoEmDia}</p>
+                                    <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden shrink-0">
+                                        <div className={`h-full transition-all duration-1000 ${stats.progresso === 100 ? 'bg-green-400' : 'bg-yellow-400'}`} style={{ width: `${stats.progresso}%` }} />
                                     </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {stats.precisandoAtencao.slice(0, 3).map(aluno => (
-                                            <div key={aluno.id} className="flex justify-between items-center text-xs p-2 bg-white rounded border border-red-100 shadow-sm">
-                                                <span className="font-bold text-red-900 truncate max-w-[120px]">{aluno.nome}</span>
-                                                <span className="text-[9px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-bold whitespace-nowrap border border-red-100">
-                                                    {aluno.dias === null ? localTxt.nunca : `${aluno.dias} ${localTxt.dias}`}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {stats.precisandoAtencao.length > 3 && (
-                                            <button onClick={() => setAbaAtiva('alunos')} className="w-full text-center text-[10px] text-red-500 font-bold hover:text-red-700 pt-1">
-                                                + {stats.precisandoAtencao.length - 3} {lang === 'es' ? 'otros' : 'outros'}...
-                                            </button>
+
+                                    <div className="mt-4 flex-1 flex flex-col justify-start">
+                                        {stats.pendentes === 0 ? (
+                                            <span className="flex items-center gap-1.5 text-green-300 font-bold text-sm bg-green-900/20 p-2 rounded"><CheckCircle size={16} /> {localTxt.completoMes}</span>
+                                        ) : (
+                                            <>
+                                                <span className="flex items-center gap-1.5 text-yellow-300 font-bold text-sm mb-2"><AlertTriangle size={16} /> {stats.pendentes} {localTxt.pendentesMes}</span>
+
+                                                <div className="bg-black/20 rounded p-2 overflow-y-auto custom-scroll flex-1 min-h-[50px] max-h-[80px]">
+                                                    <p className="text-[9px] font-bold text-blue-200 uppercase tracking-wider mb-1">{localTxt.faltando}</p>
+                                                    <ul className="text-[10px] text-white leading-tight space-y-1 list-disc pl-3">
+                                                        {stats.partesFaltando.map((falta, i) => (
+                                                            <li key={i}>{falta}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
-                                )}
+
+                                    <button onClick={() => setAbaAtiva('designar')} className="mt-4 w-full bg-white text-blue-700 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition flex items-center justify-center gap-2 shrink-0">
+                                        {txt.gerenciar} <ArrowRight size={14} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-gray-100 rounded-2xl p-8 text-center border-2 border-dashed border-gray-300">
+                        <p className="text-gray-500 mb-4">{txt.semReuniaoFutura}</p>
+                        <button onClick={() => setAbaAtiva('importar')} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition">{txt.importar}</button>
+                    </div>
+                )}
+            </div>
+
+            {/* MIDDLE: ALUNOS E SAÚDE (LADO A LADO) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* PAINEL VISÃO GERAL DE ALUNOS */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 mb-4 text-blue-800 font-bold border-b pb-3 border-gray-50">
+                            <Users size={18} />
+                            <span className="text-sm">{localTxt.alunosTitulo}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col items-center justify-center">
+                                <span className="text-[10px] uppercase font-black text-gray-400 mb-1">{localTxt.total}</span>
+                                <span className="text-2xl font-black text-gray-800">{stats.totalAlunos}</span>
+                            </div>
+                            <div className="bg-green-50 p-3 rounded-xl border border-green-100 flex flex-col items-center justify-center">
+                                <span className="text-[10px] uppercase font-black text-green-600 mb-1">{localTxt.ativos}</span>
+                                <span className="text-2xl font-black text-green-700">{stats.totalAtivos}</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex flex-col items-center">
+                                <Medal size={16} className="text-blue-500 mb-1" />
+                                <span className="text-base font-bold text-blue-900">{stats.countAnciaos}</span>
+                                <span className="text-[9px] uppercase font-bold text-blue-400">{localTxt.anciaos}</span>
+                            </div>
+                            <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 flex flex-col items-center">
+                                <User size={16} className="text-indigo-500 mb-1" />
+                                <span className="text-base font-bold text-indigo-900">{stats.countServos}</span>
+                                <span className="text-[9px] uppercase font-bold text-indigo-400">{localTxt.servos}</span>
+                            </div>
+                            <div className="bg-pink-50/50 p-3 rounded-lg border border-pink-100 flex flex-col items-center">
+                                <BookHeart size={16} className="text-pink-500 mb-1" />
+                                <span className="text-base font-bold text-pink-900">{stats.countIrmas}</span>
+                                <span className="text-[9px] uppercase font-bold text-pink-400">{localTxt.irmas}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* LISTA DE PRÓXIMOS EVENTOS */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 font-bold text-gray-800">
-                            {txt.eventos.titulo}
+                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-gray-50">
+                        {stats.totalDesabilitados > 0 ? (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
+                                <UserX size={14} />
+                                <span>{stats.totalDesabilitados} {localTxt.inativos}</span>
+                            </div>
+                        ) : <div></div>}
+
+                        <button
+                            onClick={() => setAbaAtiva('alunos')}
+                            className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 py-1.5 px-4 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                        >
+                            {localTxt.irParaAlunos} <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* PAINEL SAÚDE DA CONGREGAÇÃO */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col">
+                    <div className="flex items-center gap-2 mb-4 text-rose-600 font-bold border-b border-gray-50 pb-3">
+                        <HeartPulse size={18} />
+                        <span className="text-sm">{localTxt.saudeTitulo}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-4 flex-1">
+                        <div className="flex items-center gap-4 bg-green-50/50 border border-green-100 p-4 rounded-xl">
+                            <ProgressRing percentage={stats.totalAtivos > 0 ? Math.round((stats.usadosNoTrimestre / stats.totalAtivos) * 100) : 0} />
+                            <div>
+                                <h4 className="font-bold text-green-900 text-sm">{localTxt.rodizio}</h4>
+                                <p className="text-xs text-green-700 mt-1 leading-tight">{localTxt.rodizioSub}</p>
+                            </div>
                         </div>
+
+                        <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl flex flex-col flex-1">
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h4 className="font-bold text-red-900 text-sm flex items-center gap-1.5">
+                                        <AlertCircle size={16} className="text-red-600" /> {localTxt.atencao}
+                                    </h4>
+                                    <p className="text-[10px] text-red-700 mt-0.5">{localTxt.atencaoSub}</p>
+                                </div>
+                                <span className="bg-red-200 text-red-800 text-xs font-black px-2.5 py-0.5 rounded-full">
+                                    {stats.precisandoAtencao.length}
+                                </span>
+                            </div>
+
+                            {stats.precisandoAtencao.length === 0 ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center p-2 text-green-600">
+                                    <ThumbsUp size={24} className="mb-2 opacity-50" />
+                                    <p className="text-xs font-medium">{localTxt.tudoEmDia}</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {stats.precisandoAtencao.slice(0, 3).map(aluno => (
+                                        <div key={aluno.id} className="flex justify-between items-center text-xs p-2.5 bg-white rounded-lg border border-red-100 shadow-sm">
+                                            <span className="font-bold text-red-900 truncate max-w-[180px]">{aluno.nome}</span>
+                                            <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded font-bold whitespace-nowrap border border-red-100">
+                                                {aluno.dias === null ? localTxt.nunca : `${aluno.dias} ${localTxt.dias}`}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {stats.precisandoAtencao.length > 3 && (
+                                        <button onClick={() => setAbaAtiva('alunos')} className="w-full text-center text-[11px] text-red-500 font-bold hover:text-red-700 pt-2 pb-1">
+                                            + {stats.precisandoAtencao.length - 3} {lang === 'es' ? 'otros' : 'outros'}...
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {/* BOTTOM: GESTÃO DE EVENTOS E VISITAS COMPLETA */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 font-bold text-indigo-800 flex items-center gap-2 bg-indigo-50/40">
+                    <Tent size={18} className="text-indigo-600" />
+                    <span>Gestão de Eventos e Visitas</span>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+
+                    {/* Lista de Eventos */}
+                    <div className="bg-white">
                         {stats.eventosAgendados.length === 0 ? (
-                            <div className="p-8 text-center text-gray-400 text-sm">
+                            <div className="p-10 text-center text-gray-400 text-sm flex h-full items-center justify-center">
                                 {txt.eventos.semEventos}
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-gray-50 max-h-[280px] overflow-y-auto custom-scroll">
                                 {stats.eventosAgendados.map((ev, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={`px-6 py-3 flex items-center justify-between transition-colors
-                                            ${ev.isPassado ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50 bg-white'}`}
-                                    >
+                                    <div key={idx} className={`px-6 py-4 flex items-center justify-between transition-colors ${ev.isPassado ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50'}`}>
                                         <div className="flex items-center gap-4">
-                                            {/* Data Badge */}
-                                            <div className={`p-1.5 rounded-lg border text-[10px] font-bold w-14 text-center ${getCorEvento(ev.tipo, ev.isPassado)}`}>
+                                            <div className={`p-2 rounded-lg border text-xs font-bold w-16 text-center ${getCorEvento(ev.tipo, ev.isPassado)}`}>
                                                 {formatarData(ev.dataInicio)}
                                             </div>
-
-                                            {/* Info Evento */}
                                             <div>
-                                                <p className={`font-bold text-xs ${ev.isPassado ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+                                                <p className={`font-bold text-sm ${ev.isPassado ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
                                                     {getNomeEvento(ev.tipo)}
                                                 </p>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-[10px] text-gray-500">
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className="text-xs text-gray-500">
                                                         Semana de {formatarData(ev.dataInicio)}
                                                     </p>
                                                     {ev.isPassado && (
-                                                        <span className="text-[9px] bg-gray-200 text-gray-600 px-1.5 rounded flex items-center gap-1">
+                                                        <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
                                                             <Archive size={10} /> {localTxt.passado}
                                                         </span>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* Botão Excluir */}
                                         <button
                                             onClick={() => {
                                                 if (window.confirm('Remover evento da lista?')) {
                                                     onDefinirEvento(ev.dataInicio, 'normal');
                                                 }
                                             }}
-                                            className="text-gray-400 hover:text-red-500 p-2 transition-colors"
+                                            className="text-gray-400 hover:text-red-500 p-2 bg-white rounded-full shadow-sm border border-gray-100 transition-colors"
                                             title="Remover evento"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
-                </div>
 
-                {/* COLUNA DIREITA (Laterais) */}
-                <div className="lg:col-span-1 space-y-6">
-
-                    {/* --- PAINEL DE ALUNOS ATUALIZADO --- */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                        <div className="flex items-center gap-2 mb-3 text-blue-800 font-bold border-b pb-2 border-gray-100">
-                            <Users size={18} />
-                            <span className="text-sm">{localTxt.alunosTitulo}</span>
-                        </div>
-
-                        {/* Totais Gerais */}
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col items-center justify-center">
-                                <span className="text-[9px] uppercase font-black text-gray-400 mb-0.5">{localTxt.total}</span>
-                                <span className="text-xl font-black text-gray-800">{stats.totalAlunos}</span>
-                            </div>
-                            <div className="bg-green-50 p-2 rounded-lg border border-green-100 flex flex-col items-center justify-center">
-                                <span className="text-[9px] uppercase font-black text-green-600 mb-0.5">{localTxt.ativos}</span>
-                                <span className="text-xl font-black text-green-700">{stats.totalAtivos}</span>
-                            </div>
-                        </div>
-
-                        {/* Detalhes (Anciãos, Servos, Irmãs) */}
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                            <div className="bg-blue-50/50 p-2 rounded border border-blue-100 flex flex-col items-center">
-                                <Medal size={14} className="text-blue-500 mb-1" />
-                                <span className="text-sm font-bold text-blue-900">{stats.countAnciaos}</span>
-                                <span className="text-[8px] uppercase font-bold text-blue-400">{localTxt.anciaos}</span>
-                            </div>
-                            <div className="bg-indigo-50/50 p-2 rounded border border-indigo-100 flex flex-col items-center">
-                                <User size={14} className="text-indigo-500 mb-1" />
-                                <span className="text-sm font-bold text-indigo-900">{stats.countServos}</span>
-                                <span className="text-[8px] uppercase font-bold text-indigo-400">{localTxt.servos}</span>
-                            </div>
-                            <div className="bg-pink-50/50 p-2 rounded border border-pink-100 flex flex-col items-center">
-                                <BookHeart size={14} className="text-pink-500 mb-1" />
-                                <span className="text-sm font-bold text-pink-900">{stats.countIrmas}</span>
-                                <span className="text-[8px] uppercase font-bold text-pink-400">{localTxt.irmas}</span>
-                            </div>
-                        </div>
-
-                        {/* Rodapé do Card (Desabilitados + Botão) */}
-                        <div className="flex items-center justify-between mt-1 pt-2 border-t border-gray-50">
-                            {stats.totalDesabilitados > 0 ? (
-                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
-                                    <UserX size={12} />
-                                    <span>{stats.totalDesabilitados} {localTxt.inativos}</span>
-                                </div>
-                            ) : <div></div>}
-
-                            <button
-                                onClick={() => setAbaAtiva('alunos')}
-                                className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 py-1 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
-                            >
-                                {localTxt.irParaAlunos} <ArrowRight size={12} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* AGENDAR EVENTO (Compacto) */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                        <div className="flex items-center gap-2 mb-3 text-indigo-700 font-bold border-b pb-2 border-gray-100">
-                            <Calendar size={18} />
+                    {/* Agendar Evento */}
+                    <div className="p-6 bg-gray-50/30 flex flex-col justify-center">
+                        <div className="flex items-center gap-2 mb-4 text-gray-700 font-bold">
+                            <Calendar size={16} />
                             <span className="text-sm">{txt.eventos.agendar}</span>
                         </div>
 
-                        <div className="space-y-3">
-                            <div>
-                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">{txt.eventos.tipo}</label>
-                                <select
-                                    className="w-full mt-0.5 p-1.5 border rounded text-xs bg-gray-50 outline-none focus:ring-1 focus:ring-indigo-200"
-                                    value={tipoEvento}
-                                    onChange={(e) => {
-                                        setTipoEvento(e.target.value);
-                                        setDataEvento('');
-                                    }}
-                                >
-                                    <option value="visita">{txt.eventos.visita}</option>
-                                    <option value="assembleia_betel">{txt.eventos.assembleia_betel}</option>
-                                    <option value="assembleia_circuito">{txt.eventos.assembleia_circuito}</option>
-                                    <option value="congresso">{txt.eventos.congresso}</option>
-                                </select>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{txt.eventos.tipo}</label>
+                                    <select
+                                        className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm"
+                                        value={tipoEvento}
+                                        onChange={(e) => {
+                                            setTipoEvento(e.target.value);
+                                            setDataEvento('');
+                                        }}
+                                    >
+                                        <option value="visita">{txt.eventos.visita}</option>
+                                        <option value="assembleia_betel">{txt.eventos.assembleia_betel}</option>
+                                        <option value="assembleia_circuito">{txt.eventos.assembleia_circuito}</option>
+                                        <option value="congresso">{txt.eventos.congresso}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{txt.eventos.data}</label>
+                                    <input
+                                        type="date"
+                                        className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm"
+                                        value={dataEvento}
+                                        onChange={(e) => setDataEvento(e.target.value)}
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">{txt.eventos.data}</label>
-                                <input
-                                    type="date"
-                                    className="w-full mt-0.5 p-1.5 border rounded text-xs outline-none focus:ring-1 focus:ring-indigo-200"
-                                    value={dataEvento}
-                                    onChange={(e) => setDataEvento(e.target.value)}
-                                />
-                                <div className="flex gap-2 mt-2 bg-indigo-50 p-2 rounded text-[10px] text-indigo-800 leading-tight">
-                                    <Info size={12} className="shrink-0 mt-0.5" />
-                                    <p>{getHelpText()}</p>
-                                </div>
+                            <div className="flex gap-2.5 bg-indigo-50/50 border border-indigo-100 p-3 rounded-lg text-xs text-indigo-800 leading-relaxed shadow-sm">
+                                <Info size={16} className="shrink-0 mt-0.5 text-indigo-500" />
+                                <p>{getHelpText()}</p>
                             </div>
 
                             <button
@@ -623,20 +631,16 @@ export default function Dashboard({
                                     onDefinirEvento(dataEvento, tipoEvento);
                                     setDataEvento('');
                                 }}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 rounded-lg flex items-center justify-center gap-2 transition text-xs shadow-sm"
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-200 mt-2"
                             >
-                                <Plus size={14} /> {txt.eventos.adicionar}
+                                <Plus size={16} /> {txt.eventos.adicionar}
                             </button>
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-[10px] text-blue-800 space-y-2">
-                        <p className="font-bold flex items-center gap-1.5"><Briefcase size={12} /> {txt.eventos.visita}</p>
-                        <p className="leading-tight opacity-80">{txt.eventos.dicaVisita}</p>
-                    </div>
-
                 </div>
             </div>
+
         </div>
     );
 }
