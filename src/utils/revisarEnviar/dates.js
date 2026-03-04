@@ -49,6 +49,9 @@ const monthIndexFromName = (name) => {
 const weekdayToIndex = (diaSemana) => {
     const d = normalizarTxt(diaSemana);
 
+    // [NOVO] Se o valor for um número em formato string ("3" = Quarta)
+    if (/^[0-6]$/.test(d)) return parseInt(d, 10);
+
     // pt
     if (d === 'domingo') return 0;
     if (d === 'segunda' || d === 'segunda-feira') return 1;
@@ -119,7 +122,7 @@ export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, ov
     // Se houver um overrideDia (ex: 'Terça-feira' para visita), usa ele.
     // Senão, tenta a configuração. Se não tiver configuração, string vazia.
     const diaAlvo = overrideDia || config?.dia_reuniao || config?.diaReuniao || config?.diaSemana || '';
-    
+
     const weekdayIdx = weekdayToIndex(diaAlvo);
 
     // tenta inferir ano do fallback (se existir), senão ano atual
@@ -152,7 +155,7 @@ export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, ov
 
     let cur = new Date(start);
     let found = null;
-    
+
     // Procura o dia da semana específico dentro do range da semana
     while (cur.getTime() <= end.getTime()) {
         if (cur.getDay() === weekdayIdx) {

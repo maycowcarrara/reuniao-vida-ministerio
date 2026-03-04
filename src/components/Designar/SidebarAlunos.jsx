@@ -385,7 +385,13 @@ const SidebarAlunos = ({
                                             <div className="mt-1 border-t border-gray-100 pt-1 w-full space-y-0.5">
                                                 {historicoRecente.map((hist, i) => (
                                                     <div key={i} className="flex justify-between items-center text-[9px] text-gray-400">
-                                                        <span className="shrink-0 mr-2">{hist.data ? new Date(hist.data).toLocaleDateString() : '--/--'}</span>
+                                                        <span className="shrink-0 mr-2">
+                                                            {hist.data
+                                                                ? (hist.data.includes('-')
+                                                                    ? hist.data.split('T')[0].split('-').reverse().join('/')
+                                                                    : hist.data)
+                                                                : '--/--'}
+                                                        </span>
                                                         <span className="truncate text-right font-medium text-gray-500" title={`${hist.parte || "—"}${hist.ajudante ? ` (${TT.com} ${hist.ajudante})` : ''}`}>
                                                             {hist.parte || "—"}
                                                             {hist.ajudante && <span className="text-gray-400 font-normal opacity-80"> ({TT.com} {hist.ajudante})</span>}

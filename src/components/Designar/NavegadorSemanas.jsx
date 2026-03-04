@@ -11,15 +11,26 @@ const NavegadorSemanas = ({
 }) => {
     if (!listaSemanas || listaSemanas.length === 0) return null;
 
-    // Fallback de textos locais para o que não estava mapeado no TT
+    // Adicionado os textos necessários para as alterações
     const localTx = {
         pt: {
-            resumo: "Resumo"
+            resumo: "Resumo",
+            tesouros: "Tesouros",
+            oracaoInicial: "Oração Inicial",
+            oracaoFinal: "Oração Final"
         },
         es: {
-            resumo: "Resumen"
+            resumo: "Resumen",
+            tesouros: "Tesoros",
+            oracaoInicial: "Oración Inicial",
+            oracaoFinal: "Oración Final"
         }
-    }[lang] || { resumo: "Resumo" };
+    }[lang] || { 
+        resumo: "Resumo", 
+        tesouros: "Tesouros", 
+        oracaoInicial: "Oração Inicial", 
+        oracaoFinal: "Oração Final" 
+    };
 
     // Função auxiliar super robusta para extrair a data correta de qualquer semana
     const getTimestamp = (sem) => {
@@ -112,15 +123,34 @@ const NavegadorSemanas = ({
                                     <span className="font-semibold text-gray-700">{TT.presidente}:</span> <span className="text-gray-600">{sem.presidente?.nome || '--'}</span>
                                 </div>
                                 <div className="border-t border-gray-100 pt-1.5 flex flex-col gap-1">
-                                    {sem.partes?.filter(p => p.estudante || p.dirigente || p.leitor || p.oracao).map(p => {
+                                    {/* Mapeando recebendo (p, i, arr) para saber a posição (início vs fim) */}
+                                    {sem.partes?.filter(p => p.estudante || p.dirigente || p.leitor || p.oracao).map((p, i, arr) => {
                                         const nome = p.estudante?.nome || p.dirigente?.nome || p.leitor?.nome || p.oracao?.nome;
+                                        
+                                        const tituloOriginal = p.titulo || '';
+                                        const tituloLower = tituloOriginal.toLowerCase();
+                                        let tituloCurto = '';
 
-                                        // Regex atualizado para extrair o número (se houver) e a primeira palavra subsequente
-                                        const match = p.titulo.match(/^(\d+\.)\s*([^\s]+)/);
-                                        const tituloCurto = match ? `${match[1]} ${match[2]}` : p.titulo.split(' ')[0];
+                                        // REGRA 1: Cântico no Início vira "Oração Inicial"
+                                        if (i === 0 && (tituloLower.includes('cântico') || tituloLower.includes('cantico'))) {
+                                            tituloCurto = localTx.oracaoInicial;
+                                        } 
+                                        // REGRA 2: Comentários no final vira "Oração Final"
+                                        else if (i === arr.length - 1 && (tituloLower.includes('comentários') || tituloLower.includes('comentarios'))) {
+                                            tituloCurto = localTx.oracaoFinal;
+                                        } 
+                                        // REGRA 3: Se começar com "1.", substitui pelo texto "1. Tesouros"
+                                        else if (tituloOriginal.trim().startsWith('1.')) {
+                                            tituloCurto = `1. ${localTx.tesouros}`;
+                                        } 
+                                        // REGRA 4: Padrão (Extrai o número se houver + primeira palavra)
+                                        else {
+                                            const match = tituloOriginal.match(/^(\d+\.)\s*([^\s]+)/);
+                                            tituloCurto = match ? `${match[1]} ${match[2]}` : tituloOriginal.split(' ')[0];
+                                        }
 
                                         return (
-                                            <div key={p.id} className="truncate text-[10px]" title={p.titulo}>
+                                            <div key={p.id} className="truncate text-[10px]" title={tituloOriginal}>
                                                 <span className="font-medium text-gray-600">{tituloCurto}</span>: {nome}
                                             </div>
                                         )

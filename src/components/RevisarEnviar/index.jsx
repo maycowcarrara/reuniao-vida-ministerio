@@ -273,18 +273,20 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         if (eventoEspecial?.dataInput) return eventoEspecial.dataInput;
 
-        const hasDataInicio = !!sem?.dataInicio;
-        if (hasDataInicio && sem?.dataReuniao && sem.dataReuniao !== sem.dataInicio) {
-            return sem.dataReuniao;
-        }
+        // 1º PRIORIDADE: Calcular o dia correto com base no "dia_reuniao" das configurações
+        const dataCalculada = getMeetingDateISOFromSemana({
+            semanaStr: sem?.semana,
+            config,
+            isoFallback: null // Passamos null para checar se ele consegue calcular
+        });
 
-        return (
-            getMeetingDateISOFromSemana({
-                semanaStr: sem?.semana,
-                config,
-                isoFallback: sem?.dataReuniao || sem?.dataInicio
-            }) || sem?.dataReuniao || sem?.dataInicio
-        );
+        // Se conseguiu calcular o dia configurado, usa ele imediatamente!
+        if (dataCalculada) return dataCalculada;
+
+        // 2º Fallbacks (caso falhe o cálculo ou a configuração não exista)
+        if (sem?.dataReuniao) return sem.dataReuniao;
+
+        return sem?.dataInicio || sem?.data;
     };
 
     // --- CONFIGURAÇÃO DE LAYOUTS ---
