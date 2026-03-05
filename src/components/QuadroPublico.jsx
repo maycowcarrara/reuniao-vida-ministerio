@@ -278,21 +278,58 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         hoje.setHours(0, 0, 0, 0);
         hoje.setDate(hoje.getDate() - 2);
 
+        // FUNÇÃO SALVA-VIDAS: Se o banco de dados não tiver a data, a gente descobre ela lendo o texto!
+        const extrairDataBaseISO = (sem) => {
+            if (sem.dataReuniao) return sem.dataReuniao;
+            if (sem.dataInicio) return sem.dataInicio;
+            if (sem.data) return sem.data;
+
+            if (sem.semana) {
+                const str = sem.semana.toLowerCase();
+                const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                let mesIndex = 0;
+                for (let i = 0; i < meses.length; i++) {
+                    if (str.includes(meses[i])) { mesIndex = i % 12; break; }
+                }
+                const matchDia = str.match(/^(\d+)/);
+                const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
+                const matchAno = str.match(/(20\d{2})/);
+                const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
+
+                const d = new Date(ano, mesIndex, dia, 12, 0, 0);
+                return d.toISOString().split('T')[0];
+            }
+            return null;
+        };
+
         let filtradas = programacoes.filter(sem => {
             if (sem.arquivada) return false;
-            const dtCalculo = sem.dataReuniao || sem.dataInicio;
-            const dataReuniao = new Date(dtCalculo + 'T12:00:00');
-            return dataReuniao >= hoje;
+
+            const dtCalculo = extrairDataBaseISO(sem); // Pega a data segura (Segunda-feira)
+            if (!dtCalculo) return false;
+
+            // --- NOVA REGRA: Mostrar a semana até o DOMINGO dela passar ---
+            const inicioSemana = new Date(dtCalculo + 'T12:00:00');
+
+            // Joga a data para o Domingo (Segunda + 6 dias)
+            const fimSemana = new Date(inicioSemana);
+            fimSemana.setDate(inicioSemana.getDate() + 6);
+            fimSemana.setHours(23, 59, 59, 999);
+
+            // A semana só some do quadro na próxima segunda-feira!
+            return fimSemana >= hoje;
         });
 
         filtradas = filtradas.map(sem => {
             let dataCorreta;
+            const dtBase = extrairDataBaseISO(sem); // Pega a data segura novamente para os cálculos
+
             if (sem.evento === 'visita') {
-                dataCorreta = obterDataExata(sem.dataInicio, lang === 'es' ? 'Martes' : 'Terça-feira');
+                dataCorreta = obterDataExata(dtBase, lang === 'es' ? 'Martes' : 'Terça-feira');
             } else if (sem.evento === 'assembleia' || sem.evento === 'congresso') {
-                dataCorreta = sem.dataEventoEspecial || sem.dataInicio;
+                dataCorreta = sem.dataEventoEspecial || dtBase;
             } else {
-                dataCorreta = obterDataExata(sem.dataInicio, config?.dia_reuniao || (lang === 'es' ? 'Lunes' : 'Segunda-feira'));
+                dataCorreta = obterDataExata(dtBase, config?.dia_reuniao || (lang === 'es' ? 'Lunes' : 'Segunda-feira'));
             }
 
             const partesComHorario = calcularHorarios(sem.partes, dataCorreta, config?.horario);
@@ -320,7 +357,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             }).filter(Boolean);
         }
 
-        return filtradas.sort((a, b) => new Date(a.dataInicio).getTime() - new Date(b.dataInicio).getTime());
+        return filtradas.sort((a, b) => new Date(extrairDataBaseISO(a)).getTime() - new Date(extrairDataBaseISO(b)).getTime());
     }, [programacoes, busca, config?.dia_reuniao, config?.horario, lang]);
 
     const y = agora.getFullYear();
@@ -359,6 +396,16 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
     return (
         <div className="h-screen bg-slate-50 font-sans flex flex-col overflow-hidden">
+            <style>{`
+                @keyframes pop-in {
+                    0% { transform: scale(1); }
+                    40% { transform: scale(1.8); }
+                    100% { transform: scale(1); }
+                }
+                .animate-pop-in {
+                    animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1;
+                }
+            `}</style>
             <header className="bg-blue-700 text-white shadow-md z-50 shrink-0">
                 <div className="px-4 py-4 max-w-2xl mx-auto space-y-4">
 
@@ -403,17 +450,26 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                     <div className="flex gap-2 w-full">
                         <div className="relative flex-1 group">
-                            <Search size={16} className="absolute left-3 top-3 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
+                            {/* Ícone de lupa centralizado verticalmente */}
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
+
                             <input
                                 type="text"
                                 placeholder={T.placeholderBusca}
-                                className="w-full bg-blue-800/40 border border-blue-400/30 text-white placeholder-blue-300 rounded-xl pl-10 pr-10 py-2.5 outline-none focus:ring-4 focus:ring-blue-400/50 focus:bg-blue-900/60 transition-all shadow-inner text-sm"
+                                /* Aumentei o pr-10 para pr-12 para o texto não ficar embaixo do botão grande */
+                                className="w-full bg-blue-800/40 border border-blue-400/30 text-white placeholder-blue-300 rounded-xl pl-10 pr-12 py-2.5 outline-none focus:ring-4 focus:ring-blue-400/50 focus:bg-blue-900/60 transition-all shadow-inner text-sm"
                                 value={busca}
                                 onChange={(e) => setBusca(e.target.value)}
                             />
+
                             {busca && (
-                                <button onClick={() => setBusca('')} className="absolute right-3 top-3 text-blue-300 hover:text-white transition-colors">
-                                    <X size={16} />
+                                <button
+                                    onClick={() => setBusca('')}
+                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-blue-300 hover:text-white hover:bg-blue-700/60 p-1.5 rounded-lg transition-all active:scale-95 flex items-center justify-center"
+                                    title="Limpar busca"
+                                >
+                                    {/* strokeWidth={3} deixa o X mais gordinho e visível */}
+                                    <X size={16} strokeWidth={3} />
                                 </button>
                             )}
                         </div>
@@ -421,8 +477,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                         <button
                             onClick={() => setModoTempoReal(!modoTempoReal)}
                             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 shrink-0 ${modoTempoReal
-                                    ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
-                                    : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
+                                ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
+                                : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
                                 }`}
                             title="Modo Tempo Real"
                         >
@@ -484,9 +540,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                 <div
                                     key={idx}
                                     className={`bg-white rounded-3xl shadow-sm border overflow-hidden ${isVisita ? 'border-blue-500' :
-                                            isAssembleia ? 'border-purple-500' :
-                                                estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200 shadow-md' :
-                                                    isEspecial ? 'border-amber-500' : 'border-slate-200'
+                                        isAssembleia ? 'border-purple-500' :
+                                            estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200 shadow-md' :
+                                                isEspecial ? 'border-amber-500' : 'border-slate-200'
                                         }`}
                                 >
                                     {/* BANNERS ESPECIAIS */}
@@ -607,6 +663,18 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                             const isAcontecendo = modoTempoReal && isHoje && agora >= parte.startObj && agora < parte.endObj;
                                                             const jaPassou = modoTempoReal && isHoje && agora >= parte.endObj;
 
+                                                            // --- NOVO: Cálculo do Progresso (Barra vertical dinâmica) ---
+                                                            let progresso = 0;
+                                                            if (jaPassou) {
+                                                                progresso = 100;
+                                                            } else if (isAcontecendo) {
+                                                                const totalTempoMs = parte.endObj.getTime() - parte.startObj.getTime();
+                                                                const tempoDecorridoMs = agora.getTime() - parte.startObj.getTime();
+                                                                // Garante que o número fique sempre entre 0 e 100%
+                                                                progresso = Math.max(0, Math.min(100, (tempoDecorridoMs / totalTempoMs) * 100));
+                                                            }
+                                                            // -------------------------------------------------------------
+
                                                             const configLabels = {
                                                                 tesouros: { txt: T.secoes.tesouros, css: "bg-slate-100 text-slate-600" },
                                                                 ministerio: { txt: T.secoes.ministerio, css: "bg-amber-100 text-amber-800" },
@@ -624,11 +692,48 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                         </span>
                                                                     </div>
 
+                                                                    {/* NOVO: ESTRUTURA DA LINHA DINÂMICA */}
+                                                                    {/* NOVO: ESTRUTURA DA LINHA DINÂMICA E BOLINHA */}
                                                                     <div className="relative w-4 flex justify-center shrink-0">
-                                                                        <div className={`absolute top-3 bottom-[-1.5rem] w-[2px] transition-colors duration-500 ${jaPassou ? 'bg-emerald-400' : 'bg-slate-200'}`}></div>
-                                                                        <div className={`w-3 h-3 mt-1.5 rounded-full z-10 shrink-0 shadow-sm transition-colors duration-500 ${isAcontecendo ? 'bg-emerald-500 animate-pulse ring-4 ring-emerald-100' :
-                                                                                jaPassou ? 'bg-emerald-400' : 'bg-slate-300'
-                                                                            }`}></div>
+
+                                                                        {/* Fundo Cinza (Trilho) com overflow-hidden para não vazar a cor */}
+                                                                        <div className="absolute top-3 bottom-[-1.5rem] w-[2px] bg-slate-200 overflow-hidden">
+                                                                            {/* Barra Verde (Preenchimento) que cresce baseada na % */}
+                                                                            <div
+                                                                                className="w-full bg-emerald-400 transition-all ease-linear"
+                                                                                style={{
+                                                                                    height: `${progresso}%`,
+                                                                                    transitionDuration: isAcontecendo ? '10000ms' : '500ms'
+                                                                                }}
+                                                                            ></div>
+                                                                        </div>
+
+                                                                        {/* Container da Bolinha */}
+                                                                        <div className="relative mt-1.5 flex justify-center items-center z-10 w-3 h-3">
+
+                                                                            {/* 1. O RIPPLE (Onda tipo Sonar) - Roda exatas 1 vez quando começa */}
+                                                                            {isAcontecendo && (
+                                                                                <div
+                                                                                    className="absolute inset-0 rounded-full bg-emerald-400 animate-ping"
+                                                                                    style={{ animationIterationCount: 1, animationDuration: '1000ms' }}
+                                                                                ></div>
+                                                                            )}
+
+                                                                            {/* 2. A BOLINHA (Com efeito "Pop" quando inicia e "Pulse" contínuo depois) */}
+                                                                            {/* O 'key' forca o React a recriar a div quando muda de status, ativando a animação de entrada (Pop) */}
+                                                                            <div
+                                                                                key={isAcontecendo ? 'on' : jaPassou ? 'past' : 'off'}
+                                                                                className={`relative w-full h-full rounded-full shadow-sm transition-colors duration-500 ${isAcontecendo ? 'animate-pop-in' : ''}`}
+                                                                            >
+                                                                                <div className={`w-full h-full rounded-full ${isAcontecendo
+                                                                                    ? 'bg-emerald-500 animate-pulse ring-4 ring-emerald-100'
+                                                                                    : jaPassou
+                                                                                        ? 'bg-emerald-400'
+                                                                                        : 'bg-slate-300'
+                                                                                    }`}></div>
+                                                                            </div>
+
+                                                                        </div>
                                                                     </div>
 
                                                                     <div className="flex-1 pb-6">

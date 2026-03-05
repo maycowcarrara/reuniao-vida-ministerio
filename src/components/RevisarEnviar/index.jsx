@@ -396,16 +396,31 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         // 1. PASSO DE LIMPEZA INTELIGENTE POR INTERVALO DE SEMANA
         const rangesParaLimpar = semanasParaImprimir.map(sem => {
-            const dataBase = sem.dataInicio || sem.dataReuniao || sem.data;
-            if (!dataBase) return null;
+            // Usamos a data ISO garantida em vez de 'sem.dataInicio'
+            const dataReuniao = getDataReuniaoISO(sem);
+            if (!dataReuniao) return null;
 
-            const [ano, mes, dia] = dataBase.split('-').map(Number);
-            const start = new Date(ano, mes - 1, dia); // Segunda-feira
+            const [ano, mes, dia] = dataReuniao.split('-').map(Number);
+            // Colocamos 12:00:00 para evitar bugs de fuso horário jogando pro dia anterior
+            const dataBase = new Date(ano, mes - 1, dia, 12, 0, 0);
 
-            const end = new Date(ano, mes - 1, dia);
-            end.setDate(start.getDate() + 6); // Domingo
+            // Acha o dia da semana: 0 = Domingo, 1 = Segunda... 6 = Sábado
+            const diaSemana = dataBase.getDay();
 
-            return { start, end, label: dataBase };
+            // Quantos dias temos que voltar para chegar na Segunda-feira?
+            const diffParaSegunda = diaSemana === 0 ? 6 : diaSemana - 1;
+
+            // Define o começo da semana (Segunda-feira 00:00:00)
+            const start = new Date(dataBase);
+            start.setDate(dataBase.getDate() - diffParaSegunda);
+            start.setHours(0, 0, 0, 0);
+
+            // Define o fim da semana (Domingo 23:59:59)
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+
+            return { start, end, label: dataReuniao };
         }).filter(Boolean);
 
         if (rangesParaLimpar.length > 0) {
@@ -413,20 +428,19 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 if (!aluno.historico || !Array.isArray(aluno.historico)) return aluno;
 
                 const historicoLimpo = aluno.historico.filter(h => {
-                    if (!h.data) return true; // Se não tem data, não apaga
+                    if (!h.data) return true; // Se não tem data, preserva
 
                     const [hAno, hMes, hDia] = h.data.split('-').map(Number);
-                    const hDate = new Date(hAno, hMes - 1, hDia);
+                    const hDate = new Date(hAno, hMes - 1, hDia, 12, 0, 0); // 12h para evitar fuso
 
-                    // Verifica se a data do histórico cai dentro de alguma das semanas
+                    // Verifica se o histórico velho cai dentro da semana que estamos sincronizando
                     const caiNaSemana = rangesParaLimpar.some(range => hDate >= range.start && hDate <= range.end);
 
                     if (caiNaSemana) {
                         console.log(`[LIXEIRA] Apagando registro -> Aluno: ${aluno.nome} | Parte: ${h.parte} | Data antiga: ${h.data}`);
                     }
 
-                    // Retorna "false" (remover) se a data cair na semana.
-                    return !caiNaSemana;
+                    return !caiNaSemana; // Se cai na semana, retorna false para APAGAR da lista
                 });
 
                 return {
