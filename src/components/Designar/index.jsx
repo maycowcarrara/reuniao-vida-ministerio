@@ -46,6 +46,7 @@ const Designar = ({
     listaProgramacoes = [],
     setListaProgramacoes = () => { },
     alunos = [],
+    onAlunosChange, // <--- ADICIONADO AQUI
     cargosMap = {},
     lang = 'pt',
     t = {},
@@ -137,16 +138,13 @@ const Designar = ({
     const formatarDataPorExtenso = (sem) => {
         let dataBaseStr = null;
 
-        // NOVA REGRA: Identifica se é semana de visita do Superintendente
         const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem?.dataInicio);
         const tipoEvento = eventoConfig?.tipo || sem?.evento || 'normal';
         const isVisita = tipoEvento === 'visita';
 
-        // 🚨 A CORREÇÃO ESTÁ AQUI: Ignora a data manual se for visita!
         if (eventoConfig?.dataInput && !isVisita) {
             dataBaseStr = eventoConfig.dataInput;
         } else {
-            // 1. Tenta calcular a data exata da reunião usando a sua função que já funciona!
             try {
                 dataBaseStr = getMeetingDateISOFromSemana({
                     semanaStr: sem?.semana,
@@ -159,12 +157,10 @@ const Designar = ({
             }
         }
 
-        // 2. Fallbacks de segurança caso a função falhe ou não haja dia configurado
         if (!dataBaseStr) {
             dataBaseStr = sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
         }
 
-        // 3. Salva-vidas: Extrai do título se o banco estiver vazio
         if (!dataBaseStr && sem?.semana) {
             const timeMs = getSortTime(sem);
             if (timeMs > 0) {
@@ -175,7 +171,6 @@ const Designar = ({
 
         if (!dataBaseStr) return null;
 
-        // 🔥 TRAVA MATEMÁTICA: Garante que caia na terça-feira
         if (isVisita) {
             const [ano, mes, dia] = dataBaseStr.split('-').map(Number);
             const d = new Date(ano, mes - 1, dia, 12, 0, 0);
@@ -189,7 +184,6 @@ const Designar = ({
             }
         }
 
-        // 4. Converte a data final exata para texto por extenso (Quarta-feira, 15 de abril...)
         try {
             const dataBase = new Date(dataBaseStr + 'T12:00:00');
             const opcoes = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -290,20 +284,80 @@ const Designar = ({
         setListaProgramacoesSafe(prev => prev.map((s, idx) => keys.includes(getSemanaKey(s, idx)) ? { ...s, arquivada: false, arquivadaEm: null } : s));
     };
 
-    // 🔥 EXCLUSÃO SUPER SEGURA (Limpa todo o histórico de alunos que caiu naquela semana inteira)
+    // ------------------------------------------------------------------------------------------
+    // 🔥 LÓGICA DE LIMPEZA DE HISTÓRICO (Lixeira Inteligente) PARA O DESIGNAR
+    // ------------------------------------------------------------------------------------------
+    const limparHistoricoPorDatas = (datasBase) => {
+        // Se a função não foi passada por props, ignoramos silenciosamente
+        if (!onAlunosChange || typeof onAlunosChange !== 'function' || !Array.isArray(alunos) || alunos.length === 0) return;
+
+        // Calcula os limites da(s) semana(s) selecionada(s)
+        const ranges = datasBase.filter(Boolean).map(dataStr => {
+            const [ano, mes, dia] = dataStr.split('-').map(Number);
+            const dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0);
+            const diaSemana = dataBaseObj.getDay();
+            const diffParaSegunda = diaSemana === 0 ? 6 : diaSemana - 1;
+
+            const start = new Date(dataBaseObj);
+            start.setDate(dataBaseObj.getDate() - diffParaSegunda);
+            start.setHours(0, 0, 0, 0);
+
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+
+            return { start, end };
+        });
+
+        if (ranges.length === 0) return;
+
+        let alterouAlgo = false;
+        const novosAlunos = alunos.map(aluno => {
+            if (!aluno.historico || !Array.isArray(aluno.historico)) return aluno;
+
+            const historicoLimpo = aluno.historico.filter(h => {
+                if (!h.data) return true; // Mantém históricos mal formatados (sem data)
+                const [hAno, hMes, hDia] = h.data.split('-').map(Number);
+                const hDate = new Date(hAno, hMes - 1, hDia, 12, 0, 0);
+
+                // Se a data do histórico estiver dentro da semana que está sendo apagada:
+                const caiEmAlgumRange = ranges.some(r => hDate >= r.start && hDate <= r.end);
+                if (caiEmAlgumRange) alterouAlgo = true;
+
+                return !caiEmAlgumRange; // false = Joga no lixo
+            });
+
+            return { ...aluno, historico: historicoLimpo };
+        });
+
+        // Só executa a alteração geral se realmente algum aluno perdeu um histórico
+        if (alterouAlgo) {
+            console.log("Limpando histórico atrelado à(s) semana(s) excluída(s)...");
+            onAlunosChange(novosAlunos);
+        }
+    };
+
+    // 🔥 EXCLUSÃO SUPER SEGURA DA SEMANA (AGORA LIMPA O HISTÓRICO TAMBÉM)
     const handleExcluirSemana = async (semanaKey) => {
         const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
-        if (!atual || !window.confirm(`Excluir a semana ${atual?.semana || semanaKey}?`)) return;
+        if (!atual || !window.confirm(`Excluir a semana ${atual?.semana || semanaKey}? Isso também apagará os históricos dos alunos associados a esta semana.`)) return;
 
-        if (onExcluirSemana && atual.id) {
-            let dataBase = atual.dataExata || atual.dataInicio || atual.dataReuniao || atual.data;
-            if (!dataBase && atual.semana) {
-                const timeMs = getSortTime(atual);
-                if (timeMs > 0) {
-                    const d = new Date(timeMs);
-                    dataBase = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                }
+        let dataBase = atual.dataExata || atual.dataInicio || atual.dataReuniao || atual.data;
+        if (!dataBase && atual.semana) {
+            const timeMs = getSortTime(atual);
+            if (timeMs > 0) {
+                const d = new Date(timeMs);
+                dataBase = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             }
+        }
+
+        // 1º Passo: Limpa os registros do banco de dados de alunos (se a dataBase existir)
+        if (dataBase) {
+            limparHistoricoPorDatas([dataBase]);
+        }
+
+        // 2º Passo: Exclui a Programação em si
+        if (onExcluirSemana && atual.id) {
             await onExcluirSemana(atual.id, dataBase);
         }
 
@@ -315,6 +369,7 @@ const Designar = ({
         setSemanasSelecionadas(prev => { const next = { ...prev }; delete next[semanaKey]; return next; });
     };
 
+    // 🔥 EXCLUSÃO EM MASSA DE ARQUIVADAS (AGORA LIMPA O HISTÓRICO TAMBÉM)
     const apagarArquivadas = async () => {
         const keys = getSelectedKeys();
         let alvo = [];
@@ -325,7 +380,9 @@ const Designar = ({
         }
 
         if (alvo.length === 0) return alert('Nenhuma semana arquivada para apagar.');
-        if (!window.confirm(`${TT.apagarArquivadas}? (${alvo.length})`)) return;
+        if (!window.confirm(`${TT.apagarArquivadas}? (${alvo.length})\nIsso também apagará os históricos dos alunos associados a estas semanas.`)) return;
+
+        const datasParaLimpar = [];
 
         if (onExcluirSemana) {
             for (const item of alvo) {
@@ -338,9 +395,16 @@ const Designar = ({
                             dataBase = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                         }
                     }
+                    if (dataBase) datasParaLimpar.push(dataBase);
+
                     await onExcluirSemana(item.id, dataBase);
                 }
             }
+        }
+
+        // Executa a limpeza do histórico para todas as semanas afetadas
+        if (datasParaLimpar.length > 0) {
+            limparHistoricoPorDatas(datasParaLimpar);
         }
 
         const idsApagados = new Set(alvo.map(a => a.id));
@@ -348,6 +412,8 @@ const Designar = ({
         setSemanasSelecionadas({});
         userClearedWeeksRef.current = true;
     };
+    // ------------------------------------------------------------------------------------------
+
     const toggleArquivadaSemana = (semanaKey, arquivar) => {
         const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
         if (!atual) return;

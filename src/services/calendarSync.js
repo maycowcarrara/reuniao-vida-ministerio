@@ -1,4 +1,4 @@
-// 1. Função para Autenticar e pegar os Calendários do usuário
+// 1. Função para Autenticar e pegar os Calendários do utilizador
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
 export const iniciarSincronizacao = async () => {
@@ -47,19 +47,47 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
     try {
         let eventosProcessados = 0;
         const horarioPadrao = configuracoes?.horario || "19:30";
+        
+        // 🔥 Detecta o idioma para as tags e textos dinâmicos
+        const lang = (configuracoes?.idioma || 'pt').toString().trim().toLowerCase().startsWith('es') ? 'es' : 'pt';
+        
+        // Dicionário de traduções para a Agenda
+        const textos = {
+            pt: {
+                presidenteReuniao: "Presidente da Reunião",
+                presidente: "Presidente",
+                oracaoInicial: "Oração Inicial",
+                oracaoFinal: "Oração Final",
+                com: "com",
+                leitor: "leitor",
+                progReuniao: "Programação da Reunião",
+                detalhesParte: "Detalhes da sua parte",
+                geradoAuto: "Gerado automaticamente pelo Gerenciador RVM",
+                descPresidente: "Você é o presidente da reunião desta semana."
+            },
+            es: {
+                presidenteReuniao: "Presidente de la Reunión",
+                presidente: "Presidente",
+                oracaoInicial: "Oración Inicial",
+                oracaoFinal: "Oración Final",
+                com: "con",
+                leitor: "lector",
+                progReuniao: "Programa de la Reunión",
+                detalhesParte: "Detalles de su asignación",
+                geradoAuto: "Generado automáticamente por el Gestor RVM",
+                descPresidente: "Usted es el presidente de la reunión de esta semana."
+            }
+        }[lang];
 
         // 🔥 FUNÇÃO INTELIGENTE DE ENVIO (Cria ou Atualiza)
         const enviarParaGoogle = async (evento) => {
-            // Tenta CRIAR (POST) - Alterado sendUpdates para 'none'
             let res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(evento)
             });
 
-            // Se retornar 409 (Conflict), significa que o evento já existe! Então vamos ATUALIZAR (PUT)
             if (res.status === 409) {
-                // Alterado sendUpdates para 'none'
                 res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${evento.id}?sendUpdates=none`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -73,7 +101,6 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
         for (const reuniao of reunioes) {
             if (!reuniao.dataExata || !reuniao.partes) continue;
 
-            // Cria uma base para o ID Único (Google exige letras minúsculas a-v e números)
             const baseIdUnico = `rvm${reuniao.dataExata.replace(/-/g, '')}`;
 
             const [hora, minuto] = horarioPadrao.split(':');
@@ -88,7 +115,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
             if (presidente?.nome) {
                 programacaoLinhas.push({
                     id: 'presidente',
-                    texto: `👔 Presidente: ${presidente.nome}`
+                    texto: `👔 ${textos.presidente}: ${presidente.nome}`
                 });
             }
 
@@ -108,20 +135,38 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 const end = new Date(start.getTime() + (duracao * 60000));
                 dataHoraAtual = end;
 
-                let pessoa = parte.estudante?.nome || parte.oracao?.nome || parte.leitor?.nome || parte.dirigente?.nome || "";
-                let ajudanteStr = parte.ajudante?.nome ? ` (com ${parte.ajudante.nome})` : '';
+                // 🔥 CORREÇÃO: Prioriza o Dirigente e ajusta o Leitor corretamente
+                let pessoa = "";
+                let ajudanteStr = "";
+
+                if (parte.dirigente?.nome) {
+                    pessoa = parte.dirigente.nome;
+                    if (parte.leitor?.nome) {
+                        ajudanteStr = ` (${textos.leitor} ${parte.leitor.nome})`;
+                    }
+                } else if (parte.estudante?.nome) {
+                    pessoa = parte.estudante.nome;
+                    if (parte.ajudante?.nome) {
+                        ajudanteStr = ` (${textos.com} ${parte.ajudante.nome})`;
+                    }
+                } else if (parte.oracao?.nome) {
+                    pessoa = parte.oracao.nome;
+                } else if (parte.leitor?.nome) {
+                    pessoa = parte.leitor.nome;
+                }
+
                 let nomesExibicao = pessoa ? ` - ${pessoa}${ajudanteStr}` : '';
 
                 const tipo = (parte.tipo || '').toLowerCase();
                 const tituloOriginal = (parte.titulo || '');
-                const ehOracao = tipo.includes('oracao') || tipo.includes('oração');
+                const ehOracao = tipo.includes('oracao') || tipo.includes('oração') || tipo.includes('oración');
 
                 let tituloExibicao = tituloOriginal;
                 if (ehOracao) {
                     if (tituloLower.includes('inicial') || tituloLower.includes('inicio') || tituloLower.includes('abertura') || index <= 1) {
-                        tituloExibicao = 'Oração Inicial';
+                        tituloExibicao = textos.oracaoInicial;
                     } else {
-                        tituloExibicao = 'Oração Final';
+                        tituloExibicao = textos.oracaoFinal;
                     }
                 }
 
@@ -143,27 +188,27 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
             const dataHoraFimReuniao = new Date(dataHoraAtual);
 
             const gerarDescricaoHTML = (idDestacado, detalhesExtra) => {
-                let html = `<h3>📋 Programação da Reunião:</h3><br>`;
+                let html = `<h3>📋 ${textos.progReuniao}:</h3><br>`;
                 programacaoLinhas.forEach(linha => {
                     if (linha.id === idDestacado) html += `<b>👉 ${linha.texto} 👈</b><br>`;
                     else html += `${linha.texto}<br>`;
                 });
-                if (detalhesExtra) html += `<br><b>📝 Detalhes da sua parte:</b><br>${detalhesExtra.replace(/\n/g, '<br>')}<br>`;
-                html += `<br><i>🤖 Gerado automaticamente pelo Gerenciador RVM.</i>`;
+                if (detalhesExtra) html += `<br><b>📝 ${textos.detalhesParte}:</b><br>${detalhesExtra.replace(/\n/g, '<br>')}<br>`;
+                html += `<br><i>🤖 ${textos.geradoAuto}.</i>`;
                 return html;
             };
 
             const requestsParaEnviar = [];
 
-            // 3. Criar evento do PRESIDENTE (Início a Fim da Reunião)
+            // 3. Criar evento do PRESIDENTE
             if (presidente?.nome) {
                 const convidadosPres = [];
                 if (presidente.email) convidadosPres.push({ email: presidente.email });
 
                 const eventoPres = {
-                    id: `${baseIdUnico}presidente`, // 🔥 ID ÚNICO
-                    summary: `[RVM] Presidente da Reunião - ${presidente.nome}`,
-                    description: gerarDescricaoHTML('presidente', 'Você é o presidente da reunião desta semana.'),
+                    id: `${baseIdUnico}presidente`,
+                    summary: `[RVM] ${textos.presidenteReuniao} - ${presidente.nome}`,
+                    description: gerarDescricaoHTML('presidente', textos.descPresidente),
                     start: { dateTime: dataHoraInicioReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     end: { dateTime: dataHoraFimReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     colorId: "9",
@@ -192,10 +237,10 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 const secao = (p.parteOriginal.secao || '').toLowerCase();
                 if (secao === 'tesouros') cor = "8";
                 else if (secao === 'ministerio') cor = "6";
-                else if (secao === 'vida' || (p.tituloExibicao).toLowerCase().includes('estudo')) cor = "11";
+                else if (secao === 'vida' || (p.tituloExibicao).toLowerCase().includes('estudo') || (p.tituloExibicao).toLowerCase().includes('estudio')) cor = "11";
 
                 const eventoParte = {
-                    id: `${baseIdUnico}${p.id}`, // 🔥 ID ÚNICO (ex: rvm20260302parte3)
+                    id: `${baseIdUnico}${p.id}`,
                     summary: `[RVM] ${p.tituloExibicao} - ${p.pessoa}${p.ajudanteStr}`,
                     description: gerarDescricaoHTML(p.id, p.parteOriginal.descricao),
                     start: { dateTime: p.start.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },

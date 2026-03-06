@@ -14,7 +14,7 @@ import RevisarEnviar from './components/RevisarEnviar';
 import Configuracoes from './components/Configuracoes';
 import Login from './components/Login';
 import Sidebar from './components/Sidebar';
-import QuadroPublico from './components/QuadroPublico'; 
+import QuadroPublico from './components/QuadroPublico';
 
 // Hooks e Serviços
 import { useGerenciadorDados } from './hooks/useGerenciadorDados';
@@ -67,51 +67,51 @@ function AdminPanel() {
 
   const lang = normalizarIdioma(dadosSistema?.configuracoes?.idioma);
   const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
-  
+
   // --- DICIONÁRIO LOCAL DO APP (Alertas e Modais) ---
   const APP_TEXTS = {
-      pt: {
-          carregando: "Carregando...",
-          backupOk: "✅ Backup restaurado com sucesso!",
-          backupInvalido: "⚠️ Arquivo inválido.",
-          backupSalvo: "✅ Backup salvo com sucesso!",
-          backupErroSalvar: "⚠️ Erro ao salvar backup.",
-          alertaReset1: "⚠️ PERIGO: Isso vai apagar TUDO.\nTem certeza?",
-          alertaReset2: "⚠️ ÚLTIMA CHANCE: Clique em OK para apagar.",
-          bancoLimpo: "✅ Banco limpo!",
-          erroLimpar: "Erro ao limpar.",
-          eventoOk: "✅ Evento agendado!",
-          dupTitulo: "Semana já existe",
-          dupDesc: "O que deseja fazer com a semana duplicada?",
-          btnSubstituir: "Substituir",
-          btnDuplicar: "Duplicar",
-          btnCancelar: "Cancelar",
-          offlineAviso: "Você está offline. Pode continuar editando!",
-          verQuadro: "Ver Quadro",
-          minhaCong: "Minha Congregação",
-          sairTelaCheia: "Sair da Tela Cheia"
-      },
-      es: {
-          carregando: "Cargando...",
-          backupOk: "✅ ¡Copia de seguridad restaurada con éxito!",
-          backupInvalido: "⚠️ Archivo inválido.",
-          backupSalvo: "✅ ¡Copia de seguridad guardada con éxito!",
-          backupErroSalvar: "⚠️ Error al guardar la copia de seguridad.",
-          alertaReset1: "⚠️ PELIGRO: Esto borrará TODO.\n¿Estás seguro?",
-          alertaReset2: "⚠️ ÚLTIMA OPORTUNIDAD: Haz clic en OK para borrar.",
-          bancoLimpo: "✅ ¡Base de datos limpia!",
-          erroLimpar: "Error al limpiar.",
-          eventoOk: "✅ ¡Evento programado!",
-          dupTitulo: "La semana ya existe",
-          dupDesc: "¿Qué deseas hacer con la semana duplicada?",
-          btnSubstituir: "Reemplazar",
-          btnDuplicar: "Duplicar",
-          btnCancelar: "Cancelar",
-          offlineAviso: "Estás desconectado. ¡Puedes seguir editando!",
-          verQuadro: "Ver Tablero",
-          minhaCong: "Mi Congregación",
-          sairTelaCheia: "Salir de Pantalla Completa"
-      }
+    pt: {
+      carregando: "Carregando...",
+      backupOk: "✅ Backup restaurado com sucesso!",
+      backupInvalido: "⚠️ Arquivo inválido.",
+      backupSalvo: "✅ Backup salvo com sucesso!",
+      backupErroSalvar: "⚠️ Erro ao salvar backup.",
+      alertaReset1: "⚠️ PERIGO: Isso vai apagar TUDO.\nTem certeza?",
+      alertaReset2: "⚠️ ÚLTIMA CHANCE: Clique em OK para apagar.",
+      bancoLimpo: "✅ Banco limpo!",
+      erroLimpar: "Erro ao limpar.",
+      eventoOk: "✅ Evento agendado!",
+      dupTitulo: "Semana já existe",
+      dupDesc: "O que deseja fazer com a semana duplicada?",
+      btnSubstituir: "Substituir",
+      btnDuplicar: "Duplicar",
+      btnCancelar: "Cancelar",
+      offlineAviso: "Você está offline. Pode continuar editando!",
+      verQuadro: "Ver Quadro",
+      minhaCong: "Minha Congregação",
+      sairTelaCheia: "Sair da Tela Cheia"
+    },
+    es: {
+      carregando: "Cargando...",
+      backupOk: "✅ ¡Copia de seguridad restaurada con éxito!",
+      backupInvalido: "⚠️ Archivo inválido.",
+      backupSalvo: "✅ ¡Copia de seguridad guardada con éxito!",
+      backupErroSalvar: "⚠️ Error al guardar la copia de seguridad.",
+      alertaReset1: "⚠️ PELIGRO: Esto borrará TODO.\n¿Estás seguro?",
+      alertaReset2: "⚠️ ÚLTIMA OPORTUNIDAD: Haz clic en OK para borrar.",
+      bancoLimpo: "✅ ¡Base de datos limpia!",
+      erroLimpar: "Error al limpiar.",
+      eventoOk: "✅ ¡Evento programado!",
+      dupTitulo: "La semana ya existe",
+      dupDesc: "¿Qué deseas hacer con la semana duplicada?",
+      btnSubstituir: "Reemplazar",
+      btnDuplicar: "Duplicar",
+      btnCancelar: "Cancelar",
+      offlineAviso: "Estás desconectado. ¡Puedes seguir editando!",
+      verQuadro: "Ver Tablero",
+      minhaCong: "Mi Congregación",
+      sairTelaCheia: "Salir de Pantalla Completa"
+    }
   }[lang];
 
   const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
@@ -253,7 +253,7 @@ function AdminPanel() {
   const handleExcluirSemanaBanco = async (id, dataDaSemana) => {
     await excluirSemanaELimparHistorico(id, dataDaSemana);
   };
-  
+
   const handleExcluirAlunoBanco = async (id) => await excluirItem('alunos', id);
 
   if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-500">{APP_TEXTS.carregando}</div>;
@@ -282,20 +282,20 @@ function AdminPanel() {
       )}
 
       {!isFullscreen && (
-        <Sidebar 
-          sidebarOpen={sidebarOpen} 
-          setSidebarOpen={setSidebarOpen} 
-          abaAtiva={abaAtiva} 
-          setAbaAtiva={setAbaAtiva} 
-          usuario={usuario} 
-          handleAbrirBackup={handleAbrirBackup} 
-          handleSalvarBackup={handleSalvarBackup} 
-          handleResetarTudo={handleResetarTudo} 
-          logout={() => auth.signOut()} 
-          listaProgramacoes={listaProgramacoes} 
-          t={t} 
-          lang={lang} 
-          toggleFullscreen={toggleFullscreen} 
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          abaAtiva={abaAtiva}
+          setAbaAtiva={setAbaAtiva}
+          usuario={usuario}
+          handleAbrirBackup={handleAbrirBackup}
+          handleSalvarBackup={handleSalvarBackup}
+          handleResetarTudo={handleResetarTudo}
+          logout={() => auth.signOut()}
+          listaProgramacoes={listaProgramacoes}
+          t={t}
+          lang={lang}
+          toggleFullscreen={toggleFullscreen}
         />
       )}
 
@@ -308,30 +308,30 @@ function AdminPanel() {
 
       {/* AS CLASSES DE IMPRESSÃO TAMBÉM FORAM ADICIONADAS AQUI NO MAIN */}
       <main className={`flex-1 flex flex-col min-w-0 bg-slate-50 h-screen overflow-hidden relative print:block print:h-auto print:overflow-visible ${isFullscreen ? 'fullscreen-active' : ''}`}>
-        
+
         {!isFullscreen && (
           // NO-PRINT ADICIONADO AQUI PARA ESCONDER O HEADER
           <header className="h-14 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 border-b shrink-0 z-30 no-print">
-            
+
             <div className="flex items-center gap-3 md:gap-4">
               <h2 className="text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none">
                 {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
               </h2>
-              
+
               <div className="hidden sm:flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                 <Globe size={12} className="text-blue-600" />
                 <span className="text-[10px] font-black uppercase text-blue-800">{lang}</span>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 md:gap-4">
-              
-              <Link 
-                to="/quadro" 
+
+              <Link
+                to="/quadro"
                 title={APP_TEXTS.verQuadro}
                 className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors"
               >
-                <Users size={18} /> 
+                <Users size={18} />
                 <span className="hidden sm:block text-xs font-bold">{APP_TEXTS.verQuadro}</span>
               </Link>
 
@@ -339,7 +339,7 @@ function AdminPanel() {
                 {dadosSistema?.configuracoes?.nome_cong || APP_TEXTS.minhaCong}
               </div>
 
-              <button 
+              <button
                 className="md:hidden p-1.5 -mr-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                 onClick={() => setSidebarOpen(true)}
               >
@@ -359,10 +359,21 @@ function AdminPanel() {
         <div className="flex-1 overflow-y-auto scroll-smooth print:overflow-visible">
           {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} />}
           {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
-          
-          {/* 🔥 O COMPONENTE DESIGNAR CONTINUA RECEBENDO handleExcluirSemanaBanco NORMALMENTE */}
-          {abaAtiva === 'designar' && <Designar listaProgramacoes={listaProgramacoes} setListaProgramacoes={setListaProgramacoes} alunos={dadosSistema?.alunos || []} cargosMap={CARGOS_MAP} lang={lang} t={t} config={dadosSistema?.configuracoes} onExcluirSemana={handleExcluirSemanaBanco} />}
-          
+
+          {abaAtiva === 'designar' && (
+            <Designar
+              listaProgramacoes={listaProgramacoes}
+              setListaProgramacoes={setListaProgramacoes}
+              alunos={dadosSistema?.alunos || []}
+              onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
+              cargosMap={CARGOS_MAP}
+              lang={lang}
+              t={t}
+              config={dadosSistema?.configuracoes}
+              onExcluirSemana={handleExcluirSemanaBanco}
+            />
+          )}
+
           {abaAtiva === 'revisar' && <RevisarEnviar historico={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })} />}
           {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
           {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}
@@ -376,7 +387,7 @@ function AdminPanel() {
 // 2. WRAPPER DO QUADRO PÚBLICO
 // ============================================================================
 function QuadroPublicoWrapper({ usuario }) {
-  const { dados, loading } = useQuadroPublico(); 
+  const { dados, loading } = useQuadroPublico();
 
   // Ajusta idioma do loading dinamicamente
   const lang = (dados?.configuracoes?.idioma || 'pt').toString().trim().toLowerCase().startsWith('es') ? 'es' : 'pt';
@@ -409,7 +420,7 @@ function App() {
   }, []);
 
   if (usuarioVerificado === undefined) {
-    return <div className="h-screen bg-slate-50"></div>; 
+    return <div className="h-screen bg-slate-50"></div>;
   }
 
   return (

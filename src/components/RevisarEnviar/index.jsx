@@ -285,7 +285,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         let dataCalculada = getMeetingDateISOFromSemana({
             semanaStr: sem?.semana,
             config,
-            isoFallback: fallbackStr, 
+            isoFallback: fallbackStr,
             overrideDia: isVisita ? 'terça-feira' : null
         });
 
@@ -298,11 +298,11 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         if (isVisita && dataCalculada) {
             const [ano, mes, dia] = dataCalculada.split('-').map(Number);
             const d = new Date(ano, mes - 1, dia, 12, 0, 0); // 12h para evitar bug de fuso horário
-            
-            if (d.getDay() !== 2) { 
+
+            if (d.getDay() !== 2) {
                 const diff = 2 - d.getDay();
                 d.setDate(d.getDate() + diff);
-                
+
                 const y = d.getFullYear();
                 const m = String(d.getMonth() + 1).padStart(2, '0');
                 const day = String(d.getDate()).padStart(2, '0');
@@ -407,9 +407,21 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const gravarHistorico = () => {
         if (!Array.isArray(alunos) || alunos.length === 0) return alert(t.nadaParaGravar);
 
+        // 1. Filtra EXATAMENTE as semanas que estão com a pílula azul (Opção B)
+        const semanasSelecionadas = semanasDisponiveis.filter((sem, i) => {
+            const key = getSemanaKey(sem, i);
+            return printSelecionadas[key] === true;
+        });
+
+        // Trava de segurança
+        if (semanasSelecionadas.length === 0) {
+            alert("Nenhuma semana selecionada! Clique nas pílulas azuis para escolher de quais semanas deseja sincronizar o histórico.");
+            return;
+        }
+
         const msgConfirmacao = lang === 'es'
-            ? "¿Desea sincronizar el historial? Esto eliminará automáticamente versiones anteriores en estas semanas para evitar duplicados."
-            : "Deseja sincronizar o histórico? Isso apagará as versões anteriores das datas destas semanas para não gerar histórico duplicado.";
+            ? `¿Desea sincronizar el historial de las ${semanasSelecionadas.length} semanas seleccionadas? Esto eliminará automáticamente versiones anteriores en estas semanas para evitar duplicados.`
+            : `Deseja sincronizar o histórico das ${semanasSelecionadas.length} semanas selecionadas? Isso apagará as versões anteriores das datas destas semanas para não gerar histórico duplicado.`;
 
         if (!window.confirm(msgConfirmacao)) return;
 
@@ -418,8 +430,9 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         console.log("=== INICIANDO SINCRONIZAÇÃO DE HISTÓRICO ===");
 
-        // 1. PASSO DE LIMPEZA INTELIGENTE POR INTERVALO DE SEMANA
-        const rangesParaLimpar = semanasParaImprimir.map(sem => {
+        // 2. PASSO DE LIMPEZA INTELIGENTE POR INTERVALO DE SEMANA
+        // Usa as 'semanasSelecionadas' ao invés de 'semanasDisponiveis'
+        const rangesParaLimpar = semanasSelecionadas.map(sem => {
             // Usamos a data ISO garantida em vez de 'sem.dataInicio'
             const dataReuniao = getDataReuniaoISO(sem);
             if (!dataReuniao) return null;
@@ -476,8 +489,9 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         console.log("=== LIMPEZA CONCLUÍDA. INICIANDO GRAVAÇÃO DE NOVOS DADOS ===");
 
-        // 2. PASSO DE GRAVAÇÃO
-        semanasParaImprimir.forEach((sem) => {
+        // 3. PASSO DE GRAVAÇÃO
+        // Usa as 'semanasSelecionadas' ao invés de 'semanasDisponiveis'
+        semanasSelecionadas.forEach((sem) => {
             const data = getDataReuniaoISO(sem); // Data exata da reunião
             if (!data) return;
 
@@ -702,7 +716,19 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                     onPrint={handlePrint}
                     onGravarHistorico={gravarHistorico}
                     onConfirmSync={async (tokenGoogle, calendarId) => {
-                        const reunioesComDataExata = semanasParaImprimir.map(sem => ({
+                        // OPÇÃO B: Filtra EXATAMENTE as semanas que estão com a pílula azul
+                        const reunioesSelecionadas = semanasDisponiveis.filter((sem, i) => {
+                            const key = getSemanaKey(sem, i);
+                            return printSelecionadas[key] === true;
+                        });
+
+                        // Trava de segurança caso o usuário não tenha selecionado nenhuma
+                        if (reunioesSelecionadas.length === 0) {
+                            alert("Nenhuma semana selecionada! Clique nas pílulas azuis para escolher quais semanas enviar para a agenda.");
+                            return;
+                        }
+
+                        const reunioesComDataExata = reunioesSelecionadas.map(sem => ({
                             ...sem,
                             dataExata: getDataReuniaoISO(sem)
                         }));
