@@ -47,10 +47,10 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
     try {
         let eventosProcessados = 0;
         const horarioPadrao = configuracoes?.horario || "19:30";
-        
+
         // 🔥 Detecta o idioma para as tags e textos dinâmicos
         const lang = (configuracoes?.idioma || 'pt').toString().trim().toLowerCase().startsWith('es') ? 'es' : 'pt';
-        
+
         // Dicionário de traduções para a Agenda
         const textos = {
             pt: {
@@ -87,6 +87,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 body: JSON.stringify(evento)
             });
 
+            // Se retornar 409 (Conflict), significa que o evento já existe! Então vamos ATUALIZAR (PUT)
             if (res.status === 409) {
                 res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${evento.id}?sendUpdates=none`, {
                     method: 'PUT',
@@ -101,6 +102,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
         for (const reuniao of reunioes) {
             if (!reuniao.dataExata || !reuniao.partes) continue;
 
+            // Cria uma base para o ID Único (Google exige letras minúsculas a-v e números)
             const baseIdUnico = `rvm${reuniao.dataExata.replace(/-/g, '')}`;
 
             const [hora, minuto] = horarioPadrao.split(':');
@@ -135,7 +137,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 const end = new Date(start.getTime() + (duracao * 60000));
                 dataHoraAtual = end;
 
-                // 🔥 CORREÇÃO: Prioriza o Dirigente e ajusta o Leitor corretamente
+                // Prioriza o Dirigente e ajusta o Leitor corretamente
                 let pessoa = "";
                 let ajudanteStr = "";
 
@@ -203,7 +205,12 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
             // 3. Criar evento do PRESIDENTE
             if (presidente?.nome) {
                 const convidadosPres = [];
-                if (presidente.email) convidadosPres.push({ email: presidente.email });
+                // 🔥 SEGURANÇA: .trim() remove espaços em branco antes ou depois do e-mail
+                const emailPresLimpo = (presidente.email || "").trim();
+
+                if (emailPresLimpo) {
+                    convidadosPres.push({ email: emailPresLimpo });
+                }
 
                 const eventoPres = {
                     id: `${baseIdUnico}presidente`,
@@ -224,7 +231,11 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
 
                 const convidados = [];
                 const addConv = (aluno) => {
-                    if (aluno?.email && !convidados.find(c => c.email === aluno.email)) convidados.push({ email: aluno.email });
+                    // 🔥 SEGURANÇA: .trim() para evitar o erro 400 Bad Request do Google!
+                    const emailLimpo = (aluno?.email || "").trim();
+                    if (emailLimpo && !convidados.find(c => c.email === emailLimpo)) {
+                        convidados.push({ email: emailLimpo });
+                    }
                 };
 
                 addConv(p.parteOriginal.estudante);
