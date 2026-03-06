@@ -137,15 +137,26 @@ const Designar = ({
     const formatarDataPorExtenso = (sem) => {
         let dataBaseStr = null;
 
-        // 1. Tenta calcular a data exata da reunião usando a sua função que já funciona!
-        try {
-            dataBaseStr = getMeetingDateISOFromSemana({
-                semanaStr: sem?.semana,
-                config,
-                isoFallback: sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data
-            });
-        } catch (e) {
-            console.error("Erro ao tentar calcular a data da reunião:", e);
+        // NOVA REGRA: Identifica se é semana de visita do Superintendente
+        const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem?.dataInicio);
+        const tipoEvento = eventoConfig?.tipo || sem?.evento || 'normal';
+        const isVisita = tipoEvento === 'visita';
+
+        // 🚨 A CORREÇÃO ESTÁ AQUI: Ignora a data manual se for visita!
+        if (eventoConfig?.dataInput && !isVisita) {
+            dataBaseStr = eventoConfig.dataInput;
+        } else {
+            // 1. Tenta calcular a data exata da reunião usando a sua função que já funciona!
+            try {
+                dataBaseStr = getMeetingDateISOFromSemana({
+                    semanaStr: sem?.semana,
+                    config,
+                    isoFallback: sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data,
+                    overrideDia: isVisita ? 'terça-feira' : null
+                });
+            } catch (e) {
+                console.error("Erro ao tentar calcular a data da reunião:", e);
+            }
         }
 
         // 2. Fallbacks de segurança caso a função falhe ou não haja dia configurado
@@ -163,6 +174,20 @@ const Designar = ({
         }
 
         if (!dataBaseStr) return null;
+
+        // 🔥 TRAVA MATEMÁTICA: Garante que caia na terça-feira
+        if (isVisita) {
+            const [ano, mes, dia] = dataBaseStr.split('-').map(Number);
+            const d = new Date(ano, mes - 1, dia, 12, 0, 0);
+            if (d.getDay() !== 2) {
+                const diff = 2 - d.getDay();
+                d.setDate(d.getDate() + diff);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                dataBaseStr = `${y}-${m}-${day}`;
+            }
+        }
 
         // 4. Converte a data final exata para texto por extenso (Quarta-feira, 15 de abril...)
         try {

@@ -268,25 +268,49 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
     // --- CÁLCULO DE DATA ---
     const getDataReuniaoISO = (sem) => {
-        const dataReferencia = sem.dataInicio || sem.dataReuniao || sem.data;
-        const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === dataReferencia);
+        const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === sem?.dataInicio);
+        const isVisita = sem?.evento === 'visita' || eventoEspecial?.tipo === 'visita';
 
-        if (eventoEspecial?.dataInput) return eventoEspecial.dataInput;
+        // 🚨 A CORREÇÃO ESTÁ AQUI:
+        // Se houver data manual, respeita... a menos que seja Visita!
+        // Isso impede que o "dataInput" salvo como segunda-feira atropele nosso cálculo.
+        if (eventoEspecial?.dataInput && !isVisita) {
+            return eventoEspecial.dataInput;
+        }
 
-        // 1º PRIORIDADE: Calcular o dia correto com base no "dia_reuniao" das configurações
-        const dataCalculada = getMeetingDateISOFromSemana({
+        // Data base para segurança
+        const fallbackStr = sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
+
+        // 1º PRIORIDADE: Calcular o dia correto com base nas configurações
+        let dataCalculada = getMeetingDateISOFromSemana({
             semanaStr: sem?.semana,
             config,
-            isoFallback: null // Passamos null para checar se ele consegue calcular
+            isoFallback: fallbackStr, 
+            overrideDia: isVisita ? 'terça-feira' : null
         });
 
-        // Se conseguiu calcular o dia configurado, usa ele imediatamente!
-        if (dataCalculada) return dataCalculada;
+        // Caso a função falhe e retorne nulo, pegamos a data de segurança
+        if (!dataCalculada) {
+            dataCalculada = fallbackStr;
+        }
 
-        // 2º Fallbacks (caso falhe o cálculo ou a configuração não exista)
-        if (sem?.dataReuniao) return sem.dataReuniao;
+        // 🔥 TRAVA MATEMÁTICA: Garante que caia na terça-feira
+        if (isVisita && dataCalculada) {
+            const [ano, mes, dia] = dataCalculada.split('-').map(Number);
+            const d = new Date(ano, mes - 1, dia, 12, 0, 0); // 12h para evitar bug de fuso horário
+            
+            if (d.getDay() !== 2) { 
+                const diff = 2 - d.getDay();
+                d.setDate(d.getDate() + diff);
+                
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+        }
 
-        return sem?.dataInicio || sem?.data;
+        return dataCalculada;
     };
 
     // --- CONFIGURAÇÃO DE LAYOUTS ---
