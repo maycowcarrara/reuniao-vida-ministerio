@@ -360,7 +360,20 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 )}
             </div>
 
-            <ModalHistorico aluno={alunoHistorico} isOpen={modalHistoryOpen} onClose={() => setModalHistoryOpen(false)} t={t} />
+            <ModalHistorico
+                aluno={alunoHistorico}
+                isOpen={modalHistoryOpen}
+                onClose={() => { setModalHistoryOpen(false); setAlunoHistorico(null); }}
+                t={t}
+                lang={lang}
+                onUpdateAluno={(alunoAtualizado) => {
+                    // Atualiza a lista principal e manda salvar no banco de dados
+                    const novaLista = alunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a);
+                    setAlunos(novaLista);
+                    // Mantém a visualização do modal atualizada instantaneamente
+                    setAlunoHistorico(alunoAtualizado);
+                }}
+            />
             <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} />
         </div>
     );

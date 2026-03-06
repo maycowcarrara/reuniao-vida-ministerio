@@ -1,29 +1,29 @@
 import React from 'react';
 import { History, X, Trash2 } from 'lucide-react';
 
-const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno }) => {
+const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno, lang = 'pt' }) => {
     if (!isOpen || !aluno) return null;
 
-    // Função para apagar o registro
+    // Função que é ativada ao clicar na lixeira
     const handleDelete = (indexOriginal) => {
-        const msg = lang === 'es' 
-            ? "¿Desea eliminar este registro del historial?" 
+        const msg = lang === 'es'
+            ? "¿Desea eliminar este registro del historial?"
             : "Tem certeza que deseja remover este registro do histórico?";
 
         if (window.confirm(msg)) {
-            // Cria uma cópia do histórico e remove o item correto
-            const novoHistorico = [...aluno.historico];
+            // Clona o histórico atual e remove apenas o item selecionado
+            const novoHistorico = [...(aluno.historico || [])];
             novoHistorico.splice(indexOriginal, 1);
-            
-            // Chama a função passada pelo componente pai (ListaAlunos) para salvar no Firebase
+
+            // Envia o aluno com o histórico limpo de volta para a ListaAlunos salvar
             if (onUpdateAluno) {
                 onUpdateAluno({ ...aluno, historico: novoHistorico });
             }
         }
     };
 
-    // Mapeamos para guardar o índice real antes de ordenar, 
-    // assim não apagamos o item errado quando a lista é invertida.
+    // Salva o índice original da matriz ANTES de ordenar por data.
+    // Isto garante que ao apagar, apagamos o registo certo lá no Firebase.
     const historicoOrdenado = (aluno.historico || [])
         .map((h, indexOriginal) => ({ ...h, indexOriginal }))
         .sort((a, b) => new Date(b.data || 0).getTime() - new Date(a.data || 0).getTime());
@@ -39,19 +39,21 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno }) => {
                     <p className="font-black text-gray-800 border-b pb-2 mb-2">{aluno.nome}</p>
 
                     {historicoOrdenado.map((h) => (
-                        <div key={h.indexOriginal} className="flex justify-between items-center text-xs border-b border-gray-50 pb-2 group">
+                        <div key={h.indexOriginal} className="flex justify-between items-center text-xs border-b border-gray-50 pb-2 group hover:bg-gray-50/50 transition-colors px-1 -mx-1 rounded">
                             <div className="pr-4 flex-1">
                                 <p className="font-bold text-gray-700">{h.parte}</p>
                                 {h.ajudante && <p className="text-[10px] text-blue-500 italic font-bold mt-0.5">{t?.card?.com || 'com'}: {h.ajudante}</p>}
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold font-mono text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
+                                <span className="text-[10px] font-bold font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
                                     {h.data ? h.data.split('-').reverse().join('/') : '--/--'}
                                 </span>
-                                <button 
+
+                                {/* Botão Lixeira - Fica mais visível ao passar o rato (hover) na linha */}
+                                <button
                                     onClick={() => handleDelete(h.indexOriginal)}
-                                    className="text-red-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors opacity-50 group-hover:opacity-100"
-                                    title="Excluir parte"
+                                    className="text-red-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-all opacity-50 group-hover:opacity-100"
+                                    title={lang === 'es' ? "Eliminar" : "Excluir"}
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -60,7 +62,7 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno }) => {
                     ))}
 
                     {(!aluno.historico || aluno.historico.length === 0) && (
-                        <p className="text-xs text-gray-400 italic py-2">Nenhum histórico registrado.</p>
+                        <p className="text-xs text-gray-400 italic py-2 text-center">Nenhum histórico registrado.</p>
                     )}
                 </div>
             </div>
