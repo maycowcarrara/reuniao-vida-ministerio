@@ -83,6 +83,47 @@ export function useGerenciadorDados() {
         await deleteDoc(doc(db, `users/${usuario.uid}/${colecao}`, id));
     };
 
+    // --- NOVA FUNÇÃO: EXCLUIR SEMANA E LIMPAR HISTÓRICO ---
+    const excluirSemanaELimparHistorico = async (semanaId, dataDaSemana) => {
+        if (!usuario) return;
+
+        try {
+            const uid = usuario.uid;
+            const batch = writeBatch(db);
+
+            // 1. Excluir o documento da semana na coleção "programacao"
+            const semanaRef = doc(db, `users/${uid}/programacao`, semanaId);
+            batch.delete(semanaRef);
+
+            // 2. Buscar todos os alunos para verificar quem tem essa data no histórico
+            if (dataDaSemana) {
+                const alunosRef = collection(db, `users/${uid}/alunos`);
+                const snapshot = await getDocs(alunosRef);
+
+                snapshot.docs.forEach((docSnap) => {
+                    const aluno = docSnap.data();
+
+                    if (aluno.historico && Array.isArray(aluno.historico) && aluno.historico.length > 0) {
+                        // Filtra o histórico, removendo qualquer registro que tenha a mesma data da semana excluída
+                        const historicoLimpo = aluno.historico.filter(h => h.data !== dataDaSemana);
+
+                        // Se o tamanho do array diminuiu, significa que o aluno estava designado nesta semana apagada
+                        if (historicoLimpo.length !== aluno.historico.length) {
+                            batch.update(docSnap.ref, { historico: historicoLimpo });
+                        }
+                    }
+                });
+            }
+
+            // 3. Executar todas as operações de uma vez só (garante que nada fique quebrado)
+            await batch.commit();
+
+        } catch (error) {
+            console.error("Erro ao excluir semana e limpar histórico:", error);
+            throw error;
+        }
+    };
+
     const importarBackupParaUsuario = async (jsonFile) => {
         if (!usuario) return;
 
@@ -162,6 +203,7 @@ export function useGerenciadorDados() {
         usuario,
         salvarItem,
         excluirItem,
+        excluirSemanaELimparHistorico,
         importarBackupParaUsuario,
         resetarConta
     };

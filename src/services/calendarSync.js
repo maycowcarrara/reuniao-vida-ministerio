@@ -4,9 +4,9 @@ import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 export const iniciarSincronizacao = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-    
+
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
-    provider.addScope('https://www.googleapis.com/auth/calendar.readonly'); 
+    provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 
     if (auth.currentUser && auth.currentUser.email) {
         provider.setCustomParameters({ login_hint: auth.currentUser.email });
@@ -50,8 +50,8 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
 
         // 🔥 FUNÇÃO INTELIGENTE DE ENVIO (Cria ou Atualiza)
         const enviarParaGoogle = async (evento) => {
-            // Tenta CRIAR (POST)
-            let res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`, {
+            // Tenta CRIAR (POST) - Alterado sendUpdates para 'none'
+            let res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(evento)
@@ -59,13 +59,14 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
 
             // Se retornar 409 (Conflict), significa que o evento já existe! Então vamos ATUALIZAR (PUT)
             if (res.status === 409) {
-                res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${evento.id}?sendUpdates=all`, {
+                // Alterado sendUpdates para 'none'
+                res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${evento.id}?sendUpdates=none`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(evento)
                 });
             }
-            
+
             if (res.ok) eventosProcessados++;
         };
 
@@ -94,14 +95,14 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
             // 2. Processar todas as partes
             reuniao.partes.forEach((parte, index) => {
                 let duracao = parseInt(parte.tempo || "5", 10);
-                
+
                 const tituloLower = (parte.titulo || '').toLowerCase();
                 const secaoLower = (parte.secao || '').toLowerCase();
-                
+
                 const ehLeitura = tituloLower.includes('leitura da bíblia') || tituloLower.includes('leitura da biblia') || tituloLower.includes('lectura de la biblia');
                 const ehMinisterio = secaoLower === 'ministerio';
-                
-                if (ehLeitura || ehMinisterio) duracao += 1; 
+
+                if (ehLeitura || ehMinisterio) duracao += 1;
 
                 const start = new Date(dataHoraAtual);
                 const end = new Date(start.getTime() + (duracao * 60000));
@@ -114,7 +115,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 const tipo = (parte.tipo || '').toLowerCase();
                 const tituloOriginal = (parte.titulo || '');
                 const ehOracao = tipo.includes('oracao') || tipo.includes('oração');
-                
+
                 let tituloExibicao = tituloOriginal;
                 if (ehOracao) {
                     if (tituloLower.includes('inicial') || tituloLower.includes('inicio') || tituloLower.includes('abertura') || index <= 1) {
@@ -127,7 +128,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 const horaFormatada = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const tempoOriginal = parseInt(parte.tempo || "5", 10);
                 const tempoVisual = (ehLeitura || ehMinisterio) ? `${tempoOriginal}m + 1m` : `${duracao}m`;
-                
+
                 programacaoLinhas.push({
                     id: `parte${index}`,
                     texto: `🕒 ${horaFormatada} (${tempoVisual}) | ${tituloExibicao}${nomesExibicao}`
@@ -139,7 +140,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 });
             });
 
-            const dataHoraFimReuniao = new Date(dataHoraAtual); 
+            const dataHoraFimReuniao = new Date(dataHoraAtual);
 
             const gerarDescricaoHTML = (idDestacado, detalhesExtra) => {
                 let html = `<h3>📋 Programação da Reunião:</h3><br>`;
@@ -165,7 +166,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                     description: gerarDescricaoHTML('presidente', 'Você é o presidente da reunião desta semana.'),
                     start: { dateTime: dataHoraInicioReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     end: { dateTime: dataHoraFimReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-                    colorId: "9", 
+                    colorId: "9",
                     reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 2880 }, { method: 'popup', minutes: 120 }] }
                 };
                 if (convidadosPres.length > 0) eventoPres.attendees = convidadosPres;
@@ -177,17 +178,17 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 if (p.vazia) continue;
 
                 const convidados = [];
-                const addConv = (aluno) => { 
-                    if (aluno?.email && !convidados.find(c => c.email === aluno.email)) convidados.push({ email: aluno.email }); 
+                const addConv = (aluno) => {
+                    if (aluno?.email && !convidados.find(c => c.email === aluno.email)) convidados.push({ email: aluno.email });
                 };
-                
+
                 addConv(p.parteOriginal.estudante);
                 addConv(p.parteOriginal.ajudante);
                 addConv(p.parteOriginal.oracao);
                 addConv(p.parteOriginal.leitor);
                 addConv(p.parteOriginal.dirigente);
 
-                let cor = "9"; 
+                let cor = "9";
                 const secao = (p.parteOriginal.secao || '').toLowerCase();
                 if (secao === 'tesouros') cor = "8";
                 else if (secao === 'ministerio') cor = "6";

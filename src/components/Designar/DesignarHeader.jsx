@@ -1,5 +1,6 @@
 import React from 'react';
 import { Archive, RotateCcw, Trash2, Briefcase, Tent, UsersRound } from 'lucide-react';
+import { isSemanaAssembleia } from './helpers';
 
 const DesignarHeader = ({
     TT, lang, config,
@@ -120,7 +121,7 @@ const DesignarHeader = ({
                             const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
                             const tipoEvento = eventoConfig?.tipo || sem.evento || 'normal';
                             const isVisita = tipoEvento === 'visita';
-                            const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
+                            const isAssembly = isSemanaAssembleia(sem);
 
                             return (
                                 <button

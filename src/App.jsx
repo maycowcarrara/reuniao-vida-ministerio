@@ -27,7 +27,8 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 // 1. ADMIN PANEL (Seu Sistema de Gerenciamento)
 // ============================================================================
 function AdminPanel() {
-  const { dados: dadosNuvem, loading, usuario, salvarItem, excluirItem, importarBackupParaUsuario, resetarConta } = useGerenciadorDados();
+  // 🔥 FUNÇÃO excluirSemanaELimparHistorico ADICIONADA AQUI:
+  const { dados: dadosNuvem, loading, usuario, salvarItem, excluirItem, excluirSemanaELimparHistorico, importarBackupParaUsuario, resetarConta } = useGerenciadorDados();
   const [dadosSistema, setDadosSistema] = useState(dadosNuvem);
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
@@ -248,7 +249,11 @@ function AdminPanel() {
     alert(APP_TEXTS.eventoOk);
   };
 
-  const handleExcluirSemanaBanco = async (id) => await excluirItem('programacao', id);
+  // 🔥 HANDLER ATUALIZADO: Agora recebe a data da semana e repassa para a função de limpar o histórico
+  const handleExcluirSemanaBanco = async (id, dataDaSemana) => {
+    await excluirSemanaELimparHistorico(id, dataDaSemana);
+  };
+  
   const handleExcluirAlunoBanco = async (id) => await excluirItem('alunos', id);
 
   if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-500">{APP_TEXTS.carregando}</div>;
@@ -354,7 +359,10 @@ function AdminPanel() {
         <div className="flex-1 overflow-y-auto scroll-smooth print:overflow-visible">
           {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} />}
           {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
+          
+          {/* 🔥 O COMPONENTE DESIGNAR CONTINUA RECEBENDO handleExcluirSemanaBanco NORMALMENTE */}
           {abaAtiva === 'designar' && <Designar listaProgramacoes={listaProgramacoes} setListaProgramacoes={setListaProgramacoes} alunos={dadosSistema?.alunos || []} cargosMap={CARGOS_MAP} lang={lang} t={t} config={dadosSistema?.configuracoes} onExcluirSemana={handleExcluirSemanaBanco} />}
+          
           {abaAtiva === 'revisar' && <RevisarEnviar historico={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })} />}
           {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
           {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}

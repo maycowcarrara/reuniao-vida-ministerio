@@ -9,12 +9,13 @@ import {
 import ModalSugestao from './ModalSugestao';
 import NavegadorSemanas from './NavegadorSemanas';
 import SidebarAlunos from './SidebarAlunos';
-import DesignarHeader from './DesignarHeader'; // <-- IMPORT DO NOVO CABEÇALHO AQUI
+import DesignarHeader from './DesignarHeader';
 import {
     SECOES_ORDEM, SECOES_META, normalizar, normalizarSecao,
     tipoLower, isAbertura, isEncerramento, isLinhaInicialFinal,
-    isEstudoBiblicoCongregacao, isCanticoIntermediario
+    isEstudoBiblicoCongregacao, isCanticoIntermediario, isSemanaAssembleia
 } from './helpers';
+import { getMeetingDateISOFromSemana } from '../../utils/revisarEnviar/dates';
 
 const T_FALLBACK = {
     pt: {
@@ -79,16 +80,14 @@ const Designar = ({
     }, [t, lang]);
 
     const getSemanaKey = (sem, idx) =>
-        (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
+        (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
 
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
 
-    // Função de ordenação incrivelmente robusta agora aplicada ao index principal!
+    // FUNÇÃO ROBUSTA DE ORDENAÇÃO E EXTRAÇÃO DE DATAS
     const getSortTime = (sem) => {
         if (!sem) return 0;
-
-        const dataStr = sem.dataInicio || sem.dataReuniao || sem.data;
-
+        const dataStr = sem.dataInicio || sem.dataExata || sem.dataReuniao || sem.data;
         if (dataStr) {
             if (dataStr.includes('-')) {
                 const [ano, mes, dia] = dataStr.split('-');
@@ -99,32 +98,82 @@ const Designar = ({
                 return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
             }
         }
-
         if (sem.semana) {
             const str = sem.semana.toLowerCase();
             const meses = [
                 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
                 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
             ];
-
             let mesIndex = 0;
             for (let i = 0; i < meses.length; i++) {
-                if (str.includes(meses[i])) {
-                    mesIndex = i % 12;
-                    break;
-                }
+                if (str.includes(meses[i])) { mesIndex = i % 12; break; }
             }
-
             const matchDia = str.match(/^(\d+)/);
             const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
 
             const matchAno = str.match(/(20\d{2})/);
-            const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
+            let ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
+
+            // TRATAMENTO INTELIGENTE DE VIRADA DE ANO
+            if (!matchAno) {
+                const mesAtual = new Date().getMonth(); // 0 (Jan) a 11 (Dez)
+
+                // Se estamos no fim do ano (Nov/Dez) e importamos o começo (Jan/Fev) -> É ano que vem
+                if (mesAtual >= 10 && mesIndex <= 1) {
+                    ano += 1;
+                }
+                // Se estamos no começo do ano (Jan/Fev) e mexemos no final (Nov/Dez) -> É do ano passado
+                else if (mesAtual <= 1 && mesIndex >= 10) {
+                    ano -= 1;
+                }
+            }
 
             return new Date(ano, mesIndex, dia, 12, 0, 0).getTime();
         }
-
         return 0;
+    };
+
+    // 🔥 FORMATADOR DE DATA USANDO A SUA LÓGICA OFICIAL
+    const formatarDataPorExtenso = (sem) => {
+        let dataBaseStr = null;
+
+        // 1. Tenta calcular a data exata da reunião usando a sua função que já funciona!
+        try {
+            dataBaseStr = getMeetingDateISOFromSemana({
+                semanaStr: sem?.semana,
+                config,
+                isoFallback: sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data
+            });
+        } catch (e) {
+            console.error("Erro ao tentar calcular a data da reunião:", e);
+        }
+
+        // 2. Fallbacks de segurança caso a função falhe ou não haja dia configurado
+        if (!dataBaseStr) {
+            dataBaseStr = sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
+        }
+
+        // 3. Salva-vidas: Extrai do título se o banco estiver vazio
+        if (!dataBaseStr && sem?.semana) {
+            const timeMs = getSortTime(sem);
+            if (timeMs > 0) {
+                const d = new Date(timeMs);
+                dataBaseStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+        }
+
+        if (!dataBaseStr) return null;
+
+        // 4. Converte a data final exata para texto por extenso (Quarta-feira, 15 de abril...)
+        try {
+            const dataBase = new Date(dataBaseStr + 'T12:00:00');
+            const opcoes = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dataFormatada = dataBase.toLocaleDateString(lang === 'es' ? 'es-ES' : 'pt-BR', opcoes);
+
+            return dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
+        } catch (e) {
+            return dataBaseStr;
+        }
     };
 
     const normalizeAndSortProgramacoes = (arr) => [...(arr || [])].sort((a, b) => {
@@ -163,11 +212,9 @@ const Designar = ({
 
     useEffect(() => {
         if (!Array.isArray(listaFiltradaPorFlag) || listaFiltradaPorFlag.length === 0) return;
-
         setSemanasSelecionadas((prev) => {
             const keysVisiveis = new Set(listaFiltradaPorFlag.map((s, i) => getSemanaKey(s, i)));
             const hasAnyVisibleSelected = Object.keys(prev).some(k => keysVisiveis.has(k) && prev[k]);
-
             if (!userClearedWeeksRef.current && !hasAnyVisibleSelected) {
                 const next = { ...prev };
                 listaFiltradaPorFlag.forEach((sem, idx) => { next[getSemanaKey(sem, idx)] = true; });
@@ -218,6 +265,31 @@ const Designar = ({
         setListaProgramacoesSafe(prev => prev.map((s, idx) => keys.includes(getSemanaKey(s, idx)) ? { ...s, arquivada: false, arquivadaEm: null } : s));
     };
 
+    // 🔥 EXCLUSÃO SUPER SEGURA (Limpa todo o histórico de alunos que caiu naquela semana inteira)
+    const handleExcluirSemana = async (semanaKey) => {
+        const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
+        if (!atual || !window.confirm(`Excluir a semana ${atual?.semana || semanaKey}?`)) return;
+
+        if (onExcluirSemana && atual.id) {
+            let dataBase = atual.dataExata || atual.dataInicio || atual.dataReuniao || atual.data;
+            if (!dataBase && atual.semana) {
+                const timeMs = getSortTime(atual);
+                if (timeMs > 0) {
+                    const d = new Date(timeMs);
+                    dataBase = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                }
+            }
+            await onExcluirSemana(atual.id, dataBase);
+        }
+
+        setSlotAtivo(null);
+        setModalEditarOpen(false);
+        setParteEditCtx(null);
+
+        setListaProgramacoesSafe(prev => prev.filter((s, idx) => getSemanaKey(s, idx) !== semanaKey));
+        setSemanasSelecionadas(prev => { const next = { ...prev }; delete next[semanaKey]; return next; });
+    };
+
     const apagarArquivadas = async () => {
         const keys = getSelectedKeys();
         let alvo = [];
@@ -231,7 +303,19 @@ const Designar = ({
         if (!window.confirm(`${TT.apagarArquivadas}? (${alvo.length})`)) return;
 
         if (onExcluirSemana) {
-            for (const item of alvo) { if (item.id) await onExcluirSemana(item.id); }
+            for (const item of alvo) {
+                if (item.id) {
+                    let dataBase = item.dataExata || item.dataInicio || item.dataReuniao || item.data;
+                    if (!dataBase && item.semana) {
+                        const timeMs = getSortTime(item);
+                        if (timeMs > 0) {
+                            const d = new Date(timeMs);
+                            dataBase = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        }
+                    }
+                    await onExcluirSemana(item.id, dataBase);
+                }
+            }
         }
 
         const idsApagados = new Set(alvo.map(a => a.id));
@@ -239,27 +323,11 @@ const Designar = ({
         setSemanasSelecionadas({});
         userClearedWeeksRef.current = true;
     };
-
-    const handleExcluirSemana = async (semanaKey) => {
-        const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
-        if (!atual || !window.confirm(`Excluir a semana ${atual?.semana || semanaKey}?`)) return;
-
-        if (onExcluirSemana && atual.id) await onExcluirSemana(atual.id);
-
-        setSlotAtivo(null);
-        setModalEditarOpen(false);
-        setParteEditCtx(null);
-
-        setListaProgramacoesSafe(prev => prev.filter((s, idx) => getSemanaKey(s, idx) !== semanaKey));
-        setSemanasSelecionadas(prev => { const next = { ...prev }; delete next[semanaKey]; return next; });
-    };
-
     const toggleArquivadaSemana = (semanaKey, arquivar) => {
         const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
         if (!atual) return;
         const msg = arquivar ? `${TT.arquivar} ${TT.semana} ${atual?.semana}?` : `${TT.restaurar} ${TT.semana} ${atual?.semana}?`;
         if (!window.confirm(msg)) return;
-
         setListaProgramacoesSafe(prev => prev.map((s, idx) => getSemanaKey(s, idx) === semanaKey ? { ...s, arquivada: arquivar, arquivadaEm: arquivar ? new Date().toISOString() : null } : s));
     };
 
@@ -313,6 +381,15 @@ const Designar = ({
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(targetSlot.semanaIndex) ? targetSlot.semanaIndex : semanaAtivaIndex);
         if (semanaRealIndex === -1) return;
 
+        const sem = listaProgramacoes[semanaRealIndex];
+
+        // 🔥 TRAVA: BLOQUEIA DESIGNAÇÃO SE FOR ASSEMBLEIA
+        if (isSemanaAssembleia(sem, config)) {
+            alert(`⛔ BLOQUEIO:\n\nA semana "${sem.semana}" está marcada como Assembleia ou Congresso.\nA atribuição de partes foi bloqueada.`);
+            if (targetSlot === slotAtivo) setSlotAtivo(null);
+            return;
+        }
+
         setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const semana = { ...lista[semanaRealIndex], partes: [...(lista[semanaRealIndex].partes || [])] };
@@ -326,9 +403,7 @@ const Designar = ({
             return lista;
         });
 
-        if (targetSlot === slotAtivo) {
-            setTimeout(() => setSlotAtivo(null), 10);
-        }
+        if (targetSlot === slotAtivo) { setTimeout(() => setSlotAtivo(null), 10); }
     };
 
     const aplicarSugestao = (aluno) => {
@@ -341,7 +416,7 @@ const Designar = ({
         setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const atual = lista[semanaRealIndex];
-            if (!atual) return lista;
+            if (!atual || isSemanaAssembleia(atual, config)) return lista; // Trava
             const semana = { ...atual, partes: [...(atual.partes || [])] };
             const idx = semana.partes.findIndex(p => p.id === parteId);
             if (idx === -1) return lista;
@@ -352,6 +427,11 @@ const Designar = ({
     };
 
     const abrirModalEditarParte = (parte, semanaIndexFiltrado) => {
+        const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
+        if (isSemanaAssembleia(sem, config)) {
+            alert("Ações bloqueadas em semana de Assembleia.");
+            return;
+        }
         setParteEditCtx({
             parteId: parte.id, semanaIndex: semanaIndexFiltrado,
             valores: { titulo: (parte?.titulo ?? '').toString(), descricao: (parte?.descricao ?? '').toString(), tempo: String(parte?.tempo ?? '') }
@@ -379,6 +459,9 @@ const Designar = ({
     };
 
     const handleExcluirParte = (parteId, semanaIndexFiltrado) => {
+        const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
+        if (isSemanaAssembleia(sem, config)) return; // Trava
+
         if (!window.confirm(TT.confirmarExcluirParte)) return;
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndexFiltrado);
         if (semanaRealIndex === -1) return;
@@ -522,7 +605,6 @@ const Designar = ({
     return (
         <div className="w-full min-h-screen bg-gray-50 relative font-sans text-gray-800">
 
-            {/* HEADER IMPORTADO SEPARADO E REFATORADO */}
             <DesignarHeader
                 TT={TT}
                 lang={lang}
@@ -585,7 +667,12 @@ const Designar = ({
                                         const eventoConfig = config?.eventosAnuais?.find(e => e.dataInicio === sem.dataInicio);
                                         const tipoEvento = eventoConfig?.tipo || sem.evento || 'normal';
                                         const isVisita = tipoEvento === 'visita';
-                                        const isAssembly = tipoEvento.includes('assembleia') || tipoEvento.includes('congresso');
+
+                                        // 🔥 TRAVA VISUAL: Verifica se é assembleia/congresso!
+                                        const isAssembly = isSemanaAssembleia(sem, config);
+
+                                        // 🔥 FORMATADOR INTELIGENTE (Mesma técnica do RevisarEnviar)
+                                        const displayDateExtenso = formatarDataPorExtenso(sem);
 
                                         const cardBgClass = isVisita ? 'bg-blue-50 border-blue-200'
                                             : isAssembly ? 'bg-yellow-50 border-yellow-200'
@@ -601,15 +688,16 @@ const Designar = ({
                                                         <h3 className="font-black text-[15px] text-gray-800 truncate flex items-center gap-2">
                                                             <span>{sem?.semana || `${TT.semana} ${idx + 1}`}</span>
                                                             {isVisita && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-600 text-white border border-blue-700 flex items-center gap-1 uppercase tracking-wider animate-pulse"><Briefcase size={10} /> {TT.visitaSC}</span>}
-                                                            {tipoEvento.includes('assembleia') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center gap-1"><Tent size={10} /> {TT.assembleia}</span>}
-                                                            {tipoEvento.includes('congresso') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1"><UsersRound size={10} /> {TT.congresso}</span>}
+                                                            {isAssembly && !tipoEvento.includes('congresso') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center gap-1"><Tent size={10} /> {TT.assembleia}</span>}
+                                                            {isAssembly && tipoEvento.includes('congresso') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1"><UsersRound size={10} /> {TT.congresso}</span>}
                                                         </h3>
                                                         <p className="text-[11px] text-gray-500 flex items-center gap-1">
-                                                            {sem?.dataReuniao ? (
+                                                            {displayDateExtenso ? (
                                                                 <>
                                                                     <Calendar size={10} />
-                                                                    <strong className={isVisita ? 'text-blue-700' : ''}>{sem.dataReuniao.split('-').reverse().join('/')}</strong>
-                                                                    {isVisita && ` ${TT.tercaFeira}`}
+                                                                    <strong className={isVisita ? 'text-blue-700' : ''}>
+                                                                        {displayDateExtenso}
+                                                                    </strong>
                                                                 </>
                                                             ) : <span>{TT.dataNaoDefinida}</span>}
                                                         </p>
@@ -624,13 +712,14 @@ const Designar = ({
                                                     </div>
                                                 </div>
 
+                                                {/* 🔥 AVISO CHAMATIVO NA TELA (Substitui as partes) */}
                                                 {isAssembly ? (
                                                     <div className="bg-white rounded-xl border-2 border-dashed border-yellow-300 p-6 text-center flex flex-col items-center justify-center gap-2">
                                                         <div className="bg-yellow-100 p-3 rounded-full text-yellow-600">
                                                             {tipoEvento.includes('congresso') ? <UsersRound size={32} /> : <Tent size={32} />}
                                                         </div>
                                                         <h3 className="text-lg font-bold text-gray-700">{TT.semanaDe} {tipoEvento.includes('congresso') ? TT.congresso : TT.assembleia}</h3>
-                                                        <p className="text-xs text-gray-500 max-w-md">{TT.semReuniao} {TT.quadroAviso}</p>
+                                                        <p className="text-xs text-gray-500 max-w-md">Não há reunião no meio de semana em épocas de evento especial. O quadro de anúncios não exibirá designações para esta data.</p>
                                                     </div>
                                                 ) : (
                                                     <>

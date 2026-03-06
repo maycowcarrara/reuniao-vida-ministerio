@@ -1,14 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ClipboardList, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, RefreshCcw, ExternalLink, ChevronLeft, Search } from 'lucide-react';
+import { ClipboardList, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, RefreshCcw, ExternalLink, ChevronLeft, Search, Ban } from 'lucide-react';
 import * as cheerio from 'cheerio';
 import { TRANSLATIONS } from '../../utils/importador/constants';
 import { isLikelyUrl, isLikelyHtml, proxyUrl, fetchHtmlViaProxy, normalizar } from '../../utils/importador/helpers';
 import { extrairDados } from '../../utils/importador/parser';
 import RevisarImportacao from './RevisarImportacao';
+// 🔥 IMPORTANDO O HOOK PARA VERIFICAR EVENTOS DO DASHBOARD
+import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
 
 export default function Importador({ onImportComplete, idioma = 'pt' }) {
     const lang = (idioma || 'pt').toLowerCase().startsWith('es') ? 'es' : 'pt';
     const t = TRANSLATIONS[lang];
+
+    // Puxando os eventos salvos no Dashboard
+    const { dados: appDados } = useGerenciadorDados();
 
     const [input, setInput] = useState('');
     const [url, setUrl] = useState('');
@@ -30,6 +35,50 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
 
     const CATALOG_BASE = lang === 'es' ? 'guia-actividades-reunion-testigos-jehova' : 'jw-apostila-do-mes';
     const CATALOG_URL = `https://www.jw.org/${lang === 'es' ? 'es' : 'pt'}/biblioteca/${CATALOG_BASE}/`;
+
+    // --- 🔥 HELPER INTELIGENTE DE BLOQUEIO DE ASSEMBLEIA ---
+    const verificarBloqueioAssembleia = (titulo) => {
+        if (!titulo) return false;
+        const eventosDashboard = appDados?.configuracoes?.eventosAnuais || [];
+        
+        // 1. Pela palavra no Título (caso o JW mencione Assembleia)
+        const ehTextoAssembleia = titulo.toLowerCase().includes('assembleia') || titulo.toLowerCase().includes('congresso');
+        if (ehTextoAssembleia) return true;
+
+        // 2. Extraindo o "Dia e Mês" do título para bater com o Dashboard
+        const str = titulo.toLowerCase();
+        const meses = [
+            'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
+            'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+        ];
+        
+        let mesIndex = -1;
+        for (let i = 0; i < meses.length; i++) {
+            if (str.includes(meses[i])) { mesIndex = i % 12; break; }
+        }
+        
+        // Apanha o primeiro número do texto (que é a segunda-feira)
+        const matchDia = str.match(/^(\d{1,2})/);
+        
+        if (mesIndex !== -1 && matchDia) {
+            const dia = parseInt(matchDia[1], 10);
+            
+            // Formata para bater com a parte final das datas no banco (ex: "-04-13")
+            const mm = String(mesIndex + 1).padStart(2, '0');
+            const dd = String(dia).padStart(2, '0');
+            const finalMMDD = `-${mm}-${dd}`; 
+            
+            // Procura se tem essa data cadastrada (ignoramos o ano para evitar bugs na virada do ano)
+            const conflito = eventosDashboard.find(ev => 
+                (ev.dataInicio && ev.dataInicio.endsWith(finalMMDD)) && 
+                (ev.tipo.includes('assembleia') || ev.tipo.includes('congresso'))
+            );
+            
+            if (conflito) return true;
+        }
+
+        return false;
+    };
 
     // --- EFEITOS E HANDLERS ---
 
@@ -66,7 +115,7 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
             if (href.includes(CATALOG_BASE) && href.includes('-mwb')) {
                const abs = new URL(href, 'https://www.jw.org').toString();
                const slug = abs.split('/').filter(Boolean).pop();
-               out.push({ slug, titulo: slug, url: abs }); // Simplificado, usar helper de slugToLabel se quiser
+               out.push({ slug, titulo: slug, url: abs }); 
             }
         });
         return [...new Map(out.map(x => [x.url, x])).values()];
@@ -110,6 +159,15 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
             }
             const dados = extrairDados(html, 'html', lang);
             if (!dados) throw new Error('Parse Error');
+
+            // 🔥 Trava de bloqueio para colar URL/Texto! Impede abrir a Revisão
+            const tituloSemana = dados.semana || '';
+            if (verificarBloqueioAssembleia(tituloSemana)) {
+                alert(`⛔ BLOQUEIO DE SEGURANÇA:\n\nA programação de "${tituloSemana}" recai numa semana que está marcada no Dashboard como Assembleia/Congresso.\n\nA importação foi bloqueada.`);
+                setLoading(false);
+                return; 
+            }
+
             setDadosParaEdicao(dados);
         } catch (e) {
             setErro(tipo === 'url' ? t.msgErro : t.erroConteudo);
@@ -194,12 +252,31 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                             </div>
                             {semanasLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
                                 <div className="space-y-2">
-                                    {semanas.map(w => (
-                                        <div key={w.url} className="border border-gray-200 bg-white rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <div className="font-extrabold text-gray-800">{w.titulo}</div>
-                                            <button onClick={() => processarImportacao(w.url, 'url')} disabled={loading} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-extrabold hover:bg-blue-700 transition inline-flex items-center gap-2">{loading ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={18} />} {t.importarSemana}</button>
-                                        </div>
-                                    ))}
+                                    {semanas.map(w => {
+                                        // 🔥 Verificador Atuando na Renderização da Lista
+                                        const isBloqueado = verificarBloqueioAssembleia(w.titulo);
+
+                                        return (
+                                            <div key={w.url} className={`border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isBloqueado ? 'border-yellow-200 bg-yellow-50/50' : 'border-gray-200 bg-white'}`}>
+                                                <div className="font-extrabold text-gray-800">
+                                                    {w.titulo}
+                                                    {isBloqueado && (
+                                                        <span className="flex items-center gap-1 mt-1 text-[10px] text-yellow-700 bg-yellow-200/50 px-2 py-0.5 rounded-full w-fit">
+                                                            <Ban size={10} /> Semana de Assembleia
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <button 
+                                                    onClick={() => processarImportacao(w.url, 'url')} 
+                                                    disabled={loading || isBloqueado} 
+                                                    className={`px-4 py-2 rounded-xl text-white font-extrabold transition inline-flex items-center gap-2 ${isBloqueado ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                                >
+                                                    {loading ? <Loader2 className="animate-spin" size={16} /> : isBloqueado ? <Ban size={18} /> : <CheckCircle size={18} />} 
+                                                    {isBloqueado ? 'Bloqueado' : t.importarSemana}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </>

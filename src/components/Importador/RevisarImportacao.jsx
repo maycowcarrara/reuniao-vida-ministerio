@@ -3,9 +3,11 @@ import { Edit, Plus, Info, CheckCircle, AlertTriangle, ArrowUp, ArrowDown, Trash
 import { TRANSLATIONS, SECAO_UI } from '../../utils/importador/constants';
 import { formatHm } from '../../utils/importador/helpers';
 import { calcularTotalInfo } from '../../utils/importador/parser';
+import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
 
 export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel, lang = 'pt' }) {
     const t = TRANSLATIONS[lang];
+    const { dados: appDados } = useGerenciadorDados();
 
     const totalInfo = useMemo(() => calcularTotalInfo(dados?.partes || [], lang), [dados, lang]);
     const totalMin = totalInfo.totalEfetivo;
@@ -41,6 +43,50 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
         return t.secaoNA;
     };
 
+    // 🔥 REGRA DE BLOQUEIO CORRIGIDA
+    const handleConfirm = () => {
+        // 1. Acessa as chaves corretas do seu banco de dados
+        const programacaoSalva = appDados?.historico_reunioes || []; 
+        const eventosCadastrados = appDados?.configuracoes?.eventosAnuais || []; 
+
+        const dataImportada = dados.dataInicio || dados.dataExata; 
+
+        // 2. Procura se a semana já foi salva com a flag de assembleia
+        const semanaConflito = programacaoSalva.find(
+            (p) => (dataImportada && (p.dataInicio === dataImportada || p.dataExata === dataImportada)) || p.semana === dados.semana
+        );
+
+        const ehAssembleiaNaProg = semanaConflito && (
+            (semanaConflito.tipo && (semanaConflito.tipo.includes('assembleia') || semanaConflito.tipo.includes('congresso'))) ||
+            (semanaConflito.evento && (semanaConflito.evento.includes('assembleia') || semanaConflito.evento.includes('congresso'))) ||
+            semanaConflito.eventoEspecial === true
+        );
+
+        // 3. Cruza a data da importação com a data dos eventos do Dashboard
+        const temEventoNoDashboard = eventosCadastrados.find(e =>
+            (e.dataInicio === dataImportada || e.dataInput === dataImportada) &&
+            (e.tipo.includes('assembleia') || e.tipo.includes('congresso'))
+        );
+
+        const ehAssembleiaNoTexto = dados.semana && (
+            dados.semana.toLowerCase().includes('assembleia') ||
+            dados.semana.toLowerCase().includes('congresso')
+        );
+
+        // APLICA O BLOQUEIO SE ENCONTRAR NO BANCO
+        if (ehAssembleiaNaProg || temEventoNoDashboard) {
+            alert(`⛔ BLOQUEIO DE SEGURANÇA:\n\nA data desta semana (${dataImportada}) está cadastrada no seu Dashboard como um evento especial (Assembleia/Congresso).\n\nComo não há reunião do meio de semana nessas datas, a importação foi cancelada.`);
+            return;
+        }
+
+        if (ehAssembleiaNoTexto) {
+            const prosseguir = window.confirm(`⚠️ AVISO:\n\nO título da programação importada indica que é uma semana de "Assembleia" ou "Congresso".\n\nTem certeza que deseja forçar a importação?`);
+            if (!prosseguir) return;
+        }
+
+        onConfirm(dados);
+    };
+
     return (
         <div className="max-w-4xl mx-auto space-y-6 bg-white p-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-2 pb-4 border-b">
@@ -52,10 +98,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
                     <button onClick={onCancel} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition">{t.cancelar}</button>
-                    <button 
-                        onClick={() => onConfirm(dados)} 
-                        className="px-8 py-2 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition active:scale-95"
-                    >
+                    <button onClick={handleConfirm} className="px-8 py-2 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition active:scale-95">
                         {t.confirmar}
                     </button>
                 </div>
@@ -75,26 +118,13 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                         <div className="text-[11px] opacity-80">{t.totalTempoEsperado}: 1:40–1:45 (100–105 min)</div>
                     </div>
                     {!totalOk && <div className="text-[11px] mt-1">{t.totalTempoAviso}</div>}
-                    <details className="mt-2">
-                        <summary className="cursor-pointer select-none text-[11px] opacity-80">{t.totalTempoDetalhes}</summary>
-                        <div className="mt-1 text-[11px] opacity-90 space-y-1">
-                            <div>{t.totalTempoSomaPartes}: {formatHm(totalInfo.totalVisivel)}</div>
-                            {totalInfo.bonusLeituraBiblia > 0 && <div>{t.totalTempoLeituraBiblia}</div>}
-                            {totalInfo.ministerioCount > 0 && <div>{t.totalTempoMinisterioTpl.replace('{n}', totalInfo.bonusMinisterio)}</div>}
-                        </div>
-                    </details>
                 </div>
             </div>
 
             <div className="space-y-4">
                 <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-inner">
                     <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block mb-1">{t.tituloSemana}</label>
-                    <input 
-                        type="text" 
-                        value={dados.semana} 
-                        onChange={(e) => setDados({ ...dados, semana: e.target.value })} 
-                        className="w-full bg-white/60 border border-blue-100 rounded-xl px-3 py-2 font-bold text-lg text-blue-900 outline-none focus:ring-4 focus:ring-blue-100" 
-                    />
+                    <input type="text" value={dados.semana} onChange={(e) => setDados({ ...dados, semana: e.target.value })} className="w-full bg-white/60 border border-blue-100 rounded-xl px-3 py-2 font-bold text-lg text-blue-900 outline-none focus:ring-4 focus:ring-blue-100" />
                 </div>
 
                 <div className="space-y-3">
@@ -103,12 +133,10 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                         return (
                             <div key={p.id} className={`relative border p-4 pt-8 rounded-2xl flex gap-4 items-start hover:shadow-sm transition-all border-l-4 ${ui.wrap} ${ui.left}`}>
                                 <div className={`absolute left-4 top-3 text-[10px] px-2 py-0.5 border rounded-full font-extrabold tracking-wide ${ui.chip}`}>{labelSecao(p.secao)}</div>
-                                
                                 <div className="flex flex-col gap-1">
                                     <button onClick={() => moverParte(idx, 'cima')} className="text-gray-300 hover:text-blue-500 p-1"><ArrowUp size={18} /></button>
                                     <button onClick={() => moverParte(idx, 'baixo')} className="text-gray-300 hover:text-blue-500 p-1"><ArrowDown size={18} /></button>
                                 </div>
-
                                 <div className="flex-1 grid grid-cols-12 gap-3 items-end">
                                     <div className="col-span-12 md:col-span-8">
                                         <label className="text-[9px] font-bold text-gray-500 uppercase">{t.rotulos.titulo}</label>
@@ -117,15 +145,6 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                                     <div className="col-span-6 md:col-span-2">
                                         <label className="text-[9px] font-bold text-gray-500 uppercase text-center block leading-none mb-1">{t.rotulos.tempo}</label>
                                         <input type="text" inputMode="numeric" value={p.tempo} onChange={(e) => updateParte(idx, 'tempo', e.target.value.replace(/[^\d]/g, ''))} className={`w-full h-10 text-center font-mono text-sm border rounded-xl px-3 py-2 bg-white/70 outline-none focus:ring-4 ${ui.focus}`} />
-                                    </div>
-                                    <div className="col-span-6 md:col-span-2">
-                                        <label className="text-[9px] font-bold text-gray-500 uppercase block leading-none mb-1">{t.rotulos.secao}</label>
-                                        <select value={p.secao} onChange={(e) => updateParte(idx, 'secao', e.target.value)} className={`w-full h-10 text-[10px] font-extrabold bg-white/70 border rounded-xl px-3 py-2 outline-none focus:ring-4 ${ui.focus}`}>
-                                            <option value="tesouros">{t.secaoTesouros}</option>
-                                            <option value="ministerio">{t.secaoMinisterio}</option>
-                                            <option value="vida">{t.secaoVida}</option>
-                                            <option value="">{t.secaoNA}</option>
-                                        </select>
                                     </div>
                                     <div className="col-span-12">
                                         <label className="text-[9px] font-bold text-gray-500 uppercase">{t.rotulos.detalhes}</label>
@@ -140,7 +159,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                 
                 <div className="flex gap-3 mt-4">
                     <button onClick={() => setDados({...dados, partes: [...dados.partes, { id: Math.random(), titulo: '', tempo: '5', tipo: 'parte', secao: 'tesouros', descricao: '' }]})} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 transition inline-flex items-center justify-center gap-2"><Plus size={18} /> {t.addLinha}</button>
-                    <button onClick={() => onConfirm(dados)} className="flex-1 px-4 py-3 bg-green-600 text-white rounded-2xl font-bold shadow hover:bg-green-700 transition inline-flex items-center justify-center gap-2"><CheckCircle size={18} /> {t.confirmar}</button>
+                    <button onClick={handleConfirm} className="flex-1 px-4 py-3 bg-green-600 text-white rounded-2xl font-bold shadow hover:bg-green-700 transition inline-flex items-center justify-center gap-2"><CheckCircle size={18} /> {t.confirmar}</button>
                 </div>
             </div>
         </div>
