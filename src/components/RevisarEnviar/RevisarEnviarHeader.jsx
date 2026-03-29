@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CalendarDays, Loader2, Calendar, X, Printer, Save } from 'lucide-react';
-import { iniciarSincronizacao } from '../../services/calendarSync';
+import { toast } from '../../utils/toast';
 
 const RevisarEnviarHeader = ({
     t,
@@ -88,6 +88,7 @@ const RevisarEnviarHeader = ({
         if (!onConfirmSync) return;
         setSincronizando(true);
         try {
+            const { iniciarSincronizacao } = await import('../../services/calendarSync');
             const res = await iniciarSincronizacao();
             if (res.sucesso) {
                 setTokenGoogle(res.token);
@@ -106,10 +107,11 @@ const RevisarEnviarHeader = ({
 
                 setModalCalendario(true);
             } else {
-                alert(`Erro ao acessar o Google: ${res.erro}`);
+                toast.error(res.erro, t.agendaGoogleError);
             }
         } catch (err) {
             console.error(err);
+            toast.error(err, t.agendaGoogleError);
         } finally {
             setSincronizando(false);
         }
@@ -129,7 +131,7 @@ const RevisarEnviarHeader = ({
     };
 
     return (
-        <div className="bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-gray-100 no-print shrink-0 relative flex flex-col gap-3">
+        <div className="bg-white p-2.5 sm:p-3 md:p-4 rounded-2xl shadow-sm border border-gray-100 no-print shrink-0 relative flex flex-col gap-2.5 sm:gap-3">
 
             {/* LINHA 1: ABAS, FILTROS E AÇÕES */}
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -184,9 +186,9 @@ const RevisarEnviarHeader = ({
                         <Save size={13} /> {t.btnGravarHistorico || 'Sincronizar Histórico'}
                     </button>
 
-                    <button onClick={handleSyncClick} disabled={sincronizando} className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full text-[11px] font-bold shadow-sm transition flex items-center gap-1.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed" title="Enviar as designações ativas para o seu Google Agenda">
+                    <button onClick={handleSyncClick} disabled={sincronizando} className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full text-[11px] font-bold shadow-sm transition flex items-center gap-1.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed" title={t.agendaHint}>
                         {sincronizando ? <Loader2 className="animate-spin" size={13} /> : <CalendarDays size={13} />}
-                        {sincronizando ? 'Conectando...' : 'Sincronizar Agenda'}
+                        {sincronizando ? t.agendaConnecting : t.agendaSync}
                     </button>
                 </div>
             </div>
@@ -254,8 +256,8 @@ const RevisarEnviarHeader = ({
                                 >
                                     <span className="truncate max-w-[80px] sm:max-w-[100px]">{s.semana?.split(' -')[0] || s.semana}</span>
                                     {isArq && (
-                                        <span className={`text-[9px] font-black px-1 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-                                            Arq
+                                <span className={`text-[9px] font-black px-1 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>
+                                            {t.badgeArquivada}
                                         </span>
                                     )}
                                 </button>
@@ -277,14 +279,14 @@ const RevisarEnviarHeader = ({
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
                         <div className="bg-indigo-600 p-4 flex justify-between items-center text-white">
                             <h3 className="font-bold text-sm flex items-center gap-2">
-                                <CalendarDays size={18} /> Escolha a Agenda
+                                <CalendarDays size={18} /> {t.agendaChoose}
                             </h3>
                             <button onClick={() => !enviando && setModalCalendario(false)} className="hover:text-indigo-200"><X size={20} /></button>
                         </div>
 
                         <div className="p-6 space-y-4">
                             <p className="text-xs text-gray-500">
-                                Encontramos as seguintes agendas na sua conta do Google. Em qual delas você deseja salvar os blocos de horário da reunião?
+                                {t.agendaChooseDescription}
                             </p>
 
                             <div className="relative">
@@ -297,7 +299,7 @@ const RevisarEnviarHeader = ({
                                 >
                                     {calendarios.map(cal => (
                                         <option key={cal.id} value={cal.id}>
-                                            {cal.nome} {cal.principal ? '(Principal)' : ''}
+                                            {cal.nome} {cal.principal ? `(${t.agendaPrimary})` : ''}
                                         </option>
                                     ))}
                                 </select>
@@ -305,11 +307,11 @@ const RevisarEnviarHeader = ({
 
                             <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
                                 <button onClick={() => setModalCalendario(false)} disabled={enviando} className="px-4 py-2 text-xs font-bold text-gray-400 hover:bg-gray-100 rounded-xl transition">
-                                    Cancelar
+                                    {t.agendaCancel}
                                 </button>
                                 <button onClick={handleConfirmar} disabled={enviando} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-95">
                                     {enviando ? <Loader2 className="animate-spin" size={14} /> : null}
-                                    {enviando ? 'Enviando Eventos...' : 'Confirmar e Salvar'}
+                                    {enviando ? t.agendaSendingEvents : t.agendaConfirmSave}
                                 </button>
                             </div>
                         </div>

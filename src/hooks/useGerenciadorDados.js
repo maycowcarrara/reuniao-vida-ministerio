@@ -7,12 +7,20 @@ import {
     setDoc,
     deleteDoc,
     writeBatch,
-    getDocs
+    getDocs,
+    query,
+    where
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { DEFAULT_CONFIG, normalizeSystemConfig } from '../config/appConfig';
+import {
+    markAllNotificationsRead,
+    markNotificationRead,
+    NOTIFICATIONS_COLLECTION
+} from '../services/notificacoesInternas';
 
 const ESTADO_INICIAL = {
-    configuracoes: { idioma: 'pt', nome_cong: '', dia_reuniao: 'Segunda-feira', horario: '19:30' },
+    configuracoes: DEFAULT_CONFIG,
     alunos: [],
     historico_reunioes: []
 };
@@ -20,14 +28,20 @@ const ESTADO_INICIAL = {
 export function useGerenciadorDados() {
     const [dados, setDados] = useState(ESTADO_INICIAL);
     const [usuario, setUsuario] = useState(null);
+    const [confirmacoes, setConfirmacoes] = useState([]);
+    const [notificacoes, setNotificacoes] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // 1. Monitorar Login
     useEffect(() => {
         const unsubAuth = onAuthStateChanged(auth, (user) => {
             setUsuario(user);
-            if (!user) {
+            if (user) {
+                setLoading(true);
+            } else {
                 setDados(ESTADO_INICIAL);
+                setConfirmacoes([]);
+                setNotificacoes([]);
                 setLoading(false);
             }
         });
@@ -38,13 +52,12 @@ export function useGerenciadorDados() {
     useEffect(() => {
         if (!usuario) return;
 
-        setLoading(true);
         const uid = usuario.uid;
         const basePath = `users/${uid}`;
 
         const unsubConfig = onSnapshot(doc(db, basePath, "configuracoes", "geral"), (docSnap) => {
             if (docSnap.exists()) {
-                setDados(prev => ({ ...prev, configuracoes: docSnap.data() }));
+                setDados(prev => ({ ...prev, configuracoes: normalizeSystemConfig(docSnap.data()) }));
             }
         });
 
@@ -61,10 +74,33 @@ export function useGerenciadorDados() {
             setLoading(false);
         });
 
+        const unsubConfirmacoes = onSnapshot(collection(db, basePath, "confirmacoes"), (snap) => {
+            const lista = snap.docs
+                .map((d) => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.lastResponseAtIso || '').localeCompare(a.lastResponseAtIso || ''));
+
+            setConfirmacoes(lista);
+        });
+
+        const notificationsQuery = query(
+            collection(db, NOTIFICATIONS_COLLECTION),
+            where('ownerUid', '==', uid)
+        );
+
+        const unsubNotifications = onSnapshot(notificationsQuery, (snap) => {
+            const lista = snap.docs
+                .map((d) => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.createdAtIso || '').localeCompare(a.createdAtIso || ''));
+
+            setNotificacoes(lista);
+        });
+
         return () => {
             unsubConfig();
             unsubAlunos();
             unsubProg();
+            unsubConfirmacoes();
+            unsubNotifications();
         };
     }, [usuario]);
 
@@ -73,14 +109,15 @@ export function useGerenciadorDados() {
     const salvarItem = async (colecao, id, objeto) => {
         if (!usuario) return;
         const path = `users/${usuario.uid}/${colecao}`;
-        const docRef = id ? doc(db, path, id) : doc(collection(db, path));
+        const idNormalizado = id != null ? String(id).trim() : '';
+        const docRef = idNormalizado ? doc(db, path, idNormalizado) : doc(collection(db, path));
         const objetoLimpo = JSON.parse(JSON.stringify(objeto));
         await setDoc(docRef, { ...objetoLimpo, id: docRef.id }, { merge: true });
     };
 
     const excluirItem = async (colecao, id) => {
         if (!usuario) return;
-        await deleteDoc(doc(db, `users/${usuario.uid}/${colecao}`, id));
+        await deleteDoc(doc(db, `users/${usuario.uid}/${colecao}`, String(id)));
     };
 
     // --- FUNÇÃO SIMPLIFICADA: EXCLUIR SEMANA ---
@@ -103,7 +140,7 @@ export function useGerenciadorDados() {
 
         try {
             const dadosImport = jsonFile.dadosSistema || jsonFile;
-            const cong = dadosImport.configuracoes || {};
+            const cong = normalizeSystemConfig(dadosImport.configuracoes || {});
             const alunos = Array.isArray(dadosImport.alunos) ? dadosImport.alunos : [];
             const programacao = Array.isArray(dadosImport.historico_reunioes) ? dadosImport.historico_reunioes :
                 Array.isArray(dadosImport.historicoreunioes) ? dadosImport.historicoreunioes :
@@ -126,7 +163,7 @@ export function useGerenciadorDados() {
                 if (!semana) return;
                 const semanaStr = String(semana.semana || '');
                 if (semanaStr.trim() !== '') {
-                    const semanaId = semanaStr.replace(/[\/\s]/g, '-');
+                    const semanaId = semanaStr.replace(/[/\s]/g, '-');
                     const ref = doc(db, `users/${uid}/programacao`, semanaId);
                     batch.set(ref, { ...semana, semana: semanaStr });
                 }
@@ -146,7 +183,7 @@ export function useGerenciadorDados() {
 
         try {
             const uid = usuario.uid;
-            const collections = ['alunos', 'programacao', 'configuracoes'];
+            const collections = ['alunos', 'programacao', 'configuracoes', 'confirmacoes'];
 
             // Firestore não deleta coleções inteiras nativamente, precisamos deletar doc por doc
             for (const colName of collections) {
@@ -171,14 +208,26 @@ export function useGerenciadorDados() {
         }
     };
 
+    const marcarNotificacaoComoLida = async (id) => {
+        await markNotificationRead(id);
+    };
+
+    const marcarTodasNotificacoesComoLidas = async () => {
+        await markAllNotificationsRead(notificacoes);
+    };
+
     return {
         dados,
+        confirmacoes,
+        notificacoes,
         loading,
         usuario,
         salvarItem,
         excluirItem,
         excluirSemanaELimparHistorico,
         importarBackupParaUsuario,
-        resetarConta
+        resetarConta,
+        marcarNotificacaoComoLida,
+        marcarTodasNotificacoesComoLidas
     };
 }

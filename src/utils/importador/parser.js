@@ -1,5 +1,13 @@
-import * as cheerio from 'cheerio';
 import { normalizar } from './helpers';
+import { getWeekStartISOFromSemana } from '../revisarEnviar/dates';
+
+let cheerioModulePromise;
+const loadCheerio = async () => {
+    if (!cheerioModulePromise) {
+        cheerioModulePromise = import('cheerio');
+    }
+    return cheerioModulePromise;
+};
 
 // --- HELPER FUNCTIONS INTERNAS ---
 
@@ -33,8 +41,8 @@ const limparTexto = (txt) => {
     if (!txt) return '';
     let out = txt.toString();
     out = out.replace(/<[^>]*>?/gm, ' ');
-    out = out.replace(/\[([^\]]+)\]\((jwpub|https?):\/\/[^\)]+\)/gi, '$1');
-    out = out.replace(/\((jwpub|https?):\/\/[^\)]+\)/gi, ' ');
+    out = out.replace(/\[([^\]]+)\]\((jwpub|https?):\/\/[^)]+\)/gi, '$1');
+    out = out.replace(/\((jwpub|https?):\/\/[^)]+\)/gi, ' ');
     out = out.replace(/Sua resposta|Respuesta/gi, ' ');
     out = out.replace(/PERGUNTE-SE:|PREGUNTE-SE:|PREGÚNTESE:|PREGUNTESE:/gi, ' ');
     out = out.replace(/_{3,}/g, ' ');
@@ -99,7 +107,8 @@ const extractSemanaLeituraFromText = (rawText) => {
     return { semana, leitura };
 };
 
-const extrairTextoDoHtmlJW = (html) => {
+const extrairTextoDoHtmlJW = async (html) => {
+    const cheerio = await loadCheerio();
     const $ = cheerio.load(html);
     const weekHeader = $('article header h1').first().text().trim() || '';
     const leituraHeader = $('article header h2').first().text().replace(/\s+/g, ' ').trim() || '';
@@ -150,13 +159,12 @@ const findFirstVidaCanticoIndex = (partes) => {
 
 // --- FUNÇÕES PRINCIPAIS DE EXPORTAÇÃO ---
 
-export const calcularTotalInfo = (partes, lang) => {
+export const calcularTotalInfo = (partes) => {
     const list = Array.isArray(partes) ? partes : [];
     const idxCanticoVida = findFirstVidaCanticoIndex(list);
     const isBibleReadingPart = (p) => {
         const titulo = normalizar(p?.titulo || '');
-        if (lang === 'es') return titulo.includes('lectura de la biblia');
-        return titulo.includes('leitura da biblia');
+        return titulo.includes('lectura de la biblia') || titulo.includes('leitura da biblia');
     };
 
     const getMin = (p, idx) => {
@@ -172,14 +180,21 @@ export const calcularTotalInfo = (partes, lang) => {
     return { totalVisivel, bonusLeituraBiblia, ministerioCount, bonusMinisterio: ministerioCount, totalEfetivo };
 };
 
-export const extrairDados = (conteudo, tipoOrigem, lang) => {
+export const extrairDados = async (conteudo, tipoOrigem, lang) => {
     const termos = getTermos(lang);
     let textoProcessar = conteudo || '';
     let semanaStr = null;
     let leituraSemanal = null;
+    let weekHeader = '';
+    let breadcrumb = '';
+    let pageTitle = '';
+    let ogTitle = '';
 
     if (tipoOrigem === 'html') {
-        const { texto, ogTitle, breadcrumb, pageTitle, weekHeader, leituraHeader } = extrairTextoDoHtmlJW(conteudo);
+        const extraido = await extrairTextoDoHtmlJW(conteudo);
+        const { texto, leituraHeader } = extraido;
+
+        ({ ogTitle, breadcrumb, pageTitle, weekHeader } = extraido);
         textoProcessar = texto;
         semanaStr = (weekHeader && weekHeader.trim()) || extrairSemanaDeString(breadcrumb) ||
             extrairSemanaDeString(pageTitle) || extrairSemanaDeString(ogTitle) || null;
@@ -362,8 +377,15 @@ export const extrairDados = (conteudo, tipoOrigem, lang) => {
 
     if (!merged.length) return null;
 
+    const dataInicio = getWeekStartISOFromSemana({
+        semanaStr,
+        isoFallback: null,
+        textSources: [weekHeader, breadcrumb, pageTitle, ogTitle, bruto, semanaStr]
+    });
+
     return {
         semana: leituraSemanal ? `${semanaStr} - ${leituraSemanal}` : semanaStr,
+        dataInicio,
         partes: merged,
         presidente: null,
         leitor: null,

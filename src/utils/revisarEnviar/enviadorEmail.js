@@ -1,9 +1,15 @@
-import emailjs from '@emailjs/browser';
-
 // 🔒 Puxando as chaves de forma segura do arquivo .env
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+let emailJsModulePromise;
+const loadEmailJs = async () => {
+    if (!emailJsModulePromise) {
+        emailJsModulePromise = import('@emailjs/browser');
+    }
+    return emailJsModulePromise;
+};
 
 export const enviarEmailAutomatico = async (payload) => {
     // Validação de segurança: se não tem e-mail, não tenta enviar
@@ -18,12 +24,17 @@ export const enviarEmailAutomatico = async (payload) => {
         Data: payload.Data || "—",
         Desig: payload.Desig || "—",
         Sala: payload.Sala || "Principal",
-        Link: payload.Link || "",
+        Link: payload.Link || payload.LinkConfirmacao || "",
+        LinkConfirmacao: payload.LinkConfirmacao || payload.Link || "",
+        LinkConfirmar: payload.LinkConfirmar || "",
+        LinkRecusar: payload.LinkRecusar || "",
+        LinkAgenda: payload.LinkAgenda || "",
         email_destino: payload.email_destino
     };
 
     try {
-        const resposta = await emailjs.send(
+        const emailjs = await loadEmailJs();
+        const resposta = await emailjs.default.send(
             EMAILJS_SERVICE_ID,
             EMAILJS_TEMPLATE_ID,
             templateParams,

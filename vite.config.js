@@ -2,6 +2,30 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const normalizePath = (value = '') => value.replace(/\\/g, '/')
+
+const getReadableChunkName = (chunkInfo) => {
+  const preferredName = chunkInfo.name && chunkInfo.name !== 'index' ? chunkInfo.name : ''
+  if (preferredName) return preferredName
+
+  const candidateIds = [
+    chunkInfo.facadeModuleId,
+    ...(chunkInfo.moduleIds || [])
+  ]
+    .filter(Boolean)
+    .map(normalizePath)
+
+  const sourceId = candidateIds.find((id) => id.includes('/src/')) || candidateIds[0]
+  if (!sourceId) return 'chunk'
+
+  const parts = sourceId.split('/')
+  const fileName = parts[parts.length - 1] || ''
+  const baseName = fileName.replace(/\.[^.]+$/, '')
+
+  if (baseName && baseName !== 'index') return baseName
+  return parts[parts.length - 2] || 'chunk'
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -47,14 +71,40 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        chunkFileNames(chunkInfo) {
+          return `assets/${getReadableChunkName(chunkInfo)}-[hash].js`
+        },
         manualChunks(id) {
-          // Se o arquivo vier de "node_modules", é uma biblioteca
           if (id.includes('node_modules')) {
-            // Vamos separar o Firebase em um arquivo só pra ele (é o mais pesado)
-            if (id.includes('firebase')) {
-              return 'firebase';
+            if (id.includes('firebase/auth')) {
+              return 'firebase-auth';
             }
-            // O resto das bibliotecas (React, Lucide, etc) vai para "vendor"
+            if (id.includes('firebase/firestore')) {
+              return 'firebase-firestore';
+            }
+            if (id.includes('firebase/app')) {
+              return 'firebase-core';
+            }
+            if (id.includes('firebase')) {
+              return 'firebase-misc';
+            }
+            if (
+              id.includes('react-router') ||
+              id.includes('react-dom') ||
+              id.includes('react/') ||
+              id.includes('scheduler')
+            ) {
+              return 'framework';
+            }
+            if (id.includes('@emailjs/browser')) {
+              return 'email';
+            }
+            if (id.includes('cheerio')) {
+              return 'importador';
+            }
+            if (id.includes('lucide-react')) {
+              return 'ui-icons';
+            }
             return 'vendor';
           }
         }

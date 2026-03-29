@@ -5,6 +5,29 @@ import {
 } from 'lucide-react';
 // Importa o package.json diretamente para ler a versão
 import packageJson from '../../package.json';
+import { formatText, useSectionMessages } from '../i18n';
+
+function SidebarButton({ active, onClick, icon, label, badge, sidebarOpen }) {
+    const iconElement = React.createElement(icon, { size: 18, className: 'shrink-0' });
+
+    return (
+        <button
+            onClick={onClick}
+            className={`w-full flex items-center justify-between px-4 py-3 transition-all border-l-4 ${active
+                ? 'bg-blue-800 border-white text-white'
+                : 'border-transparent text-blue-100 hover:bg-blue-700'
+                }`}
+        >
+            <div className="flex items-center gap-3">
+                {iconElement}
+                {sidebarOpen && <span className="text-sm font-medium whitespace-nowrap">{label}</span>}
+            </div>
+            {sidebarOpen && badge > 0 && (
+                <span className="bg-blue-900 px-2 py-0.5 rounded-full text-[10px]">{badge}</span>
+            )}
+        </button>
+    );
+}
 
 export default function Sidebar({
     sidebarOpen,
@@ -14,12 +37,14 @@ export default function Sidebar({
     usuario,
     logout,
     listaProgramacoes,
+    alunos = [],
     t,
-    lang, // RECEBE O IDIOMA DO APP.JSX
     toggleFullscreen
 }) {
     const versaoSistema = packageJson.version;
     const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const totalSemanasAtivas = (listaProgramacoes || []).filter(semana => !semana?.arquivada).length;
+    const totalAlunosAtivos = (alunos || []).filter(aluno => aluno?.tipo !== 'desab').length;
 
     // --- ESCUTA O EVENTO DE INSTALAÇÃO DO PWA ---
     useEffect(() => {
@@ -50,26 +75,8 @@ export default function Sidebar({
         }
     };
 
-    // --- GARANTIA DE IDIOMA ---
-    const currentLang = lang === 'es' ? 'es' : 'pt';
-
-    // --- DICIONÁRIO LOCAL DA SIDEBAR ---
-    const SIDEBAR_TEXTS = {
-        pt: {
-            telaCheia: "Tela Cheia",
-            versao: "Versão do Sistema",
-            sair: "Sair da Conta",
-            instalarApp: "Instalar Aplicativo",
-            alertaAtualizacao: `Versão Atual: ${versaoSistema}\n\nDeseja recarregar a página para verificar atualizações no sistema?`
-        },
-        es: {
-            telaCheia: "Pantalla Completa",
-            versao: "Versión del Sistema",
-            sair: "Cerrar Sesión",
-            instalarApp: "Instalar Aplicación",
-            alertaAtualizacao: `Versión Actual: ${versaoSistema}\n\n¿Deseas recargar la página para buscar actualizaciones en el sistema?`
-        }
-    }[currentLang];
+    const SIDEBAR_TEXTS = useSectionMessages('sidebar');
+    const alertaAtualizacao = formatText(SIDEBAR_TEXTS.alertaAtualizacao, { version: versaoSistema });
 
     // Quando clica num botão, muda a aba e, se estiver no celular, fecha o menu automaticamente
     const handleTabClick = (id) => {
@@ -78,24 +85,6 @@ export default function Sidebar({
             setSidebarOpen(false);
         }
     };
-
-    const SidebarButton = ({ id, icon: Icon, label, badge }) => (
-        <button
-            onClick={() => handleTabClick(id)}
-            className={`w-full flex items-center justify-between px-4 py-3 transition-all border-l-4 ${abaAtiva === id
-                ? 'bg-blue-800 border-white text-white'
-                : 'border-transparent text-blue-100 hover:bg-blue-700'
-                }`}
-        >
-            <div className="flex items-center gap-3">
-                <Icon size={18} className="shrink-0" />
-                {sidebarOpen && <span className="text-sm font-medium whitespace-nowrap">{label}</span>}
-            </div>
-            {sidebarOpen && badge > 0 && (
-                <span className="bg-blue-900 px-2 py-0.5 rounded-full text-[10px]">{badge}</span>
-            )}
-        </button>
-    );
 
     return (
         <>
@@ -131,13 +120,13 @@ export default function Sidebar({
 
                 {/* Navegação Principal */}
                 <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden">
-                    <SidebarButton id="dashboard" icon={Home} label={t.inicio || "Início"} />
-                    <SidebarButton id="importar" icon={Calendar} label={t.importar} />
-                    <SidebarButton id="designar" icon={LayoutDashboard} label={t.designar} badge={listaProgramacoes.length} />
-                    <SidebarButton id="revisar" icon={Send} label={t.revisar} />
-                    <SidebarButton id="alunos" icon={Users} label={t.alunos} />
+                    <SidebarButton active={abaAtiva === 'dashboard'} onClick={() => handleTabClick('dashboard')} icon={Home} label={t.inicio || "Início"} sidebarOpen={sidebarOpen} />
+                    <SidebarButton active={abaAtiva === 'importar'} onClick={() => handleTabClick('importar')} icon={Calendar} label={t.importar} sidebarOpen={sidebarOpen} />
+                    <SidebarButton active={abaAtiva === 'designar'} onClick={() => handleTabClick('designar')} icon={LayoutDashboard} label={t.designar} badge={totalSemanasAtivas} sidebarOpen={sidebarOpen} />
+                    <SidebarButton active={abaAtiva === 'revisar'} onClick={() => handleTabClick('revisar')} icon={Send} label={t.revisar} sidebarOpen={sidebarOpen} />
+                    <SidebarButton active={abaAtiva === 'alunos'} onClick={() => handleTabClick('alunos')} icon={Users} label={t.alunos} badge={totalAlunosAtivos} sidebarOpen={sidebarOpen} />
                     <div className="mt-4 border-t border-blue-500/30 pt-2">
-                        <SidebarButton id="configuracoes" icon={Settings} label={t.configuracoes || t.ajustes || "Configurações"} />
+                        <SidebarButton active={abaAtiva === 'configuracoes'} onClick={() => handleTabClick('configuracoes')} icon={Settings} label={t.configuracoes || t.ajustes} sidebarOpen={sidebarOpen} />
                     </div>
                 </nav>
 
@@ -168,8 +157,8 @@ export default function Sidebar({
                         {/* Botão de Versão (Verificar Atualizações) */}
                         <button
                             onClick={() => {
-                                if (window.confirm(SIDEBAR_TEXTS.alertaAtualizacao)) {
-                                    window.location.reload(true);
+                                if (window.confirm(alertaAtualizacao)) {
+                                    window.location.reload();
                                 }
                             }}
                             className="flex w-full items-center justify-between px-2 py-2 text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-800/50 rounded-md transition-colors"
@@ -192,7 +181,7 @@ export default function Sidebar({
                                     src={usuario.photoURL}
                                     className="w-8 h-8 rounded-full border border-blue-300"
                                     referrerPolicy="no-referrer"
-                                    alt="Perfil"
+                                    alt={SIDEBAR_TEXTS.avatarAlt}
                                 />
                             ) : (
                                 <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white border border-blue-400">

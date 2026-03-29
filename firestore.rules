@@ -1,0 +1,209 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdminEmail() {
+      return request.auth.token.email in [
+        "maycowcarrara@gmail.com",
+        "carraramaycow@gmail.com"
+      ];
+    }
+
+    function isAdminUser(userId) {
+      return isSignedIn()
+        && request.auth.uid == userId
+        && isAdminEmail();
+    }
+
+    function isConfirmationStatus(status) {
+      return status in ["pendente", "confirmado", "nao_pode"];
+    }
+
+    function confirmationMutableKeys() {
+      return [
+        "status",
+        "previousStatus",
+        "responseHistory",
+        "lastResponseSource",
+        "lastResponseActorType",
+        "updatedAt",
+        "lastResponseAt",
+        "lastResponseAtIso",
+        "confirmedAt",
+        "declinedAt",
+        "lastStatusChangeAtIso",
+        "lastStatusChangeFrom",
+        "lastStatusChangeTo",
+        "lastStatusChangeKey",
+        "alertPending",
+        "alertSeenAt",
+        "lastReminderSentAt"
+      ];
+    }
+
+    function confirmationBaseKeys() {
+      return [
+        "token",
+        "assignmentKey",
+        "ownerUid",
+        "lang",
+        "semana",
+        "dataISO",
+        "tituloParte",
+        "pessoaNome",
+        "role",
+        "congregacaoNome",
+        "agendaLink",
+        "sala",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "previousStatus",
+        "responseHistory",
+        "lastResponseSource",
+        "lastResponseActorType",
+        "lastResponseAt",
+        "lastResponseAtIso",
+        "confirmedAt",
+        "declinedAt",
+        "lastStatusChangeAtIso",
+        "lastStatusChangeFrom",
+        "lastStatusChangeTo",
+        "lastStatusChangeKey",
+        "alertPending",
+        "alertSeenAt",
+        "lastReminderSentAt",
+        "id"
+      ];
+    }
+
+    function publicConfirmationDoc(token) {
+      return get(/databases/$(database)/documents/confirmacoes_publicas/$(token));
+    }
+
+    function matchesPublicConfirmation(userId, assignmentKey) {
+      return request.resource.data.token is string
+        && request.resource.data.token.size() > 0
+        && exists(/databases/$(database)/documents/confirmacoes_publicas/$(request.resource.data.token))
+        && publicConfirmationDoc(request.resource.data.token).data.ownerUid == userId
+        && publicConfirmationDoc(request.resource.data.token).data.assignmentKey == assignmentKey;
+    }
+
+    function isValidPublicConfirmationMirrorUpdate(userId, assignmentKey) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(confirmationMutableKeys())
+        && request.resource.data.token == resource.data.token
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.assignmentKey == resource.data.assignmentKey
+        && matchesPublicConfirmation(userId, assignmentKey)
+        && isConfirmationStatus(request.resource.data.status);
+    }
+
+    function isValidPublicConfirmationUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(confirmationMutableKeys())
+        && request.resource.data.token == resource.data.token
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.assignmentKey == resource.data.assignmentKey
+        && request.resource.data.pessoaNome == resource.data.pessoaNome
+        && request.resource.data.tituloParte == resource.data.tituloParte
+        && isConfirmationStatus(request.resource.data.status);
+    }
+
+    function isValidNotificationCreate() {
+      return request.resource.data.keys().hasOnly([
+        "id",
+        "ownerUid",
+        "type",
+        "title",
+        "description",
+        "token",
+        "assignmentKey",
+        "dataISO",
+        "semana",
+        "pessoaNome",
+        "status",
+        "previousStatus",
+        "meta",
+        "readAt",
+        "readAtIso",
+        "createdAt",
+        "createdAtIso"
+      ])
+      && request.resource.data.token is string
+      && request.resource.data.token.size() > 0
+      && exists(/databases/$(database)/documents/confirmacoes_publicas/$(request.resource.data.token))
+      && publicConfirmationDoc(request.resource.data.token).data.ownerUid == request.resource.data.ownerUid
+      && publicConfirmationDoc(request.resource.data.token).data.assignmentKey == request.resource.data.assignmentKey
+      && request.resource.data.type == "confirmacao_status";
+    }
+
+    match /users/{userId}/configuracoes/{docId} {
+      allow read: if true;
+      allow write: if isAdminUser(userId);
+    }
+
+    match /users/{userId}/programacao/{docId} {
+      allow read: if true;
+      allow write: if isAdminUser(userId);
+    }
+
+    match /users/{userId}/confirmacoes/{assignmentKey} {
+      allow read: if isAdminUser(userId);
+      allow create: if isAdminUser(userId)
+        && request.resource.data.keys().hasOnly(confirmationBaseKeys())
+        && request.resource.data.ownerUid == userId
+        && isConfirmationStatus(request.resource.data.status);
+      allow update: if isAdminUser(userId)
+        || isValidPublicConfirmationMirrorUpdate(userId, assignmentKey);
+      allow delete: if isAdminUser(userId);
+    }
+
+    match /users/{userId}/{document=**} {
+      allow read, write: if isAdminUser(userId);
+    }
+
+    match /confirmacoes_publicas/{token} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && isAdminEmail()
+        && request.resource.data.keys().hasOnly(confirmationBaseKeys())
+        && isConfirmationStatus(request.resource.data.status);
+      allow update: if (
+          isSignedIn()
+          && request.auth.uid == resource.data.ownerUid
+          && isAdminEmail()
+        ) || isValidPublicConfirmationUpdate();
+      allow delete: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUid
+        && isAdminEmail();
+    }
+
+    match /notificacoes/{notificationId} {
+      allow read: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUid
+        && isAdminEmail();
+
+      allow create: if (
+          isSignedIn()
+          && request.auth.uid == request.resource.data.ownerUid
+          && isAdminEmail()
+        ) || isValidNotificationCreate();
+
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUid
+        && isAdminEmail()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "readAt",
+          "readAtIso"
+        ]);
+
+      allow delete: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUid
+        && isAdminEmail();
+    }
+  }
+}

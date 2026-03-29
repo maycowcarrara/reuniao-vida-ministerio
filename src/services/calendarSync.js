@@ -1,5 +1,7 @@
 // 1. Função para Autenticar e pegar os Calendários do utilizador
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { normalizeLanguage } from '../config/appConfig';
+import { getSectionMessages } from '../i18n';
 
 export const iniciarSincronizacao = async () => {
     const auth = getAuth();
@@ -17,14 +19,14 @@ export const iniciarSincronizacao = async () => {
         const credential = GoogleAuthProvider.credentialFromResult(result);
         const token = credential.accessToken;
 
-        if (!token) throw new Error("Não foi possível obter o token de acesso.");
+        if (!token) throw new Error(getSectionMessages('calendarSync', 'pt').tokenErro);
 
         const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
 
-        if (!data.items) throw new Error("Nenhum calendário encontrado na sua conta.");
+        if (!data.items) throw new Error(getSectionMessages('calendarSync', 'pt').nenhumCalendario);
 
         return {
             sucesso: true,
@@ -49,35 +51,8 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
         const horarioPadrao = configuracoes?.horario || "19:30";
 
         // 🔥 Detecta o idioma para as tags e textos dinâmicos
-        const lang = (configuracoes?.idioma || 'pt').toString().trim().toLowerCase().startsWith('es') ? 'es' : 'pt';
-
-        // Dicionário de traduções para a Agenda
-        const textos = {
-            pt: {
-                presidenteReuniao: "Presidente da Reunião",
-                presidente: "Presidente",
-                oracaoInicial: "Oração Inicial",
-                oracaoFinal: "Oração Final",
-                com: "com",
-                leitor: "leitor",
-                progReuniao: "Programação da Reunião",
-                detalhesParte: "Detalhes da sua parte",
-                geradoAuto: "Gerado automaticamente pelo Gerenciador RVM",
-                descPresidente: "Você é o presidente da reunião desta semana."
-            },
-            es: {
-                presidenteReuniao: "Presidente de la Reunión",
-                presidente: "Presidente",
-                oracaoInicial: "Oración Inicial",
-                oracaoFinal: "Oración Final",
-                com: "con",
-                leitor: "lector",
-                progReuniao: "Programa de la Reunión",
-                detalhesParte: "Detalles de su asignación",
-                geradoAuto: "Generado automáticamente por el Gestor RVM",
-                descPresidente: "Usted es el presidente de la reunión de esta semana."
-            }
-        }[lang];
+        const lang = normalizeLanguage(configuracoes?.idioma);
+        const textos = getSectionMessages('calendarSync', lang);
 
         // 🔥 FUNÇÃO INTELIGENTE DE ENVIO (Cria ou Atualiza)
         const enviarParaGoogle = async (evento) => {

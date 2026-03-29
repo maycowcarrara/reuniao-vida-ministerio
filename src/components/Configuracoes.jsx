@@ -11,8 +11,11 @@ import {
     Globe,
     ChevronDown
 } from 'lucide-react';
+import { toast } from '../utils/toast';
+import { useSectionMessages } from '../i18n';
+import { getWeekdayOptions, normalizeLanguage, normalizeMeetingDay } from '../config/appConfig';
 
-export default function Configuracoes({ dados, salvarAlteracao, t, lang, importarBackup, resetarConta }) {
+export default function Configuracoes({ dados, salvarAlteracao, lang, importarBackup, resetarConta }) {
     const fileInputRef = useRef(null);
     const [processando, setProcessando] = useState(false);
 
@@ -26,63 +29,17 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
         }
     }, [dados?.configuracoes?.nome_cong]);
 
-    // --- TRADUÇÕES LOCAIS ---
-    const TEXTOS = {
-        pt: {
-            titulo: "Ajustes do Sistema",
-            congregacao: "Nome da Congregação",
-            dia: "Dia da Reunião",
-            horario: "Horário",
-            idioma: "Idioma do Sistema",
-            backupTitulo: "Backup e Segurança",
-            backupDesc: "Baixe uma cópia completa dos seus dados para o seu dispositivo.",
-            btnBaixar: "Baixar Backup (JSON)",
-            zonaPerigo: "Zona de Restauração",
-            restaurarTitulo: "Restaurar Backup",
-            restaurarDesc: "Apaga os dados atuais da sua conta e importa um arquivo de backup do seu dispositivo.",
-            btnRestaurar: "Restaurar Arquivo",
-            confirmarRestauracao: "⚠️ PERIGO: Isso vai APAGAR todos os dados da sua conta atual e substituir pelo arquivo selecionado.\n\nTem certeza que deseja continuar?",
-            sucesso: "✅ Backup restaurado com sucesso!",
-            erro: "Erro ao restaurar: ",
-            dias: ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo']
-        },
-        es: {
-            titulo: "Ajustes del Sistema",
-            congregacao: "Nombre de la Congregación",
-            dia: "Día de la Reunión",
-            horario: "Horario",
-            idioma: "Idioma del Sistema",
-            backupTitulo: "Copia de Seguridad",
-            backupDesc: "Descargue una copia completa de sus datos a su dispositivo.",
-            btnBaixar: "Descargar Respaldo (JSON)",
-            zonaPerigo: "Zona de Restauración",
-            restaurarTitulo: "Restaurar Respaldo",
-            restaurarDesc: "Borra los datos actuales de su cuenta e importa un archivo de respaldo desde su dispositivo.",
-            btnRestaurar: "Restaurar Archivo",
-            confirmarRestauracao: "⚠️ PELIGRO: Esto BORRARÁ todos los datos de su cuenta actual y los reemplazará con el archivo seleccionado.\n\n¿Está seguro de continuar?",
-            sucesso: "✅ ¡Respaldo restaurado con éxito!",
-            erro: "Error al restaurar: ",
-            dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-        }
-    };
-
-    const T = TEXTOS[lang] || TEXTOS.pt;
-    const DIAS_FIXOS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+    const T = useSectionMessages('configuracoes');
+    const activeLocale = normalizeLanguage(lang);
+    const isPortugueseActive = activeLocale === 'pt';
+    const isSpanishActive = activeLocale === 'es';
+    const meetingDay = normalizeMeetingDay(dados?.configuracoes?.dia_reuniao);
+    const weekdayOptions = getWeekdayOptions(lang);
     const atualizarConfig = (campo, valor) => {
         salvarAlteracao({
             ...dados,
             configuracoes: { ...dados.configuracoes, [campo]: valor }
         });
-    };
-
-    // Função para tratar o dia da reunião garantindo que seja um índice numérico
-    const getDiaReuniaoIndex = () => {
-        const valorSalvo = dados?.configuracoes?.dia_reuniao;
-        if (typeof valorSalvo === 'number') return valorSalvo; // Já é índice
-
-        // Se for string (legado), tenta achar a posição para não quebrar o que já existe
-        const indexEncontrado = TEXTOS.pt.dias.indexOf(valorSalvo);
-        return indexEncontrado !== -1 ? indexEncontrado : 0; // Padrão 0 (Segunda)
     };
 
     // --- 1. EXPORTAR (DOWNLOAD) ---
@@ -136,19 +93,19 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
 
             await importarBackup(jsonImportado);
 
-            alert(T.sucesso);
+            toast.success(T.sucesso);
             e.target.value = '';
 
         } catch (error) {
             console.error(error);
-            alert(T.erro + error.message);
+            toast.error(error, T.erro.trim());
         } finally {
             setProcessando(false);
         }
     };
 
     return (
-        <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 sm:p-6">
+        <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6 px-3 pt-3 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500 sm:p-6">
 
             <input
                 type="file"
@@ -164,7 +121,7 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
                 </div>
                 <div>
                     <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">{T.titulo}</h2>
-                    <p className="text-xs sm:text-sm font-medium text-slate-500">Gerencie as preferências locais</p>
+                    <p className="text-xs sm:text-sm font-medium text-slate-500">{T.subtitulo}</p>
                 </div>
             </div>
 
@@ -172,7 +129,7 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
 
                 <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-2 sm:mb-4">
-                    Preferências Gerais
+                    {T.preferenciasGerais}
                 </h3>
 
                 <div className="space-y-4 sm:space-y-5">
@@ -184,7 +141,7 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
                             <Building2 size={18} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
                             <input
                                 type="text"
-                                placeholder="Ex: Congregação Central"
+                                placeholder={T.placeholderCongregacao}
                                 value={nomeCongLocal}
                                 onChange={(e) => setNomeCongLocal(e.target.value)}
                                 onBlur={() => atualizarConfig('nome_cong', nomeCongLocal)}
@@ -201,14 +158,13 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
                             <div className="relative">
                                 <CalendarIcon size={18} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
                                 <select
-                                    value={dados?.configuracoes?.dia_reuniao || 'Segunda-feira'}
+                                    value={meetingDay}
                                     onChange={(e) => atualizarConfig('dia_reuniao', e.target.value)}
                                     className="w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-800 font-bold appearance-none cursor-pointer text-base sm:text-sm"
                                 >
-                                    {/* O valor salvo é sempre o DIAS_FIXOS (pt), mas o texto exibido é o do idioma atual (T.dias) */}
-                                    {DIAS_FIXOS.map((diaFixo, index) => (
-                                        <option key={diaFixo} value={diaFixo}>
-                                            {T.dias[index]}
+                                    {weekdayOptions.map((day) => (
+                                        <option key={day.value} value={day.value}>
+                                            {day.label}
                                         </option>
                                     ))}
                                 </select>
@@ -243,14 +199,14 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
                 <div className="bg-slate-100 p-1.5 rounded-2xl flex flex-row gap-1">
                     <button
                         onClick={() => atualizarConfig('idioma', 'pt')}
-                        className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${lang === 'pt' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
+                        className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${isPortugueseActive ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         🇧🇷 Português
                     </button>
                     <button
                         onClick={() => atualizarConfig('idioma', 'es')}
-                        className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${lang === 'es' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
+                        className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${isSpanishActive ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         🇪🇸 Español
@@ -295,7 +251,7 @@ export default function Configuracoes({ dados, salvarAlteracao, t, lang, importa
                         {processando ? (
                             <span className="flex items-center gap-2">
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                Processando
+                                {T.processando}
                             </span>
                         ) : (
                             <>

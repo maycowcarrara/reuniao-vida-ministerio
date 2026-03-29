@@ -1,16 +1,12 @@
 import React from 'react';
 import { History, X, Trash2 } from 'lucide-react';
 
-const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno, lang = 'pt' }) => {
+const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno }) => {
     if (!isOpen || !aluno) return null;
 
     // Função que é ativada ao clicar na lixeira
     const handleDelete = (indexOriginal) => {
-        const msg = lang === 'es'
-            ? "¿Desea eliminar este registro del historial?"
-            : "Tem certeza que deseja remover este registro do histórico?";
-
-        if (window.confirm(msg)) {
+        if (window.confirm(t?.msg?.confirmarRemoverHistorico || 'Tem certeza que deseja remover este registro do histórico?')) {
             // Clona o histórico atual e remove apenas o item selecionado
             const novoHistorico = [...(aluno.historico || [])];
             novoHistorico.splice(indexOriginal, 1);
@@ -53,7 +49,7 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno, lang = 'pt' 
                                 <button
                                     onClick={() => handleDelete(h.indexOriginal)}
                                     className="text-red-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-all opacity-50 group-hover:opacity-100"
-                                    title={lang === 'es' ? "Eliminar" : "Excluir"}
+                                    title={t?.modal?.excluir || 'Excluir'}
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -62,7 +58,7 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno, lang = 'pt' 
                     ))}
 
                     {(!aluno.historico || aluno.historico.length === 0) && (
-                        <p className="text-xs text-gray-400 italic py-2 text-center">Nenhum histórico registrado.</p>
+                        <p className="text-xs text-gray-400 italic py-2 text-center">{t?.msg?.semHistorico || 'Nenhum histórico registrado.'}</p>
                     )}
                 </div>
             </div>

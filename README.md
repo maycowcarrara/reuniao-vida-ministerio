@@ -96,6 +96,68 @@ Apesar de altamente funcional e robusto, o projeto continua em evolução:
 
 ---
 
+## 🧭 Arquitetura Atual de Configuração e Idioma
+
+Nas últimas revisões, a base de configuração e internacionalização foi centralizada para evitar divergências entre telas, toasts, utilitários e integrações.
+
+### Configuração central
+
+- Arquivo-base: `src/config/appConfig.js`
+- Responsabilidades:
+  - normalizar idioma (`pt` / `es`)
+  - normalizar configuração do sistema
+  - sincronizar `document.lang` e o idioma atual do app
+  - manter `dia_reuniao` em formato **canônico interno**
+
+### Idioma central
+
+- Arquivo-base: `src/i18n/index.js`
+- Responsabilidades:
+  - concentrar os dicionários PT/ES
+  - fornecer `formatText(...)`
+  - expor `I18nProvider`, `useI18n()` e `useSectionMessages()`
+  - permitir atualização reativa de idioma em componentes globais, como toasts
+
+### Regra importante: `dia_reuniao`
+
+O campo `configuracoes.dia_reuniao` não deve mais depender do idioma exibido na interface.
+
+Valores canônicos aceitos internamente:
+
+- `monday`
+- `tuesday`
+- `wednesday`
+- `thursday`
+- `friday`
+- `saturday`
+- `sunday`
+
+Compatibilidade:
+
+- backups e dados antigos com valores como `Segunda-feira`, `Terça-feira`, `Lunes`, `Martes` continuam funcionando
+- a normalização converte esses valores antigos automaticamente para o formato canônico
+
+### Fluxo recomendado para novas telas
+
+1. Ler idioma/configuração já normalizados.
+2. Buscar textos via `useSectionMessages('nomeDaSecao')`.
+3. Evitar textos hardcoded em JSX, `alert`, `confirm`, `toast` e helpers.
+4. Usar `formatText(...)` para mensagens com placeholders.
+5. Não salvar valores traduzidos em campos estruturais de configuração.
+
+---
+
+## 🌐 Padrão de Internacionalização
+
+Para manter PT/ES consistentes no sistema inteiro:
+
+- Novos textos de UI devem entrar em `src/i18n/index.js`.
+- Helpers e serviços devem preferir receber `t`/`lang` normalizados ou consultar o módulo central.
+- `ToastProvider`, `Login`, `Quadro Público`, `Designar`, `Importador`, `Lista de Alunos`, `Revisar & Enviar` e `Configurações` já foram migrados para a base central.
+- Mudanças de idioma devem refletir tanto na UI quanto em labels auxiliares, exportações e mensagens dinâmicas.
+
+---
+
 ## 📂 Estrutura de Dados (Exemplo)
 
 O sistema utiliza uma estrutura JSON leve e otimizada no Firestore:
@@ -106,6 +168,7 @@ O sistema utiliza uma estrutura JSON leve e otimizada no Firestore:
     "nome_cong": "Sua Congregação",
     "horario": "19:30",
     "idioma": "pt",
+    "dia_reuniao": "monday",
     "eventosAnuais": []
   },
   "alunos": [
@@ -156,6 +219,43 @@ Certifique-se de ter o [Node.js](https://nodejs.org/) instalado.
    ```
    npm run dev
    ```
+
+6. Para validar rapidamente a aplicação em produção:
+   **Bash**
+
+   ```
+   npm run build
+   ```
+
+7. Para validar a saúde do código antes de subir alterações:
+   **Bash**
+
+   ```
+   npm run lint
+   ```
+
+---
+
+## 🧪 Manutenção
+
+Checklist rápido antes de fechar alterações em UI/configuração:
+
+- `npm run lint`
+- `npm run build`
+- testar troca de idioma em `Configurações`
+- conferir se login, toasts, quadro público, importação e revisão continuam no idioma selecionado
+- evitar adicionar novos textos fora do módulo central de i18n
+
+### Estado atual da base
+
+- `eslint`: limpo
+- `vite build`: OK
+- i18n centralizado com `I18nProvider`, `useI18n()` e `useSectionMessages()`
+- `configuracoes.dia_reuniao` salvo em formato canônico interno
+
+### Regra de manutenção
+
+Se uma alteração quebrar `npm run lint` ou `npm run build`, ela não deve ser considerada pronta.
 
 ---
 

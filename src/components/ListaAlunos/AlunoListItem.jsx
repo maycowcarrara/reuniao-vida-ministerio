@@ -35,14 +35,14 @@ const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete 
                                 <h3 className="font-bold text-gray-800 text-sm truncate">{aluno.nome}</h3>
                                 {estaAusente && (
                                     <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-1 border border-orange-200" title={t.card.ausente}>
-                                        <Calendar size={8} /> Ausente
+                                        <Calendar size={8} /> {t.card.ausenteBadge}
                                     </span>
                                 )}
                                 <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-md border inline-block tracking-tighter ${info.cor}`}>{info[lang]}</span>
                             </div>
                             <div className="mt-1 text-[11px] text-gray-500 flex flex-wrap gap-x-3 gap-y-1">
-                                {aluno.telefone && (whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="flex items-center gap-1" title="WhatsApp"><Phone size={12} className="text-green-500" /> {aluno.telefone}</a> : <span className="flex items-center gap-1"><Phone size={12} className="text-green-500" /> {aluno.telefone}</span>)}
-                                {aluno.email && <a href={`mailto:${aluno.email}`} className="flex items-center gap-1 truncate" title="E-mail"><Mail size={12} className="text-blue-400" /> {aluno.email}</a>}
+                                {aluno.telefone && (whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="flex items-center gap-1" title={t.campos.tel}><Phone size={12} className="text-green-500" /> {aluno.telefone}</a> : <span className="flex items-center gap-1"><Phone size={12} className="text-green-500" /> {aluno.telefone}</span>)}
+                                {aluno.email && <a href={`mailto:${aluno.email}`} className="flex items-center gap-1 truncate" title={t.campos.mail}><Mail size={12} className="text-blue-400" /> {aluno.email}</a>}
                             </div>
                         </div>
                         
@@ -65,7 +65,7 @@ const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete 
                             {aluno.datasIndisponiveis.map((dt, idx) => (
                                 <div key={idx} className="bg-orange-50 text-orange-700 text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1.5 border border-orange-100" title={dt.motivo}>
                                     <Calendar size={10} />
-                                    <span className="font-bold">{dt.inicio.split('-').reverse().join('/')} até {dt.fim.split('-').reverse().join('/')}</span>
+                                    <span className="font-bold">{dt.inicio.split('-').reverse().join('/')} {t.campos.ate} {dt.fim.split('-').reverse().join('/')}</span>
                                     {dt.motivo && <span className="opacity-70">- {dt.motivo}</span>}
                                 </div>
                             ))}

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { X, FilterX, Search, SortAsc, SortDesc, User, UserRound, UsersRound, AlertTriangle, Clock, GripVertical, CalendarX } from 'lucide-react';
+import { useSectionMessages } from '../../i18n';
 
 // Função para gerar as iniciais caso não tenha foto
 const getIniciais = (nome) => {
@@ -23,22 +24,7 @@ const SidebarAlunos = ({
     setDraggedAluno, semanasSelecionadas
 }) => {
 
-    const localTx = {
-        pt: {
-            limpar: "Limpar", cancelar: "Cancelar", ouArraste: "ou arraste o aluno", removerDesignacao: "Remover Designação Atual",
-            buscaPlaceholder: "Nome, cargo...", nenhumAluno: "Nenhum aluno encontrado", arrasteAqui: "Arraste por aqui",
-            duplicadoMesma: "Duplicado na MESMA semana", duplicadoOutra: "Já tem parte em outra semana selecionada no mês",
-            nestaSemana: "Nesta Semana", outraSemana: "Outra Semana", ausente: "Ausente", indisponivel: "Indisponível nesta data",
-            limparTodos: "Limpar Todos os Filtros"
-        },
-        es: {
-            limpar: "Limpiar", cancelar: "Cancelar", ouArraste: "o arrastre al estudiante", removerDesignacao: "Eliminar Asignación Actual",
-            buscaPlaceholder: "Nombre, cargo...", nenhumAluno: "Ningún estudiante encontrado", arrasteAqui: "Arrastre por aquí",
-            duplicadoMesma: "Duplicado en la MISMA semana", duplicadoOutra: "Ya tiene asignación en otra semana seleccionada",
-            nestaSemana: "En esta Semana", outraSemana: "Otra Semana", ausente: "Ausente", indisponivel: "No disponible en esta fecha",
-            limparTodos: "Limpiar Todos los Filtros"
-        }
-    }[lang] || localTx.pt;
+    const localTx = useSectionMessages('designarSidebar');
 
     const getBadgeDiasColor = (dias) => {
         if (dias === null || dias === undefined) return "bg-red-50 text-red-700 border-red-200";
@@ -79,7 +65,6 @@ const SidebarAlunos = ({
             if (!dataBaseStr) return null;
 
             const [sAno, sMes, sDia] = dataBaseStr.split('-');
-            const dInicioSemana = new Date(Date.UTC(sAno, sMes - 1, sDia));
 
             const dFimSemana = new Date(Date.UTC(sAno, sMes - 1, sDia));
             dFimSemana.setUTCDate(dFimSemana.getUTCDate() + 6);
@@ -310,7 +295,7 @@ const SidebarAlunos = ({
                                             if (!isClickable) return;
 
                                             if (duplicadoMesmaSemana) {
-                                                const ok = window.confirm(TT.confirmarDuplicado || "Já designado nesta semana. Usar mesmo assim?");
+                                                const ok = window.confirm(TT.confirmarDuplicado);
                                                 if (!ok) return;
                                             }
                                             atribuirAluno(aluno);
@@ -353,7 +338,7 @@ const SidebarAlunos = ({
                                                     ) : typeof dias === 'number' ? (
                                                         <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5 ${getBadgeDiasColor(dias)}`}>
                                                             <Clock size={8} />
-                                                            {dias < 0 ? `Futuro` : `${dias} ${TT.dias}`}
+                                                            {dias < 0 ? localTx.futuro || TT.futuro : `${dias} ${TT.dias}`}
                                                         </span>
                                                     ) : (
                                                         <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5 ${getBadgeDiasColor(null)}`}>

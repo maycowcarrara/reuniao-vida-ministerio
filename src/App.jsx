@@ -1,20 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Globe, X, Minimize, WifiOff, Users, Menu } from 'lucide-react';
+import { Globe, X, Minimize, WifiOff, Users, Menu, LayoutDashboard, Send } from 'lucide-react';
 
 // Firebase Auth
 import { onAuthStateChanged } from 'firebase/auth';
 
-// Componentes
-import Dashboard from './components/Dashboard';
-import Importador from './components/Importador';
-import Designar from './components/Designar';
-import ListaAlunos from './components/ListaAlunos';
-import RevisarEnviar from './components/RevisarEnviar';
-import Configuracoes from './components/Configuracoes';
-import Login from './components/Login';
 import Sidebar from './components/Sidebar';
-import QuadroPublico from './components/QuadroPublico';
+import NotificationBell from './components/NotificationBell';
 
 // Hooks e Serviços
 import { useGerenciadorDados } from './hooks/useGerenciadorDados';
@@ -22,19 +14,56 @@ import { useQuadroPublico } from './hooks/useQuadroPublico';
 import { auth } from './services/firebase';
 import { CARGOS_MAP, TRANSLATIONS } from './data/constants';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { toast } from './utils/toast';
+import { getMeetingDateISOFromSemana, getWeekStartISOFromSemana } from './utils/revisarEnviar/dates';
+import { getSemanaStartISO } from './utils/eventos';
+import { normalizeLanguage, syncDocumentLanguage } from './config/appConfig';
+import { getSectionMessages, I18nProvider } from './i18n';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Importador = lazy(() => import('./components/Importador'));
+const Designar = lazy(() => import('./components/Designar'));
+const ListaAlunos = lazy(() => import('./components/ListaAlunos'));
+const RevisarEnviar = lazy(() => import('./components/RevisarEnviar'));
+const Configuracoes = lazy(() => import('./components/Configuracoes'));
+const Login = lazy(() => import('./components/Login'));
+const QuadroPublico = lazy(() => import('./components/QuadroPublico'));
+const ConfirmacaoPublica = lazy(() => import('./components/ConfirmacaoPublica'));
+
+function RouteLoading({ text = 'Carregando...' }) {
+  return (
+    <div className="h-full min-h-[16rem] flex items-center justify-center font-bold text-slate-500">
+      {text}
+    </div>
+  );
+}
 
 // ============================================================================
 // 1. ADMIN PANEL (Seu Sistema de Gerenciamento)
 // ============================================================================
 function AdminPanel() {
   // 🔥 FUNÇÃO excluirSemanaELimparHistorico ADICIONADA AQUI:
-  const { dados: dadosNuvem, loading, usuario, salvarItem, excluirItem, excluirSemanaELimparHistorico, importarBackupParaUsuario, resetarConta } = useGerenciadorDados();
-  const [dadosSistema, setDadosSistema] = useState(dadosNuvem);
+  const {
+    dados: dadosNuvem,
+    confirmacoes,
+    notificacoes,
+    loading,
+    usuario,
+    salvarItem,
+    excluirItem,
+    excluirSemanaELimparHistorico,
+    importarBackupParaUsuario,
+    resetarConta,
+    marcarNotificacaoComoLida,
+    marcarTodasNotificacoesComoLidas
+  } = useGerenciadorDados();
+  const dadosSistema = dadosNuvem;
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [dupModal, setDupModal] = useState({ open: false, existing: null, incoming: null, resolve: null });
 
   const fileInputRef = useRef(null);
+  const notificacoesToastRef = useRef(new Set());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isOnline = useOnlineStatus();
 
@@ -48,8 +77,6 @@ function AdminPanel() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  useEffect(() => { if (dadosNuvem) setDadosSistema(dadosNuvem); }, [dadosNuvem]);
-
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => console.warn(err.message));
@@ -58,74 +85,52 @@ function AdminPanel() {
     }
   };
 
-  const normalizarIdioma = (idioma) => {
-    const v = (idioma || '').toString().trim().toLowerCase();
-    if (v.startsWith('pt')) return 'pt';
-    if (v.startsWith('es')) return 'es';
-    return 'pt';
-  };
-
-  const lang = normalizarIdioma(dadosSistema?.configuracoes?.idioma);
+  const lang = normalizeLanguage(dadosSistema?.configuracoes?.idioma);
   const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
+  const APP_TEXTS = getSectionMessages('adminPanel', lang);
 
-  // --- DICIONÁRIO LOCAL DO APP (Alertas e Modais) ---
-  const APP_TEXTS = {
-    pt: {
-      carregando: "Carregando...",
-      backupOk: "✅ Backup restaurado com sucesso!",
-      backupInvalido: "⚠️ Arquivo inválido.",
-      backupSalvo: "✅ Backup salvo com sucesso!",
-      backupErroSalvar: "⚠️ Erro ao salvar backup.",
-      alertaReset1: "⚠️ PERIGO: Isso vai apagar TUDO.\nTem certeza?",
-      alertaReset2: "⚠️ ÚLTIMA CHANCE: Clique em OK para apagar.",
-      bancoLimpo: "✅ Banco limpo!",
-      erroLimpar: "Erro ao limpar.",
-      eventoOk: "✅ Evento agendado!",
-      dupTitulo: "Semana já existe",
-      dupDesc: "O que deseja fazer com a semana duplicada?",
-      btnSubstituir: "Substituir",
-      btnDuplicar: "Duplicar",
-      btnCancelar: "Cancelar",
-      offlineAviso: "Você está offline. Pode continuar editando!",
-      verQuadro: "Ver Quadro",
-      minhaCong: "Minha Congregação",
-      sairTelaCheia: "Sair da Tela Cheia"
-    },
-    es: {
-      carregando: "Cargando...",
-      backupOk: "✅ ¡Copia de seguridad restaurada con éxito!",
-      backupInvalido: "⚠️ Archivo inválido.",
-      backupSalvo: "✅ ¡Copia de seguridad guardada con éxito!",
-      backupErroSalvar: "⚠️ Error al guardar la copia de seguridad.",
-      alertaReset1: "⚠️ PELIGRO: Esto borrará TODO.\n¿Estás seguro?",
-      alertaReset2: "⚠️ ÚLTIMA OPORTUNIDAD: Haz clic en OK para borrar.",
-      bancoLimpo: "✅ ¡Base de datos limpia!",
-      erroLimpar: "Error al limpiar.",
-      eventoOk: "✅ ¡Evento programado!",
-      dupTitulo: "La semana ya existe",
-      dupDesc: "¿Qué deseas hacer con la semana duplicada?",
-      btnSubstituir: "Reemplazar",
-      btnDuplicar: "Duplicar",
-      btnCancelar: "Cancelar",
-      offlineAviso: "Estás desconectado. ¡Puedes seguir editando!",
-      verQuadro: "Ver Tablero",
-      minhaCong: "Mi Congregación",
-      sairTelaCheia: "Salir de Pantalla Completa"
-    }
-  }[lang];
+  useEffect(() => {
+    syncDocumentLanguage(lang);
+  }, [lang]);
+
+  useEffect(() => {
+    const unreadNotifications = (notificacoes || []).filter((item) => !item?.readAt && !item?.readAtIso);
+
+    unreadNotifications.forEach((item) => {
+      const uniqueKey = `${item.id}|${item.createdAtIso || ''}`;
+      if (notificacoesToastRef.current.has(uniqueKey)) return;
+
+      notificacoesToastRef.current.add(uniqueKey);
+      toast.info([item.title, item.description].filter(Boolean).join('\n'), { duration: 7000 });
+    });
+  }, [notificacoes]);
 
   const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
+  const unreadNotificationsCount = (notificacoes || []).filter((item) => !item?.readAt && !item?.readAtIso).length;
 
-  const salvarAlteracao = (novosDados) => {
-    setDadosSistema(novosDados);
-    if (novosDados.configuracoes) salvarItem('configuracoes', 'geral', novosDados.configuracoes);
-    if (Array.isArray(novosDados.alunos)) novosDados.alunos.forEach(a => { if (a.id) salvarItem('alunos', a.id, a); });
+  const salvarAlteracao = async (novosDados) => {
+    const operacoes = [];
+
+    if (novosDados.configuracoes) {
+      operacoes.push(salvarItem('configuracoes', 'geral', novosDados.configuracoes));
+    }
+
+    if (Array.isArray(novosDados.alunos)) {
+      novosDados.alunos.forEach(a => {
+        if (a?.id != null && String(a.id).trim() !== '') {
+          operacoes.push(salvarItem('alunos', a.id, a));
+        }
+      });
+    }
+
     if (Array.isArray(novosDados.historico_reunioes)) {
       novosDados.historico_reunioes.forEach(p => {
         const semanaStr = String(p.semana || '').trim();
-        if (semanaStr) salvarItem('programacao', semanaStr.replace(/[\/\s,.]/g, '-'), p);
+        if (semanaStr) operacoes.push(salvarItem('programacao', semanaStr.replace(/[/\s,.]/g, '-'), p));
       });
     }
+
+    await Promise.all(operacoes);
   };
 
   const setListaProgramacoes = (updater) => {
@@ -142,7 +147,7 @@ function AdminPanel() {
         const file = await handle.getFile();
         const content = await file.text();
         await importarBackupParaUsuario(JSON.parse(content));
-        alert(APP_TEXTS.backupOk);
+        toast.success(APP_TEXTS.backupOk);
         return;
       }
       if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click(); }
@@ -155,8 +160,10 @@ function AdminPanel() {
     try {
       const content = await file.text();
       await importarBackupParaUsuario(JSON.parse(content));
-      alert(APP_TEXTS.backupOk);
-    } catch (err) { alert(APP_TEXTS.backupInvalido); }
+      toast.success(APP_TEXTS.backupOk);
+    } catch (error) {
+      toast.error(error, APP_TEXTS.backupInvalido);
+    }
   };
 
   const handleSalvarBackup = async () => {
@@ -168,22 +175,53 @@ function AdminPanel() {
         const writable = await handle.createWritable();
         await writable.write(jsonText);
         await writable.close();
-        alert(APP_TEXTS.backupSalvo);
+        toast.success(APP_TEXTS.backupSalvo);
         return;
       }
       const url = URL.createObjectURL(new Blob([jsonText], { type: 'application/json' }));
       const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
-    } catch (e) { if (e.name !== 'AbortError') alert(APP_TEXTS.backupErroSalvar); }
+      toast.success(APP_TEXTS.backupSalvo);
+    } catch (e) {
+      if (e.name !== 'AbortError') toast.error(e, APP_TEXTS.backupErroSalvar);
+    }
   };
 
   const handleResetarTudo = async () => {
     if (!window.confirm(APP_TEXTS.alertaReset1)) return;
     if (!window.confirm(APP_TEXTS.alertaReset2)) return;
-    try { await resetarConta(); alert(APP_TEXTS.bancoLimpo); } catch (error) { alert(APP_TEXTS.erroLimpar); }
+    try {
+      await resetarConta();
+      toast.success(APP_TEXTS.bancoLimpo);
+    } catch (error) {
+      toast.error(error, APP_TEXTS.erroLimpar);
+    }
   };
 
   const upsertProgramacaoComConfirmacao = async (novaProg) => {
     let nextProg = { ...novaProg, semana: (novaProg.semana || '').trim() };
+    if (!nextProg.dataInicio) {
+      nextProg.dataInicio = getWeekStartISOFromSemana({
+        semanaStr: nextProg.semana,
+        config: dadosSistema?.configuracoes,
+        isoFallback: nextProg.dataExata || nextProg.dataReuniao || null,
+        textSources: [nextProg.semana]
+      });
+    }
+
+    if (!nextProg.dataExata) {
+      const dataReuniaoPadrao = getMeetingDateISOFromSemana({
+        semanaStr: nextProg.semana,
+        config: dadosSistema?.configuracoes,
+        isoFallback: nextProg.dataInicio || nextProg.dataReuniao || null,
+        textSources: [nextProg.semana]
+      });
+
+      if (dataReuniaoPadrao) {
+        nextProg.dataExata = dataReuniaoPadrao;
+        if (!nextProg.dataReuniao) nextProg.dataReuniao = dataReuniaoPadrao;
+      }
+    }
+
     const eventosAgendados = dadosSistema?.configuracoes?.eventosAnuais || [];
     const eventoNestaData = eventosAgendados.find(ev => ev.dataInicio === nextProg.dataInicio);
 
@@ -228,7 +266,7 @@ function AdminPanel() {
     if (tipoEvento !== 'normal') listaLimpa.push({ dataInicio: stringSegunda, dataInput: dataInput, tipo: tipoEvento });
 
     const configAtualizada = { ...dadosSistema.configuracoes, eventosAnuais: listaLimpa };
-    const idx = listaProgramacoes.findIndex(s => s.dataInicio === stringSegunda);
+    const idx = listaProgramacoes.findIndex(s => getSemanaStartISO(s, dadosSistema?.configuracoes) === stringSegunda);
     let novasProgramacoes = [...listaProgramacoes];
 
     if (idx !== -1) {
@@ -246,7 +284,7 @@ function AdminPanel() {
     }
 
     salvarAlteracao({ ...dadosSistema, configuracoes: configAtualizada, historico_reunioes: novasProgramacoes });
-    alert(APP_TEXTS.eventoOk);
+    toast.success(APP_TEXTS.eventoOk);
   };
 
   // 🔥 HANDLER ATUALIZADO: Agora recebe a data da semana e repassa para a função de limpar o histórico
@@ -256,13 +294,28 @@ function AdminPanel() {
 
   const handleExcluirAlunoBanco = async (id) => await excluirItem('alunos', id);
 
-  if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-500">{APP_TEXTS.carregando}</div>;
-  if (!usuario) return <Login />;
+  if (loading) {
+    return (
+      <I18nProvider lang={lang}>
+        <div className="h-screen flex items-center justify-center font-bold text-slate-500">{APP_TEXTS.carregando}</div>
+      </I18nProvider>
+    );
+  }
+  if (!usuario) {
+    return (
+      <I18nProvider lang={lang}>
+        <Suspense fallback={<div className="h-screen flex items-center justify-center font-bold text-slate-500">{APP_TEXTS.carregando}</div>}>
+          <Login />
+        </Suspense>
+      </I18nProvider>
+    );
+  }
 
   return (
-    // AS CLASSES DE IMPRESSÃO FORAM ADICIONADAS NESTA DIV (print:block print:h-auto print:overflow-visible)
-    <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden relative print:block print:h-auto print:overflow-visible">
-      <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileInputChange} />
+    <I18nProvider lang={lang}>
+      {/* AS CLASSES DE IMPRESSÃO FORAM ADICIONADAS NESTA DIV (print:block print:h-auto print:overflow-visible) */}
+      <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden relative print:block print:h-auto print:overflow-visible">
+        <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileInputChange} />
 
       {dupModal.open && (
         <div className="fixed inset-0 z-[999] bg-black/60 flex items-center justify-center p-4">
@@ -293,6 +346,7 @@ function AdminPanel() {
           handleResetarTudo={handleResetarTudo}
           logout={() => auth.signOut()}
           listaProgramacoes={listaProgramacoes}
+          alunos={dadosSistema?.alunos || []}
           t={t}
           lang={lang}
           toggleFullscreen={toggleFullscreen}
@@ -311,40 +365,92 @@ function AdminPanel() {
 
         {!isFullscreen && (
           // NO-PRINT ADICIONADO AQUI PARA ESCONDER O HEADER
-          <header className="h-14 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 border-b shrink-0 z-30 no-print">
+          <header className="bg-white shadow-sm px-3 sm:px-4 md:px-6 py-2 md:h-14 border-b shrink-0 z-30 no-print">
 
-            <div className="flex items-center gap-3 md:gap-4">
-              <h2 className="text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none">
-                {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
-              </h2>
+            <div className="flex items-center justify-between gap-3 md:gap-4">
+              <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                <h2 className="text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none">
+                  {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
+                </h2>
 
-              <div className="hidden sm:flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                <Globe size={12} className="text-blue-600" />
-                <span className="text-[10px] font-black uppercase text-blue-800">{lang}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 md:gap-4">
-
-              <Link
-                to="/quadro"
-                title={APP_TEXTS.verQuadro}
-                className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors"
-              >
-                <Users size={18} />
-                <span className="hidden sm:block text-xs font-bold">{APP_TEXTS.verQuadro}</span>
-              </Link>
-
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:block">
-                {dadosSistema?.configuracoes?.nome_cong || APP_TEXTS.minhaCong}
+                <div className="hidden sm:flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                  <Globe size={12} className="text-blue-600" />
+                  <span className="text-[10px] font-black uppercase text-blue-800">{lang}</span>
+                </div>
               </div>
 
-              <button
-                className="md:hidden p-1.5 -mr-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu size={24} />
-              </button>
+              <div className="flex items-center gap-2 md:gap-4 shrink-0">
+
+                <div className="md:hidden flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    title={t.designar}
+                    aria-label={t.designar}
+                    onClick={() => setAbaAtiva('designar')}
+                    className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${abaAtiva === 'designar'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                  >
+                    <LayoutDashboard size={18} />
+                  </button>
+
+                  <button
+                    type="button"
+                    title={t.revisar}
+                    aria-label={t.revisar}
+                    onClick={() => setAbaAtiva('revisar')}
+                    className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${abaAtiva === 'revisar'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                  >
+                    <Send size={18} />
+                  </button>
+
+                  <button
+                    type="button"
+                    title={t.alunos}
+                    aria-label={t.alunos}
+                    onClick={() => setAbaAtiva('alunos')}
+                    className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${abaAtiva === 'alunos'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                  >
+                    <Users size={18} />
+                  </button>
+                </div>
+
+                <div className="md:hidden h-7 w-px bg-slate-200 mx-0.5" />
+
+                <Link
+                  to="/quadro"
+                  title={APP_TEXTS.verQuadro}
+                  className="hidden sm:flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                >
+                  <Users size={18} />
+                  <span className="hidden sm:block text-xs font-bold">{APP_TEXTS.verQuadro}</span>
+                </Link>
+
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:block">
+                  {dadosSistema?.configuracoes?.nome_cong || APP_TEXTS.minhaCong}
+                </div>
+
+                <NotificationBell
+                  notifications={notificacoes}
+                  unreadCount={unreadNotificationsCount}
+                  onMarkOne={marcarNotificacaoComoLida}
+                  onMarkAll={marcarTodasNotificacoesComoLidas}
+                />
+
+                <button
+                  className="md:hidden p-1.5 -mr-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <Menu size={24} />
+                </button>
+              </div>
             </div>
           </header>
         )}
@@ -357,29 +463,32 @@ function AdminPanel() {
 
         {/* PRINT:OVERFLOW-VISIBLE AQUI PARA DEIXAR O CONTEÚDO ROLAR LIVREMENTE */}
         <div className="flex-1 overflow-y-auto scroll-smooth print:overflow-visible">
-          {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} />}
-          {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
+          <Suspense fallback={<RouteLoading text={APP_TEXTS.carregando} />}>
+            {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} />}
+            {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
 
-          {abaAtiva === 'designar' && (
-            <Designar
-              listaProgramacoes={listaProgramacoes}
-              setListaProgramacoes={setListaProgramacoes}
-              alunos={dadosSistema?.alunos || []}
-              onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
-              cargosMap={CARGOS_MAP}
-              lang={lang}
-              t={t}
-              config={dadosSistema?.configuracoes}
-              onExcluirSemana={handleExcluirSemanaBanco}
-            />
-          )}
+            {abaAtiva === 'designar' && (
+              <Designar
+                listaProgramacoes={listaProgramacoes}
+                setListaProgramacoes={setListaProgramacoes}
+                alunos={dadosSistema?.alunos || []}
+                onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
+                cargosMap={CARGOS_MAP}
+                lang={lang}
+                t={t}
+                config={dadosSistema?.configuracoes}
+                onExcluirSemana={handleExcluirSemanaBanco}
+              />
+            )}
 
-          {abaAtiva === 'revisar' && <RevisarEnviar historico={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })} />}
-          {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
-          {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}
+            {abaAtiva === 'revisar' && <RevisarEnviar historico={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} confirmacoes={confirmacoes} onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })} />}
+            {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
+            {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}
+          </Suspense>
         </div>
       </main>
-    </div>
+      </div>
+    </I18nProvider>
   );
 }
 
@@ -390,20 +499,33 @@ function QuadroPublicoWrapper({ usuario }) {
   const { dados, loading } = useQuadroPublico();
 
   // Ajusta idioma do loading dinamicamente
-  const lang = (dados?.configuracoes?.idioma || 'pt').toString().trim().toLowerCase().startsWith('es') ? 'es' : 'pt';
-  const loadingText = lang === 'es' ? 'Cargando Tablero...' : 'Carregando Quadro...';
+  const lang = normalizeLanguage(dados?.configuracoes?.idioma);
+  const loadingText = getSectionMessages('adminPanel', lang).loadingQuadro;
 
   if (loading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 font-sans">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-        <p className="font-bold text-sm tracking-wider uppercase">{loadingText}</p>
-      </div>
+      <I18nProvider lang={lang}>
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 font-sans">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <p className="font-bold text-sm tracking-wider uppercase">{loadingText}</p>
+        </div>
+      </I18nProvider>
     );
   }
   const programacoes = Array.isArray(dados?.historico_reunioes) ? dados.historico_reunioes : [];
   const config = dados?.configuracoes || {};
-  return <QuadroPublico programacoes={programacoes} config={config} usuario={usuario} />;
+  return (
+    <I18nProvider lang={lang}>
+      <Suspense fallback={
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 font-sans">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <p className="font-bold text-sm tracking-wider uppercase">{loadingText}</p>
+        </div>
+      }>
+        <QuadroPublico programacoes={programacoes} config={config} usuario={usuario} />
+      </Suspense>
+    </I18nProvider>
+  );
 }
 
 // ============================================================================
@@ -430,6 +552,11 @@ function App() {
           usuarioVerificado ? <Navigate to="/admin" replace /> : <Navigate to="/quadro" replace />
         } />
         <Route path="/quadro" element={<QuadroPublicoWrapper usuario={usuarioVerificado} />} />
+        <Route path="/c/:token" element={
+          <Suspense fallback={<RouteLoading text="Carregando confirmação..." />}>
+            <ConfirmacaoPublica />
+          </Suspense>
+        } />
         <Route path="/admin/*" element={<AdminPanel />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

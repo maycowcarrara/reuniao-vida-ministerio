@@ -4,6 +4,9 @@ import {
     ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info,
     UserCheck, UserX, User, Medal, BookHeart, Archive, HeartPulse, ThumbsUp, AlertCircle
 } from 'lucide-react';
+import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
+import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../utils/eventos';
+import { useSectionMessages } from '../i18n';
 
 export default function Dashboard({
     listaProgramacoes,
@@ -17,58 +20,7 @@ export default function Dashboard({
     const [tipoEvento, setTipoEvento] = useState('visita');
 
     const txt = t?.dashboard || { eventos: {}, estatisticas: {} };
-
-    // Fallback de idioma local
-    const lang = (config?.idioma || 'pt').toLowerCase().startsWith('es') ? 'es' : 'pt';
-
-    const localTxt = {
-        pt: {
-            alunosTitulo: "Visão Geral de Alunos",
-            total: "Total",
-            ativos: "Ativos",
-            inativos: "Desab.",
-            irParaAlunos: "Gerenciar Alunos",
-            anciaos: "Anciãos",
-            servos: "Servos",
-            irmas: "Irmãs",
-            passado: "Concluído",
-            saudeTitulo: "Saúde da Congregação",
-            rodizio: "Engajamento (90 dias)",
-            rodizioSub: "dos alunos ativos com partes",
-            atencao: "Precisam de Atenção",
-            atencaoSub: "Sem designação há mais de 4 meses",
-            nunca: "Nunca designado",
-            dias: "dias",
-            tudoEmDia: "Excelente! Nenhum aluno esquecido.",
-            visaoMes: "Designações (Próx. 4 Semanas)",
-            pendentesMes: "pendentes no mês",
-            completoMes: "Mês completo!",
-            faltando: "Falta preencher:"
-        },
-        es: {
-            alunosTitulo: "Resumen de Estudiantes",
-            total: "Total",
-            ativos: "Activos",
-            inativos: "Deshab.",
-            irParaAlunos: "Gestionar Estudiantes",
-            anciaos: "Ancianos",
-            servos: "Siervos",
-            irmas: "Hermanas",
-            passado: "Concluido",
-            saudeTitulo: "Salud de la Congregación",
-            rodizio: "Participación (90 días)",
-            rodizioSub: "de los activos con asignaciones",
-            atencao: "Necesitan Atención",
-            atencaoSub: "Sin asignación por más de 4 meses",
-            nunca: "Nunca asignado",
-            dias: "días",
-            tudoEmDia: "¡Excelente! Ningún estudiante olvidado.",
-            visaoMes: "Asignaciones (Próx. 4 Semanas)",
-            pendentesMes: "pendientes en el mes",
-            completoMes: "¡Mes completo!",
-            faltando: "Falta rellenar:"
-        }
-    }[lang];
+    const localTxt = useSectionMessages('dashboardExtra');
 
     // --- ESTATÍSTICAS E PAINEL DE SAÚDE ---
     const stats = useMemo(() => {
@@ -82,15 +34,55 @@ export default function Dashboard({
         const daquiA4Semanas = new Date(hoje);
         daquiA4Semanas.setDate(hoje.getDate() + 29);
 
+        const getDataReuniaoISO = (sem) => {
+            const eventoEspecial = getEventoEspecialDaSemana(sem, config);
+            const tipoEvento = getTipoEventoSemana(sem, config);
+            const isVisita = tipoEvento === 'visita';
+
+            if (eventoEspecial?.dataInput && !isVisita) {
+                return eventoEspecial.dataInput;
+            }
+
+            const fallbackStr = sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
+
+            let dataCalculada = getMeetingDateISOFromSemana({
+                semanaStr: sem?.semana,
+                config,
+                isoFallback: fallbackStr,
+                overrideDia: isVisita ? 'terça-feira' : null
+            });
+
+            if (!dataCalculada) {
+                dataCalculada = fallbackStr;
+            }
+
+            if (isVisita && dataCalculada) {
+                const [ano, mes, dia] = dataCalculada.split('-').map(Number);
+                const d = new Date(ano, mes - 1, dia, 12, 0, 0);
+
+                if (d.getDay() !== 2) {
+                    const diff = 2 - d.getDay();
+                    d.setDate(d.getDate() + diff);
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                }
+            }
+
+            return dataCalculada;
+        };
+
         // 1. Ordernar Reuniões Ativas
         const ativas = listaProgramacoes
             .filter(s => !s.arquivada)
-            .sort((a, b) => new Date(a.dataReuniao || a.dataInicio) - new Date(b.dataReuniao || b.dataInicio));
+            .map(s => ({ ...s, dataReuniaoResolvida: getDataReuniaoISO(s) }))
+            .sort((a, b) => new Date(a.dataReuniaoResolvida || a.dataInicio) - new Date(b.dataReuniaoResolvida || b.dataInicio));
 
         // Encontrar a próxima reunião
         const proximaIdx = ativas.findIndex(s => {
-            if (!s.dataReuniao) return false;
-            const [ano, mes, dia] = s.dataReuniao.split('-').map(Number);
+            if (!s.dataReuniaoResolvida) return false;
+            const [ano, mes, dia] = s.dataReuniaoResolvida.split('-').map(Number);
             const dataReuniao = new Date(ano, mes - 1, dia);
             return dataReuniao >= hoje;
         });
@@ -102,8 +94,8 @@ export default function Dashboard({
         if (proximaIdx !== -1) {
             for (let i = proximaIdx; i < ativas.length; i++) {
                 const s = ativas[i];
-                if (!s.dataReuniao) continue;
-                const [ano, mes, dia] = s.dataReuniao.split('-').map(Number);
+                if (!s.dataReuniaoResolvida) continue;
+                const [ano, mes, dia] = s.dataReuniaoResolvida.split('-').map(Number);
                 const dataR = new Date(ano, mes - 1, dia);
                 if (dataR <= daquiA4Semanas) {
                     proximasSemanas.push(s);
@@ -137,9 +129,23 @@ export default function Dashboard({
         let partesFaltando = [];
 
         const normalizeStr = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const historicoContaComoParte = (historico = []) => historico.some((item) => {
+            const parte = normalizeStr(item?.parte);
+            return [
+                'ajudante',
+                'joias',
+                'leitura',
+                'tesouros',
+                'ministerio',
+                'discurso',
+                'estudobiblico',
+                'vidacrista'
+            ].includes(parte);
+        });
 
         proximasSemanas.forEach(sem => {
-            const isSemReuniao = sem.evento && sem.evento !== 'visita' && sem.evento !== 'normal';
+            const tipoEvento = getTipoEventoSemana(sem, config);
+            const isSemReuniao = tipoEvento !== 'normal' && tipoEvento !== 'visita';
             if (isSemReuniao) return;
 
             const semanaLabel = sem.semana?.split(' -')[0] || '';
@@ -231,12 +237,15 @@ export default function Dashboard({
         const precisandoAtencao = [];
 
         ativosAlunos.forEach(aluno => {
-            if (!aluno.historico || aluno.historico.length === 0) {
+            const historico = Array.isArray(aluno.historico) ? aluno.historico : [];
+            const nuncaRecebeuParte = !historicoContaComoParte(historico);
+
+            if (nuncaRecebeuParte) {
                 precisandoAtencao.push({ ...aluno, dias: null });
                 return;
             }
 
-            const sortedHist = [...aluno.historico].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+            const sortedHist = [...historico].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
             const ultimaDataTs = new Date(sortedHist[0].data).getTime();
 
             if (ultimaDataTs >= trimestresTs) {
@@ -257,17 +266,17 @@ export default function Dashboard({
         });
 
         return {
-            proxima, ativas, pendentes, progresso, eventosAgendados, partesFaltando,
+            proxima, ativas, proximasSemanas, pendentes, progresso, eventosAgendados, partesFaltando,
             totalAlunos, totalAtivos, totalDesabilitados,
             countAnciaos, countServos, countIrmas,
             usadosNoTrimestre, precisandoAtencao
         };
-    }, [listaProgramacoes, alunos, config?.eventosAnuais]);
+    }, [listaProgramacoes, alunos, config]);
 
     // --- HELPERS ---
     const formatarData = (dataIso) => {
         if (!dataIso) return '--/--';
-        const [ano, mes, dia] = dataIso.split('-');
+        const [, mes, dia] = dataIso.split('-');
         return `${dia}/${mes}`;
     };
 
@@ -317,8 +326,74 @@ export default function Dashboard({
         );
     };
 
+    const engagementPercentage = stats.totalAtivos > 0 ? Math.round((stats.usadosNoTrimestre / stats.totalAtivos) * 100) : 0;
+    const meetingTypeLabel = stats.proxima?.evento && stats.proxima.evento !== 'normal'
+        ? getNomeEvento(stats.proxima.evento)
+        : localTxt.reuniaoNormal;
+    const meetingTimeText = config?.horario || '19:30';
+    const meetingTypeDescription = stats.proxima?.evento?.includes('assembleia') || stats.proxima?.evento === 'congresso'
+        ? localTxt.semanaComEvento
+        : localTxt.semanaSemEvento;
+
+    const studentOverviewItems = [
+        {
+            label: localTxt.total,
+            value: stats.totalAlunos,
+            icon: Users,
+            cardClass: 'bg-slate-50 border-slate-200',
+            iconClass: 'text-slate-500',
+            valueClass: 'text-slate-900',
+            labelClass: 'text-slate-500'
+        },
+        {
+            label: localTxt.ativos,
+            value: stats.totalAtivos,
+            icon: UserCheck,
+            cardClass: 'bg-green-50 border-green-100',
+            iconClass: 'text-green-600',
+            valueClass: 'text-green-700',
+            labelClass: 'text-green-600'
+        },
+        {
+            label: localTxt.inativos,
+            value: stats.totalDesabilitados,
+            icon: UserX,
+            cardClass: 'bg-gray-50 border-gray-200',
+            iconClass: 'text-gray-500',
+            valueClass: 'text-gray-700',
+            labelClass: 'text-gray-500'
+        },
+        {
+            label: localTxt.anciaos,
+            value: stats.countAnciaos,
+            icon: Medal,
+            cardClass: 'bg-blue-50 border-blue-100',
+            iconClass: 'text-blue-600',
+            valueClass: 'text-blue-800',
+            labelClass: 'text-blue-500'
+        },
+        {
+            label: localTxt.servos,
+            value: stats.countServos,
+            icon: User,
+            cardClass: 'bg-indigo-50 border-indigo-100',
+            iconClass: 'text-indigo-600',
+            valueClass: 'text-indigo-800',
+            labelClass: 'text-indigo-500'
+        },
+        {
+            label: localTxt.irmas,
+            value: stats.countIrmas,
+            icon: BookHeart,
+            cardClass: 'bg-pink-50 border-pink-100',
+            iconClass: 'text-pink-600',
+            valueClass: 'text-pink-800',
+            labelClass: 'text-pink-500'
+        }
+    ];
+
     return (
-        <div className="space-y-6 p-6 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-5 px-3 pt-3 pb-20 sm:p-6 xl:p-7 min-[1800px]:p-8 animate-in fade-in duration-500">
 
             {/* HEADER */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -332,79 +407,195 @@ export default function Dashboard({
                 </div>
             </div>
 
-            {/* TOP: PAINEL PRINCIPAL (AZUL) */}
-            <div className="w-full">
+            {/* TOP: PAINEL PRINCIPAL */}
+            <div className="dashboard-top-grid">
                 {stats.proxima ? (
-                    <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
-                        <div className="relative z-10 flex flex-col md:flex-row justify-between gap-6">
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-blue-100 text-xs font-bold uppercase tracking-wider">
-                                    <Activity size={14} /> {txt.proximaReuniao}
-                                </div>
-                                <h2 className="text-3xl font-bold">{stats.proxima.semana}</h2>
-
-                                <div className="text-blue-100 flex flex-col gap-1 mt-2">
-                                    <span className="flex items-center gap-2 text-lg mt-1">
-                                        <Clock size={18} />
-                                        {formatarData(stats.proxima.dataReuniao)}
-                                        {stats.proxima.evento === 'visita' ? '' : ` • ${config?.horario || '19:30'}`}
-                                    </span>
-
-                                    {stats.proxima.evento && stats.proxima.evento !== 'normal' && (
-                                        <span className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-lg text-sm font-bold w-fit mt-2">
-                                            {stats.proxima.evento === 'visita' && <Briefcase size={14} />}
-                                            {stats.proxima.evento === 'congresso' && <UsersRound size={14} />}
-                                            {stats.proxima.evento.includes('assembleia') && <Tent size={14} />}
-                                            {getNomeEvento(stats.proxima.evento)}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {(stats.proxima.evento?.includes('assembleia') || stats.proxima.evento === 'congresso') && (
-                                    <div className="mt-4 bg-yellow-400 text-yellow-900 px-3 py-2 rounded-lg text-xs font-bold shadow-sm inline-block">
-                                        {txt.eventos.avisoSemReuniao}
+                    <>
+                        <div className="dashboard-top-hero bg-gradient-to-r from-blue-700 via-blue-600 to-blue-600 rounded-2xl p-5 sm:p-6 xl:p-7 text-white shadow-lg relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.14),transparent_28%)] pointer-events-none" />
+                            <div className="relative z-10 grid gap-5 min-[920px]:grid-cols-[minmax(0,1.65fr)_minmax(260px,0.9fr)] items-start">
+                                <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 text-blue-100 text-xs font-bold uppercase tracking-wider">
+                                            <Activity size={14} /> {txt.proximaReuniao}
+                                        </div>
+                                        <h2 className="text-2xl sm:text-3xl xl:text-[2rem] leading-tight font-bold max-w-4xl">
+                                            {stats.proxima.semana}
+                                        </h2>
                                     </div>
+
+                                    <div className="flex flex-wrap items-center gap-2.5 text-sm">
+                                        <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-blue-50 backdrop-blur-sm">
+                                            <Clock size={16} />
+                                            {formatarData(stats.proxima.dataReuniaoResolvida)}
+                                            {stats.proxima.evento === 'visita' ? '' : ` • ${config?.horario || '19:30'}`}
+                                        </span>
+
+                                        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-blue-50 backdrop-blur-sm">
+                                            {stats.proxima.evento === 'visita' && <Briefcase size={15} />}
+                                            {stats.proxima.evento === 'congresso' && <UsersRound size={15} />}
+                                            {stats.proxima.evento?.includes('assembleia') && <Tent size={15} />}
+                                            {(!stats.proxima.evento || stats.proxima.evento === 'normal') && <CheckCircle size={15} />}
+                                            {meetingTypeLabel}
+                                        </span>
+
+                                        {(stats.proxima.evento?.includes('assembleia') || stats.proxima.evento === 'congresso') && (
+                                            <span className="inline-flex items-center gap-2 rounded-full bg-yellow-300/95 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-yellow-950 shadow-sm">
+                                                <AlertTriangle size={14} />
+                                                {txt.eventos.avisoSemReuniao}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 min-[920px]:grid-cols-1 gap-3">
+                                    <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+                                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100/80">
+                                            {localTxt.dataReuniao}
+                                        </div>
+                                        <div className="mt-2 text-2xl font-black text-white">
+                                            {formatarData(stats.proxima.dataReuniaoResolvida)}
+                                        </div>
+                                        <div className="mt-1 text-sm text-blue-100">
+                                            {stats.proxima.evento === 'visita' ? txt.eventos.visita : txt.proximaReuniao}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+                                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100/80">
+                                            {localTxt.horarioReuniao}
+                                        </div>
+                                        <div className="mt-2 text-2xl font-black text-white">
+                                            {meetingTimeText}
+                                        </div>
+                                        <div className="mt-1 text-sm text-blue-100">
+                                            {stats.proxima.evento === 'visita' ? localTxt.horarioConformeSemana : localTxt.horarioHabitual}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/15 bg-black/10 p-4 backdrop-blur-sm">
+                                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100/80">
+                                            {localTxt.tipoSemana}
+                                        </div>
+                                        <div className="mt-2 text-lg font-bold text-white leading-snug">
+                                            {meetingTypeLabel}
+                                        </div>
+                                        <div className="mt-1 text-xs text-blue-100 leading-relaxed">
+                                            {stats.proxima.evento?.includes('assembleia') || stats.proxima.evento === 'congresso'
+                                                ? txt.eventos.avisoSemReuniao
+                                                : meetingTypeDescription}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dashboard-top-progress bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 flex flex-col">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                        {localTxt.visaoMes}
+                                    </div>
+                                    <div className="mt-2 text-3xl font-black text-slate-900">
+                                        {Math.round(stats.progresso)}%
+                                    </div>
+                                </div>
+
+                                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black ${stats.pendentes === 0 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {stats.pendentes === 0 ? localTxt.completoMes : `${stats.pendentes} ${localTxt.pendentesMes}`}
+                                </span>
+                            </div>
+
+                            <div className="mt-4 w-full bg-slate-100 h-2.5 rounded-full overflow-hidden shrink-0">
+                                <div className={`h-full transition-all duration-1000 ${stats.progresso === 100 ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${stats.progresso}%` }} />
+                            </div>
+
+                            <div className="mt-5 flex-1 flex flex-col">
+                                {stats.pendentes === 0 ? (
+                                    <div className="flex items-center gap-2 rounded-xl border border-green-100 bg-green-50 px-3 py-3 text-sm font-bold text-green-700">
+                                        <CheckCircle size={16} />
+                                        {localTxt.completoMes}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-2 text-sm font-bold text-amber-700">
+                                            <AlertTriangle size={16} />
+                                            {stats.pendentes} {localTxt.pendentesMes}
+                                        </div>
+
+                                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 overflow-y-auto custom-scroll flex-1 min-h-[110px] max-h-[220px]">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">{localTxt.faltando}</p>
+                                            <ul className="space-y-2 text-xs text-slate-700">
+                                                {stats.partesFaltando.map((falta, i) => (
+                                                    <li key={i} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                                                        {falta}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </>
                                 )}
                             </div>
 
-                            {!stats.proxima.evento?.includes('assembleia') && stats.proxima.evento !== 'congresso' && (
-                                <div className="bg-white/10 rounded-xl p-5 min-w-[280px] backdrop-blur-sm flex flex-col">
-                                    <div className="flex justify-between items-end mb-2 gap-4">
-                                        <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wider leading-tight w-24">
-                                            {localTxt.visaoMes}
-                                        </span>
-                                        <span className="text-2xl font-bold">{Math.round(stats.progresso)}%</span>
-                                    </div>
-                                    <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden shrink-0">
-                                        <div className={`h-full transition-all duration-1000 ${stats.progresso === 100 ? 'bg-green-400' : 'bg-yellow-400'}`} style={{ width: `${stats.progresso}%` }} />
-                                    </div>
-
-                                    <div className="mt-4 flex-1 flex flex-col justify-start">
-                                        {stats.pendentes === 0 ? (
-                                            <span className="flex items-center gap-1.5 text-green-300 font-bold text-sm bg-green-900/20 p-2 rounded"><CheckCircle size={16} /> {localTxt.completoMes}</span>
-                                        ) : (
-                                            <>
-                                                <span className="flex items-center gap-1.5 text-yellow-300 font-bold text-sm mb-2"><AlertTriangle size={16} /> {stats.pendentes} {localTxt.pendentesMes}</span>
-
-                                                <div className="bg-black/20 rounded p-2 overflow-y-auto custom-scroll flex-1 min-h-[50px] max-h-[80px]">
-                                                    <p className="text-[9px] font-bold text-blue-200 uppercase tracking-wider mb-1">{localTxt.faltando}</p>
-                                                    <ul className="text-[10px] text-white leading-tight space-y-1 list-disc pl-3">
-                                                        {stats.partesFaltando.map((falta, i) => (
-                                                            <li key={i}>{falta}</li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    <button onClick={() => setAbaAtiva('designar')} className="mt-4 w-full bg-white text-blue-700 py-2 rounded-lg font-bold text-sm hover:bg-blue-50 transition flex items-center justify-center gap-2 shrink-0">
-                                        {txt.gerenciar} <ArrowRight size={14} />
-                                    </button>
-                                </div>
-                            )}
+                            <button onClick={() => setAbaAtiva('designar')} className="mt-5 w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-sm shadow-blue-200">
+                                {txt.gerenciar} <ArrowRight size={14} />
+                            </button>
                         </div>
-                    </div>
+
+                        <div className="dashboard-top-health bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 flex flex-col">
+                            <div className="flex items-center gap-2 mb-4 text-rose-600 font-bold border-b border-gray-50 pb-3">
+                                <HeartPulse size={18} />
+                                <span className="text-sm">{localTxt.saudeTitulo}</span>
+                            </div>
+
+                            <div className="grid gap-4 flex-1 min-[1500px]:grid-cols-[minmax(230px,0.8fr)_minmax(0,1.2fr)] min-[1800px]:grid-cols-1">
+                                <div className="flex min-[1500px]:flex-col min-[1500px]:items-start items-center gap-4 bg-green-50/60 border border-green-100 p-4 rounded-xl">
+                                    <ProgressRing percentage={engagementPercentage} />
+                                    <div>
+                                        <h4 className="font-bold text-green-900 text-sm">{localTxt.rodizio}</h4>
+                                        <p className="text-xs text-green-700 mt-1 leading-tight">{localTxt.rodizioSub}</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl flex flex-col flex-1">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                            <h4 className="font-bold text-red-900 text-sm flex items-center gap-1.5">
+                                                <AlertCircle size={16} className="text-red-600" /> {localTxt.atencao}
+                                            </h4>
+                                            <p className="text-[10px] text-red-700 mt-0.5">{localTxt.atencaoSub}</p>
+                                        </div>
+                                        <span className="bg-red-200 text-red-800 text-xs font-black px-2.5 py-0.5 rounded-full">
+                                            {stats.precisandoAtencao.length}
+                                        </span>
+                                    </div>
+
+                                    {stats.precisandoAtencao.length === 0 ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-2 text-green-600">
+                                            <ThumbsUp size={24} className="mb-2 opacity-50" />
+                                            <p className="text-xs font-medium">{localTxt.tudoEmDia}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {stats.precisandoAtencao.slice(0, 3).map(aluno => (
+                                                <div key={aluno.id} className="flex justify-between items-center text-xs p-2.5 bg-white rounded-lg border border-red-100 shadow-sm">
+                                                    <span className="font-bold text-red-900 truncate max-w-[180px]">{aluno.nome}</span>
+                                                    <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded font-bold whitespace-nowrap border border-red-100">
+                                                        {aluno.dias === null ? localTxt.nunca : `${aluno.dias} ${localTxt.dias}`}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {stats.precisandoAtencao.length > 3 && (
+                                                <button onClick={() => setAbaAtiva('alunos')} className="w-full text-center text-[11px] text-red-500 font-bold hover:text-red-700 pt-2 pb-1">
+                                                    + {stats.precisandoAtencao.length - 3} {localTxt.outros}...
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </>
                 ) : (
                     <div className="bg-gray-100 rounded-2xl p-8 text-center border-2 border-dashed border-gray-300">
                         <p className="text-gray-500 mb-4">{txt.semReuniaoFutura}</p>
@@ -413,231 +604,151 @@ export default function Dashboard({
                 )}
             </div>
 
-            {/* MIDDLE: ALUNOS E SAÚDE (LADO A LADO) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* LOWER PANELS */}
+            <div className="grid grid-cols-1 min-[1800px]:grid-cols-12 gap-6">
 
                 {/* PAINEL VISÃO GERAL DE ALUNOS */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center gap-2 mb-4 text-blue-800 font-bold border-b pb-3 border-gray-50">
-                            <Users size={18} />
-                            <span className="text-sm">{localTxt.alunosTitulo}</span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col items-center justify-center">
-                                <span className="text-[10px] uppercase font-black text-gray-400 mb-1">{localTxt.total}</span>
-                                <span className="text-2xl font-black text-gray-800">{stats.totalAlunos}</span>
-                            </div>
-                            <div className="bg-green-50 p-3 rounded-xl border border-green-100 flex flex-col items-center justify-center">
-                                <span className="text-[10px] uppercase font-black text-green-600 mb-1">{localTxt.ativos}</span>
-                                <span className="text-2xl font-black text-green-700">{stats.totalAtivos}</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-3 mb-4">
-                            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex flex-col items-center">
-                                <Medal size={16} className="text-blue-500 mb-1" />
-                                <span className="text-base font-bold text-blue-900">{stats.countAnciaos}</span>
-                                <span className="text-[9px] uppercase font-bold text-blue-400">{localTxt.anciaos}</span>
-                            </div>
-                            <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 flex flex-col items-center">
-                                <User size={16} className="text-indigo-500 mb-1" />
-                                <span className="text-base font-bold text-indigo-900">{stats.countServos}</span>
-                                <span className="text-[9px] uppercase font-bold text-indigo-400">{localTxt.servos}</span>
-                            </div>
-                            <div className="bg-pink-50/50 p-3 rounded-lg border border-pink-100 flex flex-col items-center">
-                                <BookHeart size={16} className="text-pink-500 mb-1" />
-                                <span className="text-base font-bold text-pink-900">{stats.countIrmas}</span>
-                                <span className="text-[9px] uppercase font-bold text-pink-400">{localTxt.irmas}</span>
-                            </div>
-                        </div>
+                <div className="min-[1800px]:col-span-5 bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 h-full flex flex-col">
+                    <div className="flex items-center gap-2 mb-5 text-blue-800 font-bold border-b pb-3 border-gray-100">
+                        <Users size={18} />
+                        <span className="text-sm">{localTxt.alunosTitulo}</span>
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-gray-50">
-                        {stats.totalDesabilitados > 0 ? (
-                            <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
-                                <UserX size={14} />
-                                <span>{stats.totalDesabilitados} {localTxt.inativos}</span>
-                            </div>
-                        ) : <div></div>}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 min-[1500px]:grid-cols-6 min-[1800px]:grid-cols-3 gap-3">
+                        {studentOverviewItems.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <div key={item.label} className={`rounded-xl border p-3.5 flex flex-col justify-between min-h-[110px] ${item.cardClass}`}>
+                                    <Icon size={16} className={item.iconClass} />
+                                    <div className="mt-5">
+                                        <div className={`text-2xl font-black leading-none ${item.valueClass}`}>{item.value}</div>
+                                        <div className={`mt-1 text-[10px] uppercase tracking-[0.18em] font-bold ${item.labelClass}`}>{item.label}</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
+                    <div className="flex justify-end mt-5 pt-4 border-t border-gray-100">
                         <button
                             onClick={() => setAbaAtiva('alunos')}
-                            className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 py-1.5 px-4 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                            className="w-full sm:w-auto bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 py-2.5 px-4 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
                         >
                             {localTxt.irParaAlunos} <ArrowRight size={14} />
                         </button>
                     </div>
                 </div>
 
-                {/* PAINEL SAÚDE DA CONGREGAÇÃO */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col">
-                    <div className="flex items-center gap-2 mb-4 text-rose-600 font-bold border-b border-gray-50 pb-3">
-                        <HeartPulse size={18} />
-                        <span className="text-sm">{localTxt.saudeTitulo}</span>
+                {/* GESTÃO DE EVENTOS E VISITAS */}
+                <div className="min-[1800px]:col-span-7 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden h-full flex flex-col">
+                    <div className="px-6 py-4 border-b border-gray-100 font-bold text-indigo-800 flex items-center gap-2 bg-indigo-50/40">
+                        <Tent size={18} className="text-indigo-600" />
+                        <span>{localTxt.gestaoEventosVisitas}</span>
                     </div>
 
-                    <div className="flex flex-col gap-4 flex-1">
-                        <div className="flex items-center gap-4 bg-green-50/50 border border-green-100 p-4 rounded-xl">
-                            <ProgressRing percentage={stats.totalAtivos > 0 ? Math.round((stats.usadosNoTrimestre / stats.totalAtivos) * 100) : 0} />
-                            <div>
-                                <h4 className="font-bold text-green-900 text-sm">{localTxt.rodizio}</h4>
-                                <p className="text-xs text-green-700 mt-1 leading-tight">{localTxt.rodizioSub}</p>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] min-[1800px]:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.75fr)] divide-y xl:divide-y-0 xl:divide-x divide-gray-100">
 
-                        <div className="bg-red-50/50 border border-red-100 p-4 rounded-xl flex flex-col flex-1">
-                            <div className="flex items-center justify-between mb-3">
-                                <div>
-                                    <h4 className="font-bold text-red-900 text-sm flex items-center gap-1.5">
-                                        <AlertCircle size={16} className="text-red-600" /> {localTxt.atencao}
-                                    </h4>
-                                    <p className="text-[10px] text-red-700 mt-0.5">{localTxt.atencaoSub}</p>
-                                </div>
-                                <span className="bg-red-200 text-red-800 text-xs font-black px-2.5 py-0.5 rounded-full">
-                                    {stats.precisandoAtencao.length}
-                                </span>
-                            </div>
-
-                            {stats.precisandoAtencao.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center p-2 text-green-600">
-                                    <ThumbsUp size={24} className="mb-2 opacity-50" />
-                                    <p className="text-xs font-medium">{localTxt.tudoEmDia}</p>
+                        {/* Lista de Eventos */}
+                        <div className="bg-white">
+                            {stats.eventosAgendados.length === 0 ? (
+                                <div className="p-10 text-center text-gray-400 text-sm flex h-full items-center justify-center">
+                                    {txt.eventos.semEventos}
                                 </div>
                             ) : (
-                                <div className="space-y-2">
-                                    {stats.precisandoAtencao.slice(0, 3).map(aluno => (
-                                        <div key={aluno.id} className="flex justify-between items-center text-xs p-2.5 bg-white rounded-lg border border-red-100 shadow-sm">
-                                            <span className="font-bold text-red-900 truncate max-w-[180px]">{aluno.nome}</span>
-                                            <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded font-bold whitespace-nowrap border border-red-100">
-                                                {aluno.dias === null ? localTxt.nunca : `${aluno.dias} ${localTxt.dias}`}
-                                            </span>
+                                <div className="divide-y divide-gray-50 max-h-[320px] min-[1800px]:max-h-[420px] overflow-y-auto custom-scroll">
+                                    {stats.eventosAgendados.map((ev, idx) => (
+                                        <div key={idx} className={`px-6 py-4 flex items-center justify-between transition-colors ${ev.isPassado ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-2 rounded-lg border text-xs font-bold w-16 text-center ${getCorEvento(ev.tipo, ev.isPassado)}`}>
+                                                    {formatarData(ev.dataInicio)}
+                                                </div>
+                                                <div>
+                                                    <p className={`font-bold text-sm ${ev.isPassado ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+                                                        {getNomeEvento(ev.tipo)}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <p className="text-xs text-gray-500">
+                                                            {localTxt.semanaDe} {formatarData(ev.dataInicio)}
+                                                        </p>
+                                                        {ev.isPassado && (
+                                                            <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
+                                                                <Archive size={10} /> {localTxt.passado}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm(localTxt.removerEventoLista)) {
+                                                        onDefinirEvento(ev.dataInicio, 'normal');
+                                                    }
+                                                }}
+                                                className="text-gray-400 hover:text-red-500 p-2 bg-white rounded-full shadow-sm border border-gray-100 transition-colors"
+                                                title={localTxt.removerEvento}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
                                     ))}
-                                    {stats.precisandoAtencao.length > 3 && (
-                                        <button onClick={() => setAbaAtiva('alunos')} className="w-full text-center text-[11px] text-red-500 font-bold hover:text-red-700 pt-2 pb-1">
-                                            + {stats.precisandoAtencao.length - 3} {lang === 'es' ? 'otros' : 'outros'}...
-                                        </button>
-                                    )}
                                 </div>
                             )}
                         </div>
-                    </div>
-                </div>
 
-            </div>
-
-            {/* BOTTOM: GESTÃO DE EVENTOS E VISITAS COMPLETA */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 font-bold text-indigo-800 flex items-center gap-2 bg-indigo-50/40">
-                    <Tent size={18} className="text-indigo-600" />
-                    <span>Gestão de Eventos e Visitas</span>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
-
-                    {/* Lista de Eventos */}
-                    <div className="bg-white">
-                        {stats.eventosAgendados.length === 0 ? (
-                            <div className="p-10 text-center text-gray-400 text-sm flex h-full items-center justify-center">
-                                {txt.eventos.semEventos}
+                        {/* Agendar Evento */}
+                        <div className="p-6 bg-gray-50/30 flex flex-col justify-center">
+                            <div className="flex items-center gap-2 mb-4 text-gray-700 font-bold">
+                                <Calendar size={16} />
+                                <span className="text-sm">{txt.eventos.agendar}</span>
                             </div>
-                        ) : (
-                            <div className="divide-y divide-gray-50 max-h-[280px] overflow-y-auto custom-scroll">
-                                {stats.eventosAgendados.map((ev, idx) => (
-                                    <div key={idx} className={`px-6 py-4 flex items-center justify-between transition-colors ${ev.isPassado ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50'}`}>
-                                        <div className="flex items-center gap-4">
-                                            <div className={`p-2 rounded-lg border text-xs font-bold w-16 text-center ${getCorEvento(ev.tipo, ev.isPassado)}`}>
-                                                {formatarData(ev.dataInicio)}
-                                            </div>
-                                            <div>
-                                                <p className={`font-bold text-sm ${ev.isPassado ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
-                                                    {getNomeEvento(ev.tipo)}
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <p className="text-xs text-gray-500">
-                                                        Semana de {formatarData(ev.dataInicio)}
-                                                    </p>
-                                                    {ev.isPassado && (
-                                                        <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
-                                                            <Archive size={10} /> {localTxt.passado}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm('Remover evento da lista?')) {
-                                                    onDefinirEvento(ev.dataInicio, 'normal');
-                                                }
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{txt.eventos.tipo}</label>
+                                        <select
+                                            className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm"
+                                            value={tipoEvento}
+                                            onChange={(e) => {
+                                                setTipoEvento(e.target.value);
+                                                setDataEvento('');
                                             }}
-                                            className="text-gray-400 hover:text-red-500 p-2 bg-white rounded-full shadow-sm border border-gray-100 transition-colors"
-                                            title="Remover evento"
                                         >
-                                            <Trash2 size={16} />
-                                        </button>
+                                            <option value="visita">{txt.eventos.visita}</option>
+                                            <option value="assembleia_betel">{txt.eventos.assembleia_betel}</option>
+                                            <option value="assembleia_circuito">{txt.eventos.assembleia_circuito}</option>
+                                            <option value="congresso">{txt.eventos.congresso}</option>
+                                        </select>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Agendar Evento */}
-                    <div className="p-6 bg-gray-50/30 flex flex-col justify-center">
-                        <div className="flex items-center gap-2 mb-4 text-gray-700 font-bold">
-                            <Calendar size={16} />
-                            <span className="text-sm">{txt.eventos.agendar}</span>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{txt.eventos.tipo}</label>
-                                    <select
-                                        className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm"
-                                        value={tipoEvento}
-                                        onChange={(e) => {
-                                            setTipoEvento(e.target.value);
-                                            setDataEvento('');
-                                        }}
-                                    >
-                                        <option value="visita">{txt.eventos.visita}</option>
-                                        <option value="assembleia_betel">{txt.eventos.assembleia_betel}</option>
-                                        <option value="assembleia_circuito">{txt.eventos.assembleia_circuito}</option>
-                                        <option value="congresso">{txt.eventos.congresso}</option>
-                                    </select>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{txt.eventos.data}</label>
+                                        <input
+                                            type="date"
+                                            className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm"
+                                            value={dataEvento}
+                                            onChange={(e) => setDataEvento(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{txt.eventos.data}</label>
-                                    <input
-                                        type="date"
-                                        className="w-full mt-1.5 p-2.5 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-sm"
-                                        value={dataEvento}
-                                        onChange={(e) => setDataEvento(e.target.value)}
-                                    />
+
+                                <div className="flex gap-2.5 bg-indigo-50/50 border border-indigo-100 p-3 rounded-lg text-xs text-indigo-800 leading-relaxed shadow-sm">
+                                    <Info size={16} className="shrink-0 mt-0.5 text-indigo-500" />
+                                    <p>{getHelpText()}</p>
                                 </div>
-                            </div>
 
-                            <div className="flex gap-2.5 bg-indigo-50/50 border border-indigo-100 p-3 rounded-lg text-xs text-indigo-800 leading-relaxed shadow-sm">
-                                <Info size={16} className="shrink-0 mt-0.5 text-indigo-500" />
-                                <p>{getHelpText()}</p>
+                                <button
+                                    onClick={() => {
+                                        if (!dataEvento) return alert(localTxt.selecioneData);
+                                        onDefinirEvento(dataEvento, tipoEvento);
+                                        setDataEvento('');
+                                    }}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-200 mt-2"
+                                >
+                                    <Plus size={16} /> {txt.eventos.adicionar}
+                                </button>
                             </div>
-
-                            <button
-                                onClick={() => {
-                                    if (!dataEvento) return alert('Selecione uma data');
-                                    onDefinirEvento(dataEvento, tipoEvento);
-                                    setDataEvento('');
-                                }}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-200 mt-2"
-                            >
-                                <Plus size={16} /> {txt.eventos.adicionar}
-                            </button>
                         </div>
                     </div>
-
                 </div>
             </div>
 

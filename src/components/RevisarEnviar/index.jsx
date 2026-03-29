@@ -23,12 +23,12 @@ import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
 import { getI18n } from '../../utils/revisarEnviar/translations';
 import { getMeetingDateISOFromSemana, formatarDataFolha } from '../../utils/revisarEnviar/dates';
 import { buildWhatsappHref, buildMailtoHref } from '../../utils/revisarEnviar/links';
-import { addHistorico, tipoOracaoToDb } from '../../utils/revisarEnviar/historico';
+import { addHistorico } from '../../utils/revisarEnviar/historico';
+import { toast } from '../../utils/toast';
+import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
+import { formatText } from '../../i18n';
 
-import { enviarEventosParaAgenda } from '../../services/calendarSync';
-
-const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
-    const hasHistorico = Array.isArray(historico) && historico.length > 0;
+const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosChange }) => {
     const { lang, t } = getI18n(config);
 
     const [startIndex, setStartIndex] = useState(0);
@@ -36,12 +36,6 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
     const [abaAtiva, setAbaAtiva] = useState('imprimir');
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
     const [sentMap, setSentMap] = useState({});
-
-    // Sobrescrevendo o texto do botão para o novo conceito de Sincronizar
-    const tModificado = {
-        ...t,
-        btnGravarHistorico: lang === 'es' ? 'Sincronizar Historial' : 'Sincronizar Histórico'
-    };
 
     // --- HELPERS DE TIPO E DETECÇÃO ---
     const getTipo = (p) => (p?.tipo ?? p?.type ?? '').toString();
@@ -235,7 +229,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
         setPrintSelecionadas(next);
 
         prevStartSeguroRef.current = startSeguro;
-    }, [startSeguro, semanasDisponiveis, qtdSemanas]);
+    }, [startSeguro, semanasDisponiveis, qtdSemanas, printSelecionadas]);
 
     const toggleSemanaPrint = (key) => {
         userClearedRef.current = false;
@@ -268,8 +262,9 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
     // --- CÁLCULO DE DATA ---
     const getDataReuniaoISO = (sem) => {
-        const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === sem?.dataInicio);
-        const isVisita = sem?.evento === 'visita' || eventoEspecial?.tipo === 'visita';
+        const eventoEspecial = getEventoEspecialDaSemana(sem, config);
+        const tipoEvento = getTipoEventoSemana(sem, config);
+        const isVisita = tipoEvento === 'visita';
 
         // 🚨 A CORREÇÃO ESTÁ AQUI:
         // Se houver data manual, respeita... a menos que seja Visita!
@@ -415,15 +410,11 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         // Trava de segurança
         if (semanasSelecionadas.length === 0) {
-            alert("Nenhuma semana selecionada! Clique nas pílulas azuis para escolher de quais semanas deseja sincronizar o histórico.");
+            alert(t.syncNoWeeks);
             return;
         }
 
-        const msgConfirmacao = lang === 'es'
-            ? `¿Desea sincronizar el historial de las ${semanasSelecionadas.length} semanas seleccionadas? Esto eliminará automáticamente versiones anteriores en estas semanas para evitar duplicados.`
-            : `Deseja sincronizar o histórico das ${semanasSelecionadas.length} semanas selecionadas? Isso apagará as versões anteriores das datas destas semanas para não gerar histórico duplicado.`;
-
-        if (!window.confirm(msgConfirmacao)) return;
+        if (!window.confirm(formatText(t.syncConfirmTpl, { count: semanasSelecionadas.length }))) return;
 
         let novosAlunos = [...alunos];
         let gravouAlgo = false;
@@ -574,9 +565,9 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
         if (gravouAlgo) {
             onAlunosChange(novosAlunos);
-            alert(lang === 'es' ? '¡Historial sincronizado con éxito!' : 'Histórico sincronizado com sucesso!');
+            toast.success(t.syncOk);
         } else {
-            alert(t.nadaParaGravar);
+            toast.info(t.nadaParaGravar);
         }
     };
 
@@ -585,7 +576,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
             window.print();
         } catch (e) {
             console.error("Erro ao imprimir", e);
-            alert("Não foi possível abrir a janela de impressão do seu navegador.");
+            toast.error(e, t.printError);
         }
     };
 
@@ -696,7 +687,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
             <div className="no-print">
                 <RevisarEnviarHeader
-                    t={tModificado}
+                    t={t}
                     abaAtiva={abaAtiva}
                     setAbaAtiva={setAbaAtiva}
                     startIndex={startIndex}
@@ -724,7 +715,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
 
                         // Trava de segurança caso o usuário não tenha selecionado nenhuma
                         if (reunioesSelecionadas.length === 0) {
-                            alert("Nenhuma semana selecionada! Clique nas pílulas azuis para escolher quais semanas enviar para a agenda.");
+                            alert(t.agendaNoWeeks);
                             return;
                         }
 
@@ -733,12 +724,13 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                             dataExata: getDataReuniaoISO(sem)
                         }));
 
+                        const { enviarEventosParaAgenda } = await import('../../services/calendarSync');
                         const resultado = await enviarEventosParaAgenda(tokenGoogle, calendarId, reunioesComDataExata, config);
 
                         if (resultado.sucesso) {
-                            alert(`Sucesso! ${resultado.quantidade} partes adicionadas à sua agenda.`);
+                            toast.success(formatText(t.agendaSuccessTpl, { count: resultado.quantidade }));
                         } else {
-                            alert(`Erro na sincronização: ${resultado.erro}`);
+                            toast.error(resultado.erro, t.agendaError);
                         }
                     }}
                 />
@@ -761,8 +753,8 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                     const dataISO = getDataReuniaoISO(semana);
                                     const horarioExib = config?.horarioReuniao ?? config?.horario ?? '19:30';
 
-                                    const eventoEspecial = config?.eventosAnuais?.find(e => e.dataInicio === semana.dataInicio);
-                                    const isVisita = semana.evento === 'visita' || eventoEspecial?.tipo === 'visita';
+                                    const tipoEvento = getTipoEventoSemana(semana, config);
+                                    const isVisita = tipoEvento === 'visita';
 
                                     return (
                                         <div key={idxSem} className={isListMode ? 're-week' : 'print-block flex flex-col'}>
@@ -779,7 +771,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                                                         {semana.semana}
                                                         {isVisita && (
                                                             <span className="text-[9px] bg-white text-blue-700 px-2 py-0.5 rounded border border-blue-700 font-bold uppercase tracking-widest">
-                                                                VISITA DO SC
+                                                                {t.visitTag}
                                                             </span>
                                                         )}
                                                     </h2>
@@ -992,6 +984,7 @@ const RevisarEnviar = ({ historico, alunos, config, onAlunosChange }) => {
                 <RevisarEnviarNotificarTab
                     semanasParaNotificar={semanasParaImprimir}
                     config={config}
+                    confirmacoes={confirmacoes}
                     lang={lang}
                     t={t}
                     getDataReuniaoISO={getDataReuniaoISO}

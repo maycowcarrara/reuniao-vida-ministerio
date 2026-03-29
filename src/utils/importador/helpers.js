@@ -43,7 +43,7 @@ export const fetchHtmlViaProxy = async (targetUrl, { signal } = {}) => {
             if (!res2.ok) throw new Error('Fallback failed');
             const txt2 = await res2.text();
             return { ok: true, status: 200, text: txt2 };
-        } catch (e) {
+        } catch {
             return { ok: false, status: 0, text: null };
         }
     }

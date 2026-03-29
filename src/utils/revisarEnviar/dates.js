@@ -1,4 +1,6 @@
 // src/utils/revisarEnviar/dates.js
+import { getLanguageMeta, getWeekdayJsDay } from '../../config/appConfig';
+
 const normalizarTxt = (s) =>
     (s ?? '')
         .toString()
@@ -43,31 +45,6 @@ const monthIndexFromName = (name) => {
     if (MONTH_IDX[k] != null) return MONTH_IDX[k];
     if (k === 'abril') return 3;
     if (k === 'agosto') return 7;
-    return null;
-};
-
-const weekdayToIndex = (diaSemana) => {
-    const d = normalizarTxt(diaSemana);
-
-    // [NOVO] Se o valor for um número em formato string ("3" = Quarta)
-    if (/^[0-6]$/.test(d)) return parseInt(d, 10);
-
-    // pt
-    if (d === 'domingo') return 0;
-    if (d === 'segunda' || d === 'segunda-feira') return 1;
-    if (d === 'terca' || d === 'terça' || d === 'terca-feira' || d === 'terça-feira') return 2;
-    if (d === 'quarta' || d === 'quarta-feira') return 3;
-    if (d === 'quinta' || d === 'quinta-feira') return 4;
-    if (d === 'sexta' || d === 'sexta-feira') return 5;
-    if (d === 'sabado' || d === 'sábado' || d === 'sabado-feira' || d === 'sábado-feira') return 6;
-
-    // es
-    if (d === 'lunes') return 1;
-    if (d === 'martes') return 2;
-    if (d === 'miercoles' || d === 'miércoles') return 3;
-    if (d === 'jueves') return 4;
-    if (d === 'viernes') return 5;
-
     return null;
 };
 
@@ -116,34 +93,32 @@ const addDays = (dateObj, days) => {
     return d;
 };
 
-export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, overrideDia = null }) => {
-    const range = parseSemanaRange(semanaStr);
-
-    // Se houver um overrideDia (ex: 'Terça-feira' para visita), usa ele.
-    // Senão, tenta a configuração. Se não tiver configuração, string vazia.
-    const diaAlvo = overrideDia || config?.dia_reuniao || config?.diaReuniao || config?.diaSemana || '';
-
-    const weekdayIdx = weekdayToIndex(diaAlvo);
-
-    // tenta inferir ano do fallback (se existir), senão ano atual
-    let year = new Date().getFullYear();
+const getYearFromSources = ({ isoFallback, config, textSources = [] }) => {
     if (isoFallback && /^\d{4}-\d{2}-\d{2}$/.test(isoFallback)) {
-        year = Number(isoFallback.slice(0, 4));
-    } else if (Number(config?.anoProgramacao)) {
-        year = Number(config.anoProgramacao);
-    } else if (Number(config?.ano)) {
-        year = Number(config.ano);
+        return Number(isoFallback.slice(0, 4));
     }
 
-    if (!range || weekdayIdx == null) {
-        return isoFallback || null;
+    for (const source of textSources) {
+        const text = (source ?? '').toString();
+        const match = text.match(/\b(20\d{2})\b/);
+        if (match) return Number(match[1]);
     }
+
+    if (Number(config?.anoProgramacao)) return Number(config.anoProgramacao);
+    if (Number(config?.ano)) return Number(config.ano);
+
+    return new Date().getFullYear();
+};
+
+const getWeekRangeDatesFromSemana = ({ semanaStr, config, isoFallback, textSources = [] }) => {
+    const range = parseSemanaRange(semanaStr);
+    if (!range) return null;
+
+    const year = getYearFromSources({ isoFallback, config, textSources });
 
     const mStart = monthIndexFromName(range.startMonthName);
     const mEnd = monthIndexFromName(range.endMonthName);
-    if (mStart == null || mEnd == null) {
-        return isoFallback || null;
-    }
+    if (mStart == null || mEnd == null) return null;
 
     const start = new Date(year, mStart, range.startDay);
     let end = new Date(year, mEnd, range.endDay);
@@ -153,6 +128,27 @@ export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, ov
         end = new Date(year + 1, mEnd, range.endDay);
     }
 
+    return { start, end };
+};
+
+export const getWeekStartISOFromSemana = ({ semanaStr, config, isoFallback, textSources = [] }) => {
+    const rangeDates = getWeekRangeDatesFromSemana({ semanaStr, config, isoFallback, textSources });
+    if (!rangeDates) return isoFallback || null;
+    return formatISODateOnly(rangeDates.start);
+};
+
+export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, overrideDia = null, textSources = [] }) => {
+    // Se houver um overrideDia (ex: 'Terça-feira' para visita), usa ele.
+    // Senão, tenta a configuração. Se não tiver configuração, string vazia.
+    const diaAlvo = overrideDia || config?.dia_reuniao || config?.diaReuniao || config?.diaSemana || '';
+    const weekdayIdx = getWeekdayJsDay(diaAlvo);
+    const rangeDates = getWeekRangeDatesFromSemana({ semanaStr, config, isoFallback, textSources });
+
+    if (!rangeDates || weekdayIdx == null) {
+        return isoFallback || null;
+    }
+
+    const { start, end } = rangeDates;
     let cur = new Date(start);
     let found = null;
 
@@ -173,7 +169,7 @@ export const formatarDataFolha = (dataStr, lang) => {
     if (!dataStr) return '';
     const [ano, mes, dia] = dataStr.split('-').map(Number);
     const data = new Date(ano, mes - 1, dia);
-    return data.toLocaleDateString(lang === 'es' ? 'es-ES' : 'pt-BR', {
+    return data.toLocaleDateString(getLanguageMeta(lang).locale, {
         weekday: 'long',
         day: 'numeric',
         month: 'long',

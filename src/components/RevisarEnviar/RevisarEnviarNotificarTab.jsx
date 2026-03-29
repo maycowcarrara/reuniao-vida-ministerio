@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
-import { CheckCircle, Mail, MessageCircle, Briefcase, Tent, UsersRound, Loader2, Send } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { CheckCircle, CheckCircle2, Mail, MessageCircle, Tent, UsersRound, Loader2, Send, XCircle } from 'lucide-react';
 
 import { formatarDataFolha } from '../../utils/revisarEnviar/dates';
-import { montarMensagemDesignacao } from '../../utils/revisarEnviar/messages';
+import { montarMensagemDesignacao, montarMensagemLembreteSemana } from '../../utils/revisarEnviar/messages';
 import { enviarEmailAutomatico } from '../../utils/revisarEnviar/enviadorEmail';
 import { buildAgendaLink } from '../../utils/revisarEnviar/links';
+import { toast } from '../../utils/toast';
+import { getTipoEventoSemana } from '../../utils/eventos';
+import { formatText } from '../../i18n';
+import {
+    ensurePublicConfirmation,
+    registerConfirmationReminder,
+    respondToConfirmationByAssignment
+} from '../../services/confirmacoesPublicas';
 
 const SECAO_UI = {
     tesouros: { chip: 'bg-slate-600', wrap: 'border-slate-200 bg-slate-50', text: 'text-slate-900' },
@@ -15,6 +23,7 @@ const SECAO_UI = {
 const RevisarEnviarNotificarTab = ({
     semanasParaNotificar,
     config,
+    confirmacoes = [],
     lang,
     t,
     getDataReuniaoISO,
@@ -34,13 +43,122 @@ const RevisarEnviarNotificarTab = ({
     const [enviandoGlobal, setEnviandoGlobal] = useState(false);
     const [progresso, setProgresso] = useState({ total: 0, enviados: 0, erros: 0 });
     const [enviandoInd, setEnviandoInd] = useState({});
+    const [manualBusy, setManualBusy] = useState({});
+
+    const confirmacoesMap = useMemo(() => {
+        return (confirmacoes || []).reduce((acc, item) => {
+            const key = String(item?.assignmentKey || '').trim();
+            if (key) acc[key] = item;
+            return acc;
+        }, {});
+    }, [confirmacoes]);
+
+    const anexarLinkConfirmacao = (mensagemBase, link) => {
+        if (!link) return mensagemBase;
+        return [mensagemBase, formatText(t.msgConfirmar, { link })].filter(Boolean).join('\n\n');
+    };
+
+    const prepararConfirmacao = async (confirmationData) => {
+        if (!confirmationData) return { link: '', status: 'pendente' };
+        return ensurePublicConfirmation(confirmationData);
+    };
+
+    const montarPayloadEmail = async (payloadBase, confirmationData) => {
+        const confirmacao = await prepararConfirmacao(confirmationData);
+        return {
+            ...payloadBase,
+            Link: confirmacao.link,
+            LinkConfirmacao: confirmacao.link,
+            LinkConfirmar: confirmacao.acceptLink,
+            LinkRecusar: confirmacao.declineLink,
+            LinkAgenda: confirmationData?.agendaLink || payloadBase?.LinkAgenda || ''
+        };
+    };
+
+    const handleEnviarWhatsapp = async (pessoa, msg, msgKey, confirmationData) => {
+        try {
+            const confirmacao = await prepararConfirmacao(confirmationData);
+            enviarZap(pessoa, anexarLinkConfirmacao(msg, confirmacao.link));
+            markSent(msgKey, 'wa');
+        } catch (error) {
+            console.error('Falha ao preparar confirmação para WhatsApp:', error);
+            toast.error(error, t.reminderError);
+        }
+    };
+
+    const handleEnviarLembrete = async (pessoa, msgKey, confirmationData) => {
+        try {
+            const confirmacao = await prepararConfirmacao(confirmationData);
+            const msg = montarMensagemLembreteSemana({
+                t,
+                config,
+                dataISO: confirmationData?.dataISO,
+                responsavelNome: pessoa?.nome,
+                tituloParte: confirmationData?.tituloParte,
+                isVisita: confirmationData?.isVisita,
+                linkConfirmacao: confirmacao.link
+            });
+
+            enviarZap(pessoa, msg);
+            markSent(msgKey, 'waReminder');
+            await registerConfirmationReminder(confirmationData?.assignmentKey);
+            toast.success(t.reminderSent);
+        } catch (error) {
+            console.error('Falha ao enviar lembrete:', error);
+            toast.error(error, t.reminderError);
+        }
+    };
+
+    const getStatusUi = (assignmentKey) => {
+        const current = confirmacoesMap[String(assignmentKey || '').trim()];
+        const status = current?.status || 'pendente';
+
+        if (status === 'confirmado') {
+            return {
+                label: t.statusConfirmado,
+                chip: 'bg-emerald-100 text-emerald-800 border-emerald-200'
+            };
+        }
+
+        if (status === 'nao_pode') {
+            return {
+                label: t.statusNaoPode,
+                chip: 'bg-rose-100 text-rose-800 border-rose-200'
+            };
+        }
+
+        return {
+            label: t.statusPendente,
+            chip: 'bg-amber-100 text-amber-800 border-amber-200'
+        };
+    };
+
+    const handleManualStatus = async (confirmationData, status) => {
+        const assignmentKey = String(confirmationData?.assignmentKey || '').trim();
+        if (!assignmentKey) return;
+
+        try {
+            setManualBusy((prev) => ({ ...prev, [assignmentKey]: status }));
+            await prepararConfirmacao(confirmationData);
+            await respondToConfirmationByAssignment(assignmentKey, status, {
+                source: 'manual_admin',
+                actorType: 'admin'
+            });
+            toast.success(status === 'confirmado' ? t.manualConfirmado : t.manualNaoPode);
+        } catch (error) {
+            toast.error(error, t.manualErro);
+        } finally {
+            setManualBusy((prev) => ({ ...prev, [assignmentKey]: null }));
+        }
+    };
 
     // --- COLETOR DE E-MAILS PARA O DISPARO GLOBAL ---
     const coletarTodasDesignacoes = () => {
         const lista = [];
 
         semanasParaNotificar.forEach(sem => {
-            if (sem.evento && sem.evento !== 'normal' && sem.evento !== 'visita') return;
+            const tipoEvento = getTipoEventoSemana(sem, config);
+            if (tipoEvento !== 'normal' && tipoEvento !== 'visita') return;
 
             const dataISO = getDataReuniaoISO(sem);
             const dataReuniaoFormatada = formatarDataFolha(dataISO, lang);
@@ -55,24 +173,41 @@ const RevisarEnviarNotificarTab = ({
                         role
                     });
 
+                    const agendaLink = buildAgendaLink({
+                        config,
+                        semana: sem.semana,
+                        dataISO,
+                        tituloParte: titulo,
+                        responsavelNome: pessoa.nome,
+                        ajudanteNome: ajudante?.nome
+                    });
+
+                    const confirmationData = {
+                        assignmentKey: msgKey,
+                        lang,
+                        semana: sem.semana,
+                        dataISO,
+                        tituloParte: titulo,
+                        pessoaNome: pessoa.nome,
+                        role,
+                        congregacaoNome: config?.nome_cong,
+                        agendaLink,
+                        sala: salaOverride || 'Principal'
+                    };
+
                     // Só adiciona na fila se ainda não foi enviado!
                     if (!isSent(msgKey, 'mail')) {
                         lista.push({
                             msgKey,
+                            confirmationData,
                             payload: {
                                 Nome: pessoa.nome,
                                 Ajudante: ajudante?.nome || "—",
                                 Data: dataReuniaoFormatada,
                                 Desig: titulo,
                                 Sala: salaOverride || 'Principal',
-                                Link: buildAgendaLink({
-                                    config,
-                                    semana: sem.semana,
-                                    dataISO,
-                                    tituloParte: titulo,
-                                    responsavelNome: pessoa.nome,
-                                    ajudanteNome: ajudante?.nome
-                                }),
+                                Link: agendaLink,
+                                LinkAgenda: agendaLink,
                                 email_destino: pessoa.email
                             }
                         });
@@ -174,11 +309,11 @@ const RevisarEnviarNotificarTab = ({
         const fila = coletarTodasDesignacoes();
 
         if (fila.length === 0) {
-            alert("Nenhum e-mail pendente ou válido encontrado para envio automático nas semanas ativas.");
+            toast.info(t.emailBatchEmpty);
             return;
         }
 
-        if (!window.confirm(`Você está prestes a enviar automaticamente ${fila.length} e-mails.\nDeseja continuar?`)) {
+        if (!window.confirm(formatText(t.emailBatchConfirmTpl, { count: fila.length }))) {
             return;
         }
 
@@ -190,7 +325,8 @@ const RevisarEnviarNotificarTab = ({
 
         for (const item of fila) {
             try {
-                await enviarEmailAutomatico(item.payload);
+                const payload = await montarPayloadEmail(item.payload, item.confirmationData);
+                await enviarEmailAutomatico(payload);
                 markSent(item.msgKey, 'mail');
                 contEnviados++;
             } catch (error) {
@@ -204,74 +340,121 @@ const RevisarEnviarNotificarTab = ({
         }
 
         setEnviandoGlobal(false);
-        alert(`Disparo concluído!\n✅ Enviados com sucesso: ${contEnviados}\n⚠️ Erros: ${contErros}`);
+        toast.success(formatText(t.emailBatchDoneTpl, { sent: contEnviados, errors: contErros }));
     };
 
     const handleEnviarIndividual = async (msgKey, payload) => {
         setEnviandoInd(prev => ({ ...prev, [msgKey]: true }));
         try {
-            await enviarEmailAutomatico(payload);
+            const enrichedPayload = await montarPayloadEmail(payload.emailPayload, payload.confirmationData);
+            await enviarEmailAutomatico(enrichedPayload);
             markSent(msgKey, 'mail');
         } catch (error) {
-            alert("Falha ao enviar e-mail. Verifique a configuração do EmailJS.");
+            console.error("Falha ao enviar e-mail individual:", error);
+            toast.error(error, t.emailSendError);
         } finally {
             setEnviandoInd(prev => ({ ...prev, [msgKey]: false }));
         }
     };
 
-    const renderButtons = ({ pessoa, msg, msgKey, corWa, compact = false, emailPayload }) => {
+    const renderButtons = ({ pessoa, msg, msgKey, corWa, compact = false, emailPayload, confirmationData }) => {
         const waSent = isSent(msgKey, 'wa');
         const mailSent = isSent(msgKey, 'mail');
+        const reminderSent = isSent(msgKey, 'waReminder');
         const hasEmail = !!pessoa?.email;
         const isSending = enviandoInd[msgKey];
+        const statusUi = getStatusUi(confirmationData?.assignmentKey);
+        const manualState = manualBusy[confirmationData?.assignmentKey];
 
         return (
-            <div className="flex items-center gap-2 shrink-0">
-                <button
-                    onClick={() => {
-                        enviarZap(pessoa, msg);
-                        markSent(msgKey, 'wa');
-                    }}
-                    className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${waSent ? 'bg-gray-200 text-gray-600' : corWa || 'bg-green-100 text-green-700 hover:bg-green-200'
-                        }`}
-                    title={t.btnEnviar}
-                >
-                    <MessageCircle size={compact ? 16 : 18} />
-                    {waSent && (
-                        <CheckCircle
-                            size={compact ? 12 : 14}
-                            className="absolute -top-1 -right-1 text-green-700 bg-white rounded-full"
-                        />
-                    )}
-                </button>
+            <div className="flex flex-col items-end gap-2 shrink-0">
+                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black ${statusUi.chip}`}>
+                    {statusUi.label}
+                </span>
 
-                <button
-                    disabled={!hasEmail || isSending || enviandoGlobal}
-                    onClick={() => handleEnviarIndividual(msgKey, emailPayload)}
-                    className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${!hasEmail ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50' :
-                            mailSent ? 'bg-gray-200 text-gray-600' :
-                                'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                        }`}
-                    title={!hasEmail ? "Aluno sem e-mail cadastrado" : t.btnEnviarEmail}
-                >
-                    {isSending ? (
-                        <Loader2 size={compact ? 16 : 18} className="animate-spin text-indigo-500" />
-                    ) : (
-                        <Mail size={compact ? 16 : 18} />
-                    )}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => handleEnviarWhatsapp(pessoa, msg, msgKey, confirmationData)}
+                        className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${waSent ? 'bg-gray-200 text-gray-600' : corWa || 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                        title={t.btnEnviar}
+                    >
+                        <MessageCircle size={compact ? 16 : 18} />
+                        {waSent && (
+                            <CheckCircle
+                                size={compact ? 12 : 14}
+                                className="absolute -top-1 -right-1 text-green-700 bg-white rounded-full"
+                            />
+                        )}
+                    </button>
 
-                    {mailSent && !isSending && (
-                        <CheckCircle
-                            size={compact ? 12 : 14}
-                            className="absolute -top-1 -right-1 text-indigo-700 bg-white rounded-full"
-                        />
-                    )}
-                </button>
+                    <button
+                        onClick={() => handleEnviarLembrete(pessoa, msgKey, confirmationData)}
+                        className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${reminderSent ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            }`}
+                        title={t.btnEnviarLembrete}
+                    >
+                        <Send size={compact ? 16 : 18} />
+                        {reminderSent && (
+                            <CheckCircle
+                                size={compact ? 12 : 14}
+                                className="absolute -top-1 -right-1 text-amber-700 bg-white rounded-full"
+                            />
+                        )}
+                    </button>
+
+                    <button
+                        disabled={!hasEmail || isSending || enviandoGlobal}
+                        onClick={() => handleEnviarIndividual(msgKey, { emailPayload, confirmationData })}
+                        className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${!hasEmail ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50' :
+                                mailSent ? 'bg-gray-200 text-gray-600' :
+                                    'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                            }`}
+                        title={!hasEmail ? t.noStudentEmailTitle : t.btnEnviarEmail}
+                    >
+                        {isSending ? (
+                            <Loader2 size={compact ? 16 : 18} className="animate-spin text-indigo-500" />
+                        ) : (
+                            <Mail size={compact ? 16 : 18} />
+                        )}
+
+                        {mailSent && !isSending && (
+                            <CheckCircle
+                                size={compact ? 12 : 14}
+                                className="absolute -top-1 -right-1 text-indigo-700 bg-white rounded-full"
+                            />
+                        )}
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => handleManualStatus(confirmationData, 'confirmado')}
+                        disabled={!!manualState}
+                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-black text-emerald-700 disabled:opacity-50"
+                        title={t.btnManualConfirmar}
+                    >
+                        {manualState === 'confirmado' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                        {t.btnManualConfirmar}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleManualStatus(confirmationData, 'nao_pode')}
+                        disabled={!!manualState}
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[10px] font-black text-rose-700 disabled:opacity-50"
+                        title={t.btnManualRecusar}
+                    >
+                        {manualState === 'nao_pode' ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                        {t.btnManualRecusar}
+                    </button>
+                </div>
             </div>
         );
     };
 
-    const renderCardPessoa = ({ tituloTopo, pessoa, msg, msgKey, corWa, compact = false, emailPayload }) => (
+    const renderCardPessoa = ({ tituloTopo, pessoa, msg, msgKey, corWa, compact = false, emailPayload, confirmationData }) => (
         <div className={`bg-white ${compact ? 'p-2' : 'p-3'} rounded-lg shadow-sm flex justify-between items-center border`}>
             <div className="min-w-0 pr-2">
                 <p className="text-[10px] font-bold text-gray-400 uppercase truncate">{tituloTopo}</p>
@@ -281,10 +464,10 @@ const RevisarEnviarNotificarTab = ({
                     <p className="text-[10px] text-gray-400 truncate">{pessoa.email}</p>
                 )}
                 {!pessoa?.email && (
-                    <p className="text-[9px] text-red-400 italic truncate">Sem e-mail</p>
+                    <p className="text-[9px] text-red-400 italic truncate">{t.noStudentEmail}</p>
                 )}
             </div>
-            {renderButtons({ pessoa, msg, msgKey, corWa, compact, emailPayload })}
+            {renderButtons({ pessoa, msg, msgKey, corWa, compact, emailPayload, confirmationData })}
         </div>
     );
 
@@ -301,10 +484,10 @@ const RevisarEnviarNotificarTab = ({
             <div className="mb-6 bg-indigo-50 rounded-xl p-5 border border-indigo-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex-1">
                     <h4 className="font-bold text-indigo-800 flex items-center gap-2">
-                        <Send size={18} /> Disparo Automático de E-mails
+                        <Send size={18} /> {t.emailBatchTitle}
                     </h4>
                     <p className="text-xs text-indigo-600 mt-1 max-w-lg">
-                        Envia todas as designações não notificadas de uma só vez usando o modelo S-89 Oficial no corpo do E-mail.
+                        {t.emailBatchDescription}
                     </p>
 
                     {enviandoGlobal && (
@@ -326,7 +509,7 @@ const RevisarEnviarNotificarTab = ({
                         }`}
                 >
                     {enviandoGlobal ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-                    {enviandoGlobal ? `Enviando (${progresso.enviados}/${progresso.total})` : "Disparar E-mails Pendentes"}
+                    {enviandoGlobal ? formatText(t.emailBatchSendingTpl, { sent: progresso.enviados, total: progresso.total }) : t.emailBatchButton}
                 </button>
             </div>
 
@@ -336,22 +519,23 @@ const RevisarEnviarNotificarTab = ({
                     const dataISO = getDataReuniaoISO(sem);
                     const dataReuniaoFormatada = formatarDataFolha(dataISO, lang);
                     const horarioExib = config?.horarioReuniao ?? config?.horario ?? '';
-                    const isVisita = sem.evento === 'visita';
+                    const tipoEvento = getTipoEventoSemana(sem, config);
+                    const isVisita = tipoEvento === 'visita';
 
                     // --- BLOQUEIO DE EVENTO ESPECIAL ---
-                    if (sem.evento && sem.evento !== 'normal' && sem.evento !== 'visita') {
+                    if (tipoEvento !== 'normal' && tipoEvento !== 'visita') {
                         return (
                             <div key={sIdx} className="bg-yellow-50 rounded-2xl p-6 border border-yellow-200 text-center">
                                 <div className="flex justify-center mb-3">
                                     <div className="bg-yellow-100 p-3 rounded-full text-yellow-600">
-                                        {sem.evento === 'congresso' ? <UsersRound size={32} /> : <Tent size={32} />}
+                                        {tipoEvento === 'congresso' ? <UsersRound size={32} /> : <Tent size={32} />}
                                     </div>
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-800 uppercase mb-1">{sem.semana}</h3>
                                 <p className="text-sm font-semibold text-yellow-800 uppercase tracking-wide mb-2">
-                                    Semana de {sem.evento === 'congresso' ? 'Congresso' : 'Assembleia'}
+                                    {formatText(t.assemblyWeekTpl, { type: tipoEvento === 'congresso' ? t.congresso : t.assembleia })}
                                 </p>
-                                <p className="text-xs text-gray-600">Não há designações para notificar nesta semana.</p>
+                                <p className="text-xs text-gray-600">{t.noAssignmentsThisWeek}</p>
                             </div>
                         );
                     }
@@ -399,7 +583,8 @@ const RevisarEnviarNotificarTab = ({
                             tituloParte,
                             descricaoParte: descricao,
                             minutosParte: min,
-                            isVisita
+                            isVisita,
+                            incluirLinkAgenda: false
                         });
 
                         const keyResp = buildMsgKey({
@@ -410,20 +595,37 @@ const RevisarEnviarNotificarTab = ({
                             role: 'resp',
                         });
 
+                        const agendaLinkResp = buildAgendaLink({
+                            config,
+                            semana: sem.semana,
+                            dataISO,
+                            tituloParte,
+                            responsavelNome: estudante.nome,
+                            ajudanteNome: ajud?.nome
+                        });
+
+                        const confirmationDataResp = {
+                            assignmentKey: keyResp,
+                            lang,
+                            semana: sem.semana,
+                            dataISO,
+                            tituloParte,
+                            pessoaNome: estudante.nome,
+                            role: 'resp',
+                            congregacaoNome: config?.nome_cong,
+                            agendaLink: agendaLinkResp,
+                            sala: p.sala || 'Principal',
+                            isVisita
+                        };
+
                         const emailPayloadResp = {
                             Nome: estudante.nome,
                             Ajudante: ajud?.nome || "—",
                             Data: dataReuniaoFormatada,
                             Desig: tituloParte,
                             Sala: p.sala || 'Principal',
-                            Link: buildAgendaLink({
-                                config,
-                                semana: sem.semana,
-                                dataISO,
-                                tituloParte: tituloParte,
-                                responsavelNome: estudante.nome,
-                                ajudanteNome: ajud?.nome
-                            }),
+                            Link: agendaLinkResp,
+                            LinkAgenda: agendaLinkResp,
                             email_destino: estudante.email
                         };
 
@@ -443,7 +645,8 @@ const RevisarEnviarNotificarTab = ({
                                 tituloParte,
                                 descricaoParte: descricao,
                                 minutosParte: min,
-                                isVisita
+                                isVisita,
+                                incluirLinkAgenda: false
                             });
 
                             keyAjud = buildMsgKey({
@@ -454,20 +657,37 @@ const RevisarEnviarNotificarTab = ({
                                 role: 'ajud',
                             });
 
+                            const agendaLinkAjud = buildAgendaLink({
+                                config,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: `${t.ajudante} - ${tituloParte}`,
+                                responsavelNome: ajud.nome
+                            });
+
                             emailPayloadAjud = {
                                 Nome: ajud.nome,
                                 Ajudante: "—",
                                 Data: dataReuniaoFormatada,
                                 Desig: `${t.ajudante} - ${tituloParte}`,
                                 Sala: p.sala || 'Principal',
-                                Link: buildAgendaLink({
-                                    config,
-                                    semana: sem.semana,
-                                    dataISO,
-                                    tituloParte: `${t.ajudante} - ${tituloParte}`,
-                                    responsavelNome: ajud.nome
-                                }),
+                                Link: agendaLinkAjud,
+                                LinkAgenda: agendaLinkAjud,
                                 email_destino: ajud.email
+                            };
+
+                            emailPayloadAjud.confirmationData = {
+                                assignmentKey: keyAjud,
+                                lang,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: `${t.ajudante} - ${tituloParte}`,
+                                pessoaNome: ajud.nome,
+                                role: 'ajud',
+                                congregacaoNome: config?.nome_cong,
+                                agendaLink: agendaLinkAjud,
+                                sala: p.sala || 'Principal',
+                                isVisita
                             };
                         }
 
@@ -481,7 +701,7 @@ const RevisarEnviarNotificarTab = ({
                                     <p className="text-sm font-bold truncate">{estudante.nome}</p>
 
                                     {!estudante.email && (
-                                        <p className="text-[9px] text-red-400 italic">Sem e-mail</p>
+                                        <p className="text-[9px] text-red-400 italic">{t.noStudentEmail}</p>
                                     )}
 
                                     {ajud?.nome && (
@@ -500,7 +720,8 @@ const RevisarEnviarNotificarTab = ({
                                         msg: msgResp,
                                         msgKey: keyResp,
                                         corWa: 'bg-green-100 text-green-700 hover:bg-green-200',
-                                        emailPayload: emailPayloadResp
+                                        emailPayload: emailPayloadResp,
+                                        confirmationData: confirmationDataResp
                                     })}
 
                                     {msgAjud && ajud && (
@@ -510,7 +731,8 @@ const RevisarEnviarNotificarTab = ({
                                                 msg: msgAjud,
                                                 msgKey: keyAjud,
                                                 corWa: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-                                                emailPayload: emailPayloadAjud
+                                                emailPayload: emailPayloadAjud,
+                                                confirmationData: emailPayloadAjud?.confirmationData
                                             })}
                                         </div>
                                     )}
@@ -543,7 +765,8 @@ const RevisarEnviarNotificarTab = ({
                             tituloParte,
                             descricaoParte: descricao,
                             minutosParte: min,
-                            isVisita
+                            isVisita,
+                            incluirLinkAgenda: false
                         });
 
                         const msgKey = buildMsgKey({
@@ -554,19 +777,36 @@ const RevisarEnviarNotificarTab = ({
                             role: 'oracao',
                         });
 
+                        const agendaLink = buildAgendaLink({
+                            config,
+                            semana: sem.semana,
+                            dataISO,
+                            tituloParte,
+                            responsavelNome: pessoa.nome
+                        });
+
+                        const confirmationData = {
+                            assignmentKey: msgKey,
+                            lang,
+                            semana: sem.semana,
+                            dataISO,
+                            tituloParte,
+                            pessoaNome: pessoa.nome,
+                            role: 'oracao',
+                            congregacaoNome: config?.nome_cong,
+                            agendaLink,
+                            sala: 'Principal',
+                            isVisita
+                        };
+
                         const emailPayload = {
                             Nome: pessoa.nome,
                             Ajudante: "—",
                             Data: dataReuniaoFormatada,
                             Desig: tituloParte,
                             Sala: 'Principal',
-                            Link: buildAgendaLink({
-                                config,
-                                semana: sem.semana,
-                                dataISO,
-                                tituloParte: tituloParte,
-                                responsavelNome: pessoa.nome
-                            }),
+                            Link: agendaLink,
+                            LinkAgenda: agendaLink,
                             email_destino: pessoa.email
                         };
 
@@ -577,7 +817,8 @@ const RevisarEnviarNotificarTab = ({
                             msgKey,
                             corWa: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
                             compact: true,
-                            emailPayload
+                            emailPayload,
+                            confirmationData
                         });
                     };
 
@@ -603,7 +844,8 @@ const RevisarEnviarNotificarTab = ({
                                 tituloParte: tituloFinal,
                                 descricaoParte: descricao,
                                 minutosParte: min,
-                                isVisita
+                                isVisita,
+                                incluirLinkAgenda: false
                             });
 
                             const msgKey = buildMsgKey({
@@ -614,19 +856,36 @@ const RevisarEnviarNotificarTab = ({
                                 role: 'dirigente',
                             });
 
+                            const agendaLink = buildAgendaLink({
+                                config,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: tituloFinal,
+                                responsavelNome: dirigente.nome
+                            });
+
+                            const confirmationData = {
+                                assignmentKey: msgKey,
+                                lang,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: tituloFinal,
+                                pessoaNome: dirigente.nome,
+                                role: 'dirigente',
+                                congregacaoNome: config?.nome_cong,
+                                agendaLink,
+                                sala: 'Principal',
+                                isVisita
+                            };
+
                             const emailPayload = {
                                 Nome: dirigente.nome,
                                 Ajudante: "—",
                                 Data: dataReuniaoFormatada,
                                 Desig: tituloFinal,
                                 Sala: 'Principal',
-                                Link: buildAgendaLink({
-                                    config,
-                                    semana: sem.semana,
-                                    dataISO,
-                                    tituloParte: tituloFinal,
-                                    responsavelNome: dirigente.nome
-                                }),
+                                Link: agendaLink,
+                                LinkAgenda: agendaLink,
                                 email_destino: dirigente.email
                             };
 
@@ -638,7 +897,8 @@ const RevisarEnviarNotificarTab = ({
                                         msg,
                                         msgKey,
                                         corWa: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
-                                        emailPayload
+                                        emailPayload,
+                                        confirmationData
                                     })}
                                 </React.Fragment>
                             );
@@ -657,7 +917,8 @@ const RevisarEnviarNotificarTab = ({
                                 tituloParte: tituloFinal,
                                 descricaoParte: descricao,
                                 minutosParte: min,
-                                isVisita
+                                isVisita,
+                                incluirLinkAgenda: false
                             });
 
                             const msgKey = buildMsgKey({
@@ -668,19 +929,36 @@ const RevisarEnviarNotificarTab = ({
                                 role: 'leitor',
                             });
 
+                            const agendaLink = buildAgendaLink({
+                                config,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: tituloFinal,
+                                responsavelNome: leitor.nome
+                            });
+
+                            const confirmationData = {
+                                assignmentKey: msgKey,
+                                lang,
+                                semana: sem.semana,
+                                dataISO,
+                                tituloParte: tituloFinal,
+                                pessoaNome: leitor.nome,
+                                role: 'leitor',
+                                congregacaoNome: config?.nome_cong,
+                                agendaLink,
+                                sala: 'Principal',
+                                isVisita
+                            };
+
                             const emailPayload = {
                                 Nome: leitor.nome,
                                 Ajudante: "—",
                                 Data: dataReuniaoFormatada,
                                 Desig: tituloFinal,
                                 Sala: 'Principal',
-                                Link: buildAgendaLink({
-                                    config,
-                                    semana: sem.semana,
-                                    dataISO,
-                                    tituloParte: tituloFinal,
-                                    responsavelNome: leitor.nome
-                                }),
+                                Link: agendaLink,
+                                LinkAgenda: agendaLink,
                                 email_destino: leitor.email
                             };
 
@@ -692,7 +970,8 @@ const RevisarEnviarNotificarTab = ({
                                         msg,
                                         msgKey,
                                         corWa: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200',
-                                        emailPayload
+                                        emailPayload,
+                                        confirmationData
                                     })}
                                 </React.Fragment>
                             );
@@ -737,12 +1016,12 @@ const RevisarEnviarNotificarTab = ({
                                     {sem.semana}
                                     {isVisita && (
                                         <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded border border-blue-700">
-                                            VISITA SC
+                                            {t.visitTag}
                                         </span>
                                     )}
                                 </h4>
                                 <div className="text-[11px] text-gray-500 font-bold">
-                                    {config?.nome_cong} | {horarioExib} | {dataReuniaoFormatada} {isVisita && "(Terça-feira)"}
+                                    {config?.nome_cong} | {horarioExib} | {dataReuniaoFormatada} {isVisita && t.tuesdayLabel}
                                 </div>
                             </div>
 
@@ -762,7 +1041,8 @@ const RevisarEnviarNotificarTab = ({
                                             tituloParte,
                                             descricaoParte: '',
                                             minutosParte: '',
-                                            isVisita
+                                            isVisita,
+                                            incluirLinkAgenda: false
                                         });
 
                                         const msgKey = buildMsgKey({
@@ -773,19 +1053,36 @@ const RevisarEnviarNotificarTab = ({
                                             role: 'presidente',
                                         });
 
+                                        const agendaLink = buildAgendaLink({
+                                            config,
+                                            semana: sem.semana,
+                                            dataISO,
+                                            tituloParte,
+                                            responsavelNome: sem.presidente.nome
+                                        });
+
+                                        const confirmationData = {
+                                            assignmentKey: msgKey,
+                                            lang,
+                                            semana: sem.semana,
+                                            dataISO,
+                                            tituloParte,
+                                            pessoaNome: sem.presidente.nome,
+                                            role: 'presidente',
+                                            congregacaoNome: config?.nome_cong,
+                                            agendaLink,
+                                            sala: 'Principal',
+                                            isVisita
+                                        };
+
                                         const emailPayload = {
                                             Nome: sem.presidente.nome,
                                             Ajudante: "—",
                                             Data: dataReuniaoFormatada,
                                             Desig: tituloParte,
                                             Sala: 'Principal',
-                                            Link: buildAgendaLink({
-                                                config,
-                                                semana: sem.semana,
-                                                dataISO,
-                                                tituloParte: tituloParte,
-                                                responsavelNome: sem.presidente.nome
-                                            }),
+                                            Link: agendaLink,
+                                            LinkAgenda: agendaLink,
                                             email_destino: sem.presidente.email
                                         };
 
@@ -795,7 +1092,8 @@ const RevisarEnviarNotificarTab = ({
                                             msg,
                                             msgKey,
                                             corWa: 'bg-green-100 text-green-700 hover:bg-green-200',
-                                            emailPayload
+                                            emailPayload,
+                                            confirmationData
                                         });
                                     })()}
 
@@ -810,7 +1108,7 @@ const RevisarEnviarNotificarTab = ({
                                 {grupos.outros.length > 0 && (
                                     <div className="rounded-2xl border p-4 bg-white">
                                         <div className="flex items-center justify-between mb-3">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Outros</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">{t.secoes.outros}</span>
                                             <span className="text-[10px] font-black text-gray-500">{grupos.outros.length}</span>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -823,7 +1121,7 @@ const RevisarEnviarNotificarTab = ({
                             {oracaoFinal && oracaoFinal !== oracaoInicial && (
                                 <div className="rounded-2xl border p-4 bg-white mt-4">
                                     <div className="flex items-center justify-between mb-3">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Encerramento</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">{t.closing}</span>
                                         <span className="text-[10px] font-black text-gray-500">1</span>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

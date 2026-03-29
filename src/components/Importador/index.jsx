@@ -1,16 +1,26 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ClipboardList, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, RefreshCcw, ExternalLink, ChevronLeft, Search, Ban } from 'lucide-react';
-import * as cheerio from 'cheerio';
-import { TRANSLATIONS } from '../../utils/importador/constants';
-import { isLikelyUrl, isLikelyHtml, proxyUrl, fetchHtmlViaProxy, normalizar } from '../../utils/importador/helpers';
+import { TRANSLATIONS, getImportadorCatalogConfig } from '../../utils/importador/constants';
+import { isLikelyUrl, fetchHtmlViaProxy } from '../../utils/importador/helpers';
 import { extrairDados } from '../../utils/importador/parser';
 import RevisarImportacao from './RevisarImportacao';
 // 🔥 IMPORTANDO O HOOK PARA VERIFICAR EVENTOS DO DASHBOARD
 import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
+import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
+import { formatText } from '../../i18n';
+
+let cheerioModulePromise;
+const loadCheerio = async () => {
+    if (!cheerioModulePromise) {
+        cheerioModulePromise = import('cheerio');
+    }
+    return cheerioModulePromise;
+};
 
 export default function Importador({ onImportComplete, idioma = 'pt' }) {
     const lang = (idioma || 'pt').toLowerCase().startsWith('es') ? 'es' : 'pt';
     const t = TRANSLATIONS[lang];
+    const catalogConfig = getImportadorCatalogConfig(lang);
 
     // Puxando os eventos salvos no Dashboard
     const { dados: appDados } = useGerenciadorDados();
@@ -21,68 +31,35 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     const [metodoAtivo, setMetodoAtivo] = useState('catalogo');
     const [dadosParaEdicao, setDadosParaEdicao] = useState(null);
     const [erro, setErro] = useState('');
-    const inputRef = useRef(null);
 
     // --- CATÁLOGO STATE ---
     const [catalogLoading, setCatalogLoading] = useState(false);
     const [catalogErro, setCatalogErro] = useState('');
     const [apostilas, setApostilas] = useState([]);
-    const [buscaApostila, setBuscaApostila] = useState('');
     const [apostilaSelecionada, setApostilaSelecionada] = useState(null);
     const [semanasLoading, setSemanasLoading] = useState(false);
     const [semanasErro, setSemanasErro] = useState('');
     const [semanas, setSemanas] = useState([]);
 
-    const CATALOG_BASE = lang === 'es' ? 'guia-actividades-reunion-testigos-jehova' : 'jw-apostila-do-mes';
-    const CATALOG_URL = `https://www.jw.org/${lang === 'es' ? 'es' : 'pt'}/biblioteca/${CATALOG_BASE}/`;
+    const CATALOG_BASE = catalogConfig.catalogBase;
+    const CATALOG_URL = `https://www.jw.org/${catalogConfig.languagePath}/biblioteca/${CATALOG_BASE}/`;
 
     // --- 🔥 HELPER INTELIGENTE DE BLOQUEIO DE ASSEMBLEIA ---
-    const verificarBloqueioAssembleia = (titulo) => {
-        if (!titulo) return false;
-        const eventosDashboard = appDados?.configuracoes?.eventosAnuais || [];
-        
-        // 1. Pela palavra no Título (caso o JW mencione Assembleia)
-        const ehTextoAssembleia = titulo.toLowerCase().includes('assembleia') || titulo.toLowerCase().includes('congresso');
-        if (ehTextoAssembleia) return true;
+    const verificarBloqueioAssembleia = ({ titulo, dataInicio } = {}) => {
+        const evento = getEventoEspecialPorSemana({
+            semanaStr: titulo,
+            config: appDados?.configuracoes,
+            isoFallback: dataInicio || null,
+            textSources: [titulo]
+        });
 
-        // 2. Extraindo o "Dia e Mês" do título para bater com o Dashboard
-        const str = titulo.toLowerCase();
-        const meses = [
-            'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
-            'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
-        ];
-        
-        let mesIndex = -1;
-        for (let i = 0; i < meses.length; i++) {
-            if (str.includes(meses[i])) { mesIndex = i % 12; break; }
-        }
-        
-        // Apanha o primeiro número do texto (que é a segunda-feira)
-        const matchDia = str.match(/^(\d{1,2})/);
-        
-        if (mesIndex !== -1 && matchDia) {
-            const dia = parseInt(matchDia[1], 10);
-            
-            // Formata para bater com a parte final das datas no banco (ex: "-04-13")
-            const mm = String(mesIndex + 1).padStart(2, '0');
-            const dd = String(dia).padStart(2, '0');
-            const finalMMDD = `-${mm}-${dd}`; 
-            
-            // Procura se tem essa data cadastrada (ignoramos o ano para evitar bugs na virada do ano)
-            const conflito = eventosDashboard.find(ev => 
-                (ev.dataInicio && ev.dataInicio.endsWith(finalMMDD)) && 
-                (ev.tipo.includes('assembleia') || ev.tipo.includes('congresso'))
-            );
-            
-            if (conflito) return true;
-        }
-
-        return false;
+        return isTipoEventoBloqueante(evento?.tipo);
     };
 
     // --- EFEITOS E HANDLERS ---
 
-    const parseSemanas = (html) => {
+    const parseSemanas = useCallback(async (html) => {
+        const cheerio = await loadCheerio();
         const $ = cheerio.load(html);
         const out = [];
         const reStart = /^(\d{1,2})(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2})(\s*de\s+[\p{L}]+)?/iu;
@@ -96,18 +73,17 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
             if (!looksWeek) return;
             
             const hrefLower = href.toLowerCase();
-            const isProgramLink = lang === 'es' 
-                ? hrefLower.includes('vida-y-ministerio-cristianos')
-                : (hrefLower.includes('programa') || hrefLower.includes('programa%c3%a7'));
+            const isProgramLink = catalogConfig.weekLinkMatcher(hrefLower);
 
             if (isProgramLink) {
                 out.push({ titulo: txt, url: new URL(href, 'https://www.jw.org').toString() });
             }
         });
         return [...new Map(out.map(x => [x.url, x])).values()]; // Unique
-    };
+    }, [catalogConfig]);
 
-    const parseApostilas = (html) => {
+    const parseApostilas = useCallback(async (html) => {
+        const cheerio = await loadCheerio();
         const $ = cheerio.load(html);
         const out = [];
         $('a[href]').each((_, el) => {
@@ -119,21 +95,23 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
             }
         });
         return [...new Map(out.map(x => [x.url, x])).values()];
-    };
+    }, [CATALOG_BASE]);
 
-    const carregarCatalogo = async () => {
+    const carregarCatalogo = useCallback(async () => {
         setCatalogLoading(true);
         setCatalogErro('');
         try {
             const { ok, text } = await fetchHtmlViaProxy(CATALOG_URL);
             if (ok) {
-                setApostilas(parseApostilas(text));
+                setApostilas(await parseApostilas(text));
             } else {
                 setCatalogErro(t.catalogErro);
             }
-        } catch(e) { setCatalogErro(t.catalogErro); } 
+        } catch {
+            setCatalogErro(t.catalogErro);
+        }
         finally { setCatalogLoading(false); }
-    };
+    }, [CATALOG_URL, parseApostilas, t.catalogErro]);
 
     const abrirApostila = async (item) => {
         setApostilaSelecionada(item);
@@ -141,9 +119,11 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
         setSemanasErro('');
         try {
             const { ok, text } = await fetchHtmlViaProxy(item.url);
-            if(ok) setSemanas(parseSemanas(text));
+            if(ok) setSemanas(await parseSemanas(text));
             else setSemanasErro(t.semanasErro);
-        } catch(e) { setSemanasErro(t.semanasErro); }
+        } catch {
+            setSemanasErro(t.semanasErro);
+        }
         finally { setSemanasLoading(false); }
     };
 
@@ -157,19 +137,19 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                 if (!res.ok) throw new Error('Fetch Error');
                 html = res.text;
             }
-            const dados = extrairDados(html, 'html', lang);
+            const dados = await extrairDados(html, 'html', lang);
             if (!dados) throw new Error('Parse Error');
 
             // 🔥 Trava de bloqueio para colar URL/Texto! Impede abrir a Revisão
             const tituloSemana = dados.semana || '';
-            if (verificarBloqueioAssembleia(tituloSemana)) {
-                alert(`⛔ BLOQUEIO DE SEGURANÇA:\n\nA programação de "${tituloSemana}" recai numa semana que está marcada no Dashboard como Assembleia/Congresso.\n\nA importação foi bloqueada.`);
+            if (verificarBloqueioAssembleia({ titulo: tituloSemana, dataInicio: dados.dataInicio || dados.dataExata })) {
+                alert(formatText(t.bloqueioSegurancaSemanaTpl, { titulo: tituloSemana }));
                 setLoading(false);
                 return; 
             }
 
             setDadosParaEdicao(dados);
-        } catch (e) {
+        } catch {
             setErro(tipo === 'url' ? t.msgErro : t.erroConteudo);
         } finally {
             setLoading(false);
@@ -184,12 +164,14 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
             } else {
                 setMetodoAtivo('texto'); setInput(clip);
             }
-        } catch (e) {}
+        } catch {
+            setErro(t.erroConteudo);
+        }
     };
 
     useEffect(() => {
         if (metodoAtivo === 'catalogo' && !apostilas.length) carregarCatalogo();
-    }, [metodoAtivo]);
+    }, [metodoAtivo, apostilas.length, carregarCatalogo]);
 
     if (dadosParaEdicao) {
         return (
@@ -204,10 +186,10 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6 bg-white p-6 m-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="max-w-3xl mx-auto space-y-6 bg-white p-3 sm:p-6 m-2 sm:m-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><ClipboardList className="text-blue-600" /> Importador</h2>
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><ClipboardList className="text-blue-600" /> {t.titulo}</h2>
                     <p className="text-sm text-gray-500 mt-1">{t.instrucao}</p>
                 </div>
                 <div className="text-xs text-gray-400 uppercase font-bold">{lang}</div>
@@ -250,11 +232,12 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                                 <button onClick={() => setApostilaSelecionada(null)} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2"><ChevronLeft size={16} /> {t.voltar}</button>
                                 <a href={apostilaSelecionada.url} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2"><ExternalLink size={16} /> {t.abrirNoJw}</a>
                             </div>
+                            {semanasErro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{semanasErro}</div>}
                             {semanasLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
                                 <div className="space-y-2">
                                     {semanas.map(w => {
                                         // 🔥 Verificador Atuando na Renderização da Lista
-                                        const isBloqueado = verificarBloqueioAssembleia(w.titulo);
+                                        const isBloqueado = verificarBloqueioAssembleia({ titulo: w.titulo });
 
                                         return (
                                             <div key={w.url} className={`border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isBloqueado ? 'border-yellow-200 bg-yellow-50/50' : 'border-gray-200 bg-white'}`}>
@@ -262,7 +245,7 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                                                     {w.titulo}
                                                     {isBloqueado && (
                                                         <span className="flex items-center gap-1 mt-1 text-[10px] text-yellow-700 bg-yellow-200/50 px-2 py-0.5 rounded-full w-fit">
-                                                            <Ban size={10} /> Semana de Assembleia
+                                                            <Ban size={10} /> {t.bloqueadoBadge}
                                                         </span>
                                                     )}
                                                 </div>
@@ -272,7 +255,7 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                                                     className={`px-4 py-2 rounded-xl text-white font-extrabold transition inline-flex items-center gap-2 ${isBloqueado ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                                                 >
                                                     {loading ? <Loader2 className="animate-spin" size={16} /> : isBloqueado ? <Ban size={18} /> : <CheckCircle size={18} />} 
-                                                    {isBloqueado ? 'Bloqueado' : t.importarSemana}
+                                                    {isBloqueado ? t.bloqueado : t.importarSemana}
                                                 </button>
                                             </div>
                                         );

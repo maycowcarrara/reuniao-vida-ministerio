@@ -13,13 +13,14 @@ import {
     LayoutDashboard,
     ChevronDown,
     ChevronUp,
-    Clock,
     CheckCircle2,
     X,
     PlayCircle,
     Download
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSectionMessages, useI18n } from '../i18n';
+import { getLanguageMeta, getWeekdayOffsetFromMonday, normalizeMeetingDay } from '../config/appConfig';
 
 // ============================================================================
 // CAPTURADOR GLOBAL DO PWA (Resolve o bug do React ser mais lento que o Chrome)
@@ -45,10 +46,10 @@ const extrairNumeroCantico = (texto) => {
     return numbers ? numbers[numbers.length - 1] : '';
 };
 
-const formatarDataCompleta = (dataISO, lang) => {
-    if (!dataISO) return 'Data não definida';
+const formatarDataCompleta = (dataISO, lang, texts) => {
+    if (!dataISO) return texts.dataNaoDefinida;
     const data = new Date(dataISO + 'T12:00:00');
-    const locale = lang === 'es' ? 'es-ES' : 'pt-BR';
+    const locale = getLanguageMeta(lang).locale;
     const diaSemana = data.toLocaleDateString(locale, { weekday: 'long' });
     const dataStr = data.toLocaleDateString(locale, { day: '2-digit', month: 'long' });
     return `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)}, ${dataStr}`;
@@ -56,12 +57,7 @@ const formatarDataCompleta = (dataISO, lang) => {
 
 const obterDataExata = (dataSegundaISO, diaConfig) => {
     if (!dataSegundaISO) return null;
-    const diasMap = {
-        'Segunda-feira': 0, 'Terça-feira': 1, 'Quarta-feira': 2,
-        'Quinta-feira': 3, 'Sexta-feira': 4, 'Sábado': 5, 'Domingo': 6,
-        'Lunes': 0, 'Martes': 1, 'Miércoles': 2, 'Jueves': 3, 'Viernes': 4
-    };
-    const add = diasMap[diaConfig] || 0;
+    const add = getWeekdayOffsetFromMonday(diaConfig);
     const dt = new Date(dataSegundaISO + 'T12:00:00');
     dt.setDate(dt.getDate() + add);
     return dt.toISOString().split('T')[0];
@@ -80,10 +76,11 @@ const checkEstaSemana = (dataInicioISO) => {
 };
 
 // --- CÁLCULO DE HORÁRIOS PARA O CRONOGRAMA ---
-const calcularHorarios = (partes, dataIso, horarioBase) => {
+const calcularHorarios = (partes, dataIso, horarioBase, lang) => {
     if (!partes || !dataIso) return partes;
     const [hora, minuto] = (horarioBase || "19:30").split(':');
     let dataAtual = new Date(`${dataIso}T${hora}:${minuto}:00`);
+    const locale = getLanguageMeta(lang).locale;
 
     return partes.map(parte => {
         let duracao = parseInt(parte.tempo || "5", 10);
@@ -104,27 +101,35 @@ const calcularHorarios = (partes, dataIso, horarioBase) => {
             ...parte,
             startObj: start,
             endObj: end,
-            startTimeStr: start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            endTimeStr: end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            startTimeStr: start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+            endTimeStr: end.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
         };
     });
 };
 
-const gerarLinkAgenda = (parte, dataSemanaISO) => {
+const gerarLinkAgenda = (parte, dataSemanaISO, texts) => {
     const dataReuniao = dataSemanaISO ? new Date(dataSemanaISO + 'T19:30:00') : new Date();
     const start = dataReuniao.toISOString().replace(/-|:|\.\d+/g, '');
     const dataFim = new Date(dataReuniao.getTime() + (parseInt(parte.tempo) || 10) * 60000);
     const end = dataFim.toISOString().replace(/-|:|\.\d+/g, '');
 
     const principal = parte.estudante || parte.dirigente || parte.oracao;
-    const nomePrincipal = principal?.nome ? `Designado: ${principal.nome}\n` : '';
-    const nomeAjudante = parte.ajudante?.nome ? `Ajudante: ${parte.ajudante.nome}\n` : '';
-    const nomeLeitor = parte.leitor?.nome ? `Leitor: ${parte.leitor.nome}\n` : '';
+    const nomePrincipal = principal?.nome ? `${texts.designado}: ${principal.nome}\n` : '';
+    const nomeAjudante = parte.ajudante?.nome ? `${texts.ajudante}: ${parte.ajudante.nome}\n` : '';
+    const nomeLeitor = parte.leitor?.nome ? `${texts.leitor}: ${parte.leitor.nome}\n` : '';
 
-    const texto = encodeURIComponent(`Reunião: ${parte.titulo}`);
-    const desc = encodeURIComponent(`Seção: ${parte.secao || 'Reunião'}\nTempo: ${parte.tempo} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
+    const texto = encodeURIComponent(`${texts.reuniao}: ${parte.titulo}`);
+    const desc = encodeURIComponent(`${texts.secao}: ${parte.secao || texts.reuniao}\n${texts.tempo}: ${parte.tempo} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
 
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${texto}&dates=${start}/${end}&details=${desc}`;
+};
+
+const formatarContagemRegressiva = (ms) => {
+    const totalSegundos = Math.max(0, Math.ceil(ms / 1000));
+    const minutos = Math.floor(totalSegundos / 60);
+    const segundos = totalSegundos % 60;
+
+    return `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
 };
 
 // ============================================================================
@@ -133,11 +138,13 @@ const gerarLinkAgenda = (parte, dataSemanaISO) => {
 
 export default function QuadroPublico({ programacoes, config, usuario }) {
     const [busca, setBusca] = useState('');
-    const [autenticado, setAutenticado] = useState(false);
+    const [autenticado, setAutenticado] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.localStorage.getItem('quadro_auth') === 'true';
+    });
     const [senhaInput, setSenhaInput] = useState('');
 
     const [semanaExpandida, setSemanaExpandida] = useState(0);
-    const [modoTempoReal, setModoTempoReal] = useState(false);
     const [agora, setAgora] = useState(new Date());
 
     // --- ESTADOS DO PWA (INSTALAÇÃO) ---
@@ -147,83 +154,20 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const SENHA_CONGREGACAO = "2026";
 
     // --- DICIONÁRIO DE TRADUÇÕES ---
-    const lang = config?.idioma === 'es' ? 'es' : 'pt';
-    const T = {
-        pt: {
-            titulo: "Acesso ao Quadro",
-            descAcesso: "Digite o código da congregação para visualizar as próximas designações.",
-            btnAcesso: "Acessar Agora",
-            placeholderBusca: "Filtrar por nome...",
-            btnTempoReal: "Tempo Real",
-            tagCronograma: "Cronograma",
-            tagFiltro: "Filtro",
-            nenhumaReuniao: "Nenhuma reunião futura",
-            visita: "Visita do Superintendente de Circuito",
-            assembleia: "Semana de Assembleia",
-            congresso: "Semana de Congresso",
-            eventoEspecial: "Evento Especial",
-            hoje: "HOJE",
-            atual: "ATUAL",
-            msgAssembleia: "Não há reunião Vida e Ministério nesta semana. Aproveite o banquete espiritual!",
-            inicio: "Início",
-            meio: "Meio",
-            fim: "Fim",
-            presidente: "Presidente da Reunião",
-            inicioReuniao: "Início da Reunião",
-            fimReuniao: "Fim da Reunião",
-            ate: "até",
-            aoVivo: "AO VIVO",
-            oracao: "Oração",
-            ajuda: "Ajuda",
-            leitor: "Leitor",
-            atualizado: "Atualizado em Tempo Real",
-            acessoSuper: "Acesso Superintendente",
-            voltarPainel: "Painel Admin",
-            instalarApp: "Instalar Aplicativo",
-            acessoRapido: "Acesso rápido e offline",
-            btnInstalar: "Instalar",
-            secoes: { tesouros: "Tesouros", ministerio: "Ministério", vida: "Vida Cristã" }
-        },
-        es: {
-            titulo: "Acceso al Tablero",
-            descAcesso: "Ingrese el código de la congregación para ver las próximas asignaciones.",
-            btnAcesso: "Acceder Ahora",
-            placeholderBusca: "Filtrar por nombre...",
-            btnTempoReal: "Tiempo Real",
-            tagCronograma: "Cronograma",
-            tagFiltro: "Filtro",
-            nenhumaReuniao: "No hay reuniones futuras",
-            visita: "Visita del Superintendente de Circuito",
-            assembleia: "Semana de Asamblea",
-            congresso: "Semana de Asamblea Regional",
-            eventoEspecial: "Evento Especial",
-            hoje: "HOY",
-            atual: "ACTUAL",
-            msgAssembleia: "No hay reunión Vida y Ministerio esta semana. ¡Disfrute del banquete espiritual!",
-            inicio: "Inicio",
-            meio: "Medio",
-            fim: "Fin",
-            presidente: "Presidente de la Reunión",
-            inicioReuniao: "Inicio de la Reunión",
-            fimReuniao: "Fin de la Reunión",
-            ate: "hasta",
-            aoVivo: "EN VIVO",
-            oracao: "Oración",
-            ajuda: "Ayuda",
-            leitor: "Lector",
-            atualizado: "Actualizado en Tiempo Real",
-            acessoSuper: "Acceso Superintendente",
-            voltarPainel: "Panel Admin",
-            instalarApp: "Instalar Aplicación",
-            acessoRapido: "Acceso rápido y sin conexión",
-            btnInstalar: "Instalar",
-            secoes: { tesouros: "Tesoros", ministerio: "Ministerio", vida: "Vida Cristiana" }
-        }
-    }[lang];
+    const { lang } = useI18n();
+    const T = useSectionMessages('quadroPublico');
+    const agendaTexts = {
+        designado: T.designado,
+        ajudante: T.ajuda,
+        leitor: T.leitor,
+        reuniao: T.reuniao,
+        secao: T.secao,
+        tempo: T.tempo,
+    };
 
     // --- EFEITOS GERAIS E CAPTURADOR PWA ---
     useEffect(() => {
-        const timer = setInterval(() => setAgora(new Date()), 10000);
+        const timer = setInterval(() => setAgora(new Date()), 1000);
 
         // Verifica se o evento já foi capturado pela "armadilha global" antes do React carregar
         const checkPrompt = () => {
@@ -263,13 +207,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             setAutenticado(true);
             localStorage.setItem('quadro_auth', 'true');
         } else {
-            alert('Código incorreto / Código incorrecto');
+            alert(T.codigoIncorreto);
         }
     };
-
-    useMemo(() => {
-        if (localStorage.getItem('quadro_auth') === 'true') setAutenticado(true);
-    }, []);
 
     const semanasParaExibir = useMemo(() => {
         if (!programacoes) return [];
@@ -325,14 +265,14 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             const dtBase = extrairDataBaseISO(sem); // Pega a data segura novamente para os cálculos
 
             if (sem.evento === 'visita') {
-                dataCorreta = obterDataExata(dtBase, lang === 'es' ? 'Martes' : 'Terça-feira');
+                dataCorreta = obterDataExata(dtBase, 'Terça-feira');
             } else if (sem.evento === 'assembleia' || sem.evento === 'congresso') {
                 dataCorreta = sem.dataEventoEspecial || dtBase;
             } else {
-                dataCorreta = obterDataExata(dtBase, config?.dia_reuniao || (lang === 'es' ? 'Lunes' : 'Segunda-feira'));
+                dataCorreta = obterDataExata(dtBase, normalizeMeetingDay(config?.dia_reuniao));
             }
 
-            const partesComHorario = calcularHorarios(sem.partes, dataCorreta, config?.horario);
+            const partesComHorario = calcularHorarios(sem.partes, dataCorreta, config?.horario, lang);
             const meetingStartTimeStr = partesComHorario.length > 0 ? partesComHorario[0].startTimeStr : '--:--';
             const meetingEndTimeStr = partesComHorario.length > 0 ? partesComHorario[partesComHorario.length - 1].endTimeStr : '--:--';
 
@@ -364,6 +304,37 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const m = String(agora.getMonth() + 1).padStart(2, '0');
     const d = String(agora.getDate()).padStart(2, '0');
     const hojeStr = `${y}-${m}-${d}`;
+    const reuniaoAoVivo = useMemo(() => {
+        return semanasParaExibir.findIndex((sem) => {
+            if (!sem.partes?.length || sem.termosBuscados) return false;
+
+            const inicio = sem.partes[0]?.startObj;
+            const fim = sem.partes[sem.partes.length - 1]?.endObj;
+
+            return inicio && fim && agora >= inicio && agora < fim;
+        });
+    }, [semanasParaExibir, agora]);
+    const reuniaoEmContagem = useMemo(() => {
+        const index = semanasParaExibir.findIndex((sem) => {
+            if (!sem.partes?.length || sem.termosBuscados) return false;
+
+            const inicio = sem.partes[0]?.startObj;
+            if (!inicio) return false;
+
+            const cincoMinAntes = new Date(inicio.getTime() - (5 * 60000));
+            return agora >= cincoMinAntes && agora < inicio;
+        });
+
+        if (index === -1) return { index: -1, msRestantes: 0 };
+
+        return {
+            index,
+            msRestantes: semanasParaExibir[index].partes[0].startObj.getTime() - agora.getTime()
+        };
+    }, [semanasParaExibir, agora]);
+    const modoTempoReal = reuniaoAoVivo !== -1;
+    const modoPreLive = !modoTempoReal && reuniaoEmContagem.index !== -1;
+    const contagemRegressiva = formatarContagemRegressiva(reuniaoEmContagem.msRestantes);
 
     if (!autenticado) {
         return (
@@ -411,17 +382,29 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                     <div className="flex justify-between items-start">
                         <div>
-                            <h1 className="text-lg font-black leading-none tracking-tight">{config?.nome_cong || 'Sua Congregação'}</h1>
+                            <h1 className="text-lg font-black leading-none tracking-tight">{config?.nome_cong || T.congregacaoPadrao}</h1>
 
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 <p className="text-blue-200 text-[9px] font-bold uppercase tracking-[0.1em] opacity-90">
-                                    Vida e Ministério
+                                    {T.ministerioLabel}
                                 </p>
 
                                 {modoTempoReal && (
-                                    <span className="flex items-center gap-1 bg-emerald-500/30 text-emerald-100 border border-emerald-500/50 text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">
-                                        <Clock size={8} className="animate-pulse" />
-                                        <span className="hidden sm:inline">{T.tagCronograma}</span>
+                                    <span className="flex items-center gap-1.5 bg-rose-500/20 text-rose-50 border border-rose-300/40 text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm shadow-rose-950/20 backdrop-blur-sm">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="absolute inline-flex h-full w-full rounded-full bg-rose-200 animate-ping opacity-80"></span>
+                                            <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-50 shadow-[0_0_10px_rgba(255,255,255,0.75)]"></span>
+                                        </span>
+                                        <span>{T.aoVivo}</span>
+                                    </span>
+                                )}
+                                {modoPreLive && (
+                                    <span className="flex items-center gap-1.5 bg-amber-400/20 text-amber-50 border border-amber-200/40 text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm shadow-amber-950/20 backdrop-blur-sm">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="absolute inline-flex h-full w-full rounded-full bg-amber-200 animate-ping opacity-80"></span>
+                                            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-50 shadow-[0_0_10px_rgba(255,248,220,0.7)]"></span>
+                                        </span>
+                                        <span>{T.comecaEm} {contagemRegressiva}</span>
                                     </span>
                                 )}
                                 {busca && (
@@ -448,43 +431,26 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                         )}
                     </div>
 
-                    <div className="flex gap-2 w-full">
-                        <div className="relative flex-1 group">
-                            {/* Ícone de lupa centralizado verticalmente */}
-                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
+                    <div className="relative w-full group">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
 
-                            <input
-                                type="text"
-                                placeholder={T.placeholderBusca}
-                                /* Aumentei o pr-10 para pr-12 para o texto não ficar embaixo do botão grande */
-                                className="w-full bg-blue-800/40 border border-blue-400/30 text-white placeholder-blue-300 rounded-xl pl-10 pr-12 py-2.5 outline-none focus:ring-4 focus:ring-blue-400/50 focus:bg-blue-900/60 transition-all shadow-inner text-sm"
-                                value={busca}
-                                onChange={(e) => setBusca(e.target.value)}
-                            />
+                        <input
+                            type="text"
+                            placeholder={T.placeholderBusca}
+                            className="w-full bg-blue-800/40 border border-blue-400/30 text-white placeholder-blue-300 rounded-xl pl-10 pr-12 py-2.5 outline-none focus:ring-4 focus:ring-blue-400/50 focus:bg-blue-900/60 transition-all shadow-inner text-sm"
+                            value={busca}
+                            onChange={(e) => setBusca(e.target.value)}
+                        />
 
-                            {busca && (
-                                <button
-                                    onClick={() => setBusca('')}
-                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-blue-300 hover:text-white hover:bg-blue-700/60 p-1.5 rounded-lg transition-all active:scale-95 flex items-center justify-center"
-                                    title="Limpar busca"
-                                >
-                                    {/* strokeWidth={3} deixa o X mais gordinho e visível */}
-                                    <X size={16} strokeWidth={3} />
-                                </button>
-                            )}
-                        </div>
-
-                        <button
-                            onClick={() => setModoTempoReal(!modoTempoReal)}
-                            className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 shrink-0 ${modoTempoReal
-                                ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30 ring-2 ring-emerald-300 ring-offset-2 ring-offset-blue-700'
-                                : 'bg-blue-800/40 border-blue-400/30 text-blue-200 hover:bg-blue-800/60'
-                                }`}
-                            title="Modo Tempo Real"
-                        >
-                            <Clock size={16} className={modoTempoReal ? 'animate-pulse' : ''} />
-                            <span className="hidden sm:inline text-[10px] font-black uppercase">{T.btnTempoReal}</span>
-                        </button>
+                        {busca && (
+                            <button
+                                onClick={() => setBusca('')}
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-blue-300 hover:text-white hover:bg-blue-700/60 p-1.5 rounded-lg transition-all active:scale-95 flex items-center justify-center"
+                                title="Limpar busca"
+                            >
+                                <X size={16} strokeWidth={3} />
+                            </button>
+                        )}
                     </div>
                 </div>
             </header>
@@ -525,12 +491,15 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                             const dataRef = sem.dataCorreta;
                             const estaSemana = checkEstaSemana(sem.dataInicio);
                             const isHoje = dataRef === hojeStr;
+                            const estaAoVivo = modoTempoReal && reuniaoAoVivo === idx;
+                            const estaEmContagem = modoPreLive && reuniaoEmContagem.index === idx;
+                            const contagemSemana = estaEmContagem ? formatarContagemRegressiva(sem.partes[0].startObj.getTime() - agora.getTime()) : null;
 
                             const isVisita = sem.evento === 'visita';
                             const isAssembleia = sem.evento === 'assembleia' || sem.evento === 'congresso';
                             const isEspecial = sem.evento && sem.evento !== 'normal' && !isVisita && !isAssembleia;
 
-                            const isExpanded = busca ? true : semanaExpandida === idx;
+                            const isExpanded = busca ? true : estaAoVivo || estaEmContagem || semanaExpandida === idx;
 
                             const numCantInicial = extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'oracao_inicial')?.titulo);
                             const numCantMeio = extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'cantico')?.titulo);
@@ -578,7 +547,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                 )}
                                             </div>
                                             <p className="text-blue-600 font-bold text-xs flex items-center gap-1.5 uppercase">
-                                                <Calendar size={12} /> {formatarDataCompleta(dataRef, lang)}
+                                                <Calendar size={12} /> {formatarDataCompleta(dataRef, lang, T)}
                                             </p>
                                         </div>
                                         <div className="text-slate-400">
@@ -602,7 +571,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                             ) : (
                                                 <>
                                                     {/* CÂNTICOS (Modo Normal) */}
-                                                    {!busca && !modoTempoReal && (numCantInicial || numCantMeio || numCantFinal) && (
+                                                    {!busca && !estaAoVivo && (numCantInicial || numCantMeio || numCantFinal) && (
                                                         <div className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100 mb-2">
                                                             <div className="text-center flex-1 border-r border-slate-200 last:border-0">
                                                                 <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">{T.inicio}</p>
@@ -633,10 +602,29 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                     )}
 
                                                     <div className="space-y-0 pt-2">
+                                                        {estaEmContagem && !sem.termosBuscados && sem.partes?.length > 0 && (
+                                                            <div className="mb-5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 shadow-sm">
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">
+                                                                            {T.comecaEm}
+                                                                        </p>
+                                                                        <p className="text-sm font-bold text-amber-950">
+                                                                            {sem.meetingStartTimeStr} • {contagemSemana}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="shrink-0 rounded-xl bg-white/80 px-3 py-2 text-center shadow-sm ring-1 ring-amber-200">
+                                                                        <div className="text-[18px] leading-none font-black tracking-tight text-amber-600 tabular-nums">
+                                                                            {contagemSemana}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
 
                                                         {/* NÓ DE INÍCIO DA REUNIÃO */}
-                                                        {modoTempoReal && !sem.termosBuscados && sem.partes?.length > 0 && (() => {
-                                                            const meetingStarted = isHoje && agora >= sem.partes[0]?.startObj;
+                                                        {estaAoVivo && !sem.termosBuscados && sem.partes?.length > 0 && (() => {
+                                                            const meetingStarted = agora >= sem.partes[0]?.startObj;
                                                             return (
                                                                 <div className="flex gap-2 relative">
                                                                     <div className="w-[40px] shrink-0 text-right pt-0.5">
@@ -660,8 +648,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                         {/* RENDERIZAÇÃO DAS PARTES */}
                                                         {sem.partes.map((parte, i) => {
                                                             const principal = parte.estudante || parte.dirigente || parte.oracao;
-                                                            const isAcontecendo = modoTempoReal && isHoje && agora >= parte.startObj && agora < parte.endObj;
-                                                            const jaPassou = modoTempoReal && isHoje && agora >= parte.endObj;
+                                                            const isAcontecendo = estaAoVivo && agora >= parte.startObj && agora < parte.endObj;
+                                                            const jaPassou = estaAoVivo && agora >= parte.endObj;
 
                                                             // --- NOVO: Cálculo do Progresso (Barra vertical dinâmica) ---
                                                             let progresso = 0;
@@ -682,7 +670,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                             };
                                                             const label = configLabels[parte.secao] || null;
 
-                                                            return modoTempoReal ? (
+                                                            return estaAoVivo ? (
                                                                 /* === MODO TEMPO REAL === */
                                                                 <div key={i} className={`flex gap-2 relative ${jaPassou ? 'opacity-60 grayscale-[30%]' : ''}`}>
 
@@ -811,11 +799,11 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                                     )}
                                                                                 </div>
                                                                                 <a
-                                                                                    href={gerarLinkAgenda(parte, dataRef)}
+                                                                                    href={gerarLinkAgenda(parte, dataRef, agendaTexts)}
                                                                                     target="_blank"
                                                                                     rel="noreferrer"
                                                                                     className="p-2.5 rounded-xl border bg-white text-blue-600 border-slate-200 shadow-sm active:scale-95 transition-colors"
-                                                                                    title="Salvar na Agenda"
+                                                                                    title={T.salvarAgenda}
                                                                                 >
                                                                                     <CalendarPlus size={18} />
                                                                                 </a>
@@ -827,7 +815,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                         })}
 
                                                         {/* NÓ DE TÉRMINO DA REUNIÃO */}
-                                                        {modoTempoReal && !sem.termosBuscados && sem.partes?.length > 0 && (
+                                                        {estaAoVivo && !sem.termosBuscados && sem.partes?.length > 0 && (
                                                             <div className="flex gap-2 relative mt-[-0.5rem] pb-4">
                                                                 <div className="w-[40px] shrink-0 text-right pt-0.5">
                                                                     <span className="text-[11px] font-black text-rose-500 tracking-tighter">{sem.meetingEndTimeStr}</span>

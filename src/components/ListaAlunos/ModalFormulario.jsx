@@ -8,7 +8,6 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
 
     useEffect(() => {
         if (isOpen) {
-            setNovaDataIndisponivel({ inicio: '', fim: '', motivo: '' });
             setTimeout(() => firstInputRef.current?.focus(), 50);
         }
     }, [isOpen]);
@@ -92,7 +91,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                         <div className="w-14 h-14 rounded-full overflow-hidden bg-white border border-gray-200 flex items-center justify-center text-gray-400 font-bold text-lg shrink-0 relative group">
                             {alunoEmEdicao.avatar ? (
                                 <>
-                                    <img src={alunoEmEdicao.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                    <img src={alunoEmEdicao.avatar} alt={t.campos.avatarAlt} className="w-full h-full object-cover" />
                                     <button 
                                         type="button" 
                                         onClick={() => setAlunoEmEdicao({ ...alunoEmEdicao, avatar: null })}
@@ -121,10 +120,10 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                         <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, tipo: e.target.value })}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder="(xx) xxxxx-xxxx" /></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.mail}</label><input type="email" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.email || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, email: e.target.value })} placeholder="email@exemplo.com" /></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder={t.campos.telefonePlaceholder} /></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.mail}</label><input type="email" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.email || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, email: e.target.value })} placeholder={t.campos.emailPlaceholder} /></div>
                         </div>
-                        <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={2} className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={lang === 'pt' ? 'Ex.: horários, limitações, preferências...' : 'Ej.: horarios, limitaciones, preferencias...'} /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={2} className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={t.campos.obsPlaceholder} /></div>
 
                         <div className="space-y-2 pt-4 border-t border-gray-100 mt-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1.5"><Calendar size={12} /> {t.campos.datasIndisponiveis}</label>
@@ -134,7 +133,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                                     {alunoEmEdicao.datasIndisponiveis.map((dt, idx) => (
                                         <div key={idx} className="flex justify-between items-center bg-orange-50 border border-orange-100 text-orange-800 text-xs px-2.5 py-1.5 rounded-lg">
                                             <div className="flex flex-col">
-                                                <span className="font-bold">{dt.inicio.split('-').reverse().join('/')} até {dt.fim.split('-').reverse().join('/')}</span>
+                                                <span className="font-bold">{dt.inicio.split('-').reverse().join('/')} {t.campos.ate} {dt.fim.split('-').reverse().join('/')}</span>
                                                 {dt.motivo && <span className="text-[9px] opacity-80">{dt.motivo}</span>}
                                             </div>
                                             <button type="button" onClick={() => removerData(idx)} className="text-orange-400 hover:text-red-500 p-1 transition-colors"><X size={14} /></button>

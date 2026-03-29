@@ -90,3 +90,47 @@ body {
 .fullscreen-active {
   background-color: #ffffff !important;
 }
+
+.dashboard-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 1280px) {
+  .dashboard-top-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .dashboard-top-hero {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-top-progress {
+    grid-column: 1;
+  }
+
+  .dashboard-top-health {
+    grid-column: 2;
+  }
+}
+
+@media (min-width: 1800px) {
+  .dashboard-top-grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.82fr) minmax(320px, 0.82fr);
+    align-items: stretch;
+  }
+
+  .dashboard-top-hero {
+    grid-column: 1;
+  }
+
+  .dashboard-top-progress {
+    grid-column: 2;
+  }
+
+  .dashboard-top-health {
+    grid-column: 3;
+  }
+}

@@ -4,6 +4,8 @@ import { TRANSLATIONS, SECAO_UI } from '../../utils/importador/constants';
 import { formatHm } from '../../utils/importador/helpers';
 import { calcularTotalInfo } from '../../utils/importador/parser';
 import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
+import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
+import { formatText } from '../../i18n';
 
 export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel, lang = 'pt' }) {
     const t = TRANSLATIONS[lang];
@@ -47,7 +49,6 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
     const handleConfirm = () => {
         // 1. Acessa as chaves corretas do seu banco de dados
         const programacaoSalva = appDados?.historico_reunioes || []; 
-        const eventosCadastrados = appDados?.configuracoes?.eventosAnuais || []; 
 
         const dataImportada = dados.dataInicio || dados.dataExata; 
 
@@ -63,10 +64,12 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
         );
 
         // 3. Cruza a data da importação com a data dos eventos do Dashboard
-        const temEventoNoDashboard = eventosCadastrados.find(e =>
-            (e.dataInicio === dataImportada || e.dataInput === dataImportada) &&
-            (e.tipo.includes('assembleia') || e.tipo.includes('congresso'))
-        );
+        const temEventoNoDashboard = getEventoEspecialPorSemana({
+            semanaStr: dados.semana,
+            config: appDados?.configuracoes,
+            isoFallback: dataImportada || null,
+            textSources: [dados.semana]
+        });
 
         const ehAssembleiaNoTexto = dados.semana && (
             dados.semana.toLowerCase().includes('assembleia') ||
@@ -74,13 +77,13 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
         );
 
         // APLICA O BLOQUEIO SE ENCONTRAR NO BANCO
-        if (ehAssembleiaNaProg || temEventoNoDashboard) {
-            alert(`⛔ BLOQUEIO DE SEGURANÇA:\n\nA data desta semana (${dataImportada}) está cadastrada no seu Dashboard como um evento especial (Assembleia/Congresso).\n\nComo não há reunião do meio de semana nessas datas, a importação foi cancelada.`);
+        if (ehAssembleiaNaProg || isTipoEventoBloqueante(temEventoNoDashboard?.tipo)) {
+            alert(formatText(t.bloqueioSegurancaDataTpl, { data: dataImportada }));
             return;
         }
 
         if (ehAssembleiaNoTexto) {
-            const prosseguir = window.confirm(`⚠️ AVISO:\n\nO título da programação importada indica que é uma semana de "Assembleia" ou "Congresso".\n\nTem certeza que deseja forçar a importação?`);
+            const prosseguir = window.confirm(t.avisoForcarImportacao);
             if (!prosseguir) return;
         }
 
@@ -88,7 +91,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 bg-white p-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="max-w-4xl mx-auto space-y-6 bg-white p-3 sm:p-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-2 pb-4 border-b">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">

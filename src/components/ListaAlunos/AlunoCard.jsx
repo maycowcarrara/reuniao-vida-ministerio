@@ -35,7 +35,7 @@ const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete }) =
                             <h3 className="font-bold text-gray-800 text-sm leading-tight break-words">{aluno.nome}</h3>
                             {estaAusente && (
                                 <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-1 border border-orange-200" title={t.card.ausente}>
-                                    <Calendar size={8} /> Ausente
+                                    <Calendar size={8} /> {t.card.ausenteBadge}
                                 </span>
                             )}
                         </div>
@@ -53,8 +53,8 @@ const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete }) =
             </div>
 
             <div className="space-y-1 mb-3 text-[11px] font-medium text-gray-500 pl-1">
-                {aluno.telefone && (whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="flex items-center gap-1.5" title="WhatsApp"><Phone size={11} className="text-green-500" /> {aluno.telefone}</a> : <div className="flex items-center gap-1.5"><Phone size={11} className="text-green-500" /> {aluno.telefone}</div>)}
-                {aluno.email && <a href={`mailto:${aluno.email}`} className="flex items-center gap-2 text-[10px] truncate" title="E-mail"><Mail size={11} className="text-blue-400" /> {aluno.email}</a>}
+                {aluno.telefone && (whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="flex items-center gap-1.5" title={t.campos.tel}><Phone size={11} className="text-green-500" /> {aluno.telefone}</a> : <div className="flex items-center gap-1.5"><Phone size={11} className="text-green-500" /> {aluno.telefone}</div>)}
+                {aluno.email && <a href={`mailto:${aluno.email}`} className="flex items-center gap-2 text-[10px] truncate" title={t.campos.mail}><Mail size={11} className="text-blue-400" /> {aluno.email}</a>}
                 <div className="flex items-start gap-1.5 text-[10px] text-gray-500"><StickyNote size={11} className="text-gray-400 mt-[1px]" /><p className={`leading-snug ${aluno.observacoes ? 'text-gray-600' : 'text-gray-300 italic'} line-clamp-2`}>{aluno.observacoes ? aluno.observacoes : t.card.semObs}</p></div>
                 
                 {aluno.datasIndisponiveis && aluno.datasIndisponiveis.length > 0 && (

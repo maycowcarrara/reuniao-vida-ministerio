@@ -1,77 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, AlertCircle, Filter, Info } from 'lucide-react';
+import { formatText, useSectionMessages } from '../../i18n';
 
 // Função auxiliar para normalizar texto (tirar acentos, minúsculas)
 const norm = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-const T = {
-    pt: {
-        titulo: "Sugestão Inteligente",
-        filtro: "Filtro",
-        genero: "Gênero",
-        homens: "Homens",
-        mulheres: "Mulheres",
-        todos: "Todos",
-        nunca: "Nunca fez",
-        futuro: "Futuro",
-        daquiAdias: "Daqui a {DIAS} dias",
-        estaFuncao: "esta parte",
-        mesesAtras: "meses atrás",
-        diasAtras: "dias atrás",
-        jaTemParte: "Já tem parte na semana",
-        confirmarDuplicado: "Este aluno já tem uma designação nesta semana. Deseja designá-lo para mais esta parte mesmo assim?",
-        semResultados: "Nenhum aluno encontrado para este perfil/privilégio.",
-        labels: {
-            qualquer: "Qualquer Parte",
-            presidente: "Presidente",
-            oracao: "Oração",
-            leitura: "Leitura da Bíblia",
-            joias: "Joias Espirituais",
-            tesouros: "Discurso (Tesouros)",
-            vida: "Parte (Vida Cristã)",
-            estudobiblico: "Estudo Bíblico",
-            dirigente: "Dirigente (EBC)",
-            leitor: "Leitor (EBC)",
-            estudante: "Parte de Estudante",
-            ministerio: "Parte de Estudante",
-            discurso: "Discurso (Ministério)",
-            ajudante: "Ajudante"
-        }
-    },
-    es: {
-        titulo: "Sugerencia Inteligente",
-        filtro: "Filtro",
-        genero: "Género",
-        homens: "Hombres",
-        mulheres: "Mujeres",
-        todos: "Todos",
-        nunca: "Nunca hizo",
-        futuro: "Futuro",
-        daquiAdias: "En {DIAS} días",
-        estaFuncao: "esta parte",
-        mesesAtras: "meses atrás",
-        diasAtras: "días atrás",
-        jaTemParte: "Ya tiene asignación",
-        confirmarDuplicado: "Este estudiante ya tiene una asignación esta semana. ¿Quieres asignarlo de todos modos?",
-        semResultados: "Ningún estudiante encontrado para este perfil.",
-        labels: {
-            qualquer: "Cualquier Parte",
-            presidente: "Presidente",
-            oracao: "Oración",
-            leitura: "Lectura de la Biblia",
-            joias: "Perlas Escondidas",
-            tesouros: "Discurso (Tesoros)",
-            vida: "Parte (Vida Cristiana)",
-            estudobiblico: "Estudio Bíblico",
-            dirigente: "Director (EBC)",
-            leitor: "Lector (EBC)",
-            estudante: "Parte de Estudiante",
-            ministerio: "Parte de Estudiante",
-            discurso: "Discurso (Ministerio)",
-            ajudante: "Ayudante"
-        }
-    }
-};
 
 export default function ModalSugestao({
     isOpen,
@@ -88,7 +20,7 @@ export default function ModalSugestao({
     const [sugestoes, setSugestoes] = useState([]);
     const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer', isAjudante: false });
 
-    const t = T[lang] || T.pt;
+    const t = useSectionMessages('designarSuggest');
 
     useEffect(() => {
         if (!isOpen) return;
@@ -397,7 +329,7 @@ export default function ModalSugestao({
                                                 {/* Dias no Futuro legíveis */}
                                                 {aluno.diasSemFazer < 0 ? (
                                                     <span className="text-[13px] font-black text-blue-600">
-                                                        {t.daquiAdias.replace('{DIAS}', Math.abs(aluno.diasSemFazer))}
+                                                        {formatText(t.daquiAdias, { DIAS: Math.abs(aluno.diasSemFazer) })}
                                                     </span>
                                                 ) : (
                                                     <span className={`text-sm font-black ${aluno.diasSemFazer > 60 ? 'text-green-600' : 'text-gray-600'}`}>
@@ -419,7 +351,7 @@ export default function ModalSugestao({
                         <div className="text-center py-10 text-gray-400 flex flex-col items-center">
                             <Info size={40} className="mb-3 opacity-20" />
                             <p className="font-bold text-sm">{t.semResultados}</p>
-                            <p className="text-xs opacity-60 max-w-[250px] mx-auto mt-2">A regra de privilégios para "{t.labels[contexto.labelKey] || contexto.labelKey}" está ocultando irmãos não qualificados.</p>
+                            <p className="text-xs opacity-60 max-w-[250px] mx-auto mt-2">{formatText(t.semResultadosDescricaoTpl, { label: t.labels[contexto.labelKey] || contexto.labelKey })}</p>
                         </div>
                     )}
                 </div>

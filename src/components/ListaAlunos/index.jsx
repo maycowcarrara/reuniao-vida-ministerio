@@ -5,6 +5,7 @@ import AlunoListItem from './AlunoListItem';
 import ModalHistorico from './ModalHistorico';
 import ModalFormulario from './ModalFormulario';
 import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva } from './utils';
+import { toast } from '../../utils/toast';
 
 // Subcomponente para os Cards Estatísticos
 const StatCard = ({ icon, label, value, isActive, onClick, colorClass, activeClass, customClass = "" }) => (
@@ -46,11 +47,19 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     const [alunoHistorico, setAlunoHistorico] = useState(null);
 
     const [viewMode, setViewMode] = useState(() => {
-        try { return localStorage.getItem('jw_alunos_view') || 'grid'; } catch { return 'grid'; }
+        try {
+            return localStorage.getItem('jw_alunos_view') || 'grid';
+        } catch {
+            return 'grid';
+        }
     });
 
     useEffect(() => {
-        try { localStorage.setItem('jw_alunos_view', viewMode); } catch { }
+        try {
+            localStorage.setItem('jw_alunos_view', viewMode);
+        } catch {
+            return undefined;
+        }
     }, [viewMode]);
 
     useEffect(() => {
@@ -152,16 +161,20 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         if (tipo === 'json') {
             // AQUI É A GRANDE SACADA: 
             // O Backup JSON ignora `alunosProcessados` (os visíveis na tela) e força a exportação de `alunos` (o banco de dados bruto e completo, com todos os dados e imagens intactas).
-            baixar(new Blob([JSON.stringify({ alunos: alunos }, null, 2)], { type: 'application/json' }), 'backup_alunos_completo.json');
+            baixar(new Blob([JSON.stringify({ alunos: alunos }, null, 2)], { type: 'application/json' }), t.exportFiles.json);
         }
         else {
             // Para CSV e TXT, exportamos só o que foi filtrado na tela
             const rows = alunosProcessados.map(a => {
                 const ult = getUltimoRegistro(a);
                 return {
-                    Nome: a.nome, Cargo: (CARGOS_MAP[getCargoKey(a.tipo, CARGOS_MAP)] || CARGOS_MAP.irmao)[lang],
-                    WhatsApp: a.telefone || "N/A", Email: a.email || "N/A", Observacoes: a.observacoes || "",
-                    Ult_Data: ult.data || "-", Ult_Parte: ult.parte || "-"
+                    [t.exportFields.nome]: a.nome,
+                    [t.exportFields.cargo]: (CARGOS_MAP[getCargoKey(a.tipo, CARGOS_MAP)] || CARGOS_MAP.irmao)[lang],
+                    [t.exportFields.whatsapp]: a.telefone || t.exportFields.naoInformado,
+                    [t.exportFields.email]: a.email || t.exportFields.naoInformado,
+                    [t.exportFields.observacoes]: a.observacoes || "",
+                    [t.exportFields.ultimaData]: ult.data || "-",
+                    [t.exportFields.ultimaParte]: ult.parte || "-"
                 };
             });
 
@@ -169,10 +182,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 if (rows.length === 0) return;
                 // Adicionado BOM para o Excel do Windows abrir os acentos perfeitamente no CSV
                 const csv = '\uFEFF' + [Object.keys(rows[0]).join(';'), ...rows.map(o => Object.values(o).join(';'))].join('\n');
-                baixar(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'relatorio_alunos.csv');
+                baixar(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), t.exportFiles.csv);
             }
             else if (tipo === 'txt') {
-                baixar(new Blob([rows.map(a => `ALUNO: ${a.Nome}\nCARGO: ${a.Cargo}\nCONTATO: ${a.WhatsApp}\nOBS: ${a.Observacoes || "-"}\n----------------`).join('\n')], { type: 'text/plain' }), 'relatorio_alunos.txt');
+                baixar(new Blob([rows.map(a => `${t.exportTxt.aluno}: ${a[t.exportFields.nome]}\n${t.exportTxt.cargo}: ${a[t.exportFields.cargo]}\n${t.exportTxt.contato}: ${a[t.exportFields.whatsapp]}\n${t.exportTxt.obs}: ${a[t.exportFields.observacoes] || "-"}\n----------------`).join('\n')], { type: 'text/plain' }), t.exportFiles.txt);
             }
             else {
                 window.print();
@@ -192,18 +205,25 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         setModalFormOpen(true);
     };
 
-    const handleSalvar = (e) => {
+    const handleSalvar = async (e) => {
         e.preventDefault();
         const clean = { ...alunoEmEdicao, nome: (alunoEmEdicao.nome || '').trim(), telefone: (alunoEmEdicao.telefone || '').trim(), email: (alunoEmEdicao.email || '').trim(), observacoes: (alunoEmEdicao.observacoes || '').trim(), tipo: alunoEmEdicao.tipo || 'irma', datasIndisponiveis: alunoEmEdicao.datasIndisponiveis || [] };
         if (!clean.nome) return;
+        const isNovoAluno = !clean.id;
 
-        if (!clean.id) {
-            const maxId = Math.max(0, ...(alunos || []).map(a => Number(a.id) || 0));
-            setAlunos([...(alunos || []), { ...clean, id: maxId + 1 }]);
-        } else {
-            setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a));
+        try {
+            if (isNovoAluno) {
+                const maxId = Math.max(0, ...(alunos || []).map(a => Number(a.id) || 0));
+                await Promise.resolve(setAlunos([...(alunos || []), { ...clean, id: String(maxId + 1) }]));
+            } else {
+                await Promise.resolve(setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a)));
+            }
+
+            setModalFormOpen(false);
+            toast.success(isNovoAluno ? t.msg.cadastradoSucesso : t.msg.atualizadoSucesso);
+        } catch (error) {
+            toast.error(error, isNovoAluno ? t.msg.erroCadastrar : t.msg.erroAtualizar);
         }
-        setModalFormOpen(false);
     };
 
     const handleExcluir = async (aluno) => {
@@ -211,11 +231,12 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         if (window.confirm(t.msg.confirmarExclusao)) {
             if (onExcluirAluno) await onExcluirAluno(aluno.id);
             setAlunos(alunos.filter(a => a.id !== aluno.id));
+            toast.success(t.msg.removerSucesso);
         }
     };
 
     return (
-        <div className="space-y-4 pb-10 p-4 md:p-6">
+        <div className="space-y-4 px-2 py-3 pb-8 sm:p-4 md:p-6">
             <style>{`
             @media print {
                 html, body, #root { height: auto !important; overflow: visible !important; }
@@ -229,7 +250,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             }
             `}</style>
 
-            <div className="bg-white p-4 md:p-5 rounded-3xl shadow-sm border border-gray-100 no-print flex flex-col gap-5">
+            <div className="bg-white p-3 sm:p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-sm border border-gray-100 no-print flex flex-col gap-4 sm:gap-5">
 
                 {/* 1. TOPO: Título e Ações Rápidas */}
                 <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
@@ -248,10 +269,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                             <button onClick={() => setMenuExportOpen(!menuExportOpen)} className="w-full justify-center bg-blue-50 text-blue-600 px-3 py-2.5 xl:py-2 rounded-xl font-black text-[10px] uppercase flex items-center gap-2 transition hover:bg-blue-100"><Download size={14} /> <span>{t.exportar}</span> <ChevronDown size={12} /></button>
                             {menuExportOpen && (
                                 <div className="absolute left-0 xl:right-0 xl:left-auto mt-2 w-52 bg-white border rounded-2xl shadow-2xl z-[150] overflow-hidden animate-in fade-in zoom-in duration-150">
-                                    <button onClick={() => handleExport('json')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border-b"><FileJson size={14} className="text-orange-500" /> JSON (Backup)</button>
-                                    <button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border-b"><FileSpreadsheet size={14} className="text-green-600" /> Excel (CSV)</button>
-                                    <button onClick={() => handleExport('txt')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border-b"><FileText size={14} className="text-blue-500" /> Texto Simples</button>
-                                    <button onClick={() => handleExport('pdf')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2"><Printer size={14} /> Imprimir Todos</button>
+                                    <button onClick={() => handleExport('json')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border-b"><FileJson size={14} className="text-orange-500" /> {t.exportLabels.json}</button>
+                                    <button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border-b"><FileSpreadsheet size={14} className="text-green-600" /> {t.exportLabels.csv}</button>
+                                    <button onClick={() => handleExport('txt')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2 border-b"><FileText size={14} className="text-blue-500" /> {t.exportLabels.txt}</button>
+                                    <button onClick={() => handleExport('pdf')} className="w-full text-left px-4 py-3 xl:py-2.5 text-xs font-bold hover:bg-gray-50 flex items-center gap-2"><Printer size={14} /> {t.exportLabels.pdf}</button>
                                 </div>
                             )}
                         </div>
@@ -306,8 +327,8 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
 
                         {/* Status (Todos vs Ativos) */}
                         <div className="flex border border-gray-200 rounded-xl overflow-hidden bg-gray-50 w-full lg:w-auto shrink-0">
-                            <button onClick={() => setFiltroStatus('todos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 text-[10px] font-black uppercase transition ${filtroStatus === 'todos' ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:bg-white'}`} title="Mostrar todos">{t.filtros.todos}</button>
-                            <button onClick={() => setFiltroStatus('ativos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 border-l border-gray-200 text-[10px] font-black uppercase transition flex items-center justify-center gap-1 ${filtroStatus === 'ativos' ? 'bg-green-500 text-white' : 'text-gray-400 hover:bg-white'}`} title="Apenas ativos">{t.filtros.ativos}</button>
+                            <button onClick={() => setFiltroStatus('todos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 text-[10px] font-black uppercase transition ${filtroStatus === 'todos' ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:bg-white'}`} title={t.acessibilidade.mostrarTodos}>{t.filtros.todos}</button>
+                            <button onClick={() => setFiltroStatus('ativos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 border-l border-gray-200 text-[10px] font-black uppercase transition flex items-center justify-center gap-1 ${filtroStatus === 'ativos' ? 'bg-green-500 text-white' : 'text-gray-400 hover:bg-white'}`} title={t.acessibilidade.apenasAtivos}>{t.filtros.ativos}</button>
                         </div>
 
                         {/* Ordenação */}
@@ -351,10 +372,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 ) : (
                     <div className="col-span-full py-10 flex flex-col items-center justify-center text-gray-400 no-print">
                         <UsersRound size={48} className="mb-3 opacity-20" />
-                        <p className="text-sm font-bold text-center">Nenhum aluno encontrado.</p>
-                        <p className="text-xs mt-1 text-center px-4">Tente remover alguns filtros ou buscar com outro termo.</p>
+                        <p className="text-sm font-bold text-center">{t.msg.vazioTitulo}</p>
+                        <p className="text-xs mt-1 text-center px-4">{t.msg.vazioDescricao}</p>
                         {hasActiveFilters && (
-                            <button onClick={limparFiltros} className="mt-4 px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition">Limpar todos os filtros</button>
+                            <button onClick={limparFiltros} className="mt-4 px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition">{t.msg.limparTodosFiltros}</button>
                         )}
                     </div>
                 )}
@@ -374,7 +395,9 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                     setAlunoHistorico(alunoAtualizado);
                 }}
             />
-            <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} />
+            {modalFormOpen && alunoEmEdicao && (
+                <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} />
+            )}
         </div>
     );
 };

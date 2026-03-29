@@ -12,7 +12,6 @@ export const fill = (str, vars) => {
 
 export const montarMensagemDesignacao = ({
     t,
-    lang,
     config,
     semana,
     dataISO,
@@ -21,21 +20,18 @@ export const montarMensagemDesignacao = ({
     tituloParte,
     descricaoParte,
     minutosParte,
-    isVisita = false 
+    isVisita = false,
+    incluirLinkAgenda = true
 }) => {
-    // 1. Textos de Visita baseados no idioma
-    const textoVisitaData = lang === 'es' ? "(Visita del SC - Martes)" : "(Visita do SC - Terça-feira)";
-    const tagVisitaTitulo = lang === 'es' ? "✨ [VISITA DEL SUPERINTENDENTE] ✨" : "✨ [VISITA DO SUPERINTENDENTE] ✨";
-
     // 2. Formatar data (adicionando aviso se for visita)
-    let dataFmt = formatarDataFolha(dataISO, lang);
+    let dataFmt = formatarDataFolha(dataISO, config?.idioma);
     if (isVisita) {
-        dataFmt += ` ${textoVisitaData}`;
+        dataFmt += ` ${t.visitDateLabel}`;
     }
 
     const bloco = [
         // Se for visita, coloca o destaque antes do título padrão
-        isVisita ? tagVisitaTitulo : null,
+        isVisita ? t.visitHeaderTag : null,
         isVisita ? '' : null,
         
         t.msgTituloPadrao,
@@ -62,10 +58,35 @@ export const montarMensagemDesignacao = ({
         ajudanteNome: ajudanteNome || '',
     });
 
-    if (linkAgenda) {
+    if (incluirLinkAgenda && linkAgenda) {
         bloco.push('');
         bloco.push(fill(t.msgAgendar, { link: linkAgenda }));
     }
 
     return bloco.join('\n');
+};
+
+export const montarMensagemLembreteSemana = ({
+    t,
+    config,
+    dataISO,
+    responsavelNome,
+    tituloParte,
+    isVisita = false,
+    linkConfirmacao = ''
+}) => {
+    let dataFmt = formatarDataFolha(dataISO, config?.idioma);
+    if (isVisita) {
+        dataFmt += ` ${t.visitDateLabel}`;
+    }
+
+    const bloco = [
+        fill(t.msgLembreteSemana, { nome: responsavelNome || '' }),
+        fill(t.msgData, { data: dataFmt }),
+        fill(t.msgParte, { titulo: tituloParte || '' }),
+        t.msgLembreteObservacao,
+        linkConfirmacao ? fill(t.msgConfirmar, { link: linkConfirmacao }) : null
+    ].filter(Boolean);
+
+    return bloco.join('\n\n');
 };
