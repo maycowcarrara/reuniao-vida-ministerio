@@ -59,6 +59,9 @@ export default defineConfig({
       },
       // 🔥 ADIÇÃO IMPORTANTE PARA O MODO OFFLINE 🔥
       workbox: {
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
         // Diz para o navegador fazer cache de todos esses tipos de arquivo
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
 

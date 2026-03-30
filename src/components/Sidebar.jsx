@@ -6,6 +6,8 @@ import {
 // Importa o package.json diretamente para ler a versão
 import packageJson from '../../package.json';
 import { formatText, useSectionMessages } from '../i18n';
+import { refreshAppVersion } from '../services/appUpdater';
+import { toast } from '../utils/toast';
 
 function SidebarButton({ active, onClick, icon, label, badge, sidebarOpen }) {
     const iconElement = React.createElement(icon, { size: 18, className: 'shrink-0' });
@@ -43,6 +45,7 @@ export default function Sidebar({
 }) {
     const versaoSistema = packageJson.version;
     const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [atualizandoVersao, setAtualizandoVersao] = useState(false);
     const totalSemanasAtivas = (listaProgramacoes || []).filter(semana => !semana?.arquivada).length;
     const totalAlunosAtivos = (alunos || []).filter(aluno => aluno?.tipo !== 'desab').length;
 
@@ -77,6 +80,21 @@ export default function Sidebar({
 
     const SIDEBAR_TEXTS = useSectionMessages('sidebar');
     const alertaAtualizacao = formatText(SIDEBAR_TEXTS.alertaAtualizacao, { version: versaoSistema });
+
+    const handleAtualizarSistema = async () => {
+        if (atualizandoVersao) return;
+        if (!window.confirm(alertaAtualizacao)) return;
+
+        setAtualizandoVersao(true);
+        toast.info(SIDEBAR_TEXTS.atualizacaoIniciada);
+
+        try {
+            await refreshAppVersion(versaoSistema);
+        } catch (error) {
+            setAtualizandoVersao(false);
+            toast.error(error, SIDEBAR_TEXTS.atualizacaoErro);
+        }
+    };
 
     // Quando clica num botão, muda a aba e, se estiver no celular, fecha o menu automaticamente
     const handleTabClick = (id) => {
@@ -156,16 +174,17 @@ export default function Sidebar({
 
                         {/* Botão de Versão (Verificar Atualizações) */}
                         <button
-                            onClick={() => {
-                                if (window.confirm(alertaAtualizacao)) {
-                                    window.location.reload();
-                                }
-                            }}
-                            className="flex w-full items-center justify-between px-2 py-2 text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-800/50 rounded-md transition-colors"
+                            type="button"
+                            onClick={handleAtualizarSistema}
+                            disabled={atualizandoVersao}
+                            className={`flex w-full items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors ${atualizandoVersao
+                                ? 'cursor-wait bg-blue-800/60 text-white'
+                                : 'text-blue-100 hover:text-white hover:bg-blue-800/50'
+                                }`}
                         >
                             <div className="flex items-center gap-3">
-                                <RefreshCw size={16} />
-                                <span>{SIDEBAR_TEXTS.versao}</span>
+                                <RefreshCw size={16} className={atualizandoVersao ? 'animate-spin' : ''} />
+                                <span>{atualizandoVersao ? SIDEBAR_TEXTS.atualizandoVersao : SIDEBAR_TEXTS.versao}</span>
                             </div>
                             <span className="text-[10px] font-bold text-blue-900 bg-blue-200 px-2 py-0.5 rounded-full">
                                 v{versaoSistema}

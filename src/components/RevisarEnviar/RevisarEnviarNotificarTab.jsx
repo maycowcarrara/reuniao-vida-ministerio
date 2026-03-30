@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle, CheckCircle2, Mail, MessageCircle, Tent, UsersRound, Loader2, Send, XCircle } from 'lucide-react';
+import { CheckCircle, CheckCircle2, Mail, MessageCircle, Tent, UsersRound, Loader2, Send, SlidersHorizontal, XCircle } from 'lucide-react';
 
 import { formatarDataFolha } from '../../utils/revisarEnviar/dates';
 import { montarMensagemDesignacao, montarMensagemLembreteSemana } from '../../utils/revisarEnviar/messages';
@@ -10,8 +10,10 @@ import { getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import {
     ensurePublicConfirmation,
+    registerNotificationChannelByAssignment,
     registerConfirmationReminder,
-    respondToConfirmationByAssignment
+    respondToConfirmationByAssignment,
+    respondToWeekReminderByAssignment
 } from '../../services/confirmacoesPublicas';
 
 const SECAO_UI = {
@@ -44,6 +46,7 @@ const RevisarEnviarNotificarTab = ({
     const [progresso, setProgresso] = useState({ total: 0, enviados: 0, erros: 0 });
     const [enviandoInd, setEnviandoInd] = useState({});
     const [manualBusy, setManualBusy] = useState({});
+    const [activeActionMenu, setActiveActionMenu] = useState(null);
 
     const confirmacoesMap = useMemo(() => {
         return (confirmacoes || []).reduce((acc, item) => {
@@ -80,6 +83,7 @@ const RevisarEnviarNotificarTab = ({
             const confirmacao = await prepararConfirmacao(confirmationData);
             enviarZap(pessoa, anexarLinkConfirmacao(msg, confirmacao.link));
             markSent(msgKey, 'wa');
+            await registerNotificationChannelByAssignment(confirmationData?.assignmentKey, 'wa');
         } catch (error) {
             console.error('Falha ao preparar confirmação para WhatsApp:', error);
             toast.error(error, t.reminderError);
@@ -96,7 +100,7 @@ const RevisarEnviarNotificarTab = ({
                 responsavelNome: pessoa?.nome,
                 tituloParte: confirmationData?.tituloParte,
                 isVisita: confirmationData?.isVisita,
-                linkConfirmacao: confirmacao.link
+                linkConfirmacao: confirmacao.weekLink
             });
 
             enviarZap(pessoa, msg);
@@ -133,6 +137,42 @@ const RevisarEnviarNotificarTab = ({
         };
     };
 
+    const getWeekStatusUi = (assignmentKey) => {
+        const current = confirmacoesMap[String(assignmentKey || '').trim()];
+        const status = current?.weekReminderStatus || 'nao_enviado';
+
+        if (status === 'confirmado') {
+            return {
+                label: t.statusSemanaConfirmada,
+                chip: 'bg-emerald-100 text-emerald-800 border-emerald-200'
+            };
+        }
+
+        if (status === 'imprevisto') {
+            return {
+                label: t.statusSemanaImprevisto,
+                chip: 'bg-rose-100 text-rose-800 border-rose-200'
+            };
+        }
+
+        if (status === 'pendente') {
+            return {
+                label: t.statusSemanaPendente,
+                chip: 'bg-amber-100 text-amber-800 border-amber-200'
+            };
+        }
+
+        return {
+            label: t.statusSemanaNaoEnviada,
+            chip: 'bg-slate-100 text-slate-700 border-slate-200'
+        };
+    };
+
+    const hasSentChannel = (assignmentKey, channel) => {
+        const current = confirmacoesMap[String(assignmentKey || '').trim()];
+        return Boolean(current?.sentChannels?.[channel]);
+    };
+
     const handleManualStatus = async (confirmationData, status) => {
         const assignmentKey = String(confirmationData?.assignmentKey || '').trim();
         if (!assignmentKey) return;
@@ -149,6 +189,25 @@ const RevisarEnviarNotificarTab = ({
             toast.error(error, t.manualErro);
         } finally {
             setManualBusy((prev) => ({ ...prev, [assignmentKey]: null }));
+        }
+    };
+
+    const handleManualWeekStatus = async (confirmationData, status) => {
+        const assignmentKey = String(confirmationData?.assignmentKey || '').trim();
+        if (!assignmentKey) return;
+
+        try {
+            setManualBusy((prev) => ({ ...prev, [`week:${assignmentKey}`]: status }));
+            await prepararConfirmacao(confirmationData);
+            await respondToWeekReminderByAssignment(assignmentKey, status, {
+                source: 'manual_admin',
+                actorType: 'admin'
+            });
+            toast.success(status === 'confirmado' ? t.manualSemanaConfirmada : t.manualSemanaImprevisto);
+        } catch (error) {
+            toast.error(error, t.manualErro);
+        } finally {
+            setManualBusy((prev) => ({ ...prev, [`week:${assignmentKey}`]: null }));
         }
     };
 
@@ -328,6 +387,7 @@ const RevisarEnviarNotificarTab = ({
                 const payload = await montarPayloadEmail(item.payload, item.confirmationData);
                 await enviarEmailAutomatico(payload);
                 markSent(item.msgKey, 'mail');
+                await registerNotificationChannelByAssignment(item.confirmationData?.assignmentKey, 'mail');
                 contEnviados++;
             } catch (error) {
                 console.error("Erro no envio:", error);
@@ -349,6 +409,7 @@ const RevisarEnviarNotificarTab = ({
             const enrichedPayload = await montarPayloadEmail(payload.emailPayload, payload.confirmationData);
             await enviarEmailAutomatico(enrichedPayload);
             markSent(msgKey, 'mail');
+            await registerNotificationChannelByAssignment(payload.confirmationData?.assignmentKey, 'mail');
         } catch (error) {
             console.error("Falha ao enviar e-mail individual:", error);
             toast.error(error, t.emailSendError);
@@ -357,119 +418,221 @@ const RevisarEnviarNotificarTab = ({
         }
     };
 
-    const renderButtons = ({ pessoa, msg, msgKey, corWa, compact = false, emailPayload, confirmationData }) => {
-        const waSent = isSent(msgKey, 'wa');
-        const mailSent = isSent(msgKey, 'mail');
-        const reminderSent = isSent(msgKey, 'waReminder');
+    const renderButtons = ({ pessoa, msg, msgKey, compact = false, emailPayload, confirmationData }) => {
+        const assignmentKey = String(confirmationData?.assignmentKey || '').trim();
+        const waSent = isSent(msgKey, 'wa') || hasSentChannel(assignmentKey, 'wa');
+        const mailSent = isSent(msgKey, 'mail') || hasSentChannel(assignmentKey, 'mail');
+        const reminderSent = isSent(msgKey, 'waReminder') || hasSentChannel(assignmentKey, 'waReminder');
         const hasEmail = !!pessoa?.email;
         const isSending = enviandoInd[msgKey];
-        const statusUi = getStatusUi(confirmationData?.assignmentKey);
-        const manualState = manualBusy[confirmationData?.assignmentKey];
+        const manualState = manualBusy[assignmentKey];
+        const manualWeekState = manualBusy[`week:${assignmentKey}`];
+        const menuOpen = activeActionMenu === assignmentKey;
+
+        const handleAction = async (callback) => {
+            setActiveActionMenu(null);
+            await callback();
+        };
 
         return (
-            <div className="flex flex-col items-end gap-2 shrink-0">
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black ${statusUi.chip}`}>
-                    {statusUi.label}
-                </span>
-
-                <div className="flex items-center gap-2">
+            <div className="relative shrink-0">
+                <div className="flex items-center gap-1.5">
                     <button
-                        onClick={() => handleEnviarWhatsapp(pessoa, msg, msgKey, confirmationData)}
-                        className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${waSent ? 'bg-gray-200 text-gray-600' : corWa || 'bg-green-100 text-green-700 hover:bg-green-200'
+                        type="button"
+                        onClick={() => {
+                            setActiveActionMenu(null);
+                            handleEnviarWhatsapp(pessoa, msg, msgKey, confirmationData);
+                        }}
+                        className={`relative inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${waSent
+                            ? 'border-slate-200 bg-slate-100 text-slate-500'
+                            : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                             }`}
                         title={t.btnEnviar}
                     >
-                        <MessageCircle size={compact ? 16 : 18} />
+                        <MessageCircle size={compact ? 15 : 17} />
                         {waSent && (
                             <CheckCircle
-                                size={compact ? 12 : 14}
-                                className="absolute -top-1 -right-1 text-green-700 bg-white rounded-full"
+                                size={12}
+                                className="absolute -top-1 -right-1 rounded-full bg-white text-emerald-700"
                             />
                         )}
                     </button>
 
                     <button
-                        onClick={() => handleEnviarLembrete(pessoa, msgKey, confirmationData)}
-                        className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${reminderSent ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        type="button"
+                        onClick={() => {
+                            setActiveActionMenu(null);
+                            handleEnviarLembrete(pessoa, msgKey, confirmationData);
+                        }}
+                        className={`relative inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${reminderSent
+                            ? 'border-slate-200 bg-slate-100 text-slate-500'
+                            : 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
                             }`}
                         title={t.btnEnviarLembrete}
                     >
-                        <Send size={compact ? 16 : 18} />
+                        <Send size={compact ? 15 : 17} />
                         {reminderSent && (
                             <CheckCircle
-                                size={compact ? 12 : 14}
-                                className="absolute -top-1 -right-1 text-amber-700 bg-white rounded-full"
+                                size={12}
+                                className="absolute -top-1 -right-1 rounded-full bg-white text-amber-700"
                             />
                         )}
                     </button>
 
                     <button
+                        type="button"
                         disabled={!hasEmail || isSending || enviandoGlobal}
-                        onClick={() => handleEnviarIndividual(msgKey, { emailPayload, confirmationData })}
-                        className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-lg transition ${!hasEmail ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50' :
-                                mailSent ? 'bg-gray-200 text-gray-600' :
-                                    'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                        onClick={() => {
+                            setActiveActionMenu(null);
+                            handleEnviarIndividual(msgKey, { emailPayload, confirmationData });
+                        }}
+                        className={`relative inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${!hasEmail
+                            ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 opacity-60'
+                            : mailSent
+                                ? 'border-slate-200 bg-slate-100 text-slate-500'
+                                : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
                             }`}
                         title={!hasEmail ? t.noStudentEmailTitle : t.btnEnviarEmail}
                     >
                         {isSending ? (
-                            <Loader2 size={compact ? 16 : 18} className="animate-spin text-indigo-500" />
+                            <Loader2 size={compact ? 15 : 17} className="animate-spin text-indigo-500" />
                         ) : (
-                            <Mail size={compact ? 16 : 18} />
+                            <Mail size={compact ? 15 : 17} />
                         )}
 
                         {mailSent && !isSending && (
                             <CheckCircle
-                                size={compact ? 12 : 14}
-                                className="absolute -top-1 -right-1 text-indigo-700 bg-white rounded-full"
+                                size={12}
+                                className="absolute -top-1 -right-1 rounded-full bg-white text-indigo-700"
                             />
                         )}
                     </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => handleManualStatus(confirmationData, 'confirmado')}
-                        disabled={!!manualState}
-                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-black text-emerald-700 disabled:opacity-50"
-                        title={t.btnManualConfirmar}
-                    >
-                        {manualState === 'confirmado' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                        {t.btnManualConfirmar}
-                    </button>
 
                     <button
                         type="button"
-                        onClick={() => handleManualStatus(confirmationData, 'nao_pode')}
-                        disabled={!!manualState}
-                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[10px] font-black text-rose-700 disabled:opacity-50"
-                        title={t.btnManualRecusar}
+                        onClick={() => setActiveActionMenu((prev) => prev === assignmentKey ? null : assignmentKey)}
+                        className={`inline-flex h-9 items-center justify-center gap-1 rounded-xl border ${compact ? 'w-9 px-0' : 'px-2.5'} text-[10px] font-black transition ${menuOpen
+                            ? 'border-slate-300 bg-slate-900 text-white'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
+                        title={t.acoesRapidas}
                     >
-                        {manualState === 'nao_pode' ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
-                        {t.btnManualRecusar}
+                        <SlidersHorizontal size={14} />
+                        {!compact && <span>{t.acoesRapidas}</span>}
                     </button>
                 </div>
+
+                {menuOpen && (
+                    <div className="absolute right-0 top-11 z-20 w-[18rem] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/70">
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => handleAction(() => handleManualStatus(confirmationData, 'confirmado'))}
+                                disabled={!!manualState}
+                                className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-2 text-[11px] font-black text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+                                title={t.btnManualConfirmar}
+                            >
+                                {manualState === 'confirmado' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                {t.btnManualConfirmar}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleAction(() => handleManualStatus(confirmationData, 'nao_pode'))}
+                                disabled={!!manualState}
+                                className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2 py-2 text-[11px] font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                                title={t.btnManualRecusar}
+                            >
+                                {manualState === 'nao_pode' ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                                {t.btnManualRecusar}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleAction(() => handleManualWeekStatus(confirmationData, 'confirmado'))}
+                                disabled={!!manualWeekState}
+                                className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-2 text-[11px] font-black text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+                                title={t.btnManualSemanaConfirmar}
+                            >
+                                {manualWeekState === 'confirmado' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                {t.btnManualSemanaConfirmar}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleAction(() => handleManualWeekStatus(confirmationData, 'imprevisto'))}
+                                disabled={!!manualWeekState}
+                                className="inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2 py-2 text-[11px] font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                                title={t.btnManualSemanaImprevisto}
+                            >
+                                {manualWeekState === 'imprevisto' ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                                {t.btnManualSemanaImprevisto}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
 
-    const renderCardPessoa = ({ tituloTopo, pessoa, msg, msgKey, corWa, compact = false, emailPayload, confirmationData }) => (
-        <div className={`bg-white ${compact ? 'p-2' : 'p-3'} rounded-lg shadow-sm flex justify-between items-center border`}>
-            <div className="min-w-0 pr-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase truncate">{tituloTopo}</p>
-                <p className={`${compact ? 'text-[13px]' : 'text-sm'} font-bold truncate`}>{pessoa?.nome}</p>
+    const renderCardPessoa = ({ tituloTopo, pessoa, msg, msgKey, compact = false, emailPayload, confirmationData, cardKey }) => {
+        const statusUi = getStatusUi(confirmationData?.assignmentKey);
+        const weekStatusUi = getWeekStatusUi(confirmationData?.assignmentKey);
 
-                {pessoa?.email && (
-                    <p className="text-[10px] text-gray-400 truncate">{pessoa.email}</p>
-                )}
-                {!pessoa?.email && (
-                    <p className="text-[9px] text-red-400 italic truncate">{t.noStudentEmail}</p>
-                )}
+        if (compact) {
+            return (
+                <div key={cardKey} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">{tituloTopo}</p>
+                        <p className="mt-1 text-[15px] font-black text-slate-900 truncate">{pessoa?.nome}</p>
+
+                        {!pessoa?.email && (
+                            <p className="mt-1 text-[10px] italic text-rose-400 truncate">{t.noStudentEmail}</p>
+                        )}
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-black ${statusUi.chip}`}>
+                            {t.statusDesignacao}: {statusUi.label}
+                        </span>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-black ${weekStatusUi.chip}`}>
+                            {t.statusSemana}: {weekStatusUi.label}
+                        </span>
+                    </div>
+
+                    <div className="mt-3">
+                        {renderButtons({ pessoa, msg, msgKey, compact, emailPayload, confirmationData })}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div key={cardKey} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1 pr-0 lg:pr-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">{tituloTopo}</p>
+                        <p className="mt-1 text-base font-black text-slate-900 truncate">{pessoa?.nome}</p>
+
+                        {!pessoa?.email && (
+                            <p className="mt-1 text-[10px] italic text-rose-400 truncate">{t.noStudentEmail}</p>
+                        )}
+
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-black ${statusUi.chip}`}>
+                                {t.statusDesignacao}: {statusUi.label}
+                            </span>
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-black ${weekStatusUi.chip}`}>
+                                {t.statusSemana}: {weekStatusUi.label}
+                            </span>
+                        </div>
+                    </div>
+
+                    {renderButtons({ pessoa, msg, msgKey, compact, emailPayload, confirmationData })}
+                </div>
             </div>
-            {renderButtons({ pessoa, msg, msgKey, corWa, compact, emailPayload, confirmationData })}
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="flex-1 bg-white p-6 rounded-2xl border max-w-5xl mx-auto w-full overflow-y-auto no-print">
@@ -694,48 +857,40 @@ const RevisarEnviarNotificarTab = ({
                         return (
                             <div
                                 key={`${p.id || tituloParte}-${estudante?.id || estudante?.nome}`}
-                                className="bg-white p-3 rounded-lg shadow-sm border flex items-center justify-between gap-3"
+                                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
                             >
                                 <div className="min-w-0">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase truncate">{tituloParte}</p>
-                                    <p className="text-sm font-bold truncate">{estudante.nome}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 truncate">
+                                        {tituloParte}
+                                    </p>
 
-                                    {!estudante.email && (
-                                        <p className="text-[9px] text-red-400 italic">{t.noStudentEmail}</p>
-                                    )}
-
-                                    {ajud?.nome && (
-                                        <p className="text-[12px] print:text-[11px] text-blue-700 font-bold truncate">
-                                            {t.ajudante}: {ajud.nome}
-                                        </p>
-                                    )}
                                     {descricao && (
-                                        <p className="text-[11px] text-gray-500 italic mt-1 line-clamp-2">{descricao}</p>
+                                        <p className="mt-1 text-[11px] italic text-slate-500 line-clamp-2">
+                                            {descricao}
+                                        </p>
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
-                                    {renderButtons({
+                                <div className={`mt-3 grid gap-3 ${msgAjud && ajud ? 'xl:grid-cols-2' : 'grid-cols-1'}`}>
+                                    {renderCardPessoa({
+                                        tituloTopo: t.designado || 'Designado',
                                         pessoa: estudante,
                                         msg: msgResp,
                                         msgKey: keyResp,
-                                        corWa: 'bg-green-100 text-green-700 hover:bg-green-200',
+                                        compact: true,
                                         emailPayload: emailPayloadResp,
                                         confirmationData: confirmationDataResp
                                     })}
 
-                                    {msgAjud && ajud && (
-                                        <div className="flex items-center gap-2 pl-2 border-l border-gray-100">
-                                            {renderButtons({
-                                                pessoa: ajud,
-                                                msg: msgAjud,
-                                                msgKey: keyAjud,
-                                                corWa: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-                                                emailPayload: emailPayloadAjud,
-                                                confirmationData: emailPayloadAjud?.confirmationData
-                                            })}
-                                        </div>
-                                    )}
+                                    {msgAjud && ajud && renderCardPessoa({
+                                        tituloTopo: t.ajudante,
+                                        pessoa: ajud,
+                                        msg: msgAjud,
+                                        msgKey: keyAjud,
+                                        compact: true,
+                                        emailPayload: emailPayloadAjud,
+                                        confirmationData: emailPayloadAjud?.confirmationData
+                                    })}
                                 </div>
                             </div>
                         );
@@ -825,11 +980,10 @@ const RevisarEnviarNotificarTab = ({
                     const renderEstudo = (p) => {
                         const dirigente = p?.dirigente || p?.estudante;
                         const leitor = p?.leitor || sem?.leitor;
-                        const cards = [];
-
                         const tituloBase = p?.titulo || 'Estudo bíblico de congregação';
                         const descricao = (p?.descricao ?? '').toString().trim();
                         const min = (p?.tempo ?? '').toString().trim();
+                        const studyCards = [];
 
                         if (dirigente) {
                             const tituloFinal = `${t.dirigente} - ${tituloBase}`;
@@ -889,19 +1043,16 @@ const RevisarEnviarNotificarTab = ({
                                 email_destino: dirigente.email
                             };
 
-                            cards.push(
-                                <React.Fragment key={`dir-${p?.id || tituloBase}`}>
-                                    {renderCardPessoa({
-                                        tituloTopo: t.dirigente,
-                                        pessoa: dirigente,
-                                        msg,
-                                        msgKey,
-                                        corWa: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
-                                        emailPayload,
-                                        confirmationData
-                                    })}
-                                </React.Fragment>
-                            );
+                            studyCards.push(renderCardPessoa({
+                                cardKey: `${msgKey}-dirigente`,
+                                tituloTopo: t.dirigente,
+                                pessoa: dirigente,
+                                msg,
+                                msgKey,
+                                compact: true,
+                                emailPayload,
+                                confirmationData
+                            }));
                         }
 
                         if (leitor) {
@@ -962,22 +1113,46 @@ const RevisarEnviarNotificarTab = ({
                                 email_destino: leitor.email
                             };
 
-                            cards.push(
-                                <React.Fragment key={`lei-${p?.id || tituloBase}`}>
-                                    {renderCardPessoa({
-                                        tituloTopo: t.leitor,
-                                        pessoa: leitor,
-                                        msg,
-                                        msgKey,
-                                        corWa: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200',
-                                        emailPayload,
-                                        confirmationData
-                                    })}
-                                </React.Fragment>
-                            );
+                            studyCards.push(renderCardPessoa({
+                                cardKey: `${msgKey}-leitor`,
+                                tituloTopo: t.leitor,
+                                pessoa: leitor,
+                                msg,
+                                msgKey,
+                                compact: true,
+                                emailPayload,
+                                confirmationData
+                            }));
                         }
 
-                        return <React.Fragment key={p?.id || `estudo-${sIdx}`}>{cards}</React.Fragment>;
+                        return (
+                            <div
+                                key={p?.id || `estudo-${sIdx}`}
+                                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 truncate">
+                                        {tituloBase}
+                                    </p>
+
+                                    {descricao && (
+                                        <p className="mt-1 text-[11px] italic text-slate-500 line-clamp-2">
+                                            {descricao}
+                                        </p>
+                                    )}
+
+                                    {min && (
+                                        <p className="mt-1 text-[10px] font-bold text-slate-400">
+                                            {min} min
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className={`mt-3 grid gap-3 ${studyCards.length > 1 ? 'xl:grid-cols-2' : 'grid-cols-1'}`}>
+                                    {studyCards}
+                                </div>
+                            </div>
+                        );
                     };
 
                     const renderParte = (p) => {

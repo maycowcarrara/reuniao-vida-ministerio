@@ -6,7 +6,8 @@ import { normalizeLanguage, syncDocumentLanguage } from '../config/appConfig';
 import { getSectionMessages } from '../i18n';
 import {
     getPublicConfirmation,
-    respondToPublicConfirmation
+    respondToPublicConfirmation,
+    respondToPublicWeekReminder
 } from '../services/confirmacoesPublicas';
 import { formatarDataFolha } from '../utils/revisarEnviar/dates';
 
@@ -26,10 +27,16 @@ export default function ConfirmacaoPublica() {
     const lang = normalizeLanguage(registro?.lang);
     const t = useMemo(() => getSectionMessages('confirmacaoPublica', lang), [lang]);
     const quadroPath = '/quadro';
+    const isWeekFlow = (searchParams.get('f') || '').trim().toLowerCase() === 'w';
 
     useEffect(() => {
         syncDocumentLanguage(lang);
     }, [lang]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem('quadro_auth', 'true');
+    }, []);
 
     useEffect(() => {
         let ativo = true;
@@ -54,15 +61,20 @@ export default function ConfirmacaoPublica() {
 
     useEffect(() => {
         const responseCode = (searchParams.get('r') || '').trim().toLowerCase();
-        if (!registro || !['a', 'n'].includes(responseCode) || saving) return;
+        const validCodes = isWeekFlow ? ['c', 'i'] : ['a', 'n'];
+        if (!registro || !validCodes.includes(responseCode) || saving) return;
         if (registro?.autoResponseApplied === responseCode) return;
 
-        const status = responseCode === 'a' ? 'confirmado' : 'nao_pode';
+        const status = isWeekFlow
+            ? (responseCode === 'c' ? 'confirmado' : 'imprevisto')
+            : (responseCode === 'a' ? 'confirmado' : 'nao_pode');
 
         const aplicarResposta = async () => {
             setSaving(true);
             try {
-                const atualizado = await respondToPublicConfirmation(token, status);
+                const atualizado = isWeekFlow
+                    ? await respondToPublicWeekReminder(token, status)
+                    : await respondToPublicConfirmation(token, status);
                 setRegistro({ ...atualizado, autoResponseApplied: responseCode });
             } catch {
                 setRegistro((prev) => prev ? { ...prev, saveError: true, autoResponseApplied: responseCode } : prev);
@@ -72,18 +84,32 @@ export default function ConfirmacaoPublica() {
         };
 
         aplicarResposta();
-    }, [registro, saving, searchParams, token]);
+    }, [isWeekFlow, registro, saving, searchParams, token]);
 
-    const statusLabel = registro?.status === 'confirmado'
-        ? t.confirmado
-        : registro?.status === 'nao_pode'
-            ? t.naoPode
-            : t.pendente;
+    const currentStatus = isWeekFlow
+        ? (registro?.weekReminderStatus || 'nao_enviado')
+        : (registro?.status || 'pendente');
+
+    const statusLabel = isWeekFlow
+        ? currentStatus === 'confirmado'
+            ? t.semanaConfirmada
+            : currentStatus === 'imprevisto'
+                ? t.semanaImprevisto
+                : currentStatus === 'nao_enviado'
+                    ? t.semanaNaoEnviada
+                    : t.semanaPendente
+        : currentStatus === 'confirmado'
+            ? t.confirmado
+            : currentStatus === 'nao_pode'
+                ? t.naoPode
+                : t.pendente;
 
     const responder = async (status) => {
         setSaving(true);
         try {
-            const atualizado = await respondToPublicConfirmation(token, status);
+            const atualizado = isWeekFlow
+                ? await respondToPublicWeekReminder(token, status)
+                : await respondToPublicConfirmation(token, status);
             setRegistro(atualizado);
         } catch {
             setRegistro((prev) => prev ? { ...prev, saveError: true } : prev);
@@ -126,78 +152,84 @@ export default function ConfirmacaoPublica() {
     }
 
     const dataFmt = registro?.dataISO ? formatarDataFolha(registro.dataISO, lang) : '—';
-    const statusClass = STATUS_STYLES[registro?.status] || STATUS_STYLES.pendente;
-    const jaConfirmou = registro?.status === 'confirmado';
-    const jaRecusou = registro?.status === 'nao_pode';
+    const statusClass = isWeekFlow
+        ? currentStatus === 'confirmado'
+            ? STATUS_STYLES.confirmado
+            : currentStatus === 'imprevisto'
+                ? STATUS_STYLES.nao_pode
+                : STATUS_STYLES.pendente
+        : STATUS_STYLES[registro?.status] || STATUS_STYLES.pendente;
+    const jaConfirmou = currentStatus === 'confirmado';
+    const jaRecusou = isWeekFlow ? currentStatus === 'imprevisto' : currentStatus === 'nao_pode';
 
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_40%,_#f8fafc)] flex items-center justify-center p-4 sm:p-6">
-            <div className="w-full max-w-xl bg-white border border-slate-200 rounded-[2rem] shadow-xl shadow-slate-200/60 overflow-hidden">
-                <div className="bg-slate-900 text-white px-6 py-7">
+            <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-[1.75rem] shadow-xl shadow-slate-200/60 overflow-hidden">
+                <div className="bg-slate-900 text-white px-5 py-5 sm:px-6">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-blue-200 font-black">
                         {registro?.congregacaoNome || t.titulo}
                     </p>
-                    <h1 className="mt-2 text-2xl sm:text-3xl font-black">{t.titulo}</h1>
-                    <p className="mt-2 text-sm text-slate-300">{t.subtitulo}</p>
+                    <h1 className="mt-2 text-2xl sm:text-[2rem] font-black leading-tight">{t.titulo}</h1>
+                    <p className="mt-2 max-w-2xl text-sm text-slate-300">{isWeekFlow ? t.subtituloSemana : t.subtitulo}</p>
                 </div>
 
-                <div className="p-6 sm:p-8 space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                <div className="p-5 sm:p-6">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">{t.data}</p>
-                            <p className="mt-2 text-sm font-bold text-slate-900">{dataFmt}</p>
+                            <p className="mt-1.5 text-sm font-bold text-slate-900">{dataFmt}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">{t.designado}</p>
-                            <p className="mt-2 text-sm font-bold text-slate-900">{registro?.pessoaNome || '—'}</p>
+                            <p className="mt-1.5 text-sm font-bold text-slate-900">{registro?.pessoaNome || '—'}</p>
                         </div>
-                    </div>
 
-                    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">{t.parte}</p>
-                        <p className="mt-2 text-base font-black text-slate-900">{registro?.tituloParte || '—'}</p>
-                    </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">{t.parte}</p>
+                            <p className="mt-1.5 text-base font-black text-slate-900">{registro?.tituloParte || '—'}</p>
+                        </div>
 
-                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4">
-                        <div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">{t.status}</p>
-                            <p className="mt-2 text-sm font-bold text-slate-700">{statusLabel}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-bold text-slate-700">{statusLabel}</p>
+                                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black ${statusClass}`}>
+                                    {statusLabel}
+                                </span>
+                            </div>
                         </div>
-                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-black ${statusClass}`}>
-                            {statusLabel}
-                        </span>
                     </div>
 
                     {registro?.saveError && (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
                             {t.erroSalvar}
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <button
                             type="button"
                             disabled={saving}
                             onClick={() => responder('confirmado')}
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-60"
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60"
                         >
                             {saving && !jaRecusou ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                            {saving ? t.salvando : t.btnConfirmar}
+                            {saving ? t.salvando : (isWeekFlow ? t.btnConfirmarSemana : t.btnConfirmar)}
                         </button>
 
                         <button
                             type="button"
                             disabled={saving}
-                            onClick={() => responder('nao_pode')}
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-black text-white hover:bg-rose-700 disabled:opacity-60"
+                            onClick={() => responder(isWeekFlow ? 'imprevisto' : 'nao_pode')}
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-black text-white transition hover:bg-rose-700 disabled:opacity-60"
                         >
                             {saving && !jaConfirmou ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
-                            {saving ? t.salvando : t.btnNaoPosso}
+                            {saving ? t.salvando : (isWeekFlow ? t.btnImprevistoSemana : t.btnNaoPosso)}
                         </button>
                     </div>
 
-                    {jaConfirmou && (
-                        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 space-y-4">
+                    {jaConfirmou && !isWeekFlow && (
+                        <div className="mt-4 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
                             <div>
                                 <h2 className="text-sm font-black text-emerald-900">{t.confirmadoOk}</h2>
                                 <p className="mt-1 text-sm text-emerald-800">{t.agendaDescricao}</p>
@@ -208,7 +240,7 @@ export default function ConfirmacaoPublica() {
                                     href={registro.agendaLink}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-black text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-800 hover:bg-emerald-100"
                                 >
                                     <CalendarPlus size={16} />
                                     {t.btnAgenda}
@@ -217,9 +249,15 @@ export default function ConfirmacaoPublica() {
                         </div>
                     )}
 
+                    {jaConfirmou && isWeekFlow && (
+                        <div className="mt-4 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
+                            {t.confirmadoSemanaOk}
+                        </div>
+                    )}
+
                     {jaRecusou && (
-                        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm font-semibold text-amber-900">
-                            {t.recusadoOk}
+                        <div className="mt-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+                            {isWeekFlow ? t.imprevistoSemanaOk : t.recusadoOk}
                         </div>
                     )}
                 </div>

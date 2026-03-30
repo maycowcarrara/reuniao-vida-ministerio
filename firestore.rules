@@ -23,6 +23,10 @@ service cloud.firestore {
       return status in ["pendente", "confirmado", "nao_pode"];
     }
 
+    function isWeekReminderStatus(status) {
+      return status in ["nao_enviado", "pendente", "confirmado", "imprevisto"];
+    }
+
     function confirmationMutableKeys() {
       return [
         "status",
@@ -41,7 +45,21 @@ service cloud.firestore {
         "lastStatusChangeKey",
         "alertPending",
         "alertSeenAt",
-        "lastReminderSentAt"
+        "lastReminderSentAt",
+        "lastReminderSentAtIso",
+        "weekReminderStatus",
+        "weekReminderPreviousStatus",
+        "weekReminderHistory",
+        "lastWeekReminderSource",
+        "lastWeekReminderActorType",
+        "weekReminderRespondedAt",
+        "weekReminderRespondedAtIso",
+        "lastWeekReminderChangeAtIso",
+        "lastWeekReminderChangeFrom",
+        "lastWeekReminderChangeTo",
+        "lastWeekReminderChangeKey",
+        "weekReminderAlertPending",
+        "weekReminderAlertSeenAt"
       ];
     }
 
@@ -60,6 +78,7 @@ service cloud.firestore {
         "agendaLink",
         "sala",
         "status",
+        "weekReminderStatus",
         "createdAt",
         "updatedAt",
         "previousStatus",
@@ -77,6 +96,19 @@ service cloud.firestore {
         "alertPending",
         "alertSeenAt",
         "lastReminderSentAt",
+        "lastReminderSentAtIso",
+        "weekReminderPreviousStatus",
+        "weekReminderHistory",
+        "lastWeekReminderSource",
+        "lastWeekReminderActorType",
+        "weekReminderRespondedAt",
+        "weekReminderRespondedAtIso",
+        "lastWeekReminderChangeAtIso",
+        "lastWeekReminderChangeFrom",
+        "lastWeekReminderChangeTo",
+        "lastWeekReminderChangeKey",
+        "weekReminderAlertPending",
+        "weekReminderAlertSeenAt",
         "id"
       ];
     }
@@ -99,7 +131,8 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.assignmentKey == resource.data.assignmentKey
         && matchesPublicConfirmation(userId, assignmentKey)
-        && isConfirmationStatus(request.resource.data.status);
+        && isConfirmationStatus(request.resource.data.status)
+        && isWeekReminderStatus(request.resource.data.weekReminderStatus);
     }
 
     function isValidPublicConfirmationUpdate() {
@@ -109,7 +142,8 @@ service cloud.firestore {
         && request.resource.data.assignmentKey == resource.data.assignmentKey
         && request.resource.data.pessoaNome == resource.data.pessoaNome
         && request.resource.data.tituloParte == resource.data.tituloParte
-        && isConfirmationStatus(request.resource.data.status);
+        && isConfirmationStatus(request.resource.data.status)
+        && isWeekReminderStatus(request.resource.data.weekReminderStatus);
     }
 
     function isValidNotificationCreate() {
@@ -137,7 +171,7 @@ service cloud.firestore {
       && exists(/databases/$(database)/documents/confirmacoes_publicas/$(request.resource.data.token))
       && publicConfirmationDoc(request.resource.data.token).data.ownerUid == request.resource.data.ownerUid
       && publicConfirmationDoc(request.resource.data.token).data.assignmentKey == request.resource.data.assignmentKey
-      && request.resource.data.type == "confirmacao_status";
+      && request.resource.data.type in ["confirmacao_status", "lembrete_semana_status"];
     }
 
     match /users/{userId}/configuracoes/{docId} {
@@ -155,7 +189,8 @@ service cloud.firestore {
       allow create: if isAdminUser(userId)
         && request.resource.data.keys().hasOnly(confirmationBaseKeys())
         && request.resource.data.ownerUid == userId
-        && isConfirmationStatus(request.resource.data.status);
+        && isConfirmationStatus(request.resource.data.status)
+        && isWeekReminderStatus(request.resource.data.weekReminderStatus);
       allow update: if isAdminUser(userId)
         || isValidPublicConfirmationMirrorUpdate(userId, assignmentKey);
       allow delete: if isAdminUser(userId);
@@ -171,7 +206,8 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid
         && isAdminEmail()
         && request.resource.data.keys().hasOnly(confirmationBaseKeys())
-        && isConfirmationStatus(request.resource.data.status);
+        && isConfirmationStatus(request.resource.data.status)
+        && isWeekReminderStatus(request.resource.data.weekReminderStatus);
       allow update: if (
           isSignedIn()
           && request.auth.uid == resource.data.ownerUid

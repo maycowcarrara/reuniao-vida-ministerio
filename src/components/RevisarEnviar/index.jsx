@@ -28,7 +28,16 @@ import { toast } from '../../utils/toast';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 
-const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosChange }) => {
+const RevisarEnviar = ({
+    historico,
+    alunos,
+    config,
+    confirmacoes = [],
+    onAlunosChange,
+    sharedWeekSelection = {},
+    setSharedWeekSelection = () => { },
+    reviewShortcutRequest = null
+}) => {
     const { lang, t } = getI18n(config);
 
     const [startIndex, setStartIndex] = useState(0);
@@ -37,23 +46,44 @@ const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosC
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
     const [sentMap, setSentMap] = useState({});
 
+    useEffect(() => {
+        if (!reviewShortcutRequest?.token) return;
+        if (reviewShortcutRequest.tab) {
+            setAbaAtiva(reviewShortcutRequest.tab);
+        }
+    }, [reviewShortcutRequest]);
+
     // --- HELPERS DE TIPO E DETECÇÃO ---
+    const normalizar = (texto = '') =>
+        texto
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+
     const getTipo = (p) => (p?.tipo ?? p?.type ?? '').toString();
 
     const isOracao = (p) => {
-        const tipo = getTipo(p).toLowerCase();
-        return tipo.includes('oracao') || tipo.includes('oração') || tipo.includes('oración');
+        const tipo = normalizar(getTipo(p));
+        const titulo = normalizar(p?.titulo ?? '');
+        return tipo.includes('oracao') || titulo.includes('oracao');
     };
 
     const isEstudo = (p) => {
-        const tipo = getTipo(p).toLowerCase();
-        const titulo = (p?.titulo ?? '').toLowerCase();
-        return tipo === 'estudo' || titulo.includes('estudo bíblico') || titulo.includes('estudio bíblico');
+        const tipo = normalizar(getTipo(p));
+        const titulo = normalizar(p?.titulo ?? '');
+        return (
+            tipo.includes('estudo') ||
+            titulo.includes('estudo biblico de congregacao') ||
+            titulo.includes('estudio biblico de la congregacion') ||
+            titulo.includes('estudo biblico') ||
+            titulo.includes('estudio biblico')
+        );
     };
 
     const getOracaoPos = (p) => {
-        const tipo = getTipo(p).toLowerCase();
-        const titulo = (p?.titulo ?? '').toString().toLowerCase();
+        const tipo = normalizar(getTipo(p));
+        const titulo = normalizar(p?.titulo ?? '');
         const raw = `${tipo} ${titulo}`.trim();
 
         if (raw.includes('inicial') || raw.includes('inicio') || raw.includes('abertura')) return 'inicio';
@@ -207,17 +237,25 @@ const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosC
     }, [semanasDisponiveisBase, filtroSemanas]);
 
     // --- SELEÇÃO DE SEMANAS (CHIPS) ---
-    const [printSelecionadas, setPrintSelecionadas] = useState({});
     const prevStartSeguroRef = useRef(startSeguro);
     const userClearedRef = useRef(false);
-    const getSemanaKey = (sem, idx) => (sem?.id ?? sem?.dataReuniao ?? sem?.semana ?? String(idx)).toString();
+    const printSelecionadas = useMemo(() => sharedWeekSelection || {}, [sharedWeekSelection]);
+    const setPrintSelecionadas = setSharedWeekSelection;
+    const getSemanaKey = (sem, idx) => (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
 
     useEffect(() => {
         const startChanged = prevStartSeguroRef.current !== startSeguro;
         if (!startChanged && userClearedRef.current) return;
 
-        const hasAnySelected = Object.values(printSelecionadas).some(Boolean);
-        if (!startChanged && hasAnySelected) return;
+        const hasAnySelected = Object.values(printSelecionadas || {}).some(Boolean);
+        if (hasAnySelected) {
+            prevStartSeguroRef.current = startSeguro;
+            return;
+        }
+
+        const visibleKeys = new Set(semanasDisponiveis.map((s, i) => getSemanaKey(s, i)));
+        const hasAnyVisibleSelected = Object.keys(printSelecionadas || {}).some((key) => visibleKeys.has(key) && !!printSelecionadas[key]);
+        if (!startChanged && hasAnyVisibleSelected) return;
 
         if (startChanged) userClearedRef.current = false;
 
@@ -229,7 +267,7 @@ const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosC
         setPrintSelecionadas(next);
 
         prevStartSeguroRef.current = startSeguro;
-    }, [startSeguro, semanasDisponiveis, qtdSemanas, printSelecionadas]);
+    }, [startSeguro, semanasDisponiveis, qtdSemanas, printSelecionadas, setPrintSelecionadas]);
 
     const toggleSemanaPrint = (key) => {
         userClearedRef.current = false;
@@ -499,7 +537,7 @@ const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosC
 
             // Loop nas partes
             (sem?.partes || []).forEach((p) => {
-                const tituloLower = (p.titulo || '').toLowerCase();
+                const tituloLower = normalizar(p.titulo || '');
                 const secaoLower = (p.secao || '').toLowerCase();
                 let termoGravacao = '';
 
@@ -513,7 +551,7 @@ const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosC
                     termoGravacao = tituloLower.includes('discurso') ? 'discurso' : 'ministerio';
                 }
                 else if (secaoLower === 'vida' || isEstudo(p) || tituloLower.includes('estudo') || tituloLower.includes('estudio')) {
-                    if (isEstudo(p) || tituloLower.includes('estudo bíblico') || tituloLower.includes('estudio bíblico')) {
+                    if (isEstudo(p) || tituloLower.includes('estudo biblico') || tituloLower.includes('estudio biblico')) {
                         termoGravacao = 'estudobiblico';
                     } else {
                         termoGravacao = 'vidacrista';
@@ -590,13 +628,13 @@ const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosC
         const partesReais = partes.filter((p) => {
             if (isOracao(p)) return false;
 
-            const tipo = (p?.tipo ?? p?.type ?? '').toString().toLowerCase();
-            const titulo = (p?.titulo ?? '').toString().toLowerCase();
+            const tipo = normalizar((p?.tipo ?? p?.type ?? '').toString());
+            const titulo = normalizar((p?.titulo ?? '').toString());
 
             const ehCantico = tipo.includes('cantico') ||
-                tipo.includes('cântico') ||
                 titulo.includes('cantico') ||
-                titulo.includes('cântico');
+                tipo.includes('cancion') ||
+                titulo.includes('cancion');
 
             return !ehCantico;
         });
@@ -814,12 +852,10 @@ const RevisarEnviar = ({ historico, alunos, config, confirmacoes = [], onAlunosC
                                                     <div className="print-block flex flex-col justify-start">
                                                         {(semana?.partes || []).map((parte, idxPart) => {
                                                             const prev = semana.partes[idxPart - 1];
-                                                            const firstTipo = getTipo(semana.partes?.[0]);
+                                                            const firstTipo = normalizar(getTipo(semana.partes?.[0]));
                                                             const isIntroEnd =
                                                                 idxPart === 1 &&
-                                                                (firstTipo.toLowerCase().includes('oracao') ||
-                                                                    firstTipo.toLowerCase().includes('oração') ||
-                                                                    firstTipo.toLowerCase().includes('oración'));
+                                                                firstTipo.includes('oracao');
 
                                                             const sectionChanged = idxPart === 0 || (prev && prev.secao !== parte.secao);
 

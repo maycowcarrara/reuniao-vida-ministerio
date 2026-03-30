@@ -14,6 +14,8 @@ const PRIVATE_COLLECTION = 'confirmacoes';
 const PUBLIC_COLLECTION = 'confirmacoes_publicas';
 const TOKEN_LENGTH = 10;
 const TOKEN_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const PRIMARY_STATUSES = ['pendente', 'confirmado', 'nao_pode'];
+const WEEK_REMINDER_STATUSES = ['nao_enviado', 'pendente', 'confirmado', 'imprevisto'];
 
 const getCurrentUser = () => {
     const user = auth.currentUser;
@@ -46,6 +48,11 @@ const buildPrivateRef = (uid, assignmentKey) =>
 const buildPublicRef = (token) =>
     doc(db, PUBLIC_COLLECTION, String(token || '').trim());
 
+const mergeSentChannels = (currentChannels = {}, channel, changedAtIso) => ({
+    ...currentChannels,
+    [channel]: changedAtIso
+});
+
 const buildHistoryEntry = ({ previousStatus, nextStatus, responseCode = '', source = 'public_link', actorType = 'public' }) => ({
     previousStatus: previousStatus || 'pendente',
     status: nextStatus,
@@ -59,12 +66,16 @@ const STATUS_LABELS = {
     pt: {
         pendente: 'Pendente',
         confirmado: 'Aceito',
-        nao_pode: 'Não poderá cumprir'
+        nao_pode: 'Não poderá cumprir',
+        nao_enviado: 'Lembrete não enviado',
+        imprevisto: 'Teve imprevisto'
     },
     es: {
         pendente: 'Pendiente',
         confirmado: 'Aceptado',
-        nao_pode: 'No podrá cumplir'
+        nao_pode: 'No podrá cumplir',
+        nao_enviado: 'Recordatorio no enviado',
+        imprevisto: 'Tuvo un imprevisto'
     }
 };
 
@@ -89,6 +100,25 @@ const buildNotificationCopy = ({ lang, pessoaNome, tituloParte, previousStatus, 
     };
 };
 
+const buildWeekReminderNotificationCopy = ({ lang, pessoaNome, tituloParte, previousStatus, nextStatus }) => {
+    const safeLang = normalizeLanguage(lang);
+
+    if (safeLang === 'es') {
+        return {
+            title: 'Recordatorio semanal actualizado',
+            description: `${pessoaNome || 'Alguien'} cambió el recordatorio de "${tituloParte || 'la asignación'}" de ${getStatusLabel(previousStatus, safeLang)} a ${getStatusLabel(nextStatus, safeLang)}.`
+        };
+    }
+
+    return {
+        title: 'Lembrete semanal atualizado',
+        description: `${pessoaNome || 'Alguém'} mudou o lembrete de "${tituloParte || 'a designação'}" de ${getStatusLabel(previousStatus, safeLang)} para ${getStatusLabel(nextStatus, safeLang)}.`
+    };
+};
+
+const isPrimaryStatus = (status) => PRIMARY_STATUSES.includes(status);
+const isWeekReminderStatus = (status) => WEEK_REMINDER_STATUSES.includes(status);
+
 const ensureUniqueToken = async () => {
     for (let i = 0; i < 7; i += 1) {
         const token = createShortToken();
@@ -100,7 +130,7 @@ const ensureUniqueToken = async () => {
     throw new Error('Não foi possível gerar um token exclusivo de confirmação.');
 };
 
-export const buildConfirmationUrl = (token, responseCode = '') => {
+export const buildConfirmationUrl = (token, responseCode = '', flow = '') => {
     if (!token || typeof window === 'undefined') return '';
 
     const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
@@ -108,6 +138,9 @@ export const buildConfirmationUrl = (token, responseCode = '') => {
     const url = new URL(path.startsWith('/') ? path : `/${path}`, window.location.origin);
     if (responseCode) {
         url.searchParams.set('r', responseCode);
+    }
+    if (flow) {
+        url.searchParams.set('f', flow);
     }
     return url.toString();
 };
@@ -144,6 +177,7 @@ export const ensurePublicConfirmation = async ({
     const publicSnap = await getDoc(publicRef);
     const publicData = publicSnap.exists() ? publicSnap.data() : {};
     const status = publicData?.status || privateData?.status || 'pendente';
+    const weekReminderStatus = publicData?.weekReminderStatus || privateData?.weekReminderStatus || 'nao_enviado';
     const createdAt = privateData?.createdAt || publicData?.createdAt || serverTimestamp();
 
     const baseData = {
@@ -160,6 +194,7 @@ export const ensurePublicConfirmation = async ({
         agendaLink: agendaLink || '',
         sala: sala || 'Principal',
         status,
+        weekReminderStatus,
         createdAt,
         updatedAt: serverTimestamp()
     };
@@ -172,6 +207,7 @@ export const ensurePublicConfirmation = async ({
         link: buildConfirmationUrl(token),
         acceptLink: buildConfirmationUrl(token, 'a'),
         declineLink: buildConfirmationUrl(token, 'n'),
+        weekLink: buildConfirmationUrl(token, '', 'w'),
         status
     };
 };
@@ -189,7 +225,7 @@ export const getPublicConfirmation = async (token) => {
     };
 };
 
-export const respondToPublicConfirmation = async (token, status, options = {}) => {
+const updateConfirmationState = async (token, mode, status, options = {}) => {
     const safeToken = String(token || '').trim();
     if (!safeToken) {
         throw new Error('Token de confirmação inválido.');
@@ -202,35 +238,73 @@ export const respondToPublicConfirmation = async (token, status, options = {}) =
     }
 
     const current = snap.data() || {};
-    const nextStatus = status === 'nao_pode' ? 'nao_pode' : 'confirmado';
-    const previousStatus = current?.status || 'pendente';
-    const changed = previousStatus !== nextStatus;
-    const responseCode = nextStatus === 'confirmado' ? 'a' : 'n';
     const source = options?.source || 'public_link';
     const actorType = options?.actorType || 'public';
-    const responseHistory = Array.isArray(current?.responseHistory) ? [...current.responseHistory] : [];
-
-    responseHistory.push(buildHistoryEntry({ previousStatus, nextStatus, responseCode, source, actorType }));
-
     const changedAtIso = new Date().toISOString();
-    const payload = {
-        status: nextStatus,
-        previousStatus,
-        responseHistory,
-        lastResponseSource: source,
-        lastResponseActorType: actorType,
-        updatedAt: serverTimestamp(),
-        lastResponseAt: serverTimestamp(),
-        lastResponseAtIso: changedAtIso,
-        confirmedAt: nextStatus === 'confirmado' ? serverTimestamp() : null,
-        declinedAt: nextStatus === 'nao_pode' ? serverTimestamp() : null,
-        lastStatusChangeAtIso: changed ? changedAtIso : current?.lastStatusChangeAtIso || null,
-        lastStatusChangeFrom: changed ? previousStatus : current?.lastStatusChangeFrom || null,
-        lastStatusChangeTo: changed ? nextStatus : current?.lastStatusChangeTo || nextStatus,
-        lastStatusChangeKey: changed ? `${changedAtIso}|${nextStatus}` : current?.lastStatusChangeKey || null,
-        alertPending: changed ? true : Boolean(current?.alertPending),
-        alertSeenAt: changed ? null : current?.alertSeenAt || null
-    };
+    let payload = {};
+    let changed = false;
+    let previousStatus = '';
+    let nextStatus = '';
+
+    if (mode === 'week') {
+        nextStatus = status === 'imprevisto' ? 'imprevisto' : 'confirmado';
+        if (!isWeekReminderStatus(nextStatus)) {
+            throw new Error('Status semanal inválido.');
+        }
+
+        previousStatus = current?.weekReminderStatus || 'nao_enviado';
+        changed = previousStatus !== nextStatus;
+        const responseCode = nextStatus === 'confirmado' ? 'c' : 'i';
+        const history = Array.isArray(current?.weekReminderHistory) ? [...current.weekReminderHistory] : [];
+        history.push(buildHistoryEntry({ previousStatus, nextStatus, responseCode, source, actorType }));
+
+        payload = {
+            weekReminderStatus: nextStatus,
+            weekReminderPreviousStatus: previousStatus,
+            weekReminderHistory: history,
+            lastWeekReminderSource: source,
+            lastWeekReminderActorType: actorType,
+            weekReminderRespondedAt: serverTimestamp(),
+            weekReminderRespondedAtIso: changedAtIso,
+            lastWeekReminderChangeAtIso: changed ? changedAtIso : current?.lastWeekReminderChangeAtIso || null,
+            lastWeekReminderChangeFrom: changed ? previousStatus : current?.lastWeekReminderChangeFrom || null,
+            lastWeekReminderChangeTo: changed ? nextStatus : current?.lastWeekReminderChangeTo || nextStatus,
+            lastWeekReminderChangeKey: changed ? `${changedAtIso}|${nextStatus}` : current?.lastWeekReminderChangeKey || null,
+            weekReminderAlertPending: changed ? true : Boolean(current?.weekReminderAlertPending),
+            weekReminderAlertSeenAt: changed ? null : current?.weekReminderAlertSeenAt || null,
+            updatedAt: serverTimestamp()
+        };
+    } else {
+        nextStatus = status === 'nao_pode' ? 'nao_pode' : 'confirmado';
+        if (!isPrimaryStatus(nextStatus)) {
+            throw new Error('Status da designação inválido.');
+        }
+
+        previousStatus = current?.status || 'pendente';
+        changed = previousStatus !== nextStatus;
+        const responseCode = nextStatus === 'confirmado' ? 'a' : 'n';
+        const responseHistory = Array.isArray(current?.responseHistory) ? [...current.responseHistory] : [];
+        responseHistory.push(buildHistoryEntry({ previousStatus, nextStatus, responseCode, source, actorType }));
+
+        payload = {
+            status: nextStatus,
+            previousStatus,
+            responseHistory,
+            lastResponseSource: source,
+            lastResponseActorType: actorType,
+            updatedAt: serverTimestamp(),
+            lastResponseAt: serverTimestamp(),
+            lastResponseAtIso: changedAtIso,
+            confirmedAt: nextStatus === 'confirmado' ? serverTimestamp() : null,
+            declinedAt: nextStatus === 'nao_pode' ? serverTimestamp() : null,
+            lastStatusChangeAtIso: changed ? changedAtIso : current?.lastStatusChangeAtIso || null,
+            lastStatusChangeFrom: changed ? previousStatus : current?.lastStatusChangeFrom || null,
+            lastStatusChangeTo: changed ? nextStatus : current?.lastStatusChangeTo || nextStatus,
+            lastStatusChangeKey: changed ? `${changedAtIso}|${nextStatus}` : current?.lastStatusChangeKey || null,
+            alertPending: changed ? true : Boolean(current?.alertPending),
+            alertSeenAt: changed ? null : current?.alertSeenAt || null
+        };
+    }
 
     await updateDoc(publicRef, payload);
     if (current?.ownerUid && current?.assignmentKey) {
@@ -243,17 +317,25 @@ export const respondToPublicConfirmation = async (token, status, options = {}) =
     }
 
     if (changed) {
-        const copy = buildNotificationCopy({
-            lang: current?.lang,
-            pessoaNome: current?.pessoaNome,
-            tituloParte: current?.tituloParte,
-            previousStatus,
-            nextStatus
-        });
+        const copy = mode === 'week'
+            ? buildWeekReminderNotificationCopy({
+                lang: current?.lang,
+                pessoaNome: current?.pessoaNome,
+                tituloParte: current?.tituloParte,
+                previousStatus,
+                nextStatus
+            })
+            : buildNotificationCopy({
+                lang: current?.lang,
+                pessoaNome: current?.pessoaNome,
+                tituloParte: current?.tituloParte,
+                previousStatus,
+                nextStatus
+            });
 
         await createInternalNotification({
             ownerUid: current?.ownerUid,
-            type: 'confirmacao_status',
+            type: mode === 'week' ? 'lembrete_semana_status' : 'confirmacao_status',
             title: copy.title,
             description: copy.description,
             token: safeToken,
@@ -272,6 +354,12 @@ export const respondToPublicConfirmation = async (token, status, options = {}) =
 
     return getPublicConfirmation(safeToken);
 };
+
+export const respondToPublicConfirmation = async (token, status, options = {}) =>
+    updateConfirmationState(token, 'primary', status, options);
+
+export const respondToPublicWeekReminder = async (token, status, options = {}) =>
+    updateConfirmationState(token, 'week', status, options);
 
 export const respondToConfirmationByAssignment = async (assignmentKey, status, options = {}) => {
     const user = getCurrentUser();
@@ -293,6 +381,26 @@ export const respondToConfirmationByAssignment = async (assignmentKey, status, o
     return respondToPublicConfirmation(token, status, options);
 };
 
+export const respondToWeekReminderByAssignment = async (assignmentKey, status, options = {}) => {
+    const user = getCurrentUser();
+    const safeKey = String(assignmentKey || '').trim();
+    if (!safeKey) {
+        throw new Error('Chave da designação inválida.');
+    }
+
+    const privateSnap = await getDoc(buildPrivateRef(user.uid, safeKey));
+    if (!privateSnap.exists()) {
+        throw new Error('Confirmação ainda não foi preparada para esta designação.');
+    }
+
+    const token = privateSnap.data()?.token;
+    if (!token) {
+        throw new Error('Token de confirmação não encontrado para esta designação.');
+    }
+
+    return respondToPublicWeekReminder(token, status, options);
+};
+
 export const registerConfirmationReminder = async (assignmentKey) => {
     const user = getCurrentUser();
     const safeKey = String(assignmentKey || '').trim();
@@ -303,12 +411,61 @@ export const registerConfirmationReminder = async (assignmentKey) => {
     if (!privateSnap.exists()) return;
 
     const token = privateSnap.data()?.token;
+    const currentChannels = privateSnap.data()?.sentChannels || {};
+    const changedAtIso = new Date().toISOString();
     const payload = {
+        weekReminderStatus: 'pendente',
         lastReminderSentAt: serverTimestamp(),
+        lastReminderSentAtIso: changedAtIso,
+        sentChannels: mergeSentChannels(currentChannels, 'waReminder', changedAtIso),
         updatedAt: serverTimestamp()
     };
 
     await updateDoc(privateRef, payload);
+
+    if (token) {
+        await setDoc(buildPublicRef(token), payload, { merge: true });
+    }
+};
+
+export const registerNotificationChannelByAssignment = async (assignmentKey, channel) => {
+    const user = getCurrentUser();
+    const safeKey = String(assignmentKey || '').trim();
+    const safeChannel = String(channel || '').trim();
+    if (!safeKey || !safeChannel) return;
+
+    const privateRef = buildPrivateRef(user.uid, safeKey);
+    const privateSnap = await getDoc(privateRef);
+    if (!privateSnap.exists()) return;
+
+    const current = privateSnap.data() || {};
+    const token = current?.token;
+    const changedAtIso = new Date().toISOString();
+    const sentChannels = mergeSentChannels(current?.sentChannels || {}, safeChannel, changedAtIso);
+    const payload = {
+        sentChannels,
+        lastNotificationChannel: safeChannel,
+        lastNotificationSentAt: serverTimestamp(),
+        lastNotificationSentAtIso: changedAtIso,
+        updatedAt: serverTimestamp()
+    };
+
+    if (safeChannel === 'wa') {
+        payload.lastWhatsappSentAt = serverTimestamp();
+        payload.lastWhatsappSentAtIso = changedAtIso;
+    }
+
+    if (safeChannel === 'mail') {
+        payload.lastEmailSentAt = serverTimestamp();
+        payload.lastEmailSentAtIso = changedAtIso;
+    }
+
+    if (safeChannel === 'waReminder') {
+        payload.lastReminderSentAt = serverTimestamp();
+        payload.lastReminderSentAtIso = changedAtIso;
+    }
+
+    await setDoc(privateRef, payload, { merge: true });
 
     if (token) {
         await setDoc(buildPublicRef(token), payload, { merge: true });

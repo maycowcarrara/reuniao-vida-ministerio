@@ -26,10 +26,11 @@ Desenvolver uma ferramenta ágil baseada em nuvem (Firebase - Serverless) que ga
 Uma interface *Mobile-First* desenvolvida para os irmãos da congregação acessarem pelo próprio celular:
 
 - **Roteamento Inteligente:** O sistema detecta automaticamente se quem está acessando é o Administrador ou um publicador, direcionando para a tela correta sem atritos.
-- **Acesso Seguro:** Proteção de privacidade por PIN numérico para evitar a exposição dos nomes na internet aberta.
+- **Acesso Seguro com Exceção Controlada:** O quadro continua protegido por PIN numérico, mas links públicos de confirmação liberam o acesso no navegador da pessoa para reduzir atrito no fluxo de resposta.
 - **Agenda com 1 Clique:** Botão dinâmico que permite ao publicador salvar a sua designação direto no *Google Calendar*, já preenchido com tempo, seção, ajudante e leitor.
 - **Filtro Inteligente:** Barra de pesquisa onde o irmão digita o próprio nome e o quadro oculta todo o resto, mostrando apenas as suas partes.
 - **Destaques Automáticos:** Extração inteligente dos números dos cânticos, selos de "Semana Atual" e banners visuais automáticos para eventos especiais (Ex: Visita do Superintendente de Circuito ou Assembleias).
+- **Pré-Reunião e Ao Vivo Automáticos:** Nos 5 minutos anteriores ao início, o quadro entra em contagem regressiva automática (`mm:ss`) e, no horário exato da reunião, troca sozinho para o modo **AO VIVO**, expandindo a semana ativa e destacando o andamento das partes sem exigir clique manual.
 
 ### 👥 Gestão Inteligente e Importação
 
@@ -52,6 +53,38 @@ Uma interface *Mobile-First* desenvolvida para os irmãos da congregação acess
 - **API Google Agenda:** Sincronização oficial e automática das partes diretamente com uma agenda do Google, exportando todas as partes com os dias, horários e detalhes perfeitamente configurados.
 - **E-mail Automático (EmailJS):** Disparo de e-mails em lote diretamente do sistema utilizando a plataforma **EmailJS**, enviando a notificação detalhada da designação sem depender de um cliente de e-mail local.
 - **WhatsApp Dinâmico:** Geração de mensagens preenchidas com nome, data, parte e ajudante, prontas para envio em um clique via `wa.me`.
+- **Confirmação Pública por Link:** Cada designação pode gerar um link público exclusivo, sem login, para aceitar ou recusar a designação.
+- **Lembrete Semanal Separado:** Além do aceite inicial, o sistema permite reconfirmação da semana da parte com status próprio.
+- **Confirmação Manual pelo Admin:** O superintendente pode registrar aceite ou ausência mesmo que a pessoa tenha respondido pessoalmente ou por WhatsApp fora do link.
+- **Central Interna de Notificações:** Mudanças de status geram alertas internos persistidos no Firestore e exibidos no sino do painel administrativo.
+- **Rastreamento de Envio Persistente:** Os checks visuais de WhatsApp, e-mail e lembrete semanal ficam gravados no banco, não apenas em memória da sessão.
+
+---
+
+## ✅ Fluxo Atual de Confirmação
+
+Fluxo implementado hoje para designações:
+
+1. O sistema gera um token público exclusivo para cada designação.
+2. O e-mail pode enviar links diretos de `Aceitar` e `Recusar`.
+3. O WhatsApp envia um link curto neutro para resposta.
+4. A resposta inicial da designação fica em `status`:
+   - `pendente`
+   - `confirmado`
+   - `nao_pode`
+5. O lembrete da semana usa um fluxo separado em `weekReminderStatus`:
+   - `nao_enviado`
+   - `pendente`
+   - `confirmado`
+   - `imprevisto`
+6. Mudanças de status geram histórico e notificação interna.
+7. O último status vence, mas as mudanças ficam registradas para auditoria.
+
+Coleções envolvidas:
+
+- `users/{uid}/confirmacoes`
+- `confirmacoes_publicas`
+- `notificacoes`
 
 ### 🖨️ Impressão Física
 
@@ -234,6 +267,34 @@ Certifique-se de ter o [Node.js](https://nodejs.org/) instalado.
    npm run lint
    ```
 
+8. Para publicar somente o hosting:
+   **Bash**
+
+   ```
+   npm run deploy
+   ```
+
+9. Para publicar somente as regras do Firestore:
+   **Bash**
+
+   ```
+   npm run deploy:rules
+   ```
+
+10. Para publicar tudo:
+    **Bash**
+
+    ```
+    npm run deploy:all
+    ```
+
+### Observação importante sobre versão
+
+- `npm run build` incrementa automaticamente a microversão (`patch`) no `package.json`
+- `npm run deploy` e `npm run deploy:all` também incrementam a microversão porque passam por `build`
+- `npm run deploy:rules` incrementa a microversão antes de publicar as regras
+- isso também atualiza o `package-lock.json`
+
 ---
 
 ## 🧪 Manutenção
@@ -242,8 +303,12 @@ Checklist rápido antes de fechar alterações em UI/configuração:
 
 - `npm run lint`
 - `npm run build`
+- se alterou segurança/acesso público, rodar `npm run deploy:rules`
 - testar troca de idioma em `Configurações`
-- conferir se login, toasts, quadro público, importação e revisão continuam no idioma selecionado
+- conferir se login, quadro público, importação e revisão continuam no idioma selecionado
+- validar o fluxo de confirmação pública, recusa e lembrete semanal
+- validar o sino de notificações e a ordenação das novas notificações no topo
+- validar no quadro público a contagem regressiva de 5 minutos e a entrada automática no estado `AO VIVO`
 - evitar adicionar novos textos fora do módulo central de i18n
 
 ### Estado atual da base

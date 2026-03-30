@@ -85,7 +85,7 @@ export const montarMensagemLembreteSemana = ({
         fill(t.msgData, { data: dataFmt }),
         fill(t.msgParte, { titulo: tituloParte || '' }),
         t.msgLembreteObservacao,
-        linkConfirmacao ? fill(t.msgConfirmar, { link: linkConfirmacao }) : null
+        linkConfirmacao ? fill(t.msgConfirmarSemana, { link: linkConfirmacao }) : null
     ].filter(Boolean);
 
     return bloco.join('\n\n');

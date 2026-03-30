@@ -38,9 +38,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 const extrairNumeroCantico = (texto) => {
     if (!texto) return '';
-    const regex = /c[âa]ntico\s*(\d+)/i;
+    const regex = /(c[âa]ntico|canci[oó]n)\s*(\d+)/i;
     const match = texto.match(regex);
-    if (match && match[1]) return match[1];
+    if (match && match[2]) return match[2];
 
     const numbers = texto.match(/\d+/g);
     return numbers ? numbers[numbers.length - 1] : '';
@@ -118,8 +118,9 @@ const gerarLinkAgenda = (parte, dataSemanaISO, texts) => {
     const nomeAjudante = parte.ajudante?.nome ? `${texts.ajudante}: ${parte.ajudante.nome}\n` : '';
     const nomeLeitor = parte.leitor?.nome ? `${texts.leitor}: ${parte.leitor.nome}\n` : '';
 
+    const secaoLabel = texts?.secoes?.[parte.secao] || parte.secao || texts.reuniao;
     const texto = encodeURIComponent(`${texts.reuniao}: ${parte.titulo}`);
-    const desc = encodeURIComponent(`${texts.secao}: ${parte.secao || texts.reuniao}\n${texts.tempo}: ${parte.tempo} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
+    const desc = encodeURIComponent(`${texts.secao}: ${secaoLabel}\n${texts.tempo}: ${parte.tempo} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
 
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${texto}&dates=${start}/${end}&details=${desc}`;
 };
@@ -163,6 +164,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         reuniao: T.reuniao,
         secao: T.secao,
         tempo: T.tempo,
+        secoes: T.secoes,
     };
 
     // --- EFEITOS GERAIS E CAPTURADOR PWA ---

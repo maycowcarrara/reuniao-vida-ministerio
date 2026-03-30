@@ -1,16 +1,19 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "4.1.153",
+  "version": "4.1.186",
   "type": "module",
   "scripts": {
     "predev": "npm version patch --no-git-tag-version",
+    "prebuild": "npm version patch --no-git-tag-version",
+    "predeploy:rules": "npm version patch --no-git-tag-version",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "git add . && git commit -m \"Auto deploy updates\" && git push && npm run build && firebase deploy"
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules",
+    "deploy:all": "npm run build && firebase deploy"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

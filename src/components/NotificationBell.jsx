@@ -40,17 +40,21 @@ export default function NotificationBell({
     }, []);
 
     const unreadNotifications = useMemo(
-        () => notifications.filter((item) => !item?.readAt && !item?.readAtIso),
+        () => notifications
+            .filter((item) => !item?.readAt && !item?.readAtIso)
+            .sort((a, b) => (b?.createdAtIso || '').localeCompare(a?.createdAtIso || '')),
         [notifications]
     );
 
     const readNotifications = useMemo(
-        () => notifications.filter((item) => item?.readAt || item?.readAtIso),
+        () => notifications
+            .filter((item) => item?.readAt || item?.readAtIso)
+            .sort((a, b) => (b?.createdAtIso || '').localeCompare(a?.createdAtIso || '')),
         [notifications]
     );
 
     return (
-        <div ref={wrapRef} className="relative">
+        <div ref={wrapRef} className="relative z-[130]">
             <button
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
@@ -67,8 +71,8 @@ export default function NotificationBell({
             </button>
 
             {open && (
-                <div className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/70 z-50 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 bg-slate-50/80">
+                <div className="fixed left-3 right-3 top-16 z-[140] overflow-hidden rounded-3xl border border-slate-300 bg-slate-100/95 shadow-2xl shadow-slate-300/80 backdrop-blur-sm md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-[22rem] md:max-w-[calc(100vw-2rem)]">
+                    <div className="flex items-center justify-between border-b border-slate-200 bg-slate-200/90 px-4 py-4">
                         <div>
                             <h3 className="text-sm font-black text-slate-900">{t.titulo}</h3>
                             <p className="text-xs font-semibold text-slate-500">
@@ -104,7 +108,7 @@ export default function NotificationBell({
                                             key={item.id}
                                             type="button"
                                             onClick={() => onMarkOne?.(item.id)}
-                                            className="w-full rounded-2xl border border-blue-100 bg-blue-50/70 px-3 py-3 text-left transition hover:bg-blue-100/70"
+                                            className="w-full rounded-2xl border border-blue-200 bg-white/95 px-3 py-3 text-left shadow-sm transition hover:bg-blue-50"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
@@ -134,7 +138,7 @@ export default function NotificationBell({
                                     {readNotifications.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3"
+                                            className="rounded-2xl border border-slate-300 bg-slate-50/95 px-3 py-3 shadow-sm"
                                         >
                                             <p className="text-sm font-black text-slate-800">{item.title}</p>
                                             <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">{item.description}</p>

@@ -32,11 +32,12 @@ const Designar = ({
     cargosMap = {},
     lang = 'pt',
     onExcluirSemana,
-    config = {}
+    config = {},
+    sharedWeekSelection = {},
+    setSharedWeekSelection = () => { }
 }) => {
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
-    const [semanasSelecionadas, setSemanasSelecionadas] = useState({});
     const userClearedWeeksRef = useRef(false);
 
     const [slotAtivo, setSlotAtivo] = useState(null);
@@ -55,6 +56,8 @@ const Designar = ({
 
     const [draggedAluno, setDraggedAluno] = useState(null);
     const [dragOverSlot, setDragOverSlot] = useState(null);
+    const semanasSelecionadas = sharedWeekSelection || {};
+    const setSemanasSelecionadas = setSharedWeekSelection;
 
     const TT = useSectionMessages('designar');
 
@@ -217,7 +220,7 @@ const Designar = ({
             }
             return prev;
         });
-    }, [listaFiltradaPorFlag]);
+    }, [listaFiltradaPorFlag, setSemanasSelecionadas]);
 
     const semanasParaExibir = (listaFiltradaPorFlag || [])
         .map((sem, idx) => ({ sem, idx, key: getSemanaKey(sem, idx) }))

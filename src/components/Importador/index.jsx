@@ -186,101 +186,103 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6 bg-white p-3 sm:p-6 m-2 sm:m-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><ClipboardList className="text-blue-600" /> {t.titulo}</h2>
-                    <p className="text-sm text-gray-500 mt-1">{t.instrucao}</p>
-                </div>
-                <div className="text-xs text-gray-400 uppercase font-bold">{lang}</div>
-            </div>
-
-            <div className="flex gap-2">
-                {[
-                    { id: 'catalogo', icon: Search, label: t.metodoCatalogo },
-                    { id: 'texto', icon: ClipboardList, label: t.metodoTexto },
-                    { id: 'link', icon: LinkIcon, label: t.metodoLink }
-                ].map(m => (
-                    <button key={m.id} onClick={() => setMetodoAtivo(m.id)} className={`flex-1 px-4 py-2 rounded-xl font-bold border transition inline-flex items-center justify-center gap-2 ${metodoAtivo === m.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}>
-                        <m.icon size={18} /> {m.label}
-                    </button>
-                ))}
-            </div>
-
-            {metodoAtivo === 'catalogo' && (
-                <div className="space-y-4">
-                    {!apostilaSelecionada ? (
-                        <>
-                            <div className="flex items-center justify-between gap-3">
-                                <div><div className="text-sm font-extrabold text-gray-800">{t.catalogTitulo}</div><div className="text-xs text-gray-500">{t.catalogSub}</div></div>
-                                <button onClick={carregarCatalogo} disabled={catalogLoading} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2 disabled:opacity-60"><RefreshCcw size={16} className={catalogLoading ? 'animate-spin' : ''} /> {t.catalogAtualizar}</button>
-                            </div>
-                            {catalogErro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{catalogErro}</div>}
-                            {catalogLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
-                                <div className="grid gap-2">
-                                    {apostilas.map(a => (
-                                        <button key={a.url} onClick={() => abrirApostila(a)} className="text-left border border-gray-200 bg-white hover:bg-gray-50 rounded-2xl p-4 transition">
-                                            <div className="font-extrabold text-gray-800">{a.titulo}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <div className="flex items-center justify-between gap-3">
-                                <button onClick={() => setApostilaSelecionada(null)} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2"><ChevronLeft size={16} /> {t.voltar}</button>
-                                <a href={apostilaSelecionada.url} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2"><ExternalLink size={16} /> {t.abrirNoJw}</a>
-                            </div>
-                            {semanasErro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{semanasErro}</div>}
-                            {semanasLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
-                                <div className="space-y-2">
-                                    {semanas.map(w => {
-                                        // 🔥 Verificador Atuando na Renderização da Lista
-                                        const isBloqueado = verificarBloqueioAssembleia({ titulo: w.titulo });
-
-                                        return (
-                                            <div key={w.url} className={`border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isBloqueado ? 'border-yellow-200 bg-yellow-50/50' : 'border-gray-200 bg-white'}`}>
-                                                <div className="font-extrabold text-gray-800">
-                                                    {w.titulo}
-                                                    {isBloqueado && (
-                                                        <span className="flex items-center gap-1 mt-1 text-[10px] text-yellow-700 bg-yellow-200/50 px-2 py-0.5 rounded-full w-fit">
-                                                            <Ban size={10} /> {t.bloqueadoBadge}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <button 
-                                                    onClick={() => processarImportacao(w.url, 'url')} 
-                                                    disabled={loading || isBloqueado} 
-                                                    className={`px-4 py-2 rounded-xl text-white font-extrabold transition inline-flex items-center gap-2 ${isBloqueado ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                                                >
-                                                    {loading ? <Loader2 className="animate-spin" size={16} /> : isBloqueado ? <Ban size={18} /> : <CheckCircle size={18} />} 
-                                                    {isBloqueado ? t.bloqueado : t.importarSemana}
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-            )}
-
-            {metodoAtivo !== 'catalogo' && (
-                <div className="space-y-4">
-                    {metodoAtivo === 'texto' ? (
-                        <textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder={t.placeholderTexto} className="w-full h-56 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 text-sm outline-none focus:ring-4 focus:ring-blue-100 resize-none" />
-                    ) : (
-                        <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder={t.placeholderLink} className="w-full rounded-2xl border border-gray-200 bg-gray-50/60 p-4 text-sm outline-none focus:ring-4 focus:ring-blue-100" />
-                    )}
-                    {erro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{erro}</div>}
-                    <div className="flex gap-3">
-                        <button onClick={handleColar} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50">{t.colar}</button>
-                        <button onClick={() => processarImportacao(metodoAtivo === 'texto' ? input : url, metodoAtivo === 'texto' ? 'texto' : 'url')} disabled={loading} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow hover:bg-blue-700 disabled:opacity-60 inline-flex items-center justify-center gap-2">{loading ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={18} />} {t.processar}</button>
+        <div className="w-full flex justify-center px-2 py-2 sm:px-6 sm:py-6">
+            <div className="w-full max-w-3xl space-y-6 bg-white p-3 sm:p-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><ClipboardList className="text-blue-600" /> {t.titulo}</h2>
+                        <p className="text-sm text-gray-500 mt-1">{t.instrucao}</p>
                     </div>
+                    <div className="text-xs text-gray-400 uppercase font-bold">{lang}</div>
                 </div>
-            )}
+
+                <div className="flex gap-2">
+                    {[
+                        { id: 'catalogo', icon: Search, label: t.metodoCatalogo },
+                        { id: 'texto', icon: ClipboardList, label: t.metodoTexto },
+                        { id: 'link', icon: LinkIcon, label: t.metodoLink }
+                    ].map(m => (
+                        <button key={m.id} onClick={() => setMetodoAtivo(m.id)} className={`flex-1 px-4 py-2 rounded-xl font-bold border transition inline-flex items-center justify-center gap-2 ${metodoAtivo === m.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}>
+                            <m.icon size={18} /> {m.label}
+                        </button>
+                    ))}
+                </div>
+
+                {metodoAtivo === 'catalogo' && (
+                    <div className="space-y-4">
+                        {!apostilaSelecionada ? (
+                            <>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div><div className="text-sm font-extrabold text-gray-800">{t.catalogTitulo}</div><div className="text-xs text-gray-500">{t.catalogSub}</div></div>
+                                    <button onClick={carregarCatalogo} disabled={catalogLoading} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2 disabled:opacity-60"><RefreshCcw size={16} className={catalogLoading ? 'animate-spin' : ''} /> {t.catalogAtualizar}</button>
+                                </div>
+                                {catalogErro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{catalogErro}</div>}
+                                {catalogLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
+                                    <div className="grid gap-2">
+                                        {apostilas.map(a => (
+                                            <button key={a.url} onClick={() => abrirApostila(a)} className="text-left border border-gray-200 bg-white hover:bg-gray-50 rounded-2xl p-4 transition">
+                                                <div className="font-extrabold text-gray-800">{a.titulo}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center justify-between gap-3">
+                                    <button onClick={() => setApostilaSelecionada(null)} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2"><ChevronLeft size={16} /> {t.voltar}</button>
+                                    <a href={apostilaSelecionada.url} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2"><ExternalLink size={16} /> {t.abrirNoJw}</a>
+                                </div>
+                                {semanasErro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{semanasErro}</div>}
+                                {semanasLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
+                                    <div className="space-y-2">
+                                        {semanas.map(w => {
+                                            // 🔥 Verificador Atuando na Renderização da Lista
+                                            const isBloqueado = verificarBloqueioAssembleia({ titulo: w.titulo });
+
+                                            return (
+                                                <div key={w.url} className={`border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isBloqueado ? 'border-yellow-200 bg-yellow-50/50' : 'border-gray-200 bg-white'}`}>
+                                                    <div className="font-extrabold text-gray-800">
+                                                        {w.titulo}
+                                                        {isBloqueado && (
+                                                            <span className="flex items-center gap-1 mt-1 text-[10px] text-yellow-700 bg-yellow-200/50 px-2 py-0.5 rounded-full w-fit">
+                                                                <Ban size={10} /> {t.bloqueadoBadge}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => processarImportacao(w.url, 'url')} 
+                                                        disabled={loading || isBloqueado} 
+                                                        className={`px-4 py-2 rounded-xl text-white font-extrabold transition inline-flex items-center gap-2 ${isBloqueado ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                                    >
+                                                        {loading ? <Loader2 className="animate-spin" size={16} /> : isBloqueado ? <Ban size={18} /> : <CheckCircle size={18} />} 
+                                                        {isBloqueado ? t.bloqueado : t.importarSemana}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {metodoAtivo !== 'catalogo' && (
+                    <div className="space-y-4">
+                        {metodoAtivo === 'texto' ? (
+                            <textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder={t.placeholderTexto} className="w-full h-56 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 text-sm outline-none focus:ring-4 focus:ring-blue-100 resize-none" />
+                        ) : (
+                            <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder={t.placeholderLink} className="w-full rounded-2xl border border-gray-200 bg-gray-50/60 p-4 text-sm outline-none focus:ring-4 focus:ring-blue-100" />
+                        )}
+                        {erro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{erro}</div>}
+                        <div className="flex gap-3">
+                            <button onClick={handleColar} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50">{t.colar}</button>
+                            <button onClick={() => processarImportacao(metodoAtivo === 'texto' ? input : url, metodoAtivo === 'texto' ? 'texto' : 'url')} disabled={loading} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow hover:bg-blue-700 disabled:opacity-60 inline-flex items-center justify-center gap-2">{loading ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={18} />} {t.processar}</button>
+                        </div>
+                    </div>
+                )}
+                </div>
         </div>
     );
 }

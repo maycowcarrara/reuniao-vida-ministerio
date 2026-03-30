@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Globe, X, Minimize, WifiOff, Users, Menu, LayoutDashboard, Send } from 'lucide-react';
+import { Globe, X, Minimize, WifiOff, Menu, LayoutDashboard, Send } from 'lucide-react';
 
 // Firebase Auth
 import { onAuthStateChanged } from 'firebase/auth';
@@ -60,10 +60,11 @@ function AdminPanel() {
   const dadosSistema = dadosNuvem;
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
+  const [sharedWeekSelection, setSharedWeekSelection] = useState({});
+  const [reviewShortcutRequest, setReviewShortcutRequest] = useState(null);
   const [dupModal, setDupModal] = useState({ open: false, existing: null, incoming: null, resolve: null });
 
   const fileInputRef = useRef(null);
-  const notificacoesToastRef = useRef(new Set());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isOnline = useOnlineStatus();
 
@@ -92,18 +93,6 @@ function AdminPanel() {
   useEffect(() => {
     syncDocumentLanguage(lang);
   }, [lang]);
-
-  useEffect(() => {
-    const unreadNotifications = (notificacoes || []).filter((item) => !item?.readAt && !item?.readAtIso);
-
-    unreadNotifications.forEach((item) => {
-      const uniqueKey = `${item.id}|${item.createdAtIso || ''}`;
-      if (notificacoesToastRef.current.has(uniqueKey)) return;
-
-      notificacoesToastRef.current.add(uniqueKey);
-      toast.info([item.title, item.description].filter(Boolean).join('\n'), { duration: 7000 });
-    });
-  }, [notificacoes]);
 
   const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
   const unreadNotificationsCount = (notificacoes || []).filter((item) => !item?.readAt && !item?.readAtIso).length;
@@ -138,6 +127,18 @@ function AdminPanel() {
     const nextRaw = typeof updater === 'function' ? updater(current) : (Array.isArray(updater) ? updater : []);
     const next = nextRaw.filter(Boolean).map(p => ({ ...p, semana: (p.semana || '').toString().trim() }));
     salvarAlteracao({ ...dadosSistema, historico_reunioes: next });
+  };
+
+  const getWeekSelectionKey = (sem, idx = 0) =>
+    (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
+
+  const handleAbrirNotificacoesSemana = (semana) => {
+    const key = getWeekSelectionKey(semana);
+    if (!key) return;
+
+    setSharedWeekSelection({ [key]: true });
+    setReviewShortcutRequest({ tab: 'notificar', token: Date.now() });
+    setAbaAtiva('revisar');
   };
 
   const handleAbrirBackup = async () => {
@@ -365,7 +366,7 @@ function AdminPanel() {
 
         {!isFullscreen && (
           // NO-PRINT ADICIONADO AQUI PARA ESCONDER O HEADER
-          <header className="bg-white shadow-sm px-3 sm:px-4 md:px-6 py-2 md:h-14 border-b shrink-0 z-30 no-print">
+          <header className="relative bg-white shadow-sm px-3 sm:px-4 md:px-6 py-2 md:h-14 border-b shrink-0 z-[120] no-print">
 
             <div className="flex items-center justify-between gap-3 md:gap-4">
               <div className="flex items-center gap-3 md:gap-4 min-w-0">
@@ -408,18 +409,14 @@ function AdminPanel() {
                     <Send size={18} />
                   </button>
 
-                  <button
-                    type="button"
-                    title={t.alunos}
-                    aria-label={t.alunos}
-                    onClick={() => setAbaAtiva('alunos')}
-                    className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${abaAtiva === 'alunos'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                      }`}
+                  <Link
+                    to="/quadro"
+                    title={APP_TEXTS.verQuadro}
+                    aria-label={APP_TEXTS.verQuadro}
+                    className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition-colors hover:bg-slate-50"
                   >
-                    <Users size={18} />
-                  </button>
+                    <Globe size={18} />
+                  </Link>
                 </div>
 
                 <div className="md:hidden h-7 w-px bg-slate-200 mx-0.5" />
@@ -429,7 +426,7 @@ function AdminPanel() {
                   title={APP_TEXTS.verQuadro}
                   className="hidden sm:flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors"
                 >
-                  <Users size={18} />
+                  <Globe size={18} />
                   <span className="hidden sm:block text-xs font-bold">{APP_TEXTS.verQuadro}</span>
                 </Link>
 
@@ -464,7 +461,7 @@ function AdminPanel() {
         {/* PRINT:OVERFLOW-VISIBLE AQUI PARA DEIXAR O CONTEÚDO ROLAR LIVREMENTE */}
         <div className="flex-1 overflow-y-auto scroll-smooth print:overflow-visible">
           <Suspense fallback={<RouteLoading text={APP_TEXTS.carregando} />}>
-            {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} />}
+            {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} confirmacoes={confirmacoes} onAbrirNotificacoesSemana={handleAbrirNotificacoesSemana} />}
             {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
 
             {abaAtiva === 'designar' && (
@@ -478,10 +475,23 @@ function AdminPanel() {
                 t={t}
                 config={dadosSistema?.configuracoes}
                 onExcluirSemana={handleExcluirSemanaBanco}
+                sharedWeekSelection={sharedWeekSelection}
+                setSharedWeekSelection={setSharedWeekSelection}
               />
             )}
 
-            {abaAtiva === 'revisar' && <RevisarEnviar historico={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} confirmacoes={confirmacoes} onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })} />}
+            {abaAtiva === 'revisar' && (
+              <RevisarEnviar
+                historico={listaProgramacoes}
+                alunos={dadosSistema?.alunos || []}
+                config={dadosSistema?.configuracoes}
+                confirmacoes={confirmacoes}
+                onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
+                sharedWeekSelection={sharedWeekSelection}
+                setSharedWeekSelection={setSharedWeekSelection}
+                reviewShortcutRequest={reviewShortcutRequest}
+              />
+            )}
             {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
             {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}
           </Suspense>

@@ -15,7 +15,9 @@ export const IMPORTADOR_CATALOG_CONFIG = {
     es: {
         languagePath: 'es',
         catalogBase: 'guia-actividades-reunion-testigos-jehova',
-        weekLinkMatcher: (hrefLower) => hrefLower.includes('vida-y-ministerio-cristianos'),
+        weekLinkMatcher: (hrefLower) =>
+            hrefLower.includes('vida-y-ministerio-cristianos') ||
+            hrefLower.includes('guia-actividades-reunion-testigos-jehova'),
     },
 };
 

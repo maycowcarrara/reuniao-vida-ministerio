@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
     Calendar, Users, CheckCircle, AlertTriangle,
-    ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info,
+    ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info, MessageCircle,
     UserCheck, UserX, User, Medal, BookHeart, Archive, HeartPulse, ThumbsUp, AlertCircle
 } from 'lucide-react';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
@@ -14,13 +14,16 @@ export default function Dashboard({
     config,
     setAbaAtiva,
     onDefinirEvento,
-    t
+    t,
+    confirmacoes = [],
+    onAbrirNotificacoesSemana
 }) {
     const [dataEvento, setDataEvento] = useState('');
     const [tipoEvento, setTipoEvento] = useState('visita');
 
     const txt = t?.dashboard || { eventos: {}, estatisticas: {} };
     const localTxt = useSectionMessages('dashboardExtra');
+    const normalizeStr = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     // --- ESTATÍSTICAS E PAINEL DE SAÚDE ---
     const stats = useMemo(() => {
@@ -71,6 +74,64 @@ export default function Dashboard({
             }
 
             return dataCalculada;
+        };
+
+        const buildAssignmentKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
+            [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
+
+        const countConfirmacoesDaSemana = (semana) => {
+            if (!semana?.semana) return { total: 0, confirmadas: 0, recusadas: 0, faltando: 0 };
+
+            const dataISO = getDataReuniaoISO(semana);
+            const confirmacoesMap = new Map(
+                (confirmacoes || []).map((item) => [String(item?.assignmentKey || '').trim(), item])
+            );
+            const assignmentKeys = [];
+
+            const addAssignment = (pessoa, role, parteId) => {
+                const pessoaId = pessoa?.id || pessoa?.nome;
+                if (!pessoaId) return;
+
+                assignmentKeys.push(buildAssignmentKey({
+                    dataISO,
+                    semana: semana.semana,
+                    parteId,
+                    pessoaId,
+                    role
+                }));
+            };
+
+            if (semana.presidente) addAssignment(semana.presidente, 'presidente', 'presidente');
+
+            (semana.partes || []).forEach((parte) => {
+                const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
+                const titulo = normalizeStr(parte?.titulo ?? '');
+                const isOracao = tipo.includes('oracao') || titulo.includes('oracao');
+                const isEstudo = tipo.includes('estudo') || titulo.includes('estudo biblico') || titulo.includes('estudio biblico');
+
+                if (isOracao) {
+                    addAssignment(parte.oracao || parte.estudante, 'oracao', parte.id);
+                    return;
+                }
+
+                if (isEstudo) {
+                    addAssignment(parte.dirigente || parte.estudante, 'dirigente', parte.id);
+                    addAssignment(parte.leitor || semana.leitor, 'leitor', parte.id);
+                    return;
+                }
+
+                addAssignment(parte.estudante, 'resp', parte.id);
+                addAssignment(parte.ajudante, 'ajud', parte.id);
+            });
+
+            const confirmadas = assignmentKeys.filter((key) => confirmacoesMap.get(key)?.status === 'confirmado').length;
+            const recusadas = assignmentKeys.filter((key) => confirmacoesMap.get(key)?.status === 'nao_pode').length;
+            return {
+                total: assignmentKeys.length,
+                confirmadas,
+                recusadas,
+                faltando: Math.max(assignmentKeys.length - confirmadas - recusadas, 0)
+            };
         };
 
         // 1. Ordernar Reuniões Ativas
@@ -128,7 +189,6 @@ export default function Dashboard({
         let partesPreenchidas = 0;
         let partesFaltando = [];
 
-        const normalizeStr = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const historicoContaComoParte = (historico = []) => historico.some((item) => {
             const parte = normalizeStr(item?.parte);
             return [
@@ -265,13 +325,15 @@ export default function Dashboard({
             return b.dias - a.dias;
         });
 
+        const resumoConfirmacoes = countConfirmacoesDaSemana(proxima);
+
         return {
             proxima, ativas, proximasSemanas, pendentes, progresso, eventosAgendados, partesFaltando,
             totalAlunos, totalAtivos, totalDesabilitados,
             countAnciaos, countServos, countIrmas,
-            usadosNoTrimestre, precisandoAtencao
+            usadosNoTrimestre, precisandoAtencao, resumoConfirmacoes
         };
-    }, [listaProgramacoes, alunos, config]);
+    }, [listaProgramacoes, alunos, config, confirmacoes]);
 
     // --- HELPERS ---
     const formatarData = (dataIso) => {
@@ -413,8 +475,8 @@ export default function Dashboard({
                     <>
                         <div className="dashboard-top-hero bg-gradient-to-r from-blue-700 via-blue-600 to-blue-600 rounded-2xl p-5 sm:p-6 xl:p-7 text-white shadow-lg relative overflow-hidden">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.14),transparent_28%)] pointer-events-none" />
-                            <div className="relative z-10 grid gap-5 min-[920px]:grid-cols-[minmax(0,1.65fr)_minmax(260px,0.9fr)] items-start">
-                                <div className="space-y-5">
+                            <div className="relative z-10 grid gap-4 min-[920px]:grid-cols-[minmax(0,1.3fr)_minmax(320px,1fr)] items-start">
+                                <div className="space-y-4">
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 text-blue-100 text-xs font-bold uppercase tracking-wider">
                                             <Activity size={14} /> {txt.proximaReuniao}
@@ -446,9 +508,59 @@ export default function Dashboard({
                                             </span>
                                         )}
                                     </div>
+
+                                    <div className="grid max-w-2xl gap-2 sm:grid-cols-3">
+                                        <div className="rounded-2xl border border-emerald-300/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/90">
+                                                {localTxt.confirmadasProxima}
+                                            </div>
+                                            <div className="mt-1 text-2xl font-black text-white">
+                                                {stats.resumoConfirmacoes.confirmadas}
+                                                <span className="ml-1 text-sm font-bold text-blue-100">/ {stats.resumoConfirmacoes.total}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-amber-300/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-100/90">
+                                                {localTxt.faltamConfirmar}
+                                            </div>
+                                            <div className="mt-1 text-2xl font-black text-white">
+                                                {stats.resumoConfirmacoes.faltando}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-rose-300/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-100/90">
+                                                {localTxt.naoPoderao}
+                                            </div>
+                                            <div className="mt-1 text-2xl font-black text-white">
+                                                {stats.resumoConfirmacoes.recusadas}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => onAbrirNotificacoesSemana?.(stats.proxima)}
+                                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-black text-blue-700 shadow-sm transition hover:bg-blue-50"
+                                        >
+                                            <MessageCircle size={16} />
+                                            {localTxt.irNotificacoesSemana}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setAbaAtiva('designar')}
+                                            className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/15"
+                                        >
+                                            {txt.gerenciar}
+                                            <ArrowRight size={14} />
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 min-[920px]:grid-cols-1 gap-3">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 min-[920px]:grid-cols-2">
                                     <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
                                         <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100/80">
                                             {localTxt.dataReuniao}
@@ -473,7 +585,7 @@ export default function Dashboard({
                                         </div>
                                     </div>
 
-                                    <div className="rounded-2xl border border-white/15 bg-black/10 p-4 backdrop-blur-sm">
+                                    <div className="rounded-2xl border border-white/15 bg-black/10 p-4 backdrop-blur-sm sm:col-span-2">
                                         <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100/80">
                                             {localTxt.tipoSemana}
                                         </div>
@@ -549,9 +661,9 @@ export default function Dashboard({
                             </div>
 
                             <div className="grid gap-4 flex-1 min-[1500px]:grid-cols-[minmax(230px,0.8fr)_minmax(0,1.2fr)] min-[1800px]:grid-cols-1">
-                                <div className="flex min-[1500px]:flex-col min-[1500px]:items-start items-center gap-4 bg-green-50/60 border border-green-100 p-4 rounded-xl">
+                                <div className="flex items-center gap-4 bg-green-50/60 border border-green-100 p-4 rounded-xl">
                                     <ProgressRing percentage={engagementPercentage} />
-                                    <div>
+                                    <div className="min-w-0">
                                         <h4 className="font-bold text-green-900 text-sm">{localTxt.rodizio}</h4>
                                         <p className="text-xs text-green-700 mt-1 leading-tight">{localTxt.rodizioSub}</p>
                                     </div>
