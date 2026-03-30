@@ -1,14 +1,20 @@
 import {
+    collection,
     doc,
     getDoc,
+    getDocs,
+    query,
     serverTimestamp,
     setDoc,
-    updateDoc
+    updateDoc,
+    where
 } from 'firebase/firestore';
 
-import { normalizeLanguage } from '../config/appConfig';
+import { normalizeLanguage, normalizeSystemConfig } from '../config/appConfig';
 import { db, auth } from './firebase';
 import { createInternalNotification } from './notificacoesInternas';
+import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
+import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../utils/eventos';
 
 const PRIVATE_COLLECTION = 'confirmacoes';
 const PUBLIC_COLLECTION = 'confirmacoes_publicas';
@@ -118,6 +124,165 @@ const buildWeekReminderNotificationCopy = ({ lang, pessoaNome, tituloParte, prev
 
 const isPrimaryStatus = (status) => PRIMARY_STATUSES.includes(status);
 const isWeekReminderStatus = (status) => WEEK_REMINDER_STATUSES.includes(status);
+const isPrimaryResolvedStatus = (status) => ['confirmado', 'nao_pode'].includes(status);
+const isWeekResolvedStatus = (status) => ['confirmado', 'imprevisto'].includes(status);
+
+const getTodayLocalISODate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const isPastEventDate = (dateISO) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateISO || '').trim())
+    && String(dateISO).trim() < getTodayLocalISODate();
+
+const normalizeText = (value = '') =>
+    value
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+
+const buildAssignmentKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
+    [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
+
+const isPrayerPart = (part) => {
+    const type = normalizeText(part?.tipo ?? part?.type ?? '');
+    const title = normalizeText(part?.titulo ?? '');
+    return type.includes('oracao') || type.includes('oracion') || title.includes('oracao') || title.includes('oracion');
+};
+
+const isBibleStudyPart = (part) => {
+    const type = normalizeText(part?.tipo ?? part?.type ?? '');
+    const title = normalizeText(part?.titulo ?? '');
+
+    return (
+        type.includes('estudo') ||
+        type.includes('estudio') ||
+        title.includes('estudo biblico') ||
+        title.includes('estudio biblico')
+    );
+};
+
+const getProgramacaoCollectionRef = (uid) =>
+    collection(db, `users/${String(uid || '').trim()}/programacao`);
+
+const getConfigRef = (uid) =>
+    doc(db, `users/${String(uid || '').trim()}/configuracoes`, 'geral');
+
+const getMeetingDateForWeek = (week, config) => {
+    const eventoEspecial = getEventoEspecialDaSemana(week, config);
+    const tipoEvento = getTipoEventoSemana(week, config);
+    const isVisita = tipoEvento === 'visita';
+    const fallbackStr = week?.dataReuniao || week?.dataExata || week?.dataInicio || week?.data || null;
+
+    if (eventoEspecial?.dataInput && !isVisita) {
+        return eventoEspecial.dataInput;
+    }
+
+    let dataCalculada = getMeetingDateISOFromSemana({
+        semanaStr: week?.semana,
+        config,
+        isoFallback: fallbackStr,
+        overrideDia: isVisita ? 'terça-feira' : null,
+        textSources: [week?.semana]
+    });
+
+    if (!dataCalculada) {
+        dataCalculada = fallbackStr;
+    }
+
+    if (isVisita && dataCalculada) {
+        const [ano, mes, dia] = dataCalculada.split('-').map(Number);
+        const d = new Date(ano, mes - 1, dia, 12, 0, 0);
+
+        if (d.getDay() !== 2) {
+            const diff = 2 - d.getDay();
+            d.setDate(d.getDate() + diff);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+    }
+
+    return dataCalculada;
+};
+
+const collectAssignmentKeysForWeek = (week, config = {}) => {
+    const keys = new Set();
+    const dataISO = getMeetingDateForWeek(week, config);
+    const semana = String(week?.semana || '').trim();
+
+    const addAssignment = (pessoa, role, parteId) => {
+        const pessoaId = pessoa?.id || pessoa?.nome;
+        if (!pessoaId) return;
+
+        keys.add(buildAssignmentKey({
+            dataISO,
+            semana,
+            parteId,
+            pessoaId,
+            role
+        }));
+    };
+
+    if (week?.presidente) {
+        addAssignment(week.presidente, 'presidente', 'presidente');
+    }
+
+    (Array.isArray(week?.partes) ? week.partes : []).forEach((parte) => {
+        if (isPrayerPart(parte)) {
+            addAssignment(parte?.oracao || parte?.estudante, 'oracao', parte?.id);
+            return;
+        }
+
+        if (isBibleStudyPart(parte)) {
+            addAssignment(parte?.dirigente || parte?.estudante, 'dirigente', parte?.id);
+            addAssignment(parte?.leitor || week?.leitor, 'leitor', parte?.id);
+            return;
+        }
+
+        addAssignment(parte?.estudante, 'resp', parte?.id);
+        addAssignment(parte?.ajudante, 'ajud', parte?.id);
+    });
+
+    return keys;
+};
+
+const validateConfirmationTarget = async (confirmationData = {}) => {
+    const ownerUid = String(confirmationData?.ownerUid || '').trim();
+    const assignmentKey = String(confirmationData?.assignmentKey || '').trim();
+    const semana = String(confirmationData?.semana || '').trim();
+
+    if (!ownerUid || !assignmentKey || !semana) {
+        return { isUnavailable: true, unavailableReason: 'missing_reference' };
+    }
+
+    const [configSnap, weeksSnap] = await Promise.all([
+        getDoc(getConfigRef(ownerUid)),
+        getDocs(query(getProgramacaoCollectionRef(ownerUid), where('semana', '==', semana)))
+    ]);
+
+    if (weeksSnap.empty) {
+        return { isUnavailable: true, unavailableReason: 'week_removed' };
+    }
+
+    const config = normalizeSystemConfig(configSnap.exists() ? configSnap.data() : {});
+    const found = weeksSnap.docs.some((weekDoc) => {
+        const keys = collectAssignmentKeysForWeek(weekDoc.data(), config);
+        return keys.has(assignmentKey);
+    });
+
+    if (!found) {
+        return { isUnavailable: true, unavailableReason: 'assignment_changed' };
+    }
+
+    return { isUnavailable: false, unavailableReason: '' };
+};
 
 const ensureUniqueToken = async () => {
     for (let i = 0; i < 7; i += 1) {
@@ -219,9 +384,15 @@ export const getPublicConfirmation = async (token) => {
     const snap = await getDoc(buildPublicRef(safeToken));
     if (!snap.exists()) return null;
 
-    return {
+    const data = {
         id: snap.id,
         ...snap.data()
+    };
+    const availability = await validateConfirmationTarget(data);
+
+    return {
+        ...data,
+        ...availability
     };
 };
 
@@ -238,6 +409,13 @@ const updateConfirmationState = async (token, mode, status, options = {}) => {
     }
 
     const current = snap.data() || {};
+    const availability = await validateConfirmationTarget(current);
+    if (availability.isUnavailable) {
+        const error = new Error('A designação vinculada a este link não existe mais.');
+        error.code = availability.unavailableReason || 'assignment_unavailable';
+        throw error;
+    }
+
     const source = options?.source || 'public_link';
     const actorType = options?.actorType || 'public';
     const changedAtIso = new Date().toISOString();
@@ -254,6 +432,11 @@ const updateConfirmationState = async (token, mode, status, options = {}) => {
 
         previousStatus = current?.weekReminderStatus || 'nao_enviado';
         changed = previousStatus !== nextStatus;
+        if (changed && isPastEventDate(current?.dataISO) && isWeekResolvedStatus(previousStatus)) {
+            const error = new Error('Não é possível alterar a resposta de uma designação após a data da reunião.');
+            error.code = 'past_event_change_locked';
+            throw error;
+        }
         const responseCode = nextStatus === 'confirmado' ? 'c' : 'i';
         const history = Array.isArray(current?.weekReminderHistory) ? [...current.weekReminderHistory] : [];
         history.push(buildHistoryEntry({ previousStatus, nextStatus, responseCode, source, actorType }));
@@ -282,6 +465,11 @@ const updateConfirmationState = async (token, mode, status, options = {}) => {
 
         previousStatus = current?.status || 'pendente';
         changed = previousStatus !== nextStatus;
+        if (changed && isPastEventDate(current?.dataISO) && isPrimaryResolvedStatus(previousStatus)) {
+            const error = new Error('Não é possível alterar a resposta de uma designação após a data da reunião.');
+            error.code = 'past_event_change_locked';
+            throw error;
+        }
         const responseCode = nextStatus === 'confirmado' ? 'a' : 'n';
         const responseHistory = Array.isArray(current?.responseHistory) ? [...current.responseHistory] : [];
         responseHistory.push(buildHistoryEntry({ previousStatus, nextStatus, responseCode, source, actorType }));
