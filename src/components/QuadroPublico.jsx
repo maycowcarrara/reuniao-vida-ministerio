@@ -21,7 +21,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useSectionMessages, useI18n } from '../i18n';
 import { getLanguageMeta } from '../config/appConfig';
-import { getMeetingDateISOFromSemana, getWeekStartISOFromSemana } from '../utils/revisarEnviar/dates';
+import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, getSemanaStartISO as getSemanaStartISOCompartilhado } from '../utils/eventos';
 
 // ============================================================================
@@ -306,7 +306,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         }
 
         return filtradas.sort((a, b) => new Date(a.semanaStartISO).getTime() - new Date(b.semanaStartISO).getTime());
-    }, [programacoes, busca, config, config?.horario, lang]);
+    }, [programacoes, busca, config, lang]);
 
     const y = agora.getFullYear();
     const m = String(agora.getMonth() + 1).padStart(2, '0');

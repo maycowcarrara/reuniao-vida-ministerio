@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { DEFAULT_CONFIG, normalizeSystemConfig } from '../config/appConfig';
+import { getSemanaSortTimestamp } from '../utils/revisarEnviar/dates';
 import {
     markAllNotificationsRead,
     markNotificationRead,
@@ -69,7 +70,7 @@ export function useGerenciadorDados() {
 
         const unsubProg = onSnapshot(collection(db, basePath, "programacao"), (snap) => {
             const lista = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-            lista.sort((a, b) => new Date(a.semana) - new Date(b.semana));
+            lista.sort((a, b) => getSemanaSortTimestamp(a) - getSemanaSortTimestamp(b));
             setDados(prev => ({ ...prev, historico_reunioes: lista }));
             setLoading(false);
         });

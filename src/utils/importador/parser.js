@@ -45,6 +45,8 @@ const limparTexto = (txt) => {
     out = out.replace(/\((jwpub|https?):\/\/[^)]+\)/gi, ' ');
     out = out.replace(/^\s{0,3}#{1,6}\s*/gm, '');
     out = out.replace(/[*_`>~]+/g, '');
+    out = out.replace(/(\d)(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 ');
+    out = out.replace(/([A-Za-zÀ-ÖØ-öø-ÿ])\((\d+\s*min)/g, '$1 ($2');
     out = out.replace(/Sua resposta|Respuesta/gi, ' ');
     out = out.replace(/PERGUNTE-SE:|PREGUNTE-SE:|PREGÚNTESE:|PREGUNTESE:/gi, ' ');
     out = out.replace(/_{3,}/g, ' ');

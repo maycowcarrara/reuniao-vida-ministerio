@@ -5,7 +5,7 @@ import {
     UserCheck, UserX, User, Medal, BookHeart, Archive, HeartPulse, ThumbsUp, AlertCircle
 } from 'lucide-react';
 import { getWeekdayJsDay } from '../config/appConfig';
-import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
+import { getCanonicalWeekStartISO, getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
 import { useSectionMessages } from '../i18n';
 
@@ -114,6 +114,57 @@ export default function Dashboard({
             return d;
         };
 
+        const getSemanaStartISO = (sem) => getCanonicalWeekStartISO({ sem, config });
+
+        const isPrayerPart = (parte) => {
+            const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
+            const titulo = normalizeStr(parte?.titulo ?? '');
+            return tipo.includes('oracao') || titulo.includes('oracao');
+        };
+
+        const isBibleStudyPart = (parte) => {
+            const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
+            const titulo = normalizeStr(parte?.titulo ?? '');
+            return tipo.includes('estudo') || titulo.includes('estudo biblico') || titulo.includes('estudio biblico');
+        };
+
+        const isSongOnlyPart = (parte) => {
+            const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
+            return tipo === 'cantico';
+        };
+
+        const countRequiredAssignmentsForWeek = (semana) => {
+            const addRequiredSlot = (value, acc) => {
+                acc.total += 1;
+                if (value?.id || value?.nome) {
+                    acc.preenchidas += 1;
+                }
+            };
+
+            const totals = { total: 0, preenchidas: 0 };
+
+            addRequiredSlot(semana?.presidente, totals);
+
+            (Array.isArray(semana?.partes) ? semana.partes : []).forEach((parte) => {
+                if (isSongOnlyPart(parte)) return;
+
+                if (isPrayerPart(parte)) {
+                    addRequiredSlot(parte?.oracao || parte?.estudante, totals);
+                    return;
+                }
+
+                if (isBibleStudyPart(parte)) {
+                    addRequiredSlot(parte?.dirigente || parte?.estudante, totals);
+                    addRequiredSlot(parte?.leitor || semana?.leitor, totals);
+                    return;
+                }
+
+                addRequiredSlot(parte?.estudante, totals);
+            });
+
+            return totals;
+        };
+
         const buildAssignmentKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
             [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
 
@@ -175,7 +226,11 @@ export default function Dashboard({
         // 1. Ordernar Reuniões Ativas
         const ativas = listaProgramacoes
             .filter(s => !s.arquivada)
-            .map(s => ({ ...s, dataReuniaoResolvida: getDataReuniaoISO(s) }))
+            .map(s => ({
+                ...s,
+                dataReuniaoResolvida: getDataReuniaoISO(s),
+                semanaStartISO: getSemanaStartISO(s)
+            }))
             .sort((a, b) => new Date(a.dataReuniaoResolvida || a.dataInicio) - new Date(b.dataReuniaoResolvida || b.dataInicio));
 
         // Encontrar a próxima reunião
@@ -248,20 +303,37 @@ export default function Dashboard({
                 }
             }
 
-            const semanasProgramadas = new Set(
-                ativas
-                    .filter((semana) => {
-                        const dataReuniao = parseISODate(semana.dataReuniaoResolvida);
-                        if (!dataReuniao || dataReuniao < analiseInicio || dataReuniao >= periodo.fim) return false;
-                        return !isTipoEventoBloqueante(getTipoEventoSemana(semana, config));
-                    })
-                    .map((semana) => getWeekStartISOFromDate(parseISODate(semana.dataReuniaoResolvida)))
-                    .filter((semanaStartISO) => semanasPrevistas.has(semanaStartISO))
-            );
+            const resumoSemanasImportadas = ativas.reduce((acc, semana) => {
+                const semanaStartISO = semana.semanaStartISO;
+
+                if (!semanaStartISO || !semanasPrevistas.has(semanaStartISO)) return acc;
+                if (isTipoEventoBloqueante(getTipoEventoSemana(semana, config))) return acc;
+
+                const requiredAssignments = countRequiredAssignmentsForWeek(semana);
+                const anterior = acc.get(semanaStartISO) || {
+                    total: 0,
+                    preenchidas: 0
+                };
+
+                acc.set(semanaStartISO, {
+                    total: Math.max(anterior.total, requiredAssignments.total),
+                    preenchidas: Math.max(anterior.preenchidas, requiredAssignments.preenchidas)
+                });
+
+                return acc;
+            }, new Map());
 
             const previstas = semanasPrevistas.size;
-            const programadas = semanasProgramadas.size;
-            const faltando = Math.max(previstas - programadas, 0);
+            const importadas = resumoSemanasImportadas.size;
+            const faltandoImportacao = Math.max(previstas - importadas, 0);
+            const designacoesObrigatoriasTotal = Array.from(resumoSemanasImportadas.values())
+                .reduce((acc, item) => acc + item.total, 0);
+            const designacoesObrigatoriasPreenchidas = Array.from(resumoSemanasImportadas.values())
+                .reduce((acc, item) => acc + item.preenchidas, 0);
+            const designacoesPendentes = Math.max(designacoesObrigatoriasTotal - designacoesObrigatoriasPreenchidas, 0);
+            const percentualDesignacoes = designacoesObrigatoriasTotal > 0
+                ? Math.round((designacoesObrigatoriasPreenchidas / designacoesObrigatoriasTotal) * 100)
+                : (importadas > 0 ? 100 : 0);
             const semReunioesPrevistas = previstas === 0;
 
             return {
@@ -269,10 +341,14 @@ export default function Dashboard({
                 periodoLabel: periodo.periodoLabel,
                 nomeMes: periodo.nomeMes,
                 previstas,
-                programadas,
-                faltando,
+                importadas,
+                faltandoImportacao,
+                designacoesObrigatoriasTotal,
+                designacoesObrigatoriasPreenchidas,
+                designacoesPendentes,
+                percentualDesignacoes,
                 semReunioesPrevistas,
-                emDia: faltando === 0
+                emDia: faltandoImportacao === 0 && designacoesPendentes === 0
             };
         });
 
@@ -654,23 +730,46 @@ export default function Dashboard({
                             <div className="mt-5 flex-1 flex flex-col">
                                 <div className="space-y-3">
                                     {stats.programacaoPorMes.map((mes) => {
+                                        const completionPercent = mes.semReunioesPrevistas
+                                            ? 100
+                                            : Math.max(0, Math.min(mes.percentualDesignacoes, 100));
                                         const statusClass = mes.semReunioesPrevistas
                                             ? 'border-slate-200 bg-slate-50 text-slate-600'
-                                            : mes.faltando === 0
-                                                ? 'border-green-100 bg-green-50 text-green-700'
-                                                : 'border-amber-100 bg-amber-50 text-amber-700';
+                                            : mes.emDia
+                                                ? 'border-green-200 bg-green-50/70 text-green-700'
+                                                : mes.faltandoImportacao > 0
+                                                    ? 'border-amber-200 bg-amber-50/70 text-amber-700'
+                                                    : 'border-blue-200 bg-blue-50/70 text-blue-700';
+                                        const progressFillClass = mes.semReunioesPrevistas
+                                            ? 'bg-slate-200/70'
+                                            : mes.emDia
+                                                ? 'bg-green-200/70'
+                                                : mes.faltandoImportacao > 0
+                                                    ? 'bg-amber-200/70'
+                                                    : 'bg-blue-200/70';
                                         const metaText = mes.semReunioesPrevistas
                                             ? localTxt.semReunioesPrevistas
-                                            : `${mes.programadas}/${mes.previstas} ${mes.previstas === 1 ? localTxt.semanaPrevista : localTxt.semanasPrevistas}`;
+                                            : `${mes.importadas}/${mes.previstas} ${mes.importadas === 1 ? localTxt.semanaImportada : localTxt.semanasImportadas}`;
+                                        const percentText = mes.semReunioesPrevistas
+                                            ? ''
+                                            : `${mes.percentualDesignacoes}% ${localTxt.designacoesPreenchidas}`;
                                         const badgeText = mes.semReunioesPrevistas
                                             ? localTxt.semReuniao
-                                            : mes.faltando === 0
+                                            : mes.emDia
                                                 ? localTxt.programacaoCompleta
-                                                : `${localTxt.faltam} ${mes.faltando} ${mes.faltando === 1 ? localTxt.semana : localTxt.semanas}`;
+                                                : mes.faltandoImportacao > 0
+                                                    ? `${localTxt.faltam} ${mes.faltandoImportacao} ${mes.faltandoImportacao === 1 ? localTxt.semana : localTxt.semanas}`
+                                                    : percentText;
 
                                         return (
-                                            <div key={mes.id} className={`rounded-xl border px-3 py-3 ${statusClass}`}>
-                                                <div className="flex items-start justify-between gap-3">
+                                            <div key={mes.id} className={`relative overflow-hidden rounded-xl border px-3 py-3 ${statusClass}`}>
+                                                <div
+                                                    className={`absolute inset-y-0 left-0 rounded-r-2xl transition-all duration-700 ${progressFillClass}`}
+                                                    style={{ width: `${completionPercent}%` }}
+                                                    aria-hidden="true"
+                                                />
+
+                                                <div className="relative z-10 flex items-start justify-between gap-3">
                                                     <div>
                                                         <div className="text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
                                                             {mes.periodoLabel}
@@ -681,10 +780,15 @@ export default function Dashboard({
                                                         <div className="mt-1 text-xs font-bold opacity-90">
                                                             {metaText}
                                                         </div>
+                                                        {!mes.semReunioesPrevistas && (
+                                                            <div className="mt-1 text-[11px] font-semibold opacity-80">
+                                                                {percentText}
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-black">
-                                                        {mes.semReunioesPrevistas ? <Info size={14} /> : mes.faltando === 0 ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+                                                        {mes.semReunioesPrevistas ? <Info size={14} /> : mes.emDia ? <CheckCircle size={14} /> : mes.faltandoImportacao > 0 ? <AlertTriangle size={14} /> : <Info size={14} />}
                                                         {badgeText}
                                                     </div>
                                                 </div>

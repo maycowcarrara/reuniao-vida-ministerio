@@ -21,7 +21,7 @@ import "./revisarEnviar.print.css";
 import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
 
 import { getI18n } from '../../utils/revisarEnviar/translations';
-import { getMeetingDateISOFromSemana, formatarDataFolha } from '../../utils/revisarEnviar/dates';
+import { getMeetingDateISOFromSemana, formatarDataFolha, getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 import { buildWhatsappHref, buildMailtoHref } from '../../utils/revisarEnviar/links';
 import { addHistorico } from '../../utils/revisarEnviar/historico';
 import { toast } from '../../utils/toast';
@@ -132,42 +132,9 @@ const RevisarEnviar = ({
         return str;
     };
 
-    // --- PROCESSAMENTO E ORDENAÇÃO ROBUSTA (AGORA COM TIMESTAMP MATEMÁTICO!) ---
-    const getTimestamp = (sem) => {
-        if (!sem) return 0;
-        const dataStr = sem.dataInicio || sem.dataReuniao || sem.data;
-        if (dataStr) {
-            if (dataStr.includes('-')) {
-                const [ano, mes, dia] = dataStr.split('-');
-                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
-            }
-            if (dataStr.includes('/')) {
-                const [dia, mes, ano] = dataStr.split('/');
-                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
-            }
-        }
-        if (sem.semana) {
-            const str = sem.semana.toLowerCase();
-            const meses = [
-                'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
-                'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
-            ];
-            let mesIndex = 0;
-            for (let i = 0; i < meses.length; i++) {
-                if (str.includes(meses[i])) { mesIndex = i % 12; break; }
-            }
-            const matchDia = str.match(/^(\d+)/);
-            const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
-            const matchAno = str.match(/(20\d{2})/);
-            const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
-            return new Date(ano, mesIndex, dia, 12, 0, 0).getTime();
-        }
-        return 0;
-    };
-
     const historicoOrdenado = useMemo(() => {
-        return [...historico].sort((a, b) => getTimestamp(a) - getTimestamp(b));
-    }, [historico]);
+        return [...historico].sort((a, b) => getSemanaSortTimestamp(a, config) - getSemanaSortTimestamp(b, config));
+    }, [historico, config]);
 
     const historicoSelect = useMemo(() => [...historicoOrdenado].reverse(), [historicoOrdenado]);
 

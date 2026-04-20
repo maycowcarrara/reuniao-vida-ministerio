@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
     Calendar, User, Search, UsersRound, UserRound, Clock,
@@ -15,7 +15,7 @@ import {
     isAbertura, isEncerramento, isLinhaInicialFinal,
     isEstudoBiblicoCongregacao, isCanticoIntermediario, isSemanaAssembleia
 } from './helpers';
-import { getMeetingDateISOFromSemana } from '../../utils/revisarEnviar/dates';
+import { getCanonicalMeetingDateISO, getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
 import { formatText, useSectionMessages } from '../../i18n';
 import { getLanguageMeta } from '../../config/appConfig';
@@ -56,6 +56,8 @@ const Designar = ({
 
     const [draggedAluno, setDraggedAluno] = useState(null);
     const [dragOverSlot, setDragOverSlot] = useState(null);
+    const stickyHeaderRef = useRef(null);
+    const [stickyOffset, setStickyOffset] = useState(176);
     const semanasSelecionadas = sharedWeekSelection || {};
     const setSemanasSelecionadas = setSharedWeekSelection;
 
@@ -67,53 +69,7 @@ const Designar = ({
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
 
     // FUNÇÃO ROBUSTA DE ORDENAÇÃO E EXTRAÇÃO DE DATAS
-    const getSortTime = (sem) => {
-        if (!sem) return 0;
-        const dataStr = sem.dataInicio || sem.dataExata || sem.dataReuniao || sem.data;
-        if (dataStr) {
-            if (dataStr.includes('-')) {
-                const [ano, mes, dia] = dataStr.split('-');
-                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
-            }
-            if (dataStr.includes('/')) {
-                const [dia, mes, ano] = dataStr.split('/');
-                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
-            }
-        }
-        if (sem.semana) {
-            const str = sem.semana.toLowerCase();
-            const meses = [
-                'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
-                'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
-            ];
-            let mesIndex = 0;
-            for (let i = 0; i < meses.length; i++) {
-                if (str.includes(meses[i])) { mesIndex = i % 12; break; }
-            }
-            const matchDia = str.match(/^(\d+)/);
-            const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
-
-            const matchAno = str.match(/(20\d{2})/);
-            let ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
-
-            // TRATAMENTO INTELIGENTE DE VIRADA DE ANO
-            if (!matchAno) {
-                const mesAtual = new Date().getMonth(); // 0 (Jan) a 11 (Dez)
-
-                // Se estamos no fim do ano (Nov/Dez) e importamos o começo (Jan/Fev) -> É ano que vem
-                if (mesAtual >= 10 && mesIndex <= 1) {
-                    ano += 1;
-                }
-                // Se estamos no começo do ano (Jan/Fev) e mexemos no final (Nov/Dez) -> É do ano passado
-                else if (mesAtual <= 1 && mesIndex >= 10) {
-                    ano -= 1;
-                }
-            }
-
-            return new Date(ano, mesIndex, dia, 12, 0, 0).getTime();
-        }
-        return 0;
-    };
+    const getSortTime = useCallback((sem) => getSemanaSortTimestamp(sem, config), [config]);
 
     // 🔥 FORMATADOR DE DATA USANDO A SUA LÓGICA OFICIAL
     const formatarDataPorExtenso = (sem) => {
@@ -127,19 +83,14 @@ const Designar = ({
             dataBaseStr = eventoConfig.dataInput;
         } else {
             try {
-                dataBaseStr = getMeetingDateISOFromSemana({
-                    semanaStr: sem?.semana,
+                dataBaseStr = getCanonicalMeetingDateISO({
+                    sem,
                     config,
-                    isoFallback: sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data,
-                    overrideDia: isVisita ? 'terça-feira' : null
+                    overrideDia: isVisita ? 'terça-feira' : null,
                 });
             } catch (e) {
                 console.error("Erro ao tentar calcular a data da reunião:", e);
             }
-        }
-
-        if (!dataBaseStr) {
-            dataBaseStr = sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
         }
 
         if (!dataBaseStr && sem?.semana) {
@@ -199,7 +150,7 @@ const Designar = ({
         if (filtroSemanas === 'todas') return lista;
         if (filtroSemanas === 'arquivadas') return lista.filter(s => !!s?.arquivada);
         return lista.filter(s => !s?.arquivada);
-    }, [listaProgramacoes, filtroSemanas]);
+    }, [listaProgramacoes, filtroSemanas, getSortTime]);
 
     const semanaAtivaIndexAtual = Math.min(semanaAtivaIndex, Math.max(0, listaFiltradaPorFlag.length - 1));
 
@@ -221,6 +172,27 @@ const Designar = ({
             return prev;
         });
     }, [listaFiltradaPorFlag, setSemanasSelecionadas]);
+
+    useEffect(() => {
+        const headerNode = stickyHeaderRef.current;
+        if (!headerNode) return undefined;
+
+        const updateStickyOffset = () => {
+            const nextOffset = Math.ceil(headerNode.getBoundingClientRect().height) + 16;
+            setStickyOffset((prev) => (prev === nextOffset ? prev : nextOffset));
+        };
+
+        updateStickyOffset();
+
+        if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver(updateStickyOffset);
+            observer.observe(headerNode);
+            return () => observer.disconnect();
+        }
+
+        window.addEventListener('resize', updateStickyOffset);
+        return () => window.removeEventListener('resize', updateStickyOffset);
+    }, []);
 
     const semanasParaExibir = (listaFiltradaPorFlag || [])
         .map((sem, idx) => ({ sem, idx, key: getSemanaKey(sem, idx) }))
@@ -671,9 +643,10 @@ const Designar = ({
     };
 
     return (
-        <div className="w-full min-h-screen bg-gray-50 relative font-sans text-gray-800 overflow-x-hidden">
+        <div className="w-full min-h-screen bg-gray-50 relative font-sans text-gray-800">
 
             <DesignarHeader
+                headerRef={stickyHeaderRef}
                 TT={TT}
                 lang={lang}
                 config={config}
@@ -703,6 +676,7 @@ const Designar = ({
                         semanaAtivaIndex={semanaAtivaIndexAtual}
                         setSemanaAtivaIndex={setSemanaAtivaIndex}
                         getSemanaKey={getSemanaKey}
+                        stickyOffset={stickyOffset}
                         TT={TT}
                         lang={lang}
                     />
@@ -887,6 +861,7 @@ const Designar = ({
                         setDraggedAluno={setDraggedAluno}
                         semanasSelecionadas={semanasSelecionadas}
                         dragOverSlot={dragOverSlot}
+                        stickyOffset={stickyOffset}
                     />
 
                 </div>

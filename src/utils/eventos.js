@@ -1,6 +1,4 @@
-import { getWeekStartISOFromSemana } from './revisarEnviar/dates';
-
-const isIsoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test((value ?? '').toString().trim());
+import { getCanonicalWeekStartISO, getWeekStartISOFromSemana } from './revisarEnviar/dates';
 
 export const isTipoEventoBloqueante = (tipo) => {
     const evento = (tipo ?? '').toString().toLowerCase();
@@ -9,15 +7,7 @@ export const isTipoEventoBloqueante = (tipo) => {
 
 export const getSemanaStartISO = (sem, config) => {
     if (!sem) return null;
-
-    if (isIsoDate(sem.dataInicio)) return sem.dataInicio;
-
-    return getWeekStartISOFromSemana({
-        semanaStr: sem.semana,
-        config,
-        isoFallback: sem.dataInicio || sem.dataExata || sem.dataReuniao || sem.data || null,
-        textSources: [sem.semana]
-    });
+    return getCanonicalWeekStartISO({ sem, config });
 };
 
 export const getEventoEspecialDaSemana = (sem, config) => {

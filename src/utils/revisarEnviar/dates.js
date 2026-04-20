@@ -93,6 +93,43 @@ const addDays = (dateObj, days) => {
     return d;
 };
 
+const isValidYMDParts = (year, month, day) => (
+    Number.isInteger(year)
+    && Number.isInteger(month)
+    && Number.isInteger(day)
+    && month >= 1
+    && month <= 12
+    && day >= 1
+    && day <= 31
+);
+
+const buildISOFromParts = (year, month, day) => {
+    if (!isValidYMDParts(year, month, day)) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+export const parseFlexibleDateToISO = (value) => {
+    const raw = (value ?? '').toString().trim();
+    if (!raw) return null;
+
+    let match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+        return buildISOFromParts(Number(match[1]), Number(match[2]), Number(match[3]));
+    }
+
+    match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+        return buildISOFromParts(Number(match[3]), Number(match[2]), Number(match[1]));
+    }
+
+    match = raw.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (match) {
+        return buildISOFromParts(Number(match[3]), Number(match[2]), Number(match[1]));
+    }
+
+    return null;
+};
+
 const getYearFromSources = ({ isoFallback, config, textSources = [] }) => {
     if (isoFallback && /^\d{4}-\d{2}-\d{2}$/.test(isoFallback)) {
         return Number(isoFallback.slice(0, 4));
@@ -175,4 +212,50 @@ export const formatarDataFolha = (dataStr, lang) => {
         month: 'long',
         year: 'numeric',
     });
+};
+
+const getStoredDateISOFromSemana = (sem, orderedFields = []) =>
+    orderedFields
+        .map((field) => sem?.[field])
+        .map(parseFlexibleDateToISO)
+        .find(Boolean) || null;
+
+export const getCanonicalWeekStartISO = ({ sem, config }) => {
+    if (!sem) return null;
+
+    const parsedFromLabel = getWeekStartISOFromSemana({
+        semanaStr: sem?.semana,
+        config,
+        isoFallback: null,
+        textSources: [sem?.semana],
+    });
+
+    return parsedFromLabel || getStoredDateISOFromSemana(sem, ['dataInicio', 'dataExata', 'dataReuniao', 'data']);
+};
+
+export const getCanonicalMeetingDateISO = ({ sem, config, overrideDia = null }) => {
+    if (!sem) return null;
+
+    const parsedFromLabel = getMeetingDateISOFromSemana({
+        semanaStr: sem?.semana,
+        config,
+        isoFallback: null,
+        overrideDia,
+        textSources: [sem?.semana],
+    });
+
+    return parsedFromLabel || getStoredDateISOFromSemana(sem, ['dataReuniao', 'dataExata', 'dataInicio', 'data']);
+};
+
+export const getSemanaSortTimestamp = (sem, config) => {
+    if (!sem) return 0;
+
+    const weekStartISO = getCanonicalWeekStartISO({ sem, config });
+
+    if (!weekStartISO) return 0;
+
+    const [ano, mes, dia] = weekStartISO.split('-').map(Number);
+    if (!isValidYMDParts(ano, mes, dia)) return 0;
+
+    return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
 };
