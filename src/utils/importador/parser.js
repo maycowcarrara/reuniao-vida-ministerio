@@ -43,6 +43,8 @@ const limparTexto = (txt) => {
     out = out.replace(/<[^>]*>?/gm, ' ');
     out = out.replace(/\[([^\]]+)\]\((jwpub|https?):\/\/[^)]+\)/gi, '$1');
     out = out.replace(/\((jwpub|https?):\/\/[^)]+\)/gi, ' ');
+    out = out.replace(/^\s{0,3}#{1,6}\s*/gm, '');
+    out = out.replace(/[*_`>~]+/g, '');
     out = out.replace(/Sua resposta|Respuesta/gi, ' ');
     out = out.replace(/PERGUNTE-SE:|PREGUNTE-SE:|PREGÚNTESE:|PREGUNTESE:/gi, ' ');
     out = out.replace(/_{3,}/g, ' ');
@@ -59,13 +61,21 @@ const shouldIgnoreLine = (linha) => {
         'ensinos biblicos', 'biblioteca', 'noticias', 'quem somos', 'ler em',
         'opcoes de download', 'sumario', 'anterior', 'proximo', 'copyright',
         'termos de uso', 'politica de privacidade', 'configuracoes de aparencia', 'links rapidos',
+        'title:', 'url source:', 'published time:', 'markdown content:',
+        'gostaria de ler este artigo em', 'sim nao', 'aceitar rejeitar personalizar',
+        'copiado', 'copiar link', 'compartilhar por e-mail', 'mostrar tabela de conteudos',
+        'this is a modal window', 'beginning of dialog window', 'end of dialog window',
         'saltar al contenido', 'saltar al sumario', 'saltar al indice', 'testigos de jehova',
         'seleccione el idioma', 'iniciar sesion', 'buscar', 'inicio', 'ensenanzas biblicas',
         'biblioteca', 'noticias', 'quienes somos', 'leer en', 'opciones de descarga',
         'sumario', 'anterior', 'siguiente', 'derechos de autor', 'terminos de uso',
         'politica de privacidad', 'configuracion de apariencia', 'enlaces rapidos',
+        'le gustaria leer este articulo en', 'si no', 'copiar enlace', 'compartir por correo',
+        'mostrar tabla de contenidos',
     ];
     if (ignores.some((x) => n.includes(x))) return true;
+    if (/^\d+\.\s+(apostilas|apostila da reuniao vida e ministerio|guias|guia de actividades)/i.test(n)) return true;
+    if (/^\d+\.\s+\d{1,2}.*(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i.test(n)) return true;
     const player = [
         'tempo', 'duration', 'reproduzir', 'voltar', 'avancar', 'mudo', 'configuracoes',
         'tiempo', 'duracion', 'reproducir', 'retroceder', 'adelantar', 'silenciar', 'configuracion',
@@ -105,6 +115,64 @@ const extractSemanaLeituraFromText = (rawText) => {
         if (m) leitura = m[0];
     }
     return { semana, leitura };
+};
+
+const extrairMioloTextoImportado = (rawText, termos) => {
+    const texto = (rawText || '').toString().replace(/\r\n/g, '\n');
+    if (!texto) return '';
+
+    const marker = 'Markdown Content:';
+    const afterMarker = texto.includes(marker) ? texto.slice(texto.indexOf(marker) + marker.length) : texto;
+    const linhas = afterMarker.split('\n');
+    const normalizadas = linhas.map((linha) => normalizar(linha));
+
+    const isSectionLine = (n) => (
+        termos.tesouros.some((x) => n.includes(x)) ||
+        termos.ministerio.some((x) => n.includes(x)) ||
+        termos.vida.some((x) => n.includes(x))
+    );
+
+    const isWeekHeading = (n) => {
+        if (!n) return false;
+        if (n.includes('programacao da reuniao vida e ministerio')) return true;
+        return /(^| )\d{1,2}\s*(?:[-–]\s*\d{1,2}).*(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/iu.test(n);
+    };
+
+    const sectionStart = normalizadas.findIndex((n) => isSectionLine(n) || n.includes('comentarios iniciais') || n.includes('comentarios iniciales'));
+    let startIndex = 0;
+
+    if (sectionStart >= 0) {
+        for (let i = sectionStart; i >= 0; i--) {
+            if (isWeekHeading(normalizadas[i])) {
+                startIndex = i;
+                break;
+            }
+        }
+    }
+
+    let endIndex = linhas.length;
+    for (let i = Math.max(startIndex, 0); i < normalizadas.length; i++) {
+        const n = normalizadas[i];
+        if (
+            n === 'anterior' ||
+            n === 'proximo' ||
+            n === 'siguiente' ||
+            n === 'imprimir' ||
+            n.includes('opcoes de download') ||
+            n.includes('opciones de descarga') ||
+            n.includes('mostrar tabela de conteudos') ||
+            n.includes('mostrar tabla de contenidos') ||
+            n.includes('copiar link') ||
+            n.includes('compartilhar por e-mail') ||
+            n.includes('compartir por correo') ||
+            n.includes('compartilhar compartilhar')
+        ) {
+            endIndex = i;
+            break;
+        }
+    }
+
+    return linhas.slice(startIndex, endIndex).join('\n').trim();
 };
 
 const extrairTextoDoHtmlJW = async (html) => {
@@ -199,6 +267,8 @@ export const extrairDados = async (conteudo, tipoOrigem, lang) => {
         semanaStr = (weekHeader && weekHeader.trim()) || extrairSemanaDeString(breadcrumb) ||
             extrairSemanaDeString(pageTitle) || extrairSemanaDeString(ogTitle) || null;
         leituraSemanal = (leituraHeader || '').replace(/\s+/g, ' ').trim();
+    } else {
+        textoProcessar = extrairMioloTextoImportado(conteudo, termos) || textoProcessar;
     }
 
     const bruto = (textoProcessar || '').toString();

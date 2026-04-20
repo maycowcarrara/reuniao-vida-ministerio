@@ -4,8 +4,9 @@ import {
     ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info, MessageCircle,
     UserCheck, UserX, User, Medal, BookHeart, Archive, HeartPulse, ThumbsUp, AlertCircle
 } from 'lucide-react';
+import { getWeekdayJsDay } from '../config/appConfig';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
-import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../utils/eventos';
+import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
 import { useSectionMessages } from '../i18n';
 
 export default function Dashboard({
@@ -32,10 +33,10 @@ export default function Dashboard({
 
         const dataLimitePassado = new Date(hoje);
         dataLimitePassado.setDate(hoje.getDate() - 30);
-
-        // Define um limite estrito de +29 dias (4 semanas redondas)
-        const daquiA4Semanas = new Date(hoje);
-        daquiA4Semanas.setDate(hoje.getDate() + 29);
+        const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        const inicioProximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
+        const inicioMesSeguinte = new Date(hoje.getFullYear(), hoje.getMonth() + 2, 1);
+        const localeMes = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'pt-BR';
 
         const getDataReuniaoISO = (sem) => {
             const eventoEspecial = getEventoEspecialDaSemana(sem, config);
@@ -74,6 +75,43 @@ export default function Dashboard({
             }
 
             return dataCalculada;
+        };
+
+        const parseISODate = (dataISO) => {
+            if (!dataISO) return null;
+            const [ano, mes, dia] = dataISO.split('-').map(Number);
+            if (!ano || !mes || !dia) return null;
+            return new Date(ano, mes - 1, dia, 12, 0, 0);
+        };
+
+        const toISODateOnly = (dateObj) => {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const formatMonthLabel = (date) => {
+            const label = new Intl.DateTimeFormat(localeMes, { month: 'long' }).format(date);
+            return label.charAt(0).toUpperCase() + label.slice(1);
+        };
+
+        const getWeekStartISOFromDate = (dateObj) => {
+            const d = new Date(dateObj);
+            d.setHours(12, 0, 0, 0);
+            const day = d.getDay();
+            const diffToMonday = day === 0 ? -6 : 1 - day;
+            d.setDate(d.getDate() + diffToMonday);
+            return toISODateOnly(d);
+        };
+
+        const getFirstMeetingDateOnOrAfter = (startDate, weekdayJs) => {
+            const d = new Date(startDate);
+            d.setHours(12, 0, 0, 0);
+            while (d.getDay() !== weekdayJs) {
+                d.setDate(d.getDate() + 1);
+            }
+            return d;
         };
 
         const buildAssignmentKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
@@ -150,21 +188,6 @@ export default function Dashboard({
 
         const proxima = proximaIdx !== -1 ? ativas[proximaIdx] : ativas[0];
 
-        // CORREÇÃO: Pega apenas as próximas 4 reuniões contanto que a data não ultrapasse os 29 dias
-        const proximasSemanas = [];
-        if (proximaIdx !== -1) {
-            for (let i = proximaIdx; i < ativas.length; i++) {
-                const s = ativas[i];
-                if (!s.dataReuniaoResolvida) continue;
-                const [ano, mes, dia] = s.dataReuniaoResolvida.split('-').map(Number);
-                const dataR = new Date(ano, mes - 1, dia);
-                if (dataR <= daquiA4Semanas) {
-                    proximasSemanas.push(s);
-                }
-                if (proximasSemanas.length >= 4) break;
-            }
-        }
-
         // 2. Eventos Agendados
         const eventosAgendados = (config?.eventosAnuais || [])
             .map(ev => {
@@ -184,10 +207,79 @@ export default function Dashboard({
             .filter(ev => ev.dataObjeto >= dataLimitePassado)
             .sort((a, b) => a.dataObjeto - b.dataObjeto);
 
-        // 3. Pendências (CALCULADORA INTELIGENTE)
-        let partesTotais = 0;
-        let partesPreenchidas = 0;
-        let partesFaltando = [];
+        const meetingJsDay = getWeekdayJsDay(config?.dia_reuniao || config?.diaReuniao || config?.diaSemana);
+        const semanasBloqueadas = new Set(
+            (config?.eventosAnuais || [])
+                .filter((evento) => isTipoEventoBloqueante(evento?.tipo))
+                .map((evento) => String(evento?.dataInicio || '').trim())
+                .filter(Boolean)
+        );
+
+        const programacaoPorMes = [
+            {
+                id: 'atual',
+                periodoLabel: localTxt.mesAtual,
+                nomeMes: formatMonthLabel(inicioMesAtual),
+                inicio: inicioMesAtual,
+                fim: inicioProximoMes
+            },
+            {
+                id: 'proximo',
+                periodoLabel: localTxt.proximoMes,
+                nomeMes: formatMonthLabel(inicioProximoMes),
+                inicio: inicioProximoMes,
+                fim: inicioMesSeguinte
+            }
+        ].map((periodo) => {
+            const analiseInicio = new Date(Math.max(periodo.inicio.getTime(), hoje.getTime()));
+            analiseInicio.setHours(12, 0, 0, 0);
+
+            const semanasPrevistas = new Set();
+            if (analiseInicio < periodo.fim && meetingJsDay != null) {
+                for (
+                    let dataCursor = getFirstMeetingDateOnOrAfter(analiseInicio, meetingJsDay);
+                    dataCursor < periodo.fim;
+                    dataCursor = new Date(dataCursor.getFullYear(), dataCursor.getMonth(), dataCursor.getDate() + 7, 12, 0, 0)
+                ) {
+                    const semanaStartISO = getWeekStartISOFromDate(dataCursor);
+                    if (!semanasBloqueadas.has(semanaStartISO)) {
+                        semanasPrevistas.add(semanaStartISO);
+                    }
+                }
+            }
+
+            const semanasProgramadas = new Set(
+                ativas
+                    .filter((semana) => {
+                        const dataReuniao = parseISODate(semana.dataReuniaoResolvida);
+                        if (!dataReuniao || dataReuniao < analiseInicio || dataReuniao >= periodo.fim) return false;
+                        return !isTipoEventoBloqueante(getTipoEventoSemana(semana, config));
+                    })
+                    .map((semana) => getWeekStartISOFromDate(parseISODate(semana.dataReuniaoResolvida)))
+                    .filter((semanaStartISO) => semanasPrevistas.has(semanaStartISO))
+            );
+
+            const previstas = semanasPrevistas.size;
+            const programadas = semanasProgramadas.size;
+            const faltando = Math.max(previstas - programadas, 0);
+            const semReunioesPrevistas = previstas === 0;
+
+            return {
+                id: periodo.id,
+                periodoLabel: periodo.periodoLabel,
+                nomeMes: periodo.nomeMes,
+                previstas,
+                programadas,
+                faltando,
+                semReunioesPrevistas,
+                emDia: faltando === 0
+            };
+        });
+
+        const mesesCobertos = programacaoPorMes.filter((item) => item.emDia).length;
+        const coberturaProgramacao = programacaoPorMes.length > 0
+            ? (mesesCobertos / programacaoPorMes.length) * 100
+            : 0;
 
         const historicoContaComoParte = (historico = []) => historico.some((item) => {
             const parte = normalizeStr(item?.parte);
@@ -203,82 +295,7 @@ export default function Dashboard({
             ].includes(parte);
         });
 
-        proximasSemanas.forEach(sem => {
-            const tipoEvento = getTipoEventoSemana(sem, config);
-            const isSemReuniao = tipoEvento !== 'normal' && tipoEvento !== 'visita';
-            if (isSemReuniao) return;
-
-            const semanaLabel = sem.semana?.split(' -')[0] || '';
-
-            // Presidente
-            partesTotais++;
-            if (sem.presidente?.id || sem.presidente?.nome) {
-                partesPreenchidas++;
-            } else {
-                partesFaltando.push(`${semanaLabel}: Presidente`);
-            }
-
-            sem.partes?.forEach(parte => {
-                const tipo = normalizeStr(parte?.tipo);
-                const titulo = normalizeStr(parte?.titulo);
-                const secao = normalizeStr(parte?.secao);
-                const rawInfo = `${tipo} ${titulo} ${secao}`;
-                const tituloCurto = parte.titulo?.split(' - ')[0] || 'Parte';
-
-                // Ignora Cânticos Puros
-                const isCantico = tipo.includes('cantico') || tipo.includes('cancion') || titulo.includes('cantico') || titulo.includes('cancion');
-                const isOracao = tipo.includes('oracao') || tipo.includes('oracion') || titulo.includes('oracao') || titulo.includes('oracion');
-
-                if (isCantico && !isOracao) return;
-
-                if (isOracao) {
-                    partesTotais++;
-                    if (parte.oracao?.id || parte.oracao?.nome || parte.estudante?.id || parte.estudante?.nome) {
-                        partesPreenchidas++;
-                    } else {
-                        partesFaltando.push(`${semanaLabel}: Oração`);
-                    }
-                } else if (rawInfo.includes('estudo biblico') || rawInfo.includes('estudio biblico')) {
-                    partesTotais += 2; // Dirigente e Leitor
-
-                    if (parte.dirigente?.id || parte.dirigente?.nome) partesPreenchidas++;
-                    else partesFaltando.push(`${semanaLabel}: Dirigente (${tituloCurto})`);
-
-                    if (parte.leitor?.id || parte.leitor?.nome) partesPreenchidas++;
-                    else partesFaltando.push(`${semanaLabel}: Leitor (${tituloCurto})`);
-
-                } else {
-                    // Parte Normal (Estudante sempre é cobrado)
-                    partesTotais++;
-                    if (parte.estudante?.id || parte.estudante?.nome) {
-                        partesPreenchidas++;
-                    } else {
-                        partesFaltando.push(`${semanaLabel}: Estudante (${tituloCurto})`);
-                    }
-
-                    // Ajudante
-                    if (secao.includes('minist')) {
-                        const isDiscurso = rawInfo.includes('discurso');
-                        const isLeitura = rawInfo.includes('leitura');
-                        const isExplicando = rawInfo.includes('explicando');
-
-                        if (!isDiscurso && !isLeitura && !isExplicando) {
-                            partesTotais++;
-                            if (parte.ajudante?.id || parte.ajudante?.nome) {
-                                partesPreenchidas++;
-                            } else {
-                                partesFaltando.push(`${semanaLabel}: Ajudante (${tituloCurto})`);
-                            }
-                        }
-                    }
-                }
-            });
-        });
-
-        const pendentes = partesTotais - partesPreenchidas;
-        const progresso = partesTotais > 0 ? (partesPreenchidas / partesTotais) * 100 : (proximasSemanas.length > 0 ? 100 : 0);
-
-        // 4. Estatísticas de Alunos & SAÚDE DA CONGREGAÇÃO
+        // 3. Estatísticas de Alunos & SAÚDE DA CONGREGAÇÃO
         const totalAlunos = alunos.length;
         const ativosAlunos = alunos.filter(a => a.tipo !== 'desab');
         const totalAtivos = ativosAlunos.length;
@@ -328,12 +345,12 @@ export default function Dashboard({
         const resumoConfirmacoes = countConfirmacoesDaSemana(proxima);
 
         return {
-            proxima, ativas, proximasSemanas, pendentes, progresso, eventosAgendados, partesFaltando,
+            proxima, ativas, eventosAgendados, programacaoPorMes, mesesCobertos, coberturaProgramacao,
             totalAlunos, totalAtivos, totalDesabilitados,
             countAnciaos, countServos, countIrmas,
             usadosNoTrimestre, precisandoAtencao, resumoConfirmacoes
         };
-    }, [listaProgramacoes, alunos, config, confirmacoes]);
+    }, [listaProgramacoes, alunos, config, confirmacoes, localTxt]);
 
     // --- HELPERS ---
     const formatarData = (dataIso) => {
@@ -608,45 +625,73 @@ export default function Dashboard({
                                     <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                                         {localTxt.visaoMes}
                                     </div>
-                                    <div className="mt-2 text-3xl font-black text-slate-900">
-                                        {Math.round(stats.progresso)}%
+                                    <div className="mt-2 flex items-end gap-2">
+                                        <div className="text-3xl font-black text-slate-900">
+                                            {stats.mesesCobertos}/2
+                                        </div>
+                                        <div className="pb-1 text-sm font-bold text-slate-500">
+                                            {localTxt.mesesCobertos}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black ${stats.pendentes === 0 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                    {stats.pendentes === 0 ? localTxt.completoMes : `${stats.pendentes} ${localTxt.pendentesMes}`}
+                                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black ${stats.mesesCobertos === 2 ? 'bg-green-100 text-green-700' : stats.mesesCobertos === 1 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                    {stats.mesesCobertos === 2
+                                        ? localTxt.coberturaCompleta
+                                        : stats.mesesCobertos === 1
+                                            ? localTxt.coberturaParcial
+                                            : localTxt.semProgramacaoPeriodo}
                                 </span>
                             </div>
 
                             <div className="mt-4 w-full bg-slate-100 h-2.5 rounded-full overflow-hidden shrink-0">
-                                <div className={`h-full transition-all duration-1000 ${stats.progresso === 100 ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${stats.progresso}%` }} />
+                                <div
+                                    className={`h-full transition-all duration-1000 ${stats.coberturaProgramacao === 100 ? 'bg-green-500' : stats.coberturaProgramacao === 0 ? 'bg-rose-500' : 'bg-amber-500'}`}
+                                    style={{ width: `${stats.coberturaProgramacao}%` }}
+                                />
                             </div>
 
                             <div className="mt-5 flex-1 flex flex-col">
-                                {stats.pendentes === 0 ? (
-                                    <div className="flex items-center gap-2 rounded-xl border border-green-100 bg-green-50 px-3 py-3 text-sm font-bold text-green-700">
-                                        <CheckCircle size={16} />
-                                        {localTxt.completoMes}
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex items-center gap-2 text-sm font-bold text-amber-700">
-                                            <AlertTriangle size={16} />
-                                            {stats.pendentes} {localTxt.pendentesMes}
-                                        </div>
+                                <div className="space-y-3">
+                                    {stats.programacaoPorMes.map((mes) => {
+                                        const statusClass = mes.semReunioesPrevistas
+                                            ? 'border-slate-200 bg-slate-50 text-slate-600'
+                                            : mes.faltando === 0
+                                                ? 'border-green-100 bg-green-50 text-green-700'
+                                                : 'border-amber-100 bg-amber-50 text-amber-700';
+                                        const metaText = mes.semReunioesPrevistas
+                                            ? localTxt.semReunioesPrevistas
+                                            : `${mes.programadas}/${mes.previstas} ${mes.previstas === 1 ? localTxt.semanaPrevista : localTxt.semanasPrevistas}`;
+                                        const badgeText = mes.semReunioesPrevistas
+                                            ? localTxt.semReuniao
+                                            : mes.faltando === 0
+                                                ? localTxt.programacaoCompleta
+                                                : `${localTxt.faltam} ${mes.faltando} ${mes.faltando === 1 ? localTxt.semana : localTxt.semanas}`;
 
-                                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 overflow-y-auto custom-scroll flex-1 min-h-[110px] max-h-[220px]">
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">{localTxt.faltando}</p>
-                                            <ul className="space-y-2 text-xs text-slate-700">
-                                                {stats.partesFaltando.map((falta, i) => (
-                                                    <li key={i} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-                                                        {falta}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </>
-                                )}
+                                        return (
+                                            <div key={mes.id} className={`rounded-xl border px-3 py-3 ${statusClass}`}>
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <div className="text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
+                                                            {mes.periodoLabel}
+                                                        </div>
+                                                        <div className="mt-1 text-base font-black">
+                                                            {mes.nomeMes}
+                                                        </div>
+                                                        <div className="mt-1 text-xs font-bold opacity-90">
+                                                            {metaText}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-black">
+                                                        {mes.semReunioesPrevistas ? <Info size={14} /> : mes.faltando === 0 ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+                                                        {badgeText}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             <button onClick={() => setAbaAtiva('designar')} className="mt-5 w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-sm shadow-blue-200">

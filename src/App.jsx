@@ -20,6 +20,8 @@ import { getSemanaStartISO } from './utils/eventos';
 import { normalizeLanguage, syncDocumentLanguage } from './config/appConfig';
 import { getSectionMessages, I18nProvider } from './i18n';
 
+const LOCAL_ADMIN_UID_KEY = 'quadro_admin_uid';
+
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Importador = lazy(() => import('./components/Importador'));
 const Designar = lazy(() => import('./components/Designar'));
@@ -506,7 +508,7 @@ function AdminPanel() {
 // 2. WRAPPER DO QUADRO PÚBLICO
 // ============================================================================
 function QuadroPublicoWrapper({ usuario }) {
-  const { dados, loading } = useQuadroPublico();
+  const { dados, loading } = useQuadroPublico(usuario?.uid);
 
   // Ajusta idioma do loading dinamicamente
   const lang = normalizeLanguage(dados?.configuracoes?.idioma);
@@ -546,6 +548,15 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (typeof window !== 'undefined') {
+        try {
+          if (user?.uid) {
+            window.localStorage.setItem(LOCAL_ADMIN_UID_KEY, user.uid);
+          }
+        } catch {
+          // Ignora falhas de storage e segue com o fluxo normal do app.
+        }
+      }
       setUsuarioVerificado(user);
     });
     return unsubscribe;
