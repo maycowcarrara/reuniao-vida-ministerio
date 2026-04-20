@@ -39,6 +39,7 @@ const Designar = ({
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
     const userClearedWeeksRef = useRef(false);
+    const selectionBootstrapRef = useRef(true);
 
     const [slotAtivo, setSlotAtivo] = useState(null);
     const [termoBusca, setTermoBusca] = useState('');
@@ -67,6 +68,7 @@ const Designar = ({
         (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
 
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
+    const hasPessoaDesignada = (pessoa) => !!(pessoa?.id || pessoa?.nome);
 
     // FUNÇÃO ROBUSTA DE ORDENAÇÃO E EXTRAÇÃO DE DATAS
     const getSortTime = useCallback((sem) => getSemanaSortTimestamp(sem, config), [config]);
@@ -158,20 +160,61 @@ const Designar = ({
     const getSemanaRealIndexByKey = (semanaKey) => listaProgramacoes.findIndex((s, idx) => getSemanaKey(s, idx) === semanaKey);
     const getSemanaRealIndexFromFilteredIndex = (idxFiltrado) => getSemanaRealIndexByKey(getSemanaKeyByFilteredIndex(idxFiltrado));
     const getSemanaIndexContexto = () => Number.isInteger(slotAtivo?.semanaIndex) ? slotAtivo.semanaIndex : semanaAtivaIndexAtual;
+    const isSemanaTotalmenteDesignada = useCallback((sem) => {
+        if (!sem || isSemanaAssembleia(sem, config)) return true;
+        if (!hasPessoaDesignada(sem?.presidente)) return false;
+
+        const partes = Array.isArray(sem?.partes) ? sem.partes : [];
+
+        return partes.every((parte) => {
+            if (isCanticoIntermediario(parte)) return true;
+
+            if (isLinhaInicialFinal(parte)) {
+                return hasPessoaDesignada(parte?.oracao) || hasPessoaDesignada(parte?.estudante);
+            }
+
+            if (isEstudoBiblicoCongregacao(parte)) {
+                const temDirigente = hasPessoaDesignada(parte?.dirigente) || hasPessoaDesignada(parte?.estudante);
+                const temLeitor = hasPessoaDesignada(parte?.leitor) || hasPessoaDesignada(sem?.leitor);
+                return temDirigente && temLeitor;
+            }
+
+            return hasPessoaDesignada(parte?.estudante);
+        });
+    }, [config]);
 
     useEffect(() => {
-        if (!Array.isArray(listaFiltradaPorFlag) || listaFiltradaPorFlag.length === 0) return;
+        if (!Array.isArray(listaFiltradaPorFlag) || listaFiltradaPorFlag.length === 0) {
+            if (selectionBootstrapRef.current) {
+                setSemanasSelecionadas({});
+            }
+            return;
+        }
+
         setSemanasSelecionadas((prev) => {
             const keysVisiveis = new Set(listaFiltradaPorFlag.map((s, i) => getSemanaKey(s, i)));
+            const selecaoPadrao = {};
+
+            listaFiltradaPorFlag.forEach((sem, idx) => {
+                if (!isSemanaTotalmenteDesignada(sem)) {
+                    selecaoPadrao[getSemanaKey(sem, idx)] = true;
+                }
+            });
+
             const hasAnyVisibleSelected = Object.keys(prev).some(k => keysVisiveis.has(k) && prev[k]);
-            if (!userClearedWeeksRef.current && !hasAnyVisibleSelected) {
-                const next = { ...prev };
-                listaFiltradaPorFlag.forEach((sem, idx) => { next[getSemanaKey(sem, idx)] = true; });
-                return next;
+
+            if (selectionBootstrapRef.current) {
+                selectionBootstrapRef.current = false;
+                return selecaoPadrao;
             }
+
+            if (!userClearedWeeksRef.current && !hasAnyVisibleSelected) {
+                return selecaoPadrao;
+            }
+
             return prev;
         });
-    }, [listaFiltradaPorFlag, setSemanasSelecionadas]);
+    }, [isSemanaTotalmenteDesignada, listaFiltradaPorFlag, setSemanasSelecionadas]);
 
     useEffect(() => {
         const headerNode = stickyHeaderRef.current;
@@ -201,6 +244,7 @@ const Designar = ({
     const mudarFiltro = (novoFiltro) => {
         setFiltroSemanas(novoFiltro);
         userClearedWeeksRef.current = false;
+        selectionBootstrapRef.current = true;
         setSemanaAtivaIndex(0);
         setSemanasSelecionadas({});
     };

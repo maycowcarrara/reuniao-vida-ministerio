@@ -3,7 +3,7 @@ import { CheckCircle, CheckCircle2, Mail, MessageCircle, Tent, UsersRound, Loade
 
 import { formatarDataFolha } from '../../utils/revisarEnviar/dates';
 import { montarMensagemDesignacao, montarMensagemLembreteSemana } from '../../utils/revisarEnviar/messages';
-import { enviarEmailAutomatico } from '../../utils/revisarEnviar/enviadorEmail';
+import { enviarEmailAutomatico, getEmailJsMissingConfig } from '../../utils/revisarEnviar/enviadorEmail';
 import { buildAgendaLink } from '../../utils/revisarEnviar/links';
 import { toast } from '../../utils/toast';
 import { getTipoEventoSemana } from '../../utils/eventos';
@@ -47,6 +47,11 @@ const RevisarEnviarNotificarTab = ({
     const [enviandoInd, setEnviandoInd] = useState({});
     const [manualBusy, setManualBusy] = useState({});
     const [activeActionMenu, setActiveActionMenu] = useState(null);
+    const emailJsMissingConfig = getEmailJsMissingConfig();
+    const emailJsReady = emailJsMissingConfig.length === 0;
+    const emailJsConfigMessage = formatText(t.emailJsConfigMissingTpl, {
+        vars: emailJsMissingConfig.join(', ')
+    });
 
     const confirmacoesMap = useMemo(() => {
         return (confirmacoes || []).reduce((acc, item) => {
@@ -56,9 +61,23 @@ const RevisarEnviarNotificarTab = ({
         }, {});
     }, [confirmacoes]);
 
-    const anexarLinkConfirmacao = (mensagemBase, link) => {
+    const getStatusLabel = (status) => {
+        if (status === 'confirmado') return t.statusConfirmado;
+        if (status === 'nao_pode') return t.statusNaoPode;
+        return t.statusPendente;
+    };
+
+    const anexarLinkConfirmacao = (mensagemBase, link, status = 'pendente') => {
         if (!link) return mensagemBase;
-        return [mensagemBase, formatText(t.msgConfirmar, { link })].filter(Boolean).join('\n\n');
+
+        const footer = ['confirmado', 'nao_pode'].includes(status)
+            ? formatText(t.msgRespostaJaRegistrada, {
+                link,
+                status: getStatusLabel(status)
+            })
+            : formatText(t.msgConfirmar, { link });
+
+        return [mensagemBase, footer].filter(Boolean).join('\n\n');
     };
 
     const prepararConfirmacao = async (confirmationData) => {
@@ -81,7 +100,7 @@ const RevisarEnviarNotificarTab = ({
     const handleEnviarWhatsapp = async (pessoa, msg, msgKey, confirmationData) => {
         try {
             const confirmacao = await prepararConfirmacao(confirmationData);
-            enviarZap(pessoa, anexarLinkConfirmacao(msg, confirmacao.link));
+            enviarZap(pessoa, anexarLinkConfirmacao(msg, confirmacao.link, confirmacao.status));
             markSent(msgKey, 'wa');
             await registerNotificationChannelByAssignment(confirmationData?.assignmentKey, 'wa');
         } catch (error) {
@@ -365,6 +384,11 @@ const RevisarEnviarNotificarTab = ({
     };
 
     const handleDispararEmails = async () => {
+        if (!emailJsReady) {
+            toast.error(new Error(emailJsConfigMessage), t.emailJsConfigTitle);
+            return;
+        }
+
         const fila = coletarTodasDesignacoes();
 
         if (fila.length === 0) {
@@ -404,6 +428,11 @@ const RevisarEnviarNotificarTab = ({
     };
 
     const handleEnviarIndividual = async (msgKey, payload) => {
+        if (!emailJsReady) {
+            toast.error(new Error(emailJsConfigMessage), t.emailJsConfigTitle);
+            return;
+        }
+
         setEnviandoInd(prev => ({ ...prev, [msgKey]: true }));
         try {
             const enrichedPayload = await montarPayloadEmail(payload.emailPayload, payload.confirmationData);
@@ -425,6 +454,7 @@ const RevisarEnviarNotificarTab = ({
         const reminderSent = isSent(msgKey, 'waReminder') || hasSentChannel(assignmentKey, 'waReminder');
         const hasEmail = !!pessoa?.email;
         const isSending = enviandoInd[msgKey];
+        const emailDisabled = !hasEmail || !emailJsReady || isSending || enviandoGlobal;
         const manualState = manualBusy[assignmentKey];
         const manualWeekState = manualBusy[`week:${assignmentKey}`];
         const menuOpen = activeActionMenu === assignmentKey;
@@ -481,18 +511,18 @@ const RevisarEnviarNotificarTab = ({
 
                     <button
                         type="button"
-                        disabled={!hasEmail || isSending || enviandoGlobal}
+                        disabled={emailDisabled}
                         onClick={() => {
                             setActiveActionMenu(null);
                             handleEnviarIndividual(msgKey, { emailPayload, confirmationData });
                         }}
-                        className={`relative inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${!hasEmail
+                        className={`relative inline-flex h-9 w-9 items-center justify-center rounded-xl border transition ${emailDisabled
                             ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 opacity-60'
                             : mailSent
                                 ? 'border-slate-200 bg-slate-100 text-slate-500'
                                 : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
                             }`}
-                        title={!hasEmail ? t.noStudentEmailTitle : t.btnEnviarEmail}
+                        title={!hasEmail ? t.noStudentEmailTitle : !emailJsReady ? emailJsConfigMessage : t.btnEnviarEmail}
                     >
                         {isSending ? (
                             <Loader2 size={compact ? 15 : 17} className="animate-spin text-indigo-500" />
@@ -653,6 +683,12 @@ const RevisarEnviarNotificarTab = ({
                         {t.emailBatchDescription}
                     </p>
 
+                    {!emailJsReady && (
+                        <p className="mt-2 text-xs font-semibold text-rose-700">
+                            {emailJsConfigMessage}
+                        </p>
+                    )}
+
                     {enviandoGlobal && (
                         <div className="w-full max-w-md bg-indigo-200 h-2 mt-3 rounded-full overflow-hidden">
                             <div
@@ -665,8 +701,9 @@ const RevisarEnviarNotificarTab = ({
 
                 <button
                     onClick={handleDispararEmails}
-                    disabled={enviandoGlobal}
-                    className={`px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition inline-flex items-center gap-2 shrink-0 ${enviandoGlobal
+                    disabled={!emailJsReady || enviandoGlobal}
+                    title={!emailJsReady ? emailJsConfigMessage : t.emailBatchButton}
+                    className={`px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition inline-flex items-center gap-2 shrink-0 ${(!emailJsReady || enviandoGlobal)
                             ? 'bg-indigo-300 text-white cursor-wait'
                             : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                         }`}

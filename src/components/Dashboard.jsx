@@ -780,11 +780,6 @@ export default function Dashboard({
                                                         <div className="mt-1 text-xs font-bold opacity-90">
                                                             {metaText}
                                                         </div>
-                                                        {!mes.semReunioesPrevistas && (
-                                                            <div className="mt-1 text-[11px] font-semibold opacity-80">
-                                                                {percentText}
-                                                            </div>
-                                                        )}
                                                     </div>
 
                                                     <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-black">
