@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarDays, Loader2, Calendar, X, Printer, Save } from 'lucide-react';
+import { CalendarDays, Loader2, Calendar, X, Printer, Save, SlidersHorizontal } from 'lucide-react';
 import { toast } from '../../utils/toast';
 import { getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 
@@ -45,11 +45,150 @@ const RevisarEnviarHeader = ({
     const [calendarioSelecionado, setCalendarioSelecionado] = useState('');
     const [tokenGoogle, setTokenGoogle] = useState(null);
     const [enviando, setEnviando] = useState(false);
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
     // Mapeamos para preservar o índice original
     const semanasOrdenadas = semanasDisponiveis
         .map((sem, originalIndex) => ({ sem, originalIndex }))
         .sort((a, b) => getSemanaSortTimestamp(a.sem) - getSemanaSortTimestamp(b.sem));
+
+    const filtroLabel = {
+        ativas: L('filtroAtivas', 'Ativas'),
+        arquivadas: L('filtroArquivadas', 'Arquivadas'),
+        todas: L('filtroTodas', 'Todas')
+    }[filtroSemanas] || L('filtroAtivas', 'Ativas');
+
+    const renderTabs = () => (
+        <div className="flex bg-gray-100 p-1 rounded-lg shrink-0 shadow-inner">
+            <button
+                type="button"
+                aria-pressed={abaAtiva === 'imprimir'}
+                onClick={() => setAbaAtiva('imprimir')}
+                className={`px-4 py-1.5 rounded-md text-[11px] font-bold transition-all ${abaAtiva === 'imprimir'
+                    ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                {t.abaVisualizar || 'Visualizar'}
+            </button>
+            <button
+                type="button"
+                aria-pressed={abaAtiva === 'notificar'}
+                onClick={() => setAbaAtiva('notificar')}
+                className={`px-4 py-1.5 rounded-md text-[11px] font-bold transition-all ${abaAtiva === 'notificar'
+                    ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                {t.abaNotificar || 'Notificar'}
+            </button>
+        </div>
+    );
+
+    const renderFiltroStatus = () => (
+        <div className="flex border border-gray-200 rounded-full overflow-hidden shadow-sm shrink-0">
+            <button type="button" onClick={() => setFiltroSemanas('ativas')} className={`px-3 py-1.5 text-[11px] font-bold transition-colors ${filtroSemanas === 'ativas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'}`}>
+                {L('filtroAtivas', 'Ativas')}
+            </button>
+            <button type="button" onClick={() => setFiltroSemanas('arquivadas')} className={`px-3 py-1.5 text-[11px] font-bold border-l border-gray-200 transition-colors ${filtroSemanas === 'arquivadas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'}`}>
+                {L('filtroArquivadas', 'Arquivadas')}
+            </button>
+            <button type="button" onClick={() => setFiltroSemanas('todas')} className={`px-3 py-1.5 text-[11px] font-bold border-l border-gray-200 transition-colors ${filtroSemanas === 'todas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'}`}>
+                {L('filtroTodas', 'Todas')}
+            </button>
+        </div>
+    );
+
+    const renderActions = (mobile = false) => (
+        <div className={mobile ? 'grid grid-cols-1 gap-2' : 'flex flex-wrap items-center gap-2'}>
+            {abaAtiva === 'imprimir' && (
+                <button onClick={onPrint} className="px-3 py-2 sm:py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl sm:rounded-full text-[11px] font-bold shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95">
+                    <Printer size={13} /> {t.btnImprimir || 'Imprimir'}
+                </button>
+            )}
+
+            <button onClick={onGravarHistorico} className="px-3 py-2 sm:py-1.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-xl sm:rounded-full text-[11px] font-bold shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95" title={t.btnGravarHistorico}>
+                <Save size={13} /> {t.btnGravarHistorico || 'Sincronizar Historico'}
+            </button>
+
+            <button onClick={handleSyncClick} disabled={sincronizando} className="px-3 py-2 sm:py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl sm:rounded-full text-[11px] font-bold shadow-sm transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed" title={t.agendaHint}>
+                {sincronizando ? <Loader2 className="animate-spin" size={13} /> : <CalendarDays size={13} />}
+                {sincronizando ? t.agendaConnecting : t.agendaSync}
+            </button>
+        </div>
+    );
+
+    const renderWeekBox = (mobile = false) => (
+        <div className="bg-white rounded-xl border border-gray-200 p-2 shadow-sm flex flex-wrap items-center gap-2.5">
+            {abaAtiva === 'imprimir' && (
+                <>
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 text-[11px]">
+                        <span className="font-bold text-gray-400">{L('labelInicio', 'A partir de:')}</span>
+                        <select className="bg-transparent outline-none font-bold text-gray-700 cursor-pointer max-w-[120px] truncate" value={startIndex} onChange={(e) => setStartIndex(Number(e.target.value))}>
+                            {historicoSelect.map((h, i) => (
+                                <option key={i} value={i}>{h.semana}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 text-[11px]">
+                        <span className="font-bold text-gray-400">{L('labelLayout', 'Layout:')}</span>
+                        <select className="bg-transparent outline-none font-bold text-gray-700 cursor-pointer max-w-[150px] truncate" value={qtdSemanas} onChange={(e) => setQtdSemanas(Number(e.target.value))}>
+                            <option value={1}>{t.layoutOpcoes?.[0] ?? '1 p/ pag'}</option>
+                            <option value={2}>{t.layoutOpcoes?.[1] ?? '2 p/ pag'}</option>
+                            <option value={4}>{t.layoutOpcoes?.[2] ?? '4 p/ pag'}</option>
+                            <option value={5}>{t.layoutOpcoes?.[3] ?? '5 p/ pag'}</option>
+                        </select>
+                    </div>
+
+                    <div className="w-px h-5 bg-gray-300 mx-1 hidden md:block"></div>
+                </>
+            )}
+
+            <div className="flex items-center gap-1">
+                <span className="text-[10px] font-black uppercase text-gray-400 mr-1 hidden sm:block">
+                    {selectedCount} {L('selecionadas', 'sel.')}
+                </span>
+                <button type="button" onClick={selecionarTodasPrint} className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-gray-100 hover:bg-gray-200 transition text-gray-700">
+                    {L('btnTodas', 'Todas')}
+                </button>
+                <button type="button" onClick={limparPrint} className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-white hover:bg-gray-100 transition text-gray-700">
+                    {L('btnLimpar', 'Limpar')}
+                </button>
+            </div>
+
+            <div className={mobile ? 'flex w-full flex-col gap-1.5' : 'flex flex-wrap items-center gap-1.5 ml-1'}>
+                {semanasOrdenadas.map(({ sem: s, originalIndex: i }) => {
+                    const k = getSemanaKey(s, i);
+                    const on = !!printSelecionadas?.[k];
+                    const isArq = !!s?.arquivada;
+
+                    return (
+                        <button
+                            key={k}
+                            type="button"
+                            onClick={() => toggleSemanaPrint(k)}
+                            className={[
+                                'px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap inline-flex items-center gap-1 max-w-full',
+                                mobile ? 'justify-between' : '',
+                                on ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                            ].join(' ')}
+                            title={s.semana}
+                        >
+                            <span className="truncate max-w-[80px] sm:max-w-[100px]">{s.semana?.split(' -')[0] || s.semana}</span>
+                            {isArq && (
+                                <span className={`text-[9px] font-black px-1 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>
+                                    {t.badgeArquivada}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+
+                {semanasDisponiveis.length === 0 && (
+                    <div className="text-[11px] text-gray-400 italic px-2">
+                        {L('nenhumaSemanaFiltro', 'Nenhuma semana para este filtro.')}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 
     // Etapa 1: Abre a janela do Google, pega o token e as agendas
     const handleSyncClick = async () => {
@@ -101,142 +240,57 @@ const RevisarEnviarHeader = ({
     return (
         <div className="bg-white p-2.5 sm:p-3 md:p-4 rounded-2xl shadow-sm border border-gray-100 no-print shrink-0 relative flex flex-col gap-2.5 sm:gap-3">
 
-            {/* LINHA 1: ABAS, FILTROS E AÇÕES */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-
-                {/* Bloco Esquerdo: Abas e Filtros */}
-                <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-                    {/* Abas Visualizar / Notificar */}
-                    <div className="flex bg-gray-100 p-1 rounded-lg shrink-0 shadow-inner">
-                        <button
-                            type="button"
-                            aria-pressed={abaAtiva === 'imprimir'}
-                            onClick={() => setAbaAtiva('imprimir')}
-                            className={`px-4 py-1.5 rounded-md text-[11px] font-bold transition-all ${abaAtiva === 'imprimir'
-                                ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            {t.abaVisualizar || 'Visualizar'}
-                        </button>
-                        <button
-                            type="button"
-                            aria-pressed={abaAtiva === 'notificar'}
-                            onClick={() => setAbaAtiva('notificar')}
-                            className={`px-4 py-1.5 rounded-md text-[11px] font-bold transition-all ${abaAtiva === 'notificar'
-                                ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            {t.abaNotificar || 'Notificar'}
-                        </button>
-                    </div>
-
-                    {/* Filtro Ativas/Arquivadas/Todas (Estilo Compacto) */}
-                    <div className="flex border border-gray-200 rounded-full overflow-hidden shadow-sm shrink-0">
-                        <button type="button" onClick={() => setFiltroSemanas('ativas')} className={`px-3 py-1.5 text-[11px] font-bold transition-colors ${filtroSemanas === 'ativas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'}`}>
-                            {L('filtroAtivas', 'Ativas')}
-                        </button>
-                        <button type="button" onClick={() => setFiltroSemanas('arquivadas')} className={`px-3 py-1.5 text-[11px] font-bold border-l border-gray-200 transition-colors ${filtroSemanas === 'arquivadas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'}`}>
-                            {L('filtroArquivadas', 'Arquivadas')}
-                        </button>
-                        <button type="button" onClick={() => setFiltroSemanas('todas')} className={`px-3 py-1.5 text-[11px] font-bold border-l border-gray-200 transition-colors ${filtroSemanas === 'todas' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-white'}`}>
-                            {L('filtroTodas', 'Todas')}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Bloco Direito: Botões de Ação */}
-                <div className="flex flex-wrap items-center gap-2">
-                    {abaAtiva === 'imprimir' && (
-                        <button onClick={onPrint} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-[11px] font-bold shadow-sm transition flex items-center gap-1.5 active:scale-95">
-                            <Printer size={13} /> {t.btnImprimir || 'Imprimir'}
-                        </button>
-                    )}
-
-                    <button onClick={onGravarHistorico} className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-full text-[11px] font-bold shadow-sm transition flex items-center gap-1.5 active:scale-95" title={t.btnGravarHistorico}>
-                        <Save size={13} /> {t.btnGravarHistorico || 'Sincronizar Histórico'}
-                    </button>
-
-                    <button onClick={handleSyncClick} disabled={sincronizando} className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full text-[11px] font-bold shadow-sm transition flex items-center gap-1.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed" title={t.agendaHint}>
-                        {sincronizando ? <Loader2 className="animate-spin" size={13} /> : <CalendarDays size={13} />}
-                        {sincronizando ? t.agendaConnecting : t.agendaSync}
-                    </button>
-                </div>
+            <div className="sm:hidden flex items-center justify-between gap-2">
+                {renderTabs()}
+                <button
+                    type="button"
+                    onClick={() => setMobileFiltersOpen(true)}
+                    className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 p-2 text-blue-700 shadow-sm"
+                    aria-label="Filtros"
+                >
+                    <SlidersHorizontal size={18} />
+                </button>
             </div>
 
-            {/* LINHA 2: CAIXA DE SEMANAS & CONFIG DE IMPRESSÃO (Tudo numa linha só) */}
+            <div className="sm:hidden flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase text-gray-400">{filtroLabel}</div>
+                    <div className="truncate text-sm font-black text-gray-800">{selectedCount} {L('selecionadas', 'selecionadas')}</div>
+                </div>
+                <div className="text-[10px] font-bold uppercase text-gray-400">{abaAtiva === 'imprimir' ? (t.abaVisualizar || 'Visualizar') : (t.abaNotificar || 'Notificar')}</div>
+            </div>
+
+            <div className="hidden sm:flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+                    {renderTabs()}
+                    {renderFiltroStatus()}
+                </div>
+                {renderActions()}
+            </div>
+
             {showWeekTabs && (
-                <div className="bg-white rounded-xl border border-gray-200 p-2 shadow-sm flex flex-wrap items-center gap-2.5">
+                <div className="hidden sm:block">
+                    {renderWeekBox()}
+                </div>
+            )}
 
-                    {/* Controles de Layout (Visível só se imprimir) */}
-                    {abaAtiva === 'imprimir' && (
-                        <>
-                            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 text-[11px]">
-                                <span className="font-bold text-gray-400">{L('labelInicio', 'A partir de:')}</span>
-                                <select className="bg-transparent outline-none font-bold text-gray-700 cursor-pointer max-w-[120px] truncate" value={startIndex} onChange={(e) => setStartIndex(Number(e.target.value))}>
-                                    {historicoSelect.map((h, i) => (
-                                        <option key={i} value={i}>{h.semana}</option>
-                                    ))}
-                                </select>
+            {mobileFiltersOpen && (
+                <div className="fixed inset-0 z-[180] bg-black/40 sm:hidden" onClick={() => setMobileFiltersOpen(false)}>
+                    <div className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="mb-3 flex items-center justify-between">
+                            <div>
+                                <div className="text-sm font-black text-gray-900">Filtros</div>
+                                <div className="text-[10px] font-bold uppercase text-gray-400">{selectedCount} semanas selecionadas</div>
                             </div>
-
-                            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 text-[11px]">
-                                <span className="font-bold text-gray-400">{L('labelLayout', 'Layout:')}</span>
-                                <select className="bg-transparent outline-none font-bold text-gray-700 cursor-pointer max-w-[150px] truncate" value={qtdSemanas} onChange={(e) => setQtdSemanas(Number(e.target.value))}>
-                                    <option value={1}>{t.layoutOpcoes?.[0] ?? '1 p/ pág'}</option>
-                                    <option value={2}>{t.layoutOpcoes?.[1] ?? '2 p/ pág'}</option>
-                                    <option value={4}>{t.layoutOpcoes?.[2] ?? '4 p/ pág'}</option>
-                                    <option value={5}>{t.layoutOpcoes?.[3] ?? '5 p/ pág'}</option>
-                                </select>
-                            </div>
-
-                            <div className="w-px h-5 bg-gray-300 mx-1 hidden md:block"></div>
-                        </>
-                    )}
-
-                    {/* Ações de Seleção de Semana */}
-                    <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-black uppercase text-gray-400 mr-1 hidden sm:block">
-                            {selectedCount} {L('selecionadas', 'sel.')}
-                        </span>
-                        <button type="button" onClick={selecionarTodasPrint} className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-gray-100 hover:bg-gray-200 transition text-gray-700">
-                            {L('btnTodas', 'Todas')}
-                        </button>
-                        <button type="button" onClick={limparPrint} className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-white hover:bg-gray-100 transition text-gray-700">
-                            {L('btnLimpar', 'Limpar')}
-                        </button>
-                    </div>
-
-                    {/* Pílulas de Semanas */}
-                    <div className="flex flex-wrap items-center gap-1.5 ml-1">
-                        {semanasOrdenadas.map(({ sem: s, originalIndex: i }) => {
-                            const k = getSemanaKey(s, i);
-                            const on = !!printSelecionadas?.[k];
-                            const isArq = !!s?.arquivada;
-
-                            return (
-                                <button
-                                    key={k}
-                                    type="button"
-                                    onClick={() => toggleSemanaPrint(k)}
-                                    className={[
-                                        'px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap inline-flex items-center gap-1 max-w-full',
-                                        on ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                                    ].join(' ')}
-                                    title={s.semana}
-                                >
-                                    <span className="truncate max-w-[80px] sm:max-w-[100px]">{s.semana?.split(' -')[0] || s.semana}</span>
-                                    {isArq && (
-                                <span className={`text-[9px] font-black px-1 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-                                            {t.badgeArquivada}
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
-
-                        {semanasDisponiveis.length === 0 && (
-                            <div className="text-[11px] text-gray-400 italic px-2">
-                                {L('nenhumaSemanaFiltro', 'Nenhuma semana para este filtro.')}
-                            </div>
-                        )}
+                            <button type="button" onClick={() => setMobileFiltersOpen(false)} className="rounded-xl border border-gray-200 p-2 text-gray-500">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            {renderFiltroStatus()}
+                            {renderActions(true)}
+                            {showWeekTabs && renderWeekBox(true)}
+                        </div>
                     </div>
                 </div>
             )}

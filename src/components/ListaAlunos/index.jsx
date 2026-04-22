@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, UsersRound, Globe, User, UserRound, FilterX, FileJson, Download, FileText, FileSpreadsheet, Printer, ChevronDown, LayoutGrid, List, SortAsc, SortDesc, Calendar, AlertCircle, Plus } from 'lucide-react';
+import { Search, UsersRound, User, UserRound, FilterX, FileJson, Download, FileText, FileSpreadsheet, Printer, ChevronDown, LayoutGrid, List, SortAsc, SortDesc, Calendar, AlertCircle, Plus, SlidersHorizontal, X } from 'lucide-react';
 import AlunoCard from './AlunoCard';
 import AlunoListItem from './AlunoListItem';
 import ModalHistorico from './ModalHistorico';
@@ -41,6 +41,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     const [modalFormOpen, setModalFormOpen] = useState(false);
     const [modalHistoryOpen, setModalHistoryOpen] = useState(false);
     const [menuExportOpen, setMenuExportOpen] = useState(false);
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
     // Dados em Edição/Visualização
     const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
@@ -281,8 +282,28 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                     </div>
                 </div>
 
+                <div className="flex gap-2 sm:hidden">
+                    <div className="relative min-w-0 flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input
+                            type="text"
+                            placeholder={t.buscaPlaceholder}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-9 pr-4 text-xs font-medium outline-none transition focus:border-blue-400 focus:bg-white"
+                            value={termo}
+                            onChange={e => setTermo(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setMobileFiltersOpen((prev) => !prev)}
+                        className={`inline-flex items-center justify-center rounded-xl border px-3 text-xs font-black uppercase shadow-sm transition ${mobileFiltersOpen || hasActiveFilters ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600'}`}
+                    >
+                        {mobileFiltersOpen ? <X size={18} /> : <SlidersHorizontal size={18} />}
+                    </button>
+                </div>
+
                 {/* 2. DASHBOARD: Cards Estatísticos */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className={`${mobileFiltersOpen ? 'grid' : 'hidden'} grid-cols-2 sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-3`}>
                     <StatCard
                         icon={<UsersRound size={18} />} label={t.estatisticas.total} value={stats.total}
                         isActive={!hasActiveFilters || (hasActiveFilters && filtroStatus === 'ativos' && termo === '' && filtrosTiposAtivos.length === 0 && filtroGenero === 'todos' && filtroEspecial === 'todos')}
@@ -317,10 +338,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 </div>
 
                 {/* 3. FILTROS E PESQUISA AVANÇADA */}
-                <div className="flex flex-col gap-3">
+                <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col gap-3`}>
                     <div className="flex flex-col lg:flex-row flex-wrap gap-2">
                         {/* Pesquisa */}
-                        <div className="flex-1 w-full lg:w-auto relative min-w-[200px]">
+                        <div className="hidden sm:block flex-1 w-full lg:w-auto relative min-w-[200px]">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                             <input type="text" placeholder={t.buscaPlaceholder} className="w-full pl-9 pr-4 py-3 lg:py-2 border border-gray-200 rounded-xl outline-none text-xs font-medium bg-gray-50 focus:bg-white focus:border-blue-400 transition" value={termo} onChange={e => setTermo(e.target.value)} />
                         </div>

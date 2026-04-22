@@ -99,6 +99,60 @@ function AdminPanel() {
   const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
   const unreadNotificationsCount = (notificacoes || []).filter((item) => !item?.readAt && !item?.readAtIso).length;
 
+  const normalizeProgramacaoDates = (programacao, config = dadosSistema?.configuracoes) => {
+    if (!programacao) return programacao;
+
+    const nextProg = { ...programacao, semana: (programacao.semana || '').toString().trim() };
+    const fallbackISO = nextProg.dataExata || nextProg.dataReuniao || nextProg.dataInicio || nextProg.data || null;
+
+    if (nextProg.semana) {
+      const dataInicioCalculada = getWeekStartISOFromSemana({
+        semanaStr: nextProg.semana,
+        config,
+        isoFallback: fallbackISO,
+        textSources: [nextProg.semana]
+      });
+
+      if (dataInicioCalculada) {
+        nextProg.dataInicio = dataInicioCalculada;
+      }
+
+      const eventoNestaData = (config?.eventosAnuais || []).find((ev) => ev?.dataInicio === nextProg.dataInicio);
+
+      if (eventoNestaData) {
+        nextProg.evento = eventoNestaData.tipo;
+        nextProg.dataEventoEspecial = eventoNestaData.dataInput;
+
+        if (eventoNestaData.tipo === 'visita') {
+          const dataBase = new Date(`${nextProg.dataInicio}T12:00:00`);
+          dataBase.setDate(dataBase.getDate() + 1);
+          const dataVisita = dataBase.toISOString().split('T')[0];
+          nextProg.dataExata = dataVisita;
+          nextProg.dataReuniao = dataVisita;
+        } else {
+          nextProg.dataExata = nextProg.dataInicio;
+          nextProg.dataReuniao = nextProg.dataInicio;
+        }
+
+        return nextProg;
+      }
+
+      const dataReuniaoCalculada = getMeetingDateISOFromSemana({
+        semanaStr: nextProg.semana,
+        config,
+        isoFallback: nextProg.dataInicio || fallbackISO,
+        textSources: [nextProg.semana]
+      });
+
+      if (dataReuniaoCalculada) {
+        nextProg.dataExata = dataReuniaoCalculada;
+        nextProg.dataReuniao = dataReuniaoCalculada;
+      }
+    }
+
+    return nextProg;
+  };
+
   const salvarAlteracao = async (novosDados) => {
     const operacoes = [];
 
@@ -116,8 +170,9 @@ function AdminPanel() {
 
     if (Array.isArray(novosDados.historico_reunioes)) {
       novosDados.historico_reunioes.forEach(p => {
-        const semanaStr = String(p.semana || '').trim();
-        if (semanaStr) operacoes.push(salvarItem('programacao', semanaStr.replace(/[/\s,.]/g, '-'), p));
+        const programacaoNormalizada = normalizeProgramacaoDates(p, novosDados.configuracoes || dadosSistema?.configuracoes);
+        const semanaStr = String(programacaoNormalizada?.semana || '').trim();
+        if (semanaStr) operacoes.push(salvarItem('programacao', semanaStr.replace(/[/\s,.]/g, '-'), programacaoNormalizada));
       });
     }
 
@@ -127,7 +182,7 @@ function AdminPanel() {
   const setListaProgramacoes = (updater) => {
     const current = listaProgramacoes;
     const nextRaw = typeof updater === 'function' ? updater(current) : (Array.isArray(updater) ? updater : []);
-    const next = nextRaw.filter(Boolean).map(p => ({ ...p, semana: (p.semana || '').toString().trim() }));
+    const next = nextRaw.filter(Boolean).map(p => normalizeProgramacaoDates(p, dadosSistema?.configuracoes));
     salvarAlteracao({ ...dadosSistema, historico_reunioes: next });
   };
 

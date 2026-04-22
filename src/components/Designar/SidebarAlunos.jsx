@@ -117,8 +117,20 @@ const SidebarAlunos = ({
     const hasActiveFilters = termoBusca !== '' || filtroGenero !== 'todos' || (filtrosTiposAtivos && filtrosTiposAtivos.length > 0);
 
     return (
-        <div className="lg:w-80 shrink-0 w-full lg:sticky self-start" style={{ top: `${stickyOffset}px` }}>
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden" style={{ maxHeight: `calc(100vh - ${stickyOffset + 16}px)` }}>
+        <>
+            {slotAtivo && (
+                <button
+                    type="button"
+                    className="fixed inset-0 z-[150] bg-black/40 lg:hidden"
+                    onClick={() => setSlotAtivo(null)}
+                    aria-label={localTx.cancelar}
+                />
+            )}
+            <div
+                className={`${slotAtivo ? 'fixed inset-x-0 bottom-0 z-[160] px-2 pb-2' : 'hidden'} lg:block lg:w-80 shrink-0 w-full lg:sticky self-start lg:px-0 lg:pb-0`}
+                style={{ top: `${stickyOffset}px` }}
+            >
+            <div className="bg-white rounded-t-2xl lg:rounded-xl shadow-2xl lg:shadow-lg border border-gray-200 flex flex-col overflow-hidden" style={{ maxHeight: slotAtivo ? 'min(78vh, calc(100vh - 5rem))' : `calc(100vh - ${stickyOffset + 16}px)` }}>
                 <div className="p-4 bg-blue-700 text-white text-xs font-bold uppercase tracking-widest flex justify-between items-center shrink-0">
                     <div className="flex flex-col">
                         <span>{buildSlotLabel()}</span>
@@ -397,6 +409,7 @@ const SidebarAlunos = ({
                 </div>
             </div>
         </div>
+        </>
     );
 };
 
