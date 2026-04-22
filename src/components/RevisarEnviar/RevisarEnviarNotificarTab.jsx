@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle, CheckCircle2, Mail, MessageCircle, Tent, UsersRound, Loader2, Send, SlidersHorizontal, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, CheckCircle2, Mail, MessageCircle, Tent, UsersRound, Loader2, Send, SlidersHorizontal, XCircle } from 'lucide-react';
 
 import { formatarDataFolha } from '../../utils/revisarEnviar/dates';
 import { montarMensagemDesignacao, montarMensagemLembreteSemana } from '../../utils/revisarEnviar/messages';
@@ -52,6 +52,14 @@ const RevisarEnviarNotificarTab = ({
     const emailJsConfigMessage = formatText(t.emailJsConfigMissingTpl, {
         vars: emailJsMissingConfig.join(', ')
     });
+    const roleLabels = {
+        presidente: t.presidente || 'Presidente',
+        oracao: t.oracao || 'Oração',
+        dirigente: t.dirigente || 'Dirigente',
+        leitor: t.leitor || 'Leitor',
+        estudante: t.estudante || 'Estudante',
+        ajudante: t.ajudante || 'Ajudante'
+    };
 
     const confirmacoesMap = useMemo(() => {
         return (confirmacoes || []).reduce((acc, item) => {
@@ -190,6 +198,20 @@ const RevisarEnviarNotificarTab = ({
     const hasSentChannel = (assignmentKey, channel) => {
         const current = confirmacoesMap[String(assignmentKey || '').trim()];
         return Boolean(current?.sentChannels?.[channel]);
+    };
+
+    const addPessoaRevisao = (acc, pessoa, role, parteLabel, semanaLabel) => {
+        if (!pessoa?.nome && !pessoa?.id) {
+            acc.semDesignado.push(`${semanaLabel}: ${parteLabel}`);
+            return;
+        }
+
+        const pessoaKey = pessoa.id || pessoa.nome;
+        acc.pessoasSemana.set(pessoaKey, [...(acc.pessoasSemana.get(pessoaKey) || []), parteLabel]);
+
+        if (!pessoa.telefone && !pessoa.email) {
+            acc.semContato.push(`${pessoa.nome} (${role})`);
+        }
     };
 
     const handleManualStatus = async (confirmationData, status) => {
@@ -383,6 +405,78 @@ const RevisarEnviarNotificarTab = ({
         return lista;
     };
 
+    const montarChecklistRevisao = () => {
+        const base = {
+            semanas: 0,
+            semDesignado: [],
+            duplicados: [],
+            semContato: [],
+            confirmacoesPendentes: 0,
+            emailsNaFila: coletarTodasDesignacoes().length,
+            pessoasSemana: new Map(),
+            substituicoes: 0,
+            agendaPendente: 0,
+            historicoPendente: 0
+        };
+
+        semanasParaNotificar.forEach((sem) => {
+            const tipoEvento = getTipoEventoSemana(sem, config);
+            if (tipoEvento !== 'normal' && tipoEvento !== 'visita') return;
+
+            base.semanas += 1;
+            base.pessoasSemana = new Map();
+            const semanaLabel = sem?.semana || 'Semana';
+            const substituicoesSemana = Array.isArray(sem?.substituicoes) ? sem.substituicoes.filter((item) => !item?.canceladaEm) : [];
+            base.substituicoes += substituicoesSemana.length;
+            if (sem?.agendaPendenteSync || sem?.needsCalendarSync) {
+                base.agendaPendente += 1;
+            }
+            if (sem?.historicoPendenteSync) {
+                base.historicoPendente += 1;
+            }
+
+            addPessoaRevisao(base, sem?.presidente, roleLabels.presidente, roleLabels.presidente, semanaLabel);
+
+            const partes = Array.isArray(sem?.partes) ? sem.partes : [];
+            partes.forEach((parte) => {
+                const titulo = parte?.titulo || 'Parte';
+                if (isOracao(parte)) {
+                    addPessoaRevisao(base, parte?.oracao || parte?.estudante, roleLabels.oracao, titulo, semanaLabel);
+                    return;
+                }
+
+                if (isEstudo(parte)) {
+                    addPessoaRevisao(base, parte?.dirigente || parte?.estudante, roleLabels.dirigente, `${roleLabels.dirigente} - ${titulo}`, semanaLabel);
+                    addPessoaRevisao(base, parte?.leitor || sem?.leitor, roleLabels.leitor, `${roleLabels.leitor} - ${titulo}`, semanaLabel);
+                    return;
+                }
+
+                addPessoaRevisao(base, parte?.estudante, roleLabels.estudante, titulo, semanaLabel);
+                if (parte?.ajudante) {
+                    addPessoaRevisao(base, parte.ajudante, roleLabels.ajudante, `${roleLabels.ajudante} - ${titulo}`, semanaLabel);
+                }
+            });
+
+            Array.from(base.pessoasSemana.entries()).forEach(([pessoa, partesPessoa]) => {
+                if (partesPessoa.length > 1) {
+                    base.duplicados.push(`${pessoa}: ${partesPessoa.join(', ')}`);
+                }
+            });
+        });
+
+        base.confirmacoesPendentes = (confirmacoes || []).filter((item) => (item?.status || 'pendente') === 'pendente').length;
+        base.semContato = [...new Set(base.semContato)];
+        const criticos = base.semDesignado.length + base.duplicados.length;
+
+        return {
+            ...base,
+            criticos,
+            ok: criticos === 0
+        };
+    };
+
+    const checklistRevisao = montarChecklistRevisao();
+
     const handleDispararEmails = async () => {
         if (!emailJsReady) {
             toast.error(new Error(emailJsConfigMessage), t.emailJsConfigTitle);
@@ -393,6 +487,10 @@ const RevisarEnviarNotificarTab = ({
 
         if (fila.length === 0) {
             toast.info(t.emailBatchEmpty);
+            return;
+        }
+
+        if (checklistRevisao.criticos > 0 && !window.confirm(`Há ${checklistRevisao.criticos} pendência(s) importante(s) na revisão final. Deseja enviar mesmo assim?`)) {
             return;
         }
 
@@ -671,6 +769,85 @@ const RevisarEnviarNotificarTab = ({
                     <MessageCircle className="text-green-600" /> {t.notificarTitulo}
                 </h3>
                 <p className="text-sm text-gray-500">{t.notificarAviso}</p>
+            </div>
+
+            <div className={`mb-4 rounded-2xl border p-4 ${checklistRevisao.ok ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h4 className={`flex items-center gap-2 font-black ${checklistRevisao.ok ? 'text-emerald-800' : 'text-amber-800'}`}>
+                            {checklistRevisao.ok ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+                            Revisão final
+                        </h4>
+                        <p className="mt-1 text-xs font-medium text-slate-600">
+                            {checklistRevisao.semanas} semana(s), {checklistRevisao.emailsNaFila} e-mail(s) na fila, {checklistRevisao.confirmacoesPendentes} confirmação(ões) pendente(s).
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4 xl:grid-cols-7">
+                        <div className="rounded-xl bg-white/80 px-3 py-2">
+                            <p className="text-lg font-black text-slate-900">{checklistRevisao.semDesignado.length}</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">sem designado</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-3 py-2">
+                            <p className="text-lg font-black text-slate-900">{checklistRevisao.duplicados.length}</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">duplicados</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-3 py-2">
+                            <p className="text-lg font-black text-slate-900">{checklistRevisao.semContato.length}</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">sem contato</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-3 py-2">
+                            <p className="text-lg font-black text-slate-900">{checklistRevisao.emailsNaFila}</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">e-mails</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-3 py-2">
+                            <p className="text-lg font-black text-slate-900">{checklistRevisao.substituicoes}</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">substituições</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-3 py-2">
+                            <p className="text-lg font-black text-slate-900">{checklistRevisao.agendaPendente}</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">agenda</p>
+                        </div>
+                        <div className="rounded-xl bg-white/80 px-3 py-2">
+                            <p className="text-lg font-black text-slate-900">{checklistRevisao.historicoPendente}</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">histórico</p>
+                        </div>
+                    </div>
+                </div>
+
+                {(checklistRevisao.semDesignado.length > 0 || checklistRevisao.duplicados.length > 0 || checklistRevisao.semContato.length > 0 || checklistRevisao.agendaPendente > 0 || checklistRevisao.historicoPendente > 0) && (
+                    <div className="mt-3 grid gap-2 text-xs text-slate-700 md:grid-cols-3">
+                        {checklistRevisao.semDesignado.length > 0 && (
+                            <div className="rounded-xl bg-white/80 p-3">
+                                <p className="font-black text-amber-800">Completar</p>
+                                <p className="mt-1 line-clamp-3">{checklistRevisao.semDesignado.slice(0, 3).join(' • ')}</p>
+                            </div>
+                        )}
+                        {checklistRevisao.duplicados.length > 0 && (
+                            <div className="rounded-xl bg-white/80 p-3">
+                                <p className="font-black text-rose-800">Duplicados</p>
+                                <p className="mt-1 line-clamp-3">{checklistRevisao.duplicados.slice(0, 3).join(' • ')}</p>
+                            </div>
+                        )}
+                        {checklistRevisao.semContato.length > 0 && (
+                            <div className="rounded-xl bg-white/80 p-3">
+                                <p className="font-black text-slate-800">Contato faltando</p>
+                                <p className="mt-1 line-clamp-3">{checklistRevisao.semContato.slice(0, 3).join(' • ')}</p>
+                            </div>
+                        )}
+                        {checklistRevisao.agendaPendente > 0 && (
+                            <div className="rounded-xl bg-white/80 p-3">
+                                <p className="font-black text-sky-800">Google Agenda</p>
+                                <p className="mt-1">Sincronize novamente as semanas alteradas depois de revisar as substituições.</p>
+                            </div>
+                        )}
+                        {checklistRevisao.historicoPendente > 0 && (
+                            <div className="rounded-xl bg-white/80 p-3">
+                                <p className="font-black text-orange-800">Histórico</p>
+                                <p className="mt-1">Grave o histórico novamente para refletir as últimas alterações publicadas.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* PAINEL DISPARO GLOBAL */}

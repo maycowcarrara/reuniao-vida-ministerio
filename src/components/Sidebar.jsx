@@ -15,6 +15,8 @@ function SidebarButton({ active, onClick, icon, label, badge, sidebarOpen }) {
     return (
         <button
             onClick={onClick}
+            title={label}
+            aria-label={label}
             className={`w-full flex items-center justify-between px-4 py-3 transition-all border-l-4 ${active
                 ? 'bg-blue-800 border-white text-white'
                 : 'border-transparent text-blue-100 hover:bg-blue-700'
@@ -128,10 +130,20 @@ export default function Sidebar({
                     </div>
 
                     {/* Botão de Fechar: Seta no PC, 'X' no Celular */}
-                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-blue-700 rounded transition-colors hidden md:block shrink-0">
+                    <button
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="p-1 hover:bg-blue-700 rounded transition-colors hidden md:block shrink-0"
+                        title={sidebarOpen ? SIDEBAR_TEXTS.recolherMenu : SIDEBAR_TEXTS.expandirMenu}
+                        aria-label={sidebarOpen ? SIDEBAR_TEXTS.recolherMenu : SIDEBAR_TEXTS.expandirMenu}
+                    >
                         <ChevronLeft className={!sidebarOpen ? 'rotate-180' : ''} />
                     </button>
-                    <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-blue-700 rounded transition-colors md:hidden shrink-0">
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="p-1 hover:bg-blue-700 rounded transition-colors md:hidden shrink-0"
+                        title={SIDEBAR_TEXTS.fecharMenu}
+                        aria-label={SIDEBAR_TEXTS.fecharMenu}
+                    >
                         <X size={20} />
                     </button>
                 </div>

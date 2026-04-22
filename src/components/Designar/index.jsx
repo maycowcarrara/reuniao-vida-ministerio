@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Calendar, User, Search, UsersRound, UserRound, Clock,
     AlertTriangle, StickyNote, Trash2, Edit2, X, Save, UserPlus,
-    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc
+    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc, Eye, EyeOff, RefreshCw
 } from 'lucide-react';
 
 import ModalSugestao from './ModalSugestao';
@@ -28,7 +28,6 @@ const Designar = ({
     listaProgramacoes = [],
     setListaProgramacoes = () => { },
     alunos = [],
-    onAlunosChange, // <--- ADICIONADO AQUI
     cargosMap = {},
     lang = 'pt',
     onExcluirSemana,
@@ -69,6 +68,43 @@ const Designar = ({
 
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
     const hasPessoaDesignada = (pessoa) => !!(pessoa?.id || pessoa?.nome);
+    const mesmaPessoa = (a, b) => {
+        if (!a || !b) return false;
+        const aKey = a.id || a.nome;
+        const bKey = b.id || b.nome;
+        return !!aKey && !!bKey && String(aKey) === String(bKey);
+    };
+
+    const compactPessoa = (pessoa) => {
+        if (!pessoa) return null;
+        return {
+            id: pessoa.id || null,
+            nome: pessoa.nome || ''
+        };
+    };
+
+    const getSubstituicoesSemana = (sem) => (Array.isArray(sem?.substituicoes) ? sem.substituicoes : []).filter((item) => !item?.canceladaEm);
+
+    const getSubstituicaoAtiva = (sem, slotCtx, value) => {
+        if (!slotCtx || !hasPessoaDesignada(value)) return null;
+        const substituicoes = getSubstituicoesSemana(sem);
+        return [...substituicoes].reverse().find((item) => {
+            const parteId = slotCtx.key === 'presidente' ? 'presidente' : slotCtx.parteId;
+            return item?.role === slotCtx.key && item?.parteId === parteId && mesmaPessoa(item?.para, value);
+        }) || null;
+    };
+
+    const marcarSemanaPublicadaPendente = (semana, motivo = 'alteracao_publicada', now = new Date().toISOString()) => {
+        if (!semana || semana?.publicadaNoQuadro === false) return;
+        semana.agendaPendenteSync = true;
+        semana.needsCalendarSync = true;
+        semana.agendaPendenteMotivo = motivo;
+        semana.agendaPendenteDesde = now;
+        semana.historicoPendenteSync = true;
+        semana.historicoPendenteMotivo = motivo;
+        semana.historicoPendenteDesde = now;
+        semana.ultimaAlteracaoPublicadaEm = now;
+    };
 
     // FUNÇÃO ROBUSTA DE ORDENAÇÃO E EXTRAÇÃO DE DATAS
     const getSortTime = useCallback((sem) => getSemanaSortTimestamp(sem, config), [config]);
@@ -279,60 +315,7 @@ const Designar = ({
         setListaProgramacoesSafe(prev => prev.map((s, idx) => keys.includes(getSemanaKey(s, idx)) ? { ...s, arquivada: false, arquivadaEm: null } : s));
     };
 
-    // ------------------------------------------------------------------------------------------
-    // 🔥 LÓGICA DE LIMPEZA DE HISTÓRICO (Lixeira Inteligente) PARA O DESIGNAR
-    // ------------------------------------------------------------------------------------------
-    const limparHistoricoPorDatas = (datasBase) => {
-        // Se a função não foi passada por props, ignoramos silenciosamente
-        if (!onAlunosChange || typeof onAlunosChange !== 'function' || !Array.isArray(alunos) || alunos.length === 0) return;
-
-        // Calcula os limites da(s) semana(s) selecionada(s)
-        const ranges = datasBase.filter(Boolean).map(dataStr => {
-            const [ano, mes, dia] = dataStr.split('-').map(Number);
-            const dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0);
-            const diaSemana = dataBaseObj.getDay();
-            const diffParaSegunda = diaSemana === 0 ? 6 : diaSemana - 1;
-
-            const start = new Date(dataBaseObj);
-            start.setDate(dataBaseObj.getDate() - diffParaSegunda);
-            start.setHours(0, 0, 0, 0);
-
-            const end = new Date(start);
-            end.setDate(start.getDate() + 6);
-            end.setHours(23, 59, 59, 999);
-
-            return { start, end };
-        });
-
-        if (ranges.length === 0) return;
-
-        let alterouAlgo = false;
-        const novosAlunos = alunos.map(aluno => {
-            if (!aluno.historico || !Array.isArray(aluno.historico)) return aluno;
-
-            const historicoLimpo = aluno.historico.filter(h => {
-                if (!h.data) return true; // Mantém históricos mal formatados (sem data)
-                const [hAno, hMes, hDia] = h.data.split('-').map(Number);
-                const hDate = new Date(hAno, hMes - 1, hDia, 12, 0, 0);
-
-                // Se a data do histórico estiver dentro da semana que está sendo apagada:
-                const caiEmAlgumRange = ranges.some(r => hDate >= r.start && hDate <= r.end);
-                if (caiEmAlgumRange) alterouAlgo = true;
-
-                return !caiEmAlgumRange; // false = Joga no lixo
-            });
-
-            return { ...aluno, historico: historicoLimpo };
-        });
-
-        // Só executa a alteração geral se realmente algum aluno perdeu um histórico
-        if (alterouAlgo) {
-            console.log("Limpando histórico atrelado à(s) semana(s) excluída(s)...");
-            onAlunosChange(novosAlunos);
-        }
-    };
-
-    // 🔥 EXCLUSÃO SUPER SEGURA DA SEMANA (AGORA LIMPA O HISTÓRICO TAMBÉM)
+    // 🔥 EXCLUSÃO SUPER SEGURA DA SEMANA
     const handleExcluirSemana = async (semanaKey) => {
         const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
         if (!atual || !window.confirm(formatText(TT.confirmarExcluirSemanaTpl, { semana: atual?.semana || semanaKey }))) return;
@@ -346,12 +329,6 @@ const Designar = ({
             }
         }
 
-        // 1º Passo: Limpa os registros do banco de dados de alunos (se a dataBase existir)
-        if (dataBase) {
-            limparHistoricoPorDatas([dataBase]);
-        }
-
-        // 2º Passo: Exclui a Programação em si
         if (onExcluirSemana && atual.id) {
             await onExcluirSemana(atual.id, dataBase);
         }
@@ -364,7 +341,7 @@ const Designar = ({
         setSemanasSelecionadas(prev => { const next = { ...prev }; delete next[semanaKey]; return next; });
     };
 
-    // 🔥 EXCLUSÃO EM MASSA DE ARQUIVADAS (AGORA LIMPA O HISTÓRICO TAMBÉM)
+    // 🔥 EXCLUSÃO EM MASSA DE ARQUIVADAS
     const apagarArquivadas = async () => {
         const keys = getSelectedKeys();
         let alvo = [];
@@ -377,8 +354,6 @@ const Designar = ({
         if (alvo.length === 0) return alert(TT.nenhumaSemanaArquivada);
         if (!window.confirm(formatText(TT.confirmarApagarArquivadasTpl, { count: alvo.length }))) return;
 
-        const datasParaLimpar = [];
-
         if (onExcluirSemana) {
             for (const item of alvo) {
                 if (item.id) {
@@ -390,16 +365,9 @@ const Designar = ({
                             dataBase = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                         }
                     }
-                    if (dataBase) datasParaLimpar.push(dataBase);
-
                     await onExcluirSemana(item.id, dataBase);
                 }
             }
-        }
-
-        // Executa a limpeza do histórico para todas as semanas afetadas
-        if (datasParaLimpar.length > 0) {
-            limparHistoricoPorDatas(datasParaLimpar);
         }
 
         const idsApagados = new Set(alvo.map(a => a.id));
@@ -415,6 +383,18 @@ const Designar = ({
         const msg = arquivar ? `${TT.arquivar} ${TT.semana} ${atual?.semana}?` : `${TT.restaurar} ${TT.semana} ${atual?.semana}?`;
         if (!window.confirm(msg)) return;
         setListaProgramacoesSafe(prev => prev.map((s, idx) => getSemanaKey(s, idx) === semanaKey ? { ...s, arquivada: arquivar, arquivadaEm: arquivar ? new Date().toISOString() : null } : s));
+    };
+
+    const togglePublicacaoSemana = (semanaKey) => {
+        setListaProgramacoesSafe(prev => prev.map((s, idx) => {
+            if (getSemanaKey(s, idx) !== semanaKey) return s;
+            const publicada = s?.publicadaNoQuadro !== false;
+            return {
+                ...s,
+                publicadaNoQuadro: !publicada,
+                publicacaoQuadroAtualizadaEm: new Date().toISOString()
+            };
+        }));
     };
 
     const getUltimoRegistro = (aluno) => {
@@ -460,7 +440,7 @@ const Designar = ({
         return ordemCrescente ? res : -res;
     });
 
-    const atribuirAluno = (aluno, targetSlot = slotAtivo) => {
+    const atribuirAluno = (aluno, targetSlot = slotAtivo, options = {}) => {
         if (!targetSlot) return;
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(targetSlot.semanaIndex) ? targetSlot.semanaIndex : semanaAtivaIndexAtual);
         if (semanaRealIndex === -1) return;
@@ -477,12 +457,43 @@ const Designar = ({
         setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const semana = { ...lista[semanaRealIndex], partes: [...(lista[semanaRealIndex].partes || [])] };
+            const now = new Date().toISOString();
+            let registroSubstituicao = null;
+            const registrarSubstituicao = (anterior, parte) => {
+                const semanaPublicada = semana?.publicadaNoQuadro !== false;
+                if ((!options.registrarSubstituicao && !semanaPublicada) || !hasPessoaDesignada(anterior) || mesmaPessoa(anterior, aluno)) return;
 
-            if (targetSlot.key === 'presidente') semana.presidente = aluno;
+                registroSubstituicao = {
+                    id: `${Date.now()}-${targetSlot.key}-${targetSlot.parteId || 'presidente'}`,
+                    role: targetSlot.key,
+                    parteId: targetSlot.key === 'presidente' ? 'presidente' : targetSlot.parteId,
+                    parteTitulo: targetSlot.key === 'presidente' ? TT.presidente : (parte?.titulo || 'Parte'),
+                    de: compactPessoa(anterior),
+                    para: compactPessoa(aluno),
+                    criadoEm: now,
+                    origem: 'designar'
+                };
+            };
+
+            if (targetSlot.key === 'presidente') {
+                registrarSubstituicao(semana.presidente, null);
+                semana.presidente = aluno;
+            }
             else {
                 const idxParte = semana.partes.findIndex(p => p.id === targetSlot.parteId);
-                if (idxParte !== -1) semana.partes[idxParte] = { ...semana.partes[idxParte], [targetSlot.key]: aluno };
+                if (idxParte !== -1) {
+                    const parteAtual = semana.partes[idxParte];
+                    registrarSubstituicao(parteAtual?.[targetSlot.key], parteAtual);
+                    semana.partes[idxParte] = { ...parteAtual, [targetSlot.key]: aluno };
+                }
             }
+
+            if (registroSubstituicao) {
+                semana.substituicoes = [...getSubstituicoesSemana(semana), registroSubstituicao];
+                marcarSemanaPublicadaPendente(semana, 'substituicao', now);
+                semana.ultimaSubstituicaoEm = now;
+            }
+
             lista[semanaRealIndex] = semana;
             return lista;
         });
@@ -492,8 +503,20 @@ const Designar = ({
 
     const aplicarSugestao = (aluno) => {
         const { semanaIndex, key, parteId } = modalSugestao;
-        atribuirAluno(aluno, { key, parteId, semanaIndex });
+        atribuirAluno(aluno, { key, parteId, semanaIndex }, { registrarSubstituicao: modalSugestao.modo === 'substituicao' });
         setModalSugestao({ ...modalSugestao, aberto: false });
+    };
+
+    const abrirSubstituicao = (slotCtx, anterior) => {
+        if (!slotCtx || !hasPessoaDesignada(anterior)) return;
+        setModalSugestao({
+            aberto: true,
+            semanaIndex: slotCtx.semanaIndex,
+            key: slotCtx.key,
+            parteId: slotCtx.parteId,
+            modo: 'substituicao',
+            anterior: compactPessoa(anterior)
+        });
     };
 
     const atualizarParteNaSemanaRealIndex = (semanaRealIndex, parteId, patch) => {
@@ -505,6 +528,7 @@ const Designar = ({
             const idx = semana.partes.findIndex(p => p.id === parteId);
             if (idx === -1) return lista;
             semana.partes[idx] = { ...semana.partes[idx], ...patch };
+            marcarSemanaPublicadaPendente(semana, 'edicao_parte');
             lista[semanaRealIndex] = semana;
             return lista;
         });
@@ -553,7 +577,9 @@ const Designar = ({
         setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const atual = lista[semanaRealIndex];
-            lista[semanaRealIndex] = { ...atual, partes: atual.partes.filter(p => p.id !== parteId) };
+            const semana = { ...atual, partes: atual.partes.filter(p => p.id !== parteId) };
+            marcarSemanaPublicadaPendente(semana, 'exclusao_parte');
+            lista[semanaRealIndex] = semana;
             return lista;
         });
 
@@ -561,9 +587,12 @@ const Designar = ({
         if (slotAtivo?.parteId === parteId) setSlotAtivo(null);
     };
 
-    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx }) => {
+    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx, substituicao, permitirSubstituicao = false }) => {
         const isEmpty = !value;
         const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
+        const canSubstitute = permitirSubstituicao && !!value && !!slotCtx;
+        const hasActions = !!onSuggest || canSubstitute;
+        const actionPadding = hasActions ? (canSubstitute && !!onSuggest ? 'pr-16' : 'pr-10') : '';
 
         const currentColorClass = active
             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
@@ -596,7 +625,7 @@ const Designar = ({
                 <button
                     type="button"
                     onClick={onClick}
-                    className={`w-full py-2 px-3 rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
+                    className={`w-full py-2 px-3 ${actionPadding} rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
                     title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
                 >
                     <div className="flex flex-row items-center justify-between gap-2">
@@ -610,10 +639,25 @@ const Designar = ({
                         )}
                     </div>
                 </button>
-                {onSuggest && (
-                    <button type="button" onClick={onSuggest} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100" title={TT.sugestaoInteligente}>
-                        <Lightbulb size={12} />
-                    </button>
+                {hasActions && (
+                    <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1 opacity-0 group-hover/slot:opacity-100 transition-all focus-within:opacity-100">
+                        {canSubstitute && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao(slotCtx, value); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title="Substituir designado">
+                                <RefreshCw size={12} />
+                            </button>
+                        )}
+                        {onSuggest && (
+                            <button type="button" onClick={onSuggest} className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 shadow-sm" title={TT.sugestaoInteligente}>
+                                <Lightbulb size={12} />
+                            </button>
+                        )}
+                    </div>
+                )}
+                {substituicao && (
+                    <div className="mt-1 flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
+                        <RefreshCw size={10} />
+                        <span className="truncate">Substituição: {substituicao.de?.nome || '—'} para {substituicao.para?.nome || value?.nome}</span>
+                    </div>
                 )}
             </div>
         );
@@ -623,6 +667,9 @@ const Designar = ({
         const secKey = normalizarSecao(parte?.secao);
         const headerClass = isLinhaInicialFinal(parte) ? 'bg-gray-200 text-gray-800' : SECOES_META[secKey]?.header || SECOES_META.vida.header;
         const isCantico = isCanticoIntermediario(parte);
+        const semanaDaParte = listaFiltradaPorFlag?.[semanaIndexFiltrado];
+        const semanaPublicada = semanaDaParte?.publicadaNoQuadro !== false;
+        const getSubstituicaoSlot = (slotCtx, value) => getSubstituicaoAtiva(semanaDaParte, slotCtx, value);
 
         const tituloNormalizado = (parte?.titulo || '').toLowerCase();
         const tipoNormalizado = (parte?.tipo || '').toLowerCase();
@@ -659,17 +706,19 @@ const Designar = ({
                             onClick: () => setSlotAtivo({ key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado }),
                             active: slotAtivo?.key === 'oracao' && slotAtivo?.parteId === parte.id,
                             onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'oracao', parteId: parte.id }); },
-                            slotCtx: { key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado }
+                            slotCtx: { key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado },
+                            substituicao: getSubstituicaoSlot({ key: 'oracao', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, parte.oracao || null),
+                            permitirSubstituicao: semanaPublicada
                         })}
                     </div>
                 ) : isEstudoBiblicoCongregacao(parte) ? (
                     <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                        {renderSlotButton({ label: TT.dirigente, value: parte.dirigente, onClick: () => setSlotAtivo({ key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'dirigente' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'dirigente', parteId: parte.id }); }, slotCtx: { key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
-                        {renderSlotButton({ label: TT.leitor, value: parte.leitor, onClick: () => setSlotAtivo({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'leitor' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'leitor', parteId: parte.id }); }, slotCtx: { key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {renderSlotButton({ label: TT.dirigente, value: parte.dirigente, onClick: () => setSlotAtivo({ key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'dirigente' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'dirigente', parteId: parte.id }); }, slotCtx: { key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, substituicao: getSubstituicaoSlot({ key: 'dirigente', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, parte.dirigente), permitirSubstituicao: semanaPublicada })}
+                        {renderSlotButton({ label: TT.leitor, value: parte.leitor, onClick: () => setSlotAtivo({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'leitor' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'leitor', parteId: parte.id }); }, slotCtx: { key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, substituicao: getSubstituicaoSlot({ key: 'leitor', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, parte.leitor), permitirSubstituicao: semanaPublicada })}
                     </div>
                 ) : (
                     <div className={`p-2 grid gap-1.5 ${requiresAjudante ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                        {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); }, slotCtx: { key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado } })}
+                        {renderSlotButton({ label: TT.estudante, value: parte.estudante, onClick: () => setSlotAtivo({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }), active: slotAtivo?.key === 'estudante' && slotAtivo?.parteId === parte.id, onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'estudante', parteId: parte.id }); }, slotCtx: { key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, substituicao: getSubstituicaoSlot({ key: 'estudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, parte.estudante), permitirSubstituicao: semanaPublicada })}
 
                         {requiresAjudante && renderSlotButton({
                             label: TT.ajudante,
@@ -678,7 +727,9 @@ const Designar = ({
                             active: slotAtivo?.key === 'ajudante' && slotAtivo?.parteId === parte.id,
                             emptyText: TT.opcional,
                             onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: 'ajudante', parteId: parte.id }); },
-                            slotCtx: { key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }
+                            slotCtx: { key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado },
+                            substituicao: getSubstituicaoSlot({ key: 'ajudante', parteId: parte.id, semanaIndex: semanaIndexFiltrado }, parte.ajudante),
+                            permitirSubstituicao: semanaPublicada
                         })}
                     </div>
                 )}
@@ -749,6 +800,11 @@ const Designar = ({
                                     semanasParaExibir.map(({ sem, idx, key }) => {
                                         const partesDaSemana = Array.isArray(sem?.partes) ? sem.partes : [];
                                         const isArq = !!sem?.arquivada;
+                                        const publicadaNoQuadro = sem?.publicadaNoQuadro !== false;
+                                        const substituicoesSemana = getSubstituicoesSemana(sem);
+                                        const agendaPendenteSync = !!(sem?.agendaPendenteSync || sem?.needsCalendarSync);
+                                        const historicoPendenteSync = !!sem?.historicoPendenteSync;
+                                        const substituicaoPresidente = getSubstituicaoAtiva(sem, { key: 'presidente', semanaIndex: idx }, sem?.presidente);
 
                                         const tipoEvento = getTipoEventoSemana(sem, config);
                                         const isVisita = tipoEvento === 'visita';
@@ -775,7 +831,26 @@ const Designar = ({
                                                             {isVisita && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-600 text-white border border-blue-700 flex items-center gap-1 uppercase tracking-wider animate-pulse"><Briefcase size={10} /> {TT.visitaSC}</span>}
                                                             {isAssembly && !tipoEvento.includes('congresso') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center gap-1"><Tent size={10} /> {TT.assembleia}</span>}
                                                             {isAssembly && tipoEvento.includes('congresso') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1"><UsersRound size={10} /> {TT.congresso}</span>}
-                                                        </h3>
+                                                             <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider ${publicadaNoQuadro ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                                 {publicadaNoQuadro ? <Eye size={10} /> : <EyeOff size={10} />}
+                                                                 {publicadaNoQuadro ? 'Publicada' : 'Rascunho'}
+                                                             </span>
+                                                            {agendaPendenteSync && (
+                                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
+                                                                    <Calendar size={10} /> Agenda pendente
+                                                                </span>
+                                                            )}
+                                                            {historicoPendenteSync && (
+                                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-orange-50 text-orange-700 border-orange-200">
+                                                                    <Archive size={10} /> Histórico pendente
+                                                                </span>
+                                                            )}
+                                                            {substituicoesSemana.length > 0 && (
+                                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-orange-50 text-orange-700 border-orange-200">
+                                                                    <RefreshCw size={10} /> {substituicoesSemana.length} subst.
+                                                                </span>
+                                                            )}
+                                                         </h3>
                                                         <p className="text-[11px] text-gray-500 flex flex-wrap items-center gap-1">
                                                             {displayDateExtenso ? (
                                                                 <>
@@ -788,6 +863,9 @@ const Designar = ({
                                                         </p>
                                                     </div>
                                                     <div className="flex w-full sm:w-auto justify-end gap-1.5 shrink-0">
+                                                        <button onClick={() => togglePublicacaoSemana(key)} className={`p-1.5 rounded-lg border bg-white transition ${publicadaNoQuadro ? 'text-emerald-600 hover:bg-emerald-50 border-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`} title={publicadaNoQuadro ? 'Ocultar do quadro público' : 'Publicar no quadro público'}>
+                                                            {publicadaNoQuadro ? <Eye size={14} /> : <EyeOff size={14} />}
+                                                        </button>
                                                         <button onClick={() => toggleArquivadaSemana(key, !isArq)} className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 transition" title={isArq ? TT.restaurar : TT.arquivar}>
                                                             {isArq ? <RotateCcw size={14} /> : <Archive size={14} />}
                                                         </button>
@@ -796,6 +874,13 @@ const Designar = ({
                                                         </button>
                                                     </div>
                                                 </div>
+
+                                                {(agendaPendenteSync || historicoPendenteSync) && !isAssembly && (
+                                                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 flex items-center gap-2">
+                                                        <RefreshCw size={13} className="shrink-0" />
+                                                        <span>Há substituição nesta semana. Revise as notificações, grave o histórico e sincronize a Google Agenda depois da alteração.</span>
+                                                    </div>
+                                                )}
 
                                                 {/* 🔥 AVISO CHAMATIVO NA TELA (Substitui as partes) */}
                                                 {isAssembly ? (
@@ -830,7 +915,7 @@ const Designar = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
-                                                                className={`bg-white py-2 px-3 rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx
+                                                                className={`bg-white py-2 px-3 ${sem.presidente ? 'pr-16' : 'pr-10'} rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx
                                                                     ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]"
                                                                     : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx
                                                                         ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
@@ -851,7 +936,18 @@ const Designar = ({
                                                                     )}
                                                                 </div>
                                                             </button>
-                                                            <button type="button" onClick={(e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); }} className="absolute top-1/2 -translate-y-1/2 right-1 z-10 p-1.5 rounded-full bg-yellow-100 text-yellow-600 opacity-0 group-hover/slot:opacity-100 transition-all hover:bg-yellow-200 shadow-sm focus:opacity-100"><Lightbulb size={12} /></button>
+                                                            <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1 opacity-0 group-hover/slot:opacity-100 transition-all focus-within:opacity-100">
+                                                                {publicadaNoQuadro && sem.presidente && (
+                                                                    <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao({ key: 'presidente', semanaIndex: idx }, sem.presidente); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title="Substituir presidente"><RefreshCw size={12} /></button>
+                                                                )}
+                                                                <button type="button" onClick={(e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); }} className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 shadow-sm" title={TT.sugestaoInteligente}><Lightbulb size={12} /></button>
+                                                            </div>
+                                                            {substituicaoPresidente && (
+                                                                <div className="mt-1 flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
+                                                                    <RefreshCw size={10} />
+                                                                    <span className="truncate">Substituição: {substituicaoPresidente.de?.nome || '—'} para {substituicaoPresidente.para?.nome || sem.presidente?.nome}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* PARTES INICIAIS E SECOES */}
@@ -952,7 +1048,7 @@ const Designar = ({
             )}
 
             {/* MODAL SUGESTÃO */}
-            <ModalSugestao isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={listaFiltradaPorFlag?.[modalSugestao.semanaIndex]} modalKey={modalSugestao.key} cargosMap={cargosMap} lang={lang} />
+            <ModalSugestao isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={listaFiltradaPorFlag?.[modalSugestao.semanaIndex]} modalKey={modalSugestao.key} cargosMap={cargosMap} lang={lang} modo={modalSugestao.modo} pessoaAtual={modalSugestao.anterior} />
         </div>
     );
 };

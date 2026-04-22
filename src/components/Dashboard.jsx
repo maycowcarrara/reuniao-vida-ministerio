@@ -77,13 +77,6 @@ export default function Dashboard({
             return dataCalculada;
         };
 
-        const parseISODate = (dataISO) => {
-            if (!dataISO) return null;
-            const [ano, mes, dia] = dataISO.split('-').map(Number);
-            if (!ano || !mes || !dia) return null;
-            return new Date(ano, mes - 1, dia, 12, 0, 0);
-        };
-
         const toISODateOnly = (dateObj) => {
             const y = dateObj.getFullYear();
             const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -419,12 +412,19 @@ export default function Dashboard({
         });
 
         const resumoConfirmacoes = countConfirmacoesDaSemana(proxima);
+        const semanasComAgendaPendente = ativas.filter((semana) => !!(semana?.agendaPendenteSync || semana?.needsCalendarSync)).length;
+        const semanasComHistoricoPendente = ativas.filter((semana) => !!semana?.historicoPendenteSync).length;
+        const substituicoesPendentes = ativas.reduce((acc, semana) => {
+            const substituicoes = Array.isArray(semana?.substituicoes) ? semana.substituicoes.filter((item) => !item?.canceladaEm) : [];
+            return acc + substituicoes.length;
+        }, 0);
 
         return {
             proxima, ativas, eventosAgendados, programacaoPorMes, mesesCobertos, coberturaProgramacao,
             totalAlunos, totalAtivos, totalDesabilitados,
             countAnciaos, countServos, countIrmas,
-            usadosNoTrimestre, precisandoAtencao, resumoConfirmacoes
+            usadosNoTrimestre, precisandoAtencao, resumoConfirmacoes,
+            semanasComAgendaPendente, semanasComHistoricoPendente, substituicoesPendentes
         };
     }, [listaProgramacoes, alunos, config, confirmacoes, localTxt]);
 
@@ -547,6 +547,92 @@ export default function Dashboard({
         }
     ];
 
+    const pendenciasDashboard = [
+        {
+            key: 'historico',
+            value: stats.semanasComHistoricoPendente,
+            label: 'Histórico para gravar',
+            hint: 'Alterações em semanas publicadas',
+            actionLabel: 'Gravar',
+            onClick: () => setAbaAtiva('revisar'),
+            tone: 'orange'
+        },
+        {
+            key: 'agenda',
+            value: stats.semanasComAgendaPendente,
+            label: 'Agenda para atualizar',
+            hint: stats.substituicoesPendentes ? `${stats.substituicoesPendentes} substituição(ões)` : 'Revisar alterações',
+            actionLabel: 'Revisar',
+            onClick: () => setAbaAtiva('revisar'),
+            tone: 'sky'
+        },
+        {
+            key: 'confirmacoes',
+            value: stats.resumoConfirmacoes.faltando,
+            label: 'Confirmações pendentes',
+            hint: stats.proxima ? stats.proxima.semana : '',
+            actionLabel: 'Notificar',
+            onClick: () => stats.proxima && onAbrirNotificacoesSemana?.(stats.proxima),
+            tone: 'amber'
+        },
+        {
+            key: 'recusas',
+            value: stats.resumoConfirmacoes.recusadas,
+            label: 'Respostas negativas',
+            hint: 'Ver substituições',
+            actionLabel: 'Revisar',
+            onClick: () => stats.proxima && onAbrirNotificacoesSemana?.(stats.proxima),
+            tone: 'rose'
+        },
+        {
+            key: 'designacoes',
+            value: stats.programacaoPorMes.reduce((sum, mes) => sum + mes.designacoesPendentes, 0),
+            label: 'Designações em aberto',
+            hint: 'Mês atual e próximo',
+            actionLabel: 'Designar',
+            onClick: () => setAbaAtiva('designar'),
+            tone: 'blue'
+        },
+        {
+            key: 'importar',
+            value: stats.programacaoPorMes.reduce((sum, mes) => sum + mes.faltandoImportacao, 0),
+            label: 'Semanas a importar',
+            hint: 'Cobertura da programação',
+            actionLabel: 'Importar',
+            onClick: () => setAbaAtiva('importar'),
+            tone: 'indigo'
+        },
+        {
+            key: 'rodizio',
+            value: stats.precisandoAtencao.length,
+            label: 'Alunos pedindo atenção',
+            hint: 'Rodízio e histórico',
+            actionLabel: 'Alunos',
+            onClick: () => setAbaAtiva('alunos'),
+            tone: 'slate'
+        },
+        {
+            key: 'rascunhos',
+            value: (listaProgramacoes || []).filter((semana) => !semana?.arquivada && semana?.publicadaNoQuadro === false).length,
+            label: 'Rascunhos no quadro',
+            hint: 'Ocultos do público',
+            actionLabel: 'Publicar',
+            onClick: () => setAbaAtiva('designar'),
+            tone: 'emerald'
+        }
+    ].filter((item) => item.value > 0);
+
+    const toneClasses = {
+        amber: 'border-amber-100 bg-amber-50 text-amber-700',
+        rose: 'border-rose-100 bg-rose-50 text-rose-700',
+        blue: 'border-blue-100 bg-blue-50 text-blue-700',
+        indigo: 'border-indigo-100 bg-indigo-50 text-indigo-700',
+        slate: 'border-slate-100 bg-slate-50 text-slate-700',
+        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+        sky: 'border-sky-100 bg-sky-50 text-sky-700',
+        orange: 'border-orange-100 bg-orange-50 text-orange-700'
+    };
+
     return (
         <div className="space-y-5 px-3 pt-3 pb-20 sm:p-6 xl:p-7 min-[1800px]:p-8 animate-in fade-in duration-500">
 
@@ -560,6 +646,49 @@ export default function Dashboard({
                     <Calendar size={14} className="text-blue-600" />
                     <span>{txt.hoje}: <strong>{new Date().toLocaleDateString()}</strong></span>
                 </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="flex items-center gap-2 text-sm font-black text-slate-800">
+                            <AlertTriangle size={17} className={pendenciasDashboard.length ? 'text-amber-500' : 'text-emerald-500'} />
+                            Central de pendências
+                        </h2>
+                        <p className="mt-1 text-xs font-medium text-slate-500">
+                            {pendenciasDashboard.length ? 'O que pede atenção agora.' : 'Tudo em dia nos principais fluxos.'}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setAbaAtiva('revisar')}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100"
+                    >
+                        Abrir revisão <ArrowRight size={13} />
+                    </button>
+                </div>
+
+                {pendenciasDashboard.length > 0 && (
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        {pendenciasDashboard.map((item) => (
+                            <button
+                                key={item.key}
+                                type="button"
+                                onClick={item.onClick}
+                                className={`flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition hover:shadow-sm ${toneClasses[item.tone]}`}
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-[11px] font-black uppercase tracking-wide">{item.label}</p>
+                                    <p className="mt-1 truncate text-[11px] font-semibold opacity-80">{item.hint}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl font-black">{item.value}</span>
+                                    <span className="rounded-lg bg-white/70 px-2 py-1 text-[10px] font-black">{item.actionLabel}</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* TOP: PAINEL PRINCIPAL */}

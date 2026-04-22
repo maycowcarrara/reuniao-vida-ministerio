@@ -18,7 +18,7 @@ import {
     PlayCircle,
     Download
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useSectionMessages, useI18n } from '../i18n';
 import { getLanguageMeta } from '../config/appConfig';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
@@ -180,12 +180,9 @@ const getDataReuniaoISO = (sem, config) => {
 // ============================================================================
 
 export default function QuadroPublico({ programacoes, config, usuario }) {
-    const [busca, setBusca] = useState('');
-    const [autenticado, setAutenticado] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return window.localStorage.getItem('quadro_auth') === 'true';
-    });
-    const [senhaInput, setSenhaInput] = useState('');
+    const [searchParams] = useSearchParams();
+    const pessoaParam = searchParams.get('p') || '';
+    const [busca, setBusca] = useState(() => pessoaParam);
 
     const [semanaExpandida, setSemanaExpandida] = useState(0);
     const [agora, setAgora] = useState(new Date());
@@ -193,8 +190,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     // --- ESTADOS DO PWA (INSTALAÇÃO) ---
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [showInstallBanner, setShowInstallBanner] = useState(false);
-
-    const SENHA_CONGREGACAO = "2026";
 
     // --- DICIONÁRIO DE TRADUÇÕES ---
     const { lang } = useI18n();
@@ -245,16 +240,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         }
     };
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (senhaInput === SENHA_CONGREGACAO) {
-            setAutenticado(true);
-            localStorage.setItem('quadro_auth', 'true');
-        } else {
-            alert(T.codigoIncorreto);
-        }
-    };
-
     const semanasParaExibir = useMemo(() => {
         if (!programacoes) return [];
 
@@ -264,6 +249,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
         let filtradas = programacoes.filter(sem => {
             if (sem.arquivada) return false;
+            if (sem.publicadaNoQuadro === false) return false;
 
             const dtCalculo = getSemanaStartISOCompartilhado(sem, config);
             if (!dtCalculo) return false;
@@ -287,14 +273,15 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             return { ...sem, semanaStartISO, dataCorreta, partes: partesComHorario, meetingStartTimeStr, meetingEndTimeStr };
         });
 
-        const termo = busca.toLowerCase().trim();
+        const termo = busca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
         if (termo) {
             filtradas = filtradas.map(sem => {
-                const temPres = sem.presidente?.nome?.toLowerCase().includes(termo);
+                const normalizarNome = (nome = '') => nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const temPres = normalizarNome(sem.presidente?.nome).includes(termo);
 
                 const partesFiltradas = (sem.partes || []).filter(p => {
                     const nomes = [p.estudante?.nome, p.ajudante?.nome, p.oracao?.nome, p.dirigente?.nome, p.leitor?.nome]
-                        .map(n => n?.toLowerCase() || '');
+                        .map(n => normalizarNome(n || ''));
                     return nomes.some(n => n.includes(termo));
                 });
 
@@ -343,33 +330,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const modoTempoReal = reuniaoAoVivo !== -1;
     const modoPreLive = !modoTempoReal && reuniaoEmContagem.index !== -1;
     const contagemRegressiva = formatarContagemRegressiva(reuniaoEmContagem.msRestantes);
-
-    if (!autenticado) {
-        return (
-            <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 font-sans">
-                <form onSubmit={handleLogin} className="bg-white p-8 rounded-[3rem] shadow-2xl w-full max-w-sm text-center border border-slate-200">
-                    <div className="bg-blue-600 text-white w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl rotate-3">
-                        <Lock size={40} className="-rotate-3" />
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-800 mb-2">{T.titulo}</h2>
-                    <p className="text-slate-500 text-sm mb-8 px-4 leading-relaxed">
-                        {T.descAcesso}
-                    </p>
-                    <input
-                        type="number"
-                        pattern="[0-9]*"
-                        placeholder="0000"
-                        className="w-full text-center text-4xl font-black tracking-[0.2em] bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 focus:border-blue-500 focus:bg-white outline-none transition-all mb-6 focus:ring-4 focus:ring-blue-500/20"
-                        value={senhaInput}
-                        onChange={e => setSenhaInput(e.target.value)}
-                    />
-                    <button type="submit" className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95">
-                        {T.btnAcesso}
-                    </button>
-                </form>
-            </div>
-        );
-    }
 
     const toggleSemana = (idx) => setSemanaExpandida(prev => prev === idx ? null : idx);
 

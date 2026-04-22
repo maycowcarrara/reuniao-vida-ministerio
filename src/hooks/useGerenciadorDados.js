@@ -19,6 +19,7 @@ import {
     markNotificationRead,
     NOTIFICATIONS_COLLECTION
 } from '../services/notificacoesInternas';
+import { toast } from '../utils/toast';
 
 const ESTADO_INICIAL = {
     configuracoes: DEFAULT_CONFIG,
@@ -32,17 +33,20 @@ export function useGerenciadorDados() {
     const [confirmacoes, setConfirmacoes] = useState([]);
     const [notificacoes, setNotificacoes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [accessError, setAccessError] = useState(null);
 
     // 1. Monitorar Login
     useEffect(() => {
         const unsubAuth = onAuthStateChanged(auth, (user) => {
             setUsuario(user);
             if (user) {
+                setAccessError(null);
                 setLoading(true);
             } else {
                 setDados(ESTADO_INICIAL);
                 setConfirmacoes([]);
                 setNotificacoes([]);
+                setAccessError(null);
                 setLoading(false);
             }
         });
@@ -55,25 +59,38 @@ export function useGerenciadorDados() {
 
         const uid = usuario.uid;
         const basePath = `users/${uid}`;
+        let handledPermissionError = false;
+
+        const handleSnapshotError = (error) => {
+            console.error("Erro ao sincronizar dados:", error);
+            setLoading(false);
+
+            if (error?.code === 'permission-denied' && !handledPermissionError) {
+                handledPermissionError = true;
+                setAccessError(error);
+                toast.error(error, 'Acesso restrito a administradores autorizados.');
+                auth.signOut().catch((signOutError) => console.error("Erro ao sair apos acesso negado:", signOutError));
+            }
+        };
 
         const unsubConfig = onSnapshot(doc(db, basePath, "configuracoes", "geral"), (docSnap) => {
             if (docSnap.exists()) {
                 setDados(prev => ({ ...prev, configuracoes: normalizeSystemConfig(docSnap.data()) }));
             }
-        });
+        }, handleSnapshotError);
 
         const unsubAlunos = onSnapshot(collection(db, basePath, "alunos"), (snap) => {
             const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
             setDados(prev => ({ ...prev, alunos: lista }));
-        });
+        }, handleSnapshotError);
 
         const unsubProg = onSnapshot(collection(db, basePath, "programacao"), (snap) => {
             const lista = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             lista.sort((a, b) => getSemanaSortTimestamp(a) - getSemanaSortTimestamp(b));
             setDados(prev => ({ ...prev, historico_reunioes: lista }));
             setLoading(false);
-        });
+        }, handleSnapshotError);
 
         const unsubConfirmacoes = onSnapshot(collection(db, basePath, "confirmacoes"), (snap) => {
             const lista = snap.docs
@@ -81,7 +98,7 @@ export function useGerenciadorDados() {
                 .sort((a, b) => (b.lastResponseAtIso || '').localeCompare(a.lastResponseAtIso || ''));
 
             setConfirmacoes(lista);
-        });
+        }, handleSnapshotError);
 
         const notificationsQuery = query(
             collection(db, NOTIFICATIONS_COLLECTION),
@@ -94,7 +111,7 @@ export function useGerenciadorDados() {
                 .sort((a, b) => (b.createdAtIso || '').localeCompare(a.createdAtIso || ''));
 
             setNotificacoes(lista);
-        });
+        }, handleSnapshotError);
 
         return () => {
             unsubConfig();
@@ -222,6 +239,7 @@ export function useGerenciadorDados() {
         confirmacoes,
         notificacoes,
         loading,
+        accessError,
         usuario,
         salvarItem,
         excluirItem,

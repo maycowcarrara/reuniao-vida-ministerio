@@ -158,6 +158,12 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         URL.revokeObjectURL(url);
     };
 
+    const escapeCsvValue = (value) => {
+        const text = String(value ?? '');
+        if (!/[;"\r\n]/.test(text)) return text;
+        return `"${text.replace(/"/g, '""')}"`;
+    };
+
     const handleExport = (tipo) => {
         if (tipo === 'json') {
             // AQUI É A GRANDE SACADA: 
@@ -182,7 +188,10 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             if (tipo === 'csv') {
                 if (rows.length === 0) return;
                 // Adicionado BOM para o Excel do Windows abrir os acentos perfeitamente no CSV
-                const csv = '\uFEFF' + [Object.keys(rows[0]).join(';'), ...rows.map(o => Object.values(o).join(';'))].join('\n');
+                const csv = '\uFEFF' + [
+                    Object.keys(rows[0]).map(escapeCsvValue).join(';'),
+                    ...rows.map(o => Object.values(o).map(escapeCsvValue).join(';'))
+                ].join('\n');
                 baixar(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), t.exportFiles.csv);
             }
             else if (tipo === 'txt') {
@@ -233,6 +242,22 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             if (onExcluirAluno) await onExcluirAluno(aluno.id);
             setAlunos(alunos.filter(a => a.id !== aluno.id));
             toast.success(t.msg.removerSucesso);
+        }
+    };
+
+    const buildQuadroPessoaUrl = (aluno) => {
+        const url = new URL('/quadro', window.location.origin);
+        url.searchParams.set('p', aluno?.nome || '');
+        return url.toString();
+    };
+
+    const handleCopiarLinkQuadro = async (aluno) => {
+        const link = buildQuadroPessoaUrl(aluno);
+        try {
+            await navigator.clipboard.writeText(link);
+            toast.success(`Link do quadro copiado para ${aluno.nome}.`);
+        } catch {
+            window.prompt('Copie o link do quadro:', link);
         }
     };
 
@@ -386,9 +411,9 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 {alunosProcessados.length > 0 ? (
                     alunosProcessados.map(aluno => (
                         viewMode === 'grid' ?
-                            <AlunoCard key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} />
+                            <AlunoCard key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} onCopyPublicLink={handleCopiarLinkQuadro} />
                             :
-                            <AlunoListItem key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} />
+                            <AlunoListItem key={aluno.id} aluno={aluno} cargosMap={CARGOS_MAP} lang={lang} t={t} onEdit={openEditar} onHistory={(a) => { setAlunoHistorico(a); setModalHistoryOpen(true); }} onDelete={handleExcluir} onCopyPublicLink={handleCopiarLinkQuadro} />
                     ))
                 ) : (
                     <div className="col-span-full py-10 flex flex-col items-center justify-center text-gray-400 no-print">

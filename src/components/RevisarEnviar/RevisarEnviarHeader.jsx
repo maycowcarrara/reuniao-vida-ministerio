@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarDays, Loader2, Calendar, X, Printer, Save, SlidersHorizontal } from 'lucide-react';
+import { CalendarDays, Loader2, Calendar, X, Printer, Save, SlidersHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from '../../utils/toast';
 import { getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 
@@ -158,6 +158,16 @@ const RevisarEnviarHeader = ({
                     const k = getSemanaKey(s, i);
                     const on = !!printSelecionadas?.[k];
                     const isArq = !!s?.arquivada;
+                    const historicoPendente = !!s?.historicoPendenteSync;
+                    const agendaPendente = !!(s?.agendaPendenteSync || s?.needsCalendarSync);
+                    const historicoOk = !!s?.historicoGravadoEm && !historicoPendente;
+                    const agendaOk = !!s?.agendaSincronizadaEm && !agendaPendente;
+                    const pillClass = (ok, pending) => {
+                        if (on) return pending ? 'bg-amber-300/25 text-amber-50 border-white/20' : 'bg-white/20 text-white border-white/20';
+                        if (pending) return 'bg-amber-50 text-amber-700 border-amber-200';
+                        if (ok) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                        return 'bg-slate-50 text-slate-400 border-slate-200';
+                    };
 
                     return (
                         <button
@@ -175,6 +185,18 @@ const RevisarEnviarHeader = ({
                             {isArq && (
                                 <span className={`text-[9px] font-black px-1 py-0.5 rounded ${on ? "bg-black/20 text-white" : "bg-gray-100 text-gray-600"}`}>
                                     {t.badgeArquivada}
+                                </span>
+                            )}
+                            {(historicoOk || historicoPendente) && (
+                                <span className={`inline-flex items-center gap-0.5 rounded border px-1 py-0.5 text-[9px] font-black ${pillClass(historicoOk, historicoPendente)}`} title={historicoPendente ? 'Histórico pendente' : 'Histórico gravado'}>
+                                    {historicoPendente ? <AlertCircle size={9} /> : <CheckCircle2 size={9} />}
+                                    H
+                                </span>
+                            )}
+                            {(agendaOk || agendaPendente) && (
+                                <span className={`inline-flex items-center gap-0.5 rounded border px-1 py-0.5 text-[9px] font-black ${pillClass(agendaOk, agendaPendente)}`} title={agendaPendente ? 'Google Agenda pendente' : 'Google Agenda sincronizada'}>
+                                    {agendaPendente ? <AlertCircle size={9} /> : <CheckCircle2 size={9} />}
+                                    A
                                 </span>
                             )}
                         </button>

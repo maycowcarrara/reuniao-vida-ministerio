@@ -34,6 +34,7 @@ const RevisarEnviar = ({
     config,
     confirmacoes = [],
     onAlunosChange,
+    onProgramacoesChange = null,
     sharedWeekSelection = {},
     setSharedWeekSelection = () => { },
     reviewShortcutRequest = null
@@ -423,6 +424,8 @@ const RevisarEnviar = ({
 
         let novosAlunos = [...alunos];
         let gravouAlgo = false;
+        let alterouHistorico = false;
+        const temPendenciaHistorico = semanasSelecionadas.some((sem) => !!sem?.historicoPendenteSync);
 
         console.log("=== INICIANDO SINCRONIZAÇÃO DE HISTÓRICO ===");
 
@@ -471,6 +474,7 @@ const RevisarEnviar = ({
 
                     if (caiNaSemana) {
                         console.log(`[LIXEIRA] Apagando registro -> Aluno: ${aluno.nome} | Parte: ${h.parte} | Data antiga: ${h.data}`);
+                        alterouHistorico = true;
                     }
 
                     return !caiNaSemana; // Se cai na semana, retorna false para APAGAR da lista
@@ -568,8 +572,27 @@ const RevisarEnviar = ({
 
         console.log("=== SINCRONIZAÇÃO TOTAL FINALIZADA ===");
 
-        if (gravouAlgo) {
-            onAlunosChange(novosAlunos);
+        if (gravouAlgo || alterouHistorico || temPendenciaHistorico) {
+            if (gravouAlgo || alterouHistorico) {
+                onAlunosChange(novosAlunos);
+            }
+            if (onProgramacoesChange) {
+                const sincronizadas = new Set(
+                    semanasSelecionadas
+                        .map((sem) => (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString())
+                        .filter(Boolean)
+                );
+                const syncedAt = new Date().toISOString();
+                onProgramacoesChange((prev) => (prev || []).map((sem) => {
+                    const key = (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString();
+                    if (!sincronizadas.has(key)) return sem;
+                    const proximaSemana = { ...(sem || {}), historicoGravadoEm: syncedAt };
+                    delete proximaSemana.historicoPendenteSync;
+                    delete proximaSemana.historicoPendenteMotivo;
+                    delete proximaSemana.historicoPendenteDesde;
+                    return proximaSemana;
+                }));
+            }
             toast.success(t.syncOk);
         } else {
             toast.info(t.nadaParaGravar);
@@ -733,6 +756,24 @@ const RevisarEnviar = ({
                         const resultado = await enviarEventosParaAgenda(tokenGoogle, calendarId, reunioesComDataExata, config);
 
                         if (resultado.sucesso) {
+                            if (onProgramacoesChange) {
+                                const sincronizadas = new Set(
+                                    reunioesSelecionadas
+                                        .map((sem) => (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString())
+                                        .filter(Boolean)
+                                );
+                                const syncedAt = new Date().toISOString();
+                                onProgramacoesChange((prev) => (prev || []).map((sem) => {
+                                    const key = (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString();
+                                    if (!sincronizadas.has(key)) return sem;
+                                    const proximaSemana = { ...(sem || {}), agendaSincronizadaEm: syncedAt };
+                                    delete proximaSemana.agendaPendenteSync;
+                                    delete proximaSemana.needsCalendarSync;
+                                    delete proximaSemana.agendaPendenteMotivo;
+                                    delete proximaSemana.agendaPendenteDesde;
+                                    return proximaSemana;
+                                }));
+                            }
                             toast.success(formatText(t.agendaSuccessTpl, { count: resultado.quantidade }));
                         } else {
                             toast.error(resultado.erro, t.agendaError);

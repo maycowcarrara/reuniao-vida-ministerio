@@ -1,8 +1,8 @@
 import React from 'react';
-import { Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock } from 'lucide-react';
+import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock } from 'lucide-react';
 import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais } from './utils';
 
-const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete }) => {
+const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onCopyPublicLink }) => {
     const cKey = getCargoKey(aluno.tipo, cargosMap);
     const info = cargosMap[cKey] || cargosMap.irmao;
     const ult = getUltimoRegistro(aluno);
@@ -51,6 +51,7 @@ const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete 
                             <div className="hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-all no-print">
                                 <button onClick={() => onEdit(aluno)} className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-xl border shadow-sm" title={t.modal.editar}><Edit2 size={14} /></button>
                                 <button onClick={() => onHistory(aluno)} className="p-2 bg-gray-50 text-gray-400 hover:text-orange-500 rounded-xl border shadow-sm" title={t.modal.historico}><History size={14} /></button>
+                                <button onClick={() => onCopyPublicLink?.(aluno)} className="p-2 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-xl border shadow-sm" title="Copiar link do quadro"><Copy size={14} /></button>
                                 <button onClick={() => onDelete(aluno)} className={`p-2 rounded-xl border shadow-sm transition-colors ${podeExcluir ? "bg-white text-red-500 hover:bg-red-50 border-red-100" : "bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed"}`} title={podeExcluir ? t.modal.excluir : t.msg.erroSoDesabilitados}>
                                     <Trash2 size={14} />
                                 </button>
@@ -76,6 +77,7 @@ const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete 
                     <div className="flex sm:hidden gap-2 mt-3 no-print">
                         <button onClick={() => onEdit(aluno)} className="flex-1 py-2 rounded-xl border bg-gray-50 text-gray-700 font-black text-[10px] uppercase">{t.modal.editar}</button>
                         <button onClick={() => onHistory(aluno)} className="flex-1 py-2 rounded-xl border bg-orange-50 text-orange-700 font-black text-[10px] uppercase">{t.modal.historico}</button>
+                        <button onClick={() => onCopyPublicLink?.(aluno)} className="flex-1 py-2 rounded-xl border bg-emerald-50 text-emerald-700 font-black text-[10px] uppercase">Link</button>
                         <button onClick={() => onDelete(aluno)} className={`flex-1 py-2 rounded-xl border font-black text-[10px] uppercase ${podeExcluir ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-300 cursor-not-allowed"}`}>{t.modal.excluir}</button>
                     </div>
                 </div>

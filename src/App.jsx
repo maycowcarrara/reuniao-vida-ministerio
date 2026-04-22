@@ -17,7 +17,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { toast } from './utils/toast';
 import { getMeetingDateISOFromSemana, getWeekStartISOFromSemana } from './utils/revisarEnviar/dates';
 import { getSemanaStartISO } from './utils/eventos';
-import { normalizeLanguage, syncDocumentLanguage } from './config/appConfig';
+import { normalizeLanguage, normalizeMeetingDay, syncDocumentLanguage } from './config/appConfig';
 import { getSectionMessages, I18nProvider } from './i18n';
 
 const LOCAL_ADMIN_UID_KEY = 'quadro_admin_uid';
@@ -99,6 +99,61 @@ function AdminPanel() {
   const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
   const unreadNotificationsCount = (notificacoes || []).filter((item) => !item?.readAt && !item?.readAtIso).length;
 
+  const getTodayISO = () => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const getDataReuniaoDaProgramacao = (sem, config = dadosSistema?.configuracoes) => (
+    sem?.dataReuniao ||
+    sem?.dataExata ||
+    getMeetingDateISOFromSemana({
+      semanaStr: sem?.semana,
+      config,
+      isoFallback: sem?.dataInicio || sem?.data || null,
+      textSources: [sem?.semana]
+    })
+  );
+
+  const limparHistoricoAlunosPorDatas = (alunos = [], datasBase = []) => {
+    const ranges = datasBase.filter(Boolean).map((dataStr) => {
+      const [ano, mes, dia] = dataStr.split('-').map(Number);
+      if (!ano || !mes || !dia) return null;
+      const dataBase = new Date(ano, mes - 1, dia, 12, 0, 0);
+      const diaSemana = dataBase.getDay();
+      const diffParaSegunda = diaSemana === 0 ? 6 : diaSemana - 1;
+      const start = new Date(dataBase);
+      start.setDate(dataBase.getDate() - diffParaSegunda);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }).filter(Boolean);
+
+    if (ranges.length === 0) return { alunos, alterou: false };
+
+    let alterou = false;
+    const novosAlunos = alunos.map((aluno) => {
+      if (!Array.isArray(aluno?.historico)) return aluno;
+      const historico = aluno.historico.filter((item) => {
+        if (!item?.data) return true;
+        const [ano, mes, dia] = item.data.split('-').map(Number);
+        if (!ano || !mes || !dia) return true;
+        const dataHist = new Date(ano, mes - 1, dia, 12, 0, 0);
+        const caiNaSemana = ranges.some((range) => dataHist >= range.start && dataHist <= range.end);
+        if (caiNaSemana) alterou = true;
+        return !caiNaSemana;
+      });
+      return historico === aluno.historico ? aluno : { ...aluno, historico };
+    });
+
+    return { alunos: novosAlunos, alterou };
+  };
+
   const normalizeProgramacaoDates = (programacao, config = dadosSistema?.configuracoes) => {
     if (!programacao) return programacao;
 
@@ -153,8 +208,41 @@ function AdminPanel() {
     return nextProg;
   };
 
+  const prepararProgramacoesParaSalvar = (programacoes = [], configDestino = dadosSistema?.configuracoes, configOrigem = dadosSistema?.configuracoes) => {
+    const diaOrigem = normalizeMeetingDay(configOrigem?.dia_reuniao || configOrigem?.diaReuniao || configOrigem?.diaSemana);
+    const diaDestino = normalizeMeetingDay(configDestino?.dia_reuniao || configDestino?.diaReuniao || configDestino?.diaSemana);
+    const mudouDiaReuniao = diaOrigem !== diaDestino;
+    const hojeISO = getTodayISO();
+    const now = new Date().toISOString();
+
+    return programacoes.map((programacao) => {
+      if (!mudouDiaReuniao) return normalizeProgramacaoDates(programacao, configDestino);
+
+      const dataAtual = getDataReuniaoDaProgramacao(programacao, configOrigem);
+      const isFutura = !dataAtual || dataAtual >= hojeISO;
+      const isPublicada = programacao?.publicadaNoQuadro !== false;
+      const configParaSemana = isFutura && isPublicada ? configDestino : configOrigem;
+      const normalizada = normalizeProgramacaoDates(programacao, configParaSemana);
+
+      if (!isFutura || !isPublicada) return normalizada;
+
+      return {
+        ...normalizada,
+        agendaPendenteSync: true,
+        needsCalendarSync: true,
+        agendaPendenteMotivo: 'mudanca_dia_reuniao',
+        agendaPendenteDesde: now,
+        historicoPendenteSync: true,
+        historicoPendenteMotivo: 'mudanca_dia_reuniao',
+        historicoPendenteDesde: now,
+        ultimaAlteracaoPublicadaEm: now
+      };
+    });
+  };
+
   const salvarAlteracao = async (novosDados) => {
     const operacoes = [];
+    const configDestino = novosDados.configuracoes || dadosSistema?.configuracoes;
 
     if (novosDados.configuracoes) {
       operacoes.push(salvarItem('configuracoes', 'geral', novosDados.configuracoes));
@@ -169,8 +257,13 @@ function AdminPanel() {
     }
 
     if (Array.isArray(novosDados.historico_reunioes)) {
-      novosDados.historico_reunioes.forEach(p => {
-        const programacaoNormalizada = normalizeProgramacaoDates(p, novosDados.configuracoes || dadosSistema?.configuracoes);
+      const programacoesPreparadas = prepararProgramacoesParaSalvar(
+        novosDados.historico_reunioes,
+        configDestino,
+        dadosSistema?.configuracoes
+      );
+      programacoesPreparadas.forEach(p => {
+        const programacaoNormalizada = p;
         const semanaStr = String(programacaoNormalizada?.semana || '').trim();
         if (semanaStr) operacoes.push(salvarItem('programacao', semanaStr.replace(/[/\s,.]/g, '-'), programacaoNormalizada));
       });
@@ -347,6 +440,10 @@ function AdminPanel() {
 
   // 🔥 HANDLER ATUALIZADO: Agora recebe a data da semana e repassa para a função de limpar o histórico
   const handleExcluirSemanaBanco = async (id, dataDaSemana) => {
+    const { alunos: alunosLimpos, alterou } = limparHistoricoAlunosPorDatas(dadosSistema?.alunos || [], [dataDaSemana]);
+    if (alterou) {
+      await salvarAlteracao({ ...dadosSistema, alunos: alunosLimpos });
+    }
     await excluirSemanaELimparHistorico(id, dataDaSemana);
   };
 
@@ -526,7 +623,6 @@ function AdminPanel() {
                 listaProgramacoes={listaProgramacoes}
                 setListaProgramacoes={setListaProgramacoes}
                 alunos={dadosSistema?.alunos || []}
-                onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
                 cargosMap={CARGOS_MAP}
                 lang={lang}
                 t={t}
@@ -544,6 +640,7 @@ function AdminPanel() {
                 config={dadosSistema?.configuracoes}
                 confirmacoes={confirmacoes}
                 onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
+                onProgramacoesChange={setListaProgramacoes}
                 sharedWeekSelection={sharedWeekSelection}
                 setSharedWeekSelection={setSharedWeekSelection}
                 reviewShortcutRequest={reviewShortcutRequest}
