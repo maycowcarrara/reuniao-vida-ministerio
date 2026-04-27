@@ -60,7 +60,7 @@ const PT_MESSAGES = {
                 congresso: "Congresso Regional",
                 dicaVisita: "A reunião será movida automaticamente para Terça-feira.",
                 dicaCancelamento: "A reunião de meio de semana será cancelada.",
-                helpVisita: "Selecione a Segunda-feira da semana da visita.",
+                helpVisita: "Selecione a Segunda ou Terça-feira da semana da visita. O sistema vinculará automaticamente à semana correta.",
                 helpCongresso: "Selecione a Sexta-feira de início.",
                 helpAssembleia: "Selecione o dia exato (Sábado ou Domingo)."
             }
@@ -730,7 +730,7 @@ const ES_MESSAGES = {
                 congresso: "Asamblea Regional",
                 dicaVisita: "La reunión se moverá automáticamente al Martes.",
                 dicaCancelamento: "La reunión de entre semana será cancelada.",
-                helpVisita: "Seleccione el Lunes de la semana de la visita.",
+                helpVisita: "Seleccione el Lunes o Martes de la semana de la visita. El sistema la vinculará automáticamente a la semana correcta.",
                 helpCongresso: "Seleccione el Viernes de inicio.",
                 helpAssembleia: "Seleccione el día exacto (Sábado o Domingo)."
             }
