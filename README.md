@@ -51,13 +51,13 @@ Uma interface *Mobile-First* desenvolvida para os irmãos da congregação acess
 ### 📢 Integrações e Notificações Avançadas
 
 - **API Google Agenda:** Sincronização oficial e automática das partes diretamente com uma agenda do Google, exportando todas as partes com os dias, horários e detalhes perfeitamente configurados.
-- **E-mail Automático (EmailJS):** Disparo de e-mails em lote diretamente do sistema utilizando a plataforma **EmailJS**, enviando a notificação detalhada da designação sem depender de um cliente de e-mail local.
+- **E-mail Automático (EmailJS):** Envio em lote diretamente pelo sistema usando **EmailJS**. O fluxo padrão envia apenas e-mails pendentes das semanas selecionadas; o reenvio de e-mails já enviados fica em uma ação separada e explícita.
 - **WhatsApp Dinâmico:** Geração de mensagens preenchidas com nome, data, parte e ajudante, prontas para envio em um clique via `wa.me`.
 - **Confirmação Pública por Link:** Cada designação pode gerar um link público exclusivo, sem login, para aceitar ou recusar a designação.
 - **Lembrete Semanal Separado:** Além do aceite inicial, o sistema permite reconfirmação da semana da parte com status próprio.
 - **Confirmação Manual pelo Admin:** O superintendente pode registrar aceite ou ausência mesmo que a pessoa tenha respondido pessoalmente ou por WhatsApp fora do link.
-- **Central Interna de Notificações:** Mudanças de status geram alertas internos persistidos no Firestore e exibidos no sino do painel administrativo.
-- **Rastreamento de Envio Persistente:** Os checks visuais de WhatsApp, e-mail e lembrete semanal ficam gravados no banco, não apenas em memória da sessão.
+- **Central Interna de Notificações:** Mudanças de status geram alertas internos persistidos no Firestore e exibidos no sino do painel administrativo, com lista compacta, expansão por "Ver mais", exclusão individual e limpeza das notificações lidas.
+- **Rastreamento de Envio Persistente:** Os checks visuais de WhatsApp, e-mail e lembrete semanal ficam gravados no banco, não apenas em memória da sessão. Alterações em designações publicadas fazem o e-mail afetado voltar para a fila de pendências sem apagar o histórico anterior.
 
 ---
 
@@ -78,7 +78,8 @@ Fluxo implementado hoje para designações:
    - `confirmado`
    - `imprevisto`
 6. Mudanças de status geram histórico e notificação interna.
-7. O último status vence, mas as mudanças ficam registradas para auditoria.
+7. Alterações em partes/designações publicadas invalidam apenas os e-mails afetados, comparando a data da alteração com o último envio registrado.
+8. O último status vence, mas as mudanças ficam registradas para auditoria.
 
 Coleções envolvidas:
 
@@ -290,8 +291,9 @@ Certifique-se de ter o [Node.js](https://nodejs.org/) instalado.
 
 ### Observação importante sobre versão
 
-- `npm run build` incrementa automaticamente a microversão (`patch`) no `package.json`
-- `npm run deploy` e `npm run deploy:all` também incrementam a microversão porque passam por `build`
+- `npm run dev` incrementa automaticamente a microversão (`patch`) no `package.json`
+- `npm run build` não incrementa versão; use-o livremente para validação local
+- `npm run deploy` e `npm run deploy:all` incrementam a microversão antes de publicar
 - `npm run deploy:rules` incrementa a microversão antes de publicar as regras
 - isso também atualiza o `package-lock.json`
 
@@ -307,7 +309,7 @@ Checklist rápido antes de fechar alterações em UI/configuração:
 - testar troca de idioma em `Configurações`
 - conferir se login, quadro público, importação e revisão continuam no idioma selecionado
 - validar o fluxo de confirmação pública, recusa e lembrete semanal
-- validar o sino de notificações e a ordenação das novas notificações no topo
+- validar o sino de notificações, a ordenação das novas notificações no topo, o botão "Ver mais" e a exclusão/limpeza das lidas
 - validar no quadro público a contagem regressiva de 5 minutos e a entrada automática no estado `AO VIVO`
 - evitar adicionar novos textos fora do módulo central de i18n
 

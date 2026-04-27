@@ -381,6 +381,23 @@ export default function Dashboard({
 
         let usadosNoTrimestre = 0;
         const precisandoAtencao = [];
+        const balanceMap = new Map([
+            ['presidente', { label: 'Presidente', total: 0, pessoas: new Set() }],
+            ['oracao', { label: 'Oração', total: 0, pessoas: new Set() }],
+            ['leitura', { label: 'Leitura', total: 0, pessoas: new Set() }],
+            ['ministerio', { label: 'Ministério', total: 0, pessoas: new Set() }],
+            ['ajudante', { label: 'Ajudante', total: 0, pessoas: new Set() }],
+            ['vida', { label: 'Vida Cristã', total: 0, pessoas: new Set() }],
+            ['estudo', { label: 'Estudo/Leitor', total: 0, pessoas: new Set() }]
+        ]);
+
+        const addBalance = (key, pessoa) => {
+            if (!pessoa?.id && !pessoa?.nome) return;
+            const item = balanceMap.get(key);
+            if (!item) return;
+            item.total += 1;
+            item.pessoas.add(pessoa.id || pessoa.nome);
+        };
 
         ativosAlunos.forEach(aluno => {
             const historico = Array.isArray(aluno.historico) ? aluno.historico : [];
@@ -405,6 +422,54 @@ export default function Dashboard({
             }
         });
 
+        ativas.forEach((semana) => {
+            if (isTipoEventoBloqueante(getTipoEventoSemana(semana, config))) return;
+            addBalance('presidente', semana?.presidente);
+
+            (Array.isArray(semana?.partes) ? semana.partes : []).forEach((parte) => {
+                const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
+                const titulo = normalizeStr(parte?.titulo ?? '');
+                const secao = normalizeStr(parte?.secao ?? '');
+
+                if (isPrayerPart(parte)) {
+                    addBalance('oracao', parte?.oracao || parte?.estudante);
+                    return;
+                }
+
+                if (isBibleStudyPart(parte)) {
+                    addBalance('estudo', parte?.dirigente || parte?.estudante);
+                    addBalance('estudo', parte?.leitor || semana?.leitor);
+                    return;
+                }
+
+                if (tipo.includes('cantico') || titulo.includes('cantico') || titulo.includes('cancion')) return;
+
+                if (titulo.includes('leitura') || titulo.includes('lectura')) {
+                    addBalance('leitura', parte?.estudante);
+                    return;
+                }
+
+                if (secao.includes('ministerio')) {
+                    addBalance('ministerio', parte?.estudante);
+                    addBalance('ajudante', parte?.ajudante);
+                    return;
+                }
+
+                if (secao.includes('vida')) {
+                    addBalance('vida', parte?.estudante || parte?.dirigente);
+                    addBalance('ajudante', parte?.ajudante);
+                }
+            });
+        });
+
+        const roleBalance = Array.from(balanceMap.entries()).map(([key, item]) => ({
+            key,
+            label: item.label,
+            total: item.total,
+            pessoas: item.pessoas.size,
+            media: item.pessoas.size > 0 ? Number((item.total / item.pessoas.size).toFixed(1)) : 0
+        }));
+
         precisandoAtencao.sort((a, b) => {
             if (a.dias === null) return -1;
             if (b.dias === null) return 1;
@@ -423,7 +488,7 @@ export default function Dashboard({
             proxima, ativas, eventosAgendados, programacaoPorMes, mesesCobertos, coberturaProgramacao,
             totalAlunos, totalAtivos, totalDesabilitados,
             countAnciaos, countServos, countIrmas,
-            usadosNoTrimestre, precisandoAtencao, resumoConfirmacoes,
+            usadosNoTrimestre, precisandoAtencao, resumoConfirmacoes, roleBalance,
             semanasComAgendaPendente, semanasComHistoricoPendente, substituicoesPendentes
         };
     }, [listaProgramacoes, alunos, config, confirmacoes, localTxt]);
@@ -567,24 +632,6 @@ export default function Dashboard({
             tone: 'sky'
         },
         {
-            key: 'confirmacoes',
-            value: stats.resumoConfirmacoes.faltando,
-            label: 'Confirmações pendentes',
-            hint: stats.proxima ? stats.proxima.semana : '',
-            actionLabel: 'Notificar',
-            onClick: () => stats.proxima && onAbrirNotificacoesSemana?.(stats.proxima),
-            tone: 'amber'
-        },
-        {
-            key: 'recusas',
-            value: stats.resumoConfirmacoes.recusadas,
-            label: 'Respostas negativas',
-            hint: 'Ver substituições',
-            actionLabel: 'Revisar',
-            onClick: () => stats.proxima && onAbrirNotificacoesSemana?.(stats.proxima),
-            tone: 'rose'
-        },
-        {
             key: 'designacoes',
             value: stats.programacaoPorMes.reduce((sum, mes) => sum + mes.designacoesPendentes, 0),
             label: 'Designações em aberto',
@@ -601,15 +648,6 @@ export default function Dashboard({
             actionLabel: 'Importar',
             onClick: () => setAbaAtiva('importar'),
             tone: 'indigo'
-        },
-        {
-            key: 'rodizio',
-            value: stats.precisandoAtencao.length,
-            label: 'Alunos pedindo atenção',
-            hint: 'Rodízio e histórico',
-            actionLabel: 'Alunos',
-            onClick: () => setAbaAtiva('alunos'),
-            tone: 'slate'
         },
         {
             key: 'rascunhos',
@@ -648,27 +686,27 @@ export default function Dashboard({
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="flex items-center gap-2 text-sm font-black text-slate-800">
-                            <AlertTriangle size={17} className={pendenciasDashboard.length ? 'text-amber-500' : 'text-emerald-500'} />
-                            Central de pendências
-                        </h2>
-                        <p className="mt-1 text-xs font-medium text-slate-500">
-                            {pendenciasDashboard.length ? 'O que pede atenção agora.' : 'Tudo em dia nos principais fluxos.'}
-                        </p>
+            {pendenciasDashboard.length > 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 className="flex items-center gap-2 text-sm font-black text-slate-800">
+                                <AlertTriangle size={17} className="text-amber-500" />
+                                Pendências administrativas
+                            </h2>
+                            <p className="mt-1 text-xs font-medium text-slate-500">
+                                Ações fora do fluxo da próxima reunião e da saúde da congregação.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setAbaAtiva('revisar')}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100"
+                        >
+                            Abrir revisão <ArrowRight size={13} />
+                        </button>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setAbaAtiva('revisar')}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100"
-                    >
-                        Abrir revisão <ArrowRight size={13} />
-                    </button>
-                </div>
 
-                {pendenciasDashboard.length > 0 && (
                     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                         {pendenciasDashboard.map((item) => (
                             <button
@@ -688,8 +726,8 @@ export default function Dashboard({
                             </button>
                         ))}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* TOP: PAINEL PRINCIPAL */}
             <div className="dashboard-top-grid">
@@ -1134,6 +1172,96 @@ export default function Dashboard({
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between border-b border-gray-100 pb-4 mb-4">
+                    <div>
+                        <div className="flex items-center gap-2 text-slate-800 font-bold">
+                            <Activity size={18} className="text-blue-600" />
+                            <span className="text-sm">{localTxt.equilibrioTitulo || 'Equilíbrio de Rodízio'}</span>
+                        </div>
+                        <p className="mt-1 max-w-2xl text-xs font-medium leading-relaxed text-slate-500">
+                            {localTxt.equilibrioSub || 'Use este painel para perceber se um tipo de parte está ficando concentrado em poucas pessoas. Quanto mais pessoas diferentes aparecem em uma categoria, mais saudável tende a estar o rodízio.'}
+                        </p>
+                    </div>
+                    <div className="grid gap-2 text-[10px] font-bold text-slate-500 sm:grid-cols-3 lg:w-[28rem]">
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                            <span className="block text-slate-900">{localTxt.totalDesignacoes || 'Total'}</span>
+                            {localTxt.totalDesignacoesHint || 'Partes já designadas'}
+                        </div>
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                            <span className="block text-slate-900">{localTxt.pessoasDiferentes || 'Pessoas'}</span>
+                            {localTxt.pessoasDiferentesHint || 'Irmãos diferentes usados'}
+                        </div>
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                            <span className="block text-slate-900">{localTxt.media || 'Média'}</span>
+                            {localTxt.mediaHint || 'Carga por pessoa'}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                    {(stats.roleBalance || []).map((item) => {
+                        const hasData = item.total > 0;
+                        const coverage = item.total > 0 ? item.pessoas / item.total : 0;
+                        const status = !hasData
+                            ? {
+                                label: localTxt.semDadosRodizio || 'Sem dados',
+                                className: 'bg-slate-200 text-slate-600 border-slate-200'
+                            }
+                            : coverage < 0.45 && item.total >= 4
+                                ? {
+                                    label: localTxt.rodizioConcentrado || 'Concentrado',
+                                    className: 'bg-amber-100 text-amber-800 border-amber-200'
+                                }
+                                : {
+                                    label: localTxt.rodizioSaudavel || 'Rodízio saudável',
+                                    className: 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                };
+                        const insight = !hasData
+                            ? (localTxt.insightSemDados || 'Ainda não há designações ativas neste tipo.')
+                            : coverage < 0.45 && item.total >= 4
+                                ? (localTxt.insightConcentrado || 'Vale procurar mais opções antes de repetir os mesmos nomes.')
+                                : (localTxt.insightSaudavel || 'Há boa distribuição entre as pessoas usadas.');
+
+                        return (
+                            <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
+                                        <p className="mt-1 text-2xl font-black text-slate-900">{item.total}</p>
+                                        <p className="text-[10px] font-bold text-slate-400">{localTxt.designacoesAtivas || 'designações ativas'}</p>
+                                    </div>
+                                    <span className={`rounded-full border px-2 py-1 text-[10px] font-black ${status.className}`}>
+                                        {status.label}
+                                    </span>
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-2 gap-2">
+                                    <div className="rounded-lg bg-white px-2.5 py-2">
+                                        <p className="text-[10px] font-black uppercase text-slate-400">{localTxt.pessoasDiferentes || 'Pessoas'}</p>
+                                        <p className="mt-0.5 text-sm font-black text-blue-700">{item.pessoas}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-white px-2.5 py-2">
+                                        <p className="text-[10px] font-black uppercase text-slate-400">{localTxt.media || 'Média'}</p>
+                                        <p className="mt-0.5 text-sm font-black text-blue-700">{hasData ? item.media : '0'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" title={localTxt.coberturaRodizio || 'Proporção de pessoas diferentes em relação ao total de designações.'}>
+                                    <div
+                                        className="h-full rounded-full bg-blue-500 transition-all"
+                                        style={{ width: `${Math.round(Math.min(100, coverage * 100))}%` }}
+                                    />
+                                </div>
+                                <p className="mt-2 min-h-8 text-[11px] font-semibold leading-snug text-slate-500">
+                                    {insight}
+                                </p>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 

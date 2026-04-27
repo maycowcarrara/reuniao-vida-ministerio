@@ -149,6 +149,9 @@ const normalizeText = (value = '') =>
 const buildAssignmentKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
     [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
 
+const buildNotificationId = ({ token, type, changeKey }) =>
+    [token || '', type || '', changeKey || ''].map((part) => String(part).trim()).join('_');
+
 const isPrayerPart = (part) => {
     const type = normalizeText(part?.tipo ?? part?.type ?? '');
     const title = normalizeText(part?.titulo ?? '');
@@ -524,6 +527,11 @@ const updateConfirmationState = async (token, mode, status, options = {}) => {
         await createInternalNotification({
             ownerUid: current?.ownerUid,
             type: mode === 'week' ? 'lembrete_semana_status' : 'confirmacao_status',
+            id: buildNotificationId({
+                token: safeToken,
+                type: mode === 'week' ? 'lembrete_semana_status' : 'confirmacao_status',
+                changeKey: mode === 'week' ? payload.lastWeekReminderChangeKey : payload.lastStatusChangeKey
+            }),
             title: copy.title,
             description: copy.description,
             token: safeToken,

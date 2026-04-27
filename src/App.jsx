@@ -57,13 +57,16 @@ function AdminPanel() {
     importarBackupParaUsuario,
     resetarConta,
     marcarNotificacaoComoLida,
-    marcarTodasNotificacoesComoLidas
+    marcarTodasNotificacoesComoLidas,
+    excluirNotificacao,
+    excluirNotificacoesLidas
   } = useGerenciadorDados();
   const dadosSistema = dadosNuvem;
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [sharedWeekSelection, setSharedWeekSelection] = useState({});
   const [reviewShortcutRequest, setReviewShortcutRequest] = useState(null);
+  const [substitutionShortcutRequest, setSubstitutionShortcutRequest] = useState(null);
   const [dupModal, setDupModal] = useState({ open: false, existing: null, incoming: null, resolve: null });
 
   const fileInputRef = useRef(null);
@@ -289,6 +292,15 @@ function AdminPanel() {
     setSharedWeekSelection({ [key]: true });
     setReviewShortcutRequest({ tab: 'notificar', token: Date.now() });
     setAbaAtiva('revisar');
+  };
+
+  const handleSolicitarSubstituicao = (request) => {
+    const key = request?.semanaKey || request?.semana || '';
+    if (key) {
+      setSharedWeekSelection({ [key]: true });
+    }
+    setSubstitutionShortcutRequest({ ...request, token: Date.now() });
+    setAbaAtiva('designar');
   };
 
   const handleAbrirBackup = async () => {
@@ -593,6 +605,8 @@ function AdminPanel() {
                   unreadCount={unreadNotificationsCount}
                   onMarkOne={marcarNotificacaoComoLida}
                   onMarkAll={marcarTodasNotificacoesComoLidas}
+                  onDeleteOne={excluirNotificacao}
+                  onDeleteRead={excluirNotificacoesLidas}
                 />
 
                 <button
@@ -630,6 +644,7 @@ function AdminPanel() {
                 onExcluirSemana={handleExcluirSemanaBanco}
                 sharedWeekSelection={sharedWeekSelection}
                 setSharedWeekSelection={setSharedWeekSelection}
+                substitutionShortcutRequest={substitutionShortcutRequest}
               />
             )}
 
@@ -644,9 +659,10 @@ function AdminPanel() {
                 sharedWeekSelection={sharedWeekSelection}
                 setSharedWeekSelection={setSharedWeekSelection}
                 reviewShortcutRequest={reviewShortcutRequest}
+                onSolicitarSubstituicao={handleSolicitarSubstituicao}
               />
             )}
-            {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
+            {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} onSalvarAluno={(aluno) => salvarItem('alunos', aluno.id, aluno)} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
             {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}
           </Suspense>
         </div>

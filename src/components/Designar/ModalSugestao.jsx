@@ -89,11 +89,21 @@ export default function ModalSugestao({
 
         // A. Verifica quem já está ocupado na semana do modal
         const ocupadosNestaSemana = new Set();
+        const familiasOcupadasNestaSemana = new Set();
+        const familiaPorPessoa = new Map(
+            (alunos || []).map((a) => [String(a?.id || a?.nome || '').trim(), (a?.familia || '').trim()])
+        );
+        const addOcupado = (u) => {
+            if (u?.id) ocupadosNestaSemana.add(u.id);
+            const pessoaKey = String(u?.id || u?.nome || '').trim();
+            const familia = (u?.familia || familiaPorPessoa.get(pessoaKey) || '').trim().toLowerCase();
+            if (familia) familiasOcupadasNestaSemana.add(familia);
+        };
+
         if (semanaAtual && Array.isArray(semanaAtual.partes)) {
-            if (semanaAtual.presidente?.id) ocupadosNestaSemana.add(semanaAtual.presidente.id);
+            addOcupado(semanaAtual.presidente);
             semanaAtual.partes.forEach(p => {
-                const addIfObj = (u) => { if (u?.id) ocupadosNestaSemana.add(u.id); };
-                addIfObj(p.estudante); addIfObj(p.ajudante); addIfObj(p.leitor); addIfObj(p.dirigente); addIfObj(p.oracao);
+                addOcupado(p.estudante); addOcupado(p.ajudante); addOcupado(p.leitor); addOcupado(p.dirigente); addOcupado(p.oracao);
             });
         }
 
@@ -218,7 +228,8 @@ export default function ModalSugestao({
                 ...aluno,
                 ultimaData,
                 diasSemFazer,
-                ocupadoAgora: ocupadosNestaSemana.has(aluno.id)
+                ocupadoAgora: ocupadosNestaSemana.has(aluno.id),
+                familiaOcupadaAgora: !!aluno.familia && familiasOcupadasNestaSemana.has(aluno.familia.trim().toLowerCase())
             };
         });
 
@@ -226,6 +237,8 @@ export default function ModalSugestao({
         listaFiltrada.sort((a, b) => {
             if (a.ocupadoAgora && !b.ocupadoAgora) return 1;
             if (!a.ocupadoAgora && b.ocupadoAgora) return -1;
+            if (a.familiaOcupadaAgora && !b.familiaOcupadaAgora) return 1;
+            if (!a.familiaOcupadaAgora && b.familiaOcupadaAgora) return -1;
 
             const aNunca = a.diasSemFazer === 9999;
             const bNunca = b.diasSemFazer === 9999;
@@ -291,6 +304,7 @@ export default function ModalSugestao({
                             contexto.gender === 'todos' ? 'Perfil compatível' : 'Gênero compatível',
                             aluno.ocupadoAgora ? 'Já usado nesta semana' : 'Livre nesta semana'
                         ];
+                        if (aluno.familiaOcupadaAgora && !aluno.ocupadoAgora) motivos.push(t.familiaJaUsada);
 
                         const mostrarSeparadorNuncaFez = index > 0 && aluno.diasSemFazer === 9999 && sugestoes[index - 1].diasSemFazer !== 9999;
 
@@ -308,6 +322,10 @@ export default function ModalSugestao({
                                         // MÁGICA: Permite seleção mesmo ocupado, mediante confirmação
                                         if (aluno.ocupadoAgora) {
                                             const confirmacao = window.confirm(t.confirmarDuplicado);
+                                            if (!confirmacao) return;
+                                        }
+                                        if (aluno.familiaOcupadaAgora && !aluno.ocupadoAgora) {
+                                            const confirmacao = window.confirm(t.confirmarFamilia);
                                             if (!confirmacao) return;
                                         }
                                         onSelect(aluno);
@@ -335,7 +353,8 @@ export default function ModalSugestao({
                                                 <span className="px-1.5 py-0.5 bg-gray-100 rounded border text-[9px] font-bold">
                                                     {(cargosMap?.[aluno.tipo]?.[lang] || aluno.tipo)}
                                                 </span>
-                                                {aluno.ocupadoAgora && <span className="text-red-500 font-bold ml-1 flex items-center gap-1 text-[10px]"><AlertCircle size={10} /> {t.jaTemParte}</span>}
+                                            {aluno.ocupadoAgora && <span className="text-red-500 font-bold ml-1 flex items-center gap-1 text-[10px]"><AlertCircle size={10} /> {t.jaTemParte}</span>}
+                                            {aluno.familiaOcupadaAgora && !aluno.ocupadoAgora && <span className="text-amber-600 font-bold ml-1 flex items-center gap-1 text-[10px]"><AlertCircle size={10} /> {t.familiaJaUsada}</span>}
                                             </div>
                                             <div className="mt-1.5 flex flex-wrap gap-1">
                                                 {motivos.map((motivo) => (
@@ -343,6 +362,8 @@ export default function ModalSugestao({
                                                         key={motivo}
                                                         className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${motivo.includes('Já usado')
                                                             ? 'bg-red-50 text-red-600'
+                                                            : motivo === t.familiaJaUsada
+                                                                ? 'bg-amber-50 text-amber-700'
                                                             : motivo.includes('Nunca') || motivo.includes('dias')
                                                                 ? 'bg-green-50 text-green-700'
                                                                 : 'bg-blue-50 text-blue-700'

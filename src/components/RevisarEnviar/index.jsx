@@ -37,7 +37,8 @@ const RevisarEnviar = ({
     onProgramacoesChange = null,
     sharedWeekSelection = {},
     setSharedWeekSelection = () => { },
-    reviewShortcutRequest = null
+    reviewShortcutRequest = null,
+    onSolicitarSubstituicao = null
 }) => {
     const { lang, t } = getI18n(config);
 
@@ -1040,6 +1041,7 @@ const RevisarEnviar = ({
                     buildMsgKey={buildMsgKey}
                     markSent={markSent}
                     isSent={isSent}
+                    onSolicitarSubstituicao={onSolicitarSubstituicao}
                 />
             )}
         </div>

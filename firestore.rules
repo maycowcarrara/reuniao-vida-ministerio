@@ -168,19 +168,58 @@ service cloud.firestore {
       ])
       && request.resource.data.token is string
       && request.resource.data.token.size() > 0
+      && request.resource.data.id is string
+      && request.resource.data.id.size() > 0
+      && request.resource.data.title is string
+      && request.resource.data.title.size() <= 120
+      && request.resource.data.description is string
+      && request.resource.data.description.size() <= 500
+      && request.resource.data.createdAt == request.time
+      && request.resource.data.createdAtIso is string
+      && request.resource.data.createdAtIso.size() <= 40
+      && request.resource.data.readAt == null
+      && request.resource.data.readAtIso == null
+      && request.resource.data.meta is map
+      && request.resource.data.meta.keys().hasOnly([
+        "tituloParte",
+        "congregacaoNome"
+      ])
       && exists(/databases/$(database)/documents/confirmacoes_publicas/$(request.resource.data.token))
       && publicConfirmationDoc(request.resource.data.token).data.ownerUid == request.resource.data.ownerUid
       && publicConfirmationDoc(request.resource.data.token).data.assignmentKey == request.resource.data.assignmentKey
-      && request.resource.data.type in ["confirmacao_status", "lembrete_semana_status"];
+      && publicConfirmationDoc(request.resource.data.token).data.dataISO == request.resource.data.dataISO
+      && publicConfirmationDoc(request.resource.data.token).data.semana == request.resource.data.semana
+      && publicConfirmationDoc(request.resource.data.token).data.pessoaNome == request.resource.data.pessoaNome
+      && request.resource.data.type in ["confirmacao_status", "lembrete_semana_status"]
+      && (
+        (
+          request.resource.data.type == "confirmacao_status"
+          && publicConfirmationDoc(request.resource.data.token).data.lastStatusChangeKey is string
+          && publicConfirmationDoc(request.resource.data.token).data.lastStatusChangeKey.size() > 0
+          && request.resource.data.status == publicConfirmationDoc(request.resource.data.token).data.status
+          && request.resource.data.previousStatus == publicConfirmationDoc(request.resource.data.token).data.previousStatus
+          && request.resource.data.id == request.resource.data.token + "_confirmacao_status_" + publicConfirmationDoc(request.resource.data.token).data.lastStatusChangeKey
+        )
+        || (
+          request.resource.data.type == "lembrete_semana_status"
+          && publicConfirmationDoc(request.resource.data.token).data.lastWeekReminderChangeKey is string
+          && publicConfirmationDoc(request.resource.data.token).data.lastWeekReminderChangeKey.size() > 0
+          && request.resource.data.status == publicConfirmationDoc(request.resource.data.token).data.weekReminderStatus
+          && request.resource.data.previousStatus == publicConfirmationDoc(request.resource.data.token).data.weekReminderPreviousStatus
+          && request.resource.data.id == request.resource.data.token + "_lembrete_semana_status_" + publicConfirmationDoc(request.resource.data.token).data.lastWeekReminderChangeKey
+        )
+      );
     }
 
     match /users/{userId}/configuracoes/{docId} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if false;
       allow write: if isAdminUser(userId);
     }
 
     match /users/{userId}/programacao/{docId} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if false;
       allow write: if isAdminUser(userId);
     }
 
@@ -201,7 +240,8 @@ service cloud.firestore {
     }
 
     match /confirmacoes_publicas/{token} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if false;
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid
         && isAdminEmail()
@@ -223,11 +263,14 @@ service cloud.firestore {
         && request.auth.uid == resource.data.ownerUid
         && isAdminEmail();
 
-      allow create: if (
-          isSignedIn()
-          && request.auth.uid == request.resource.data.ownerUid
-          && isAdminEmail()
-        ) || isValidNotificationCreate();
+      allow create: if request.resource.data.id == notificationId
+        && (
+          (
+            isSignedIn()
+            && request.auth.uid == request.resource.data.ownerUid
+            && isAdminEmail()
+          ) || isValidNotificationCreate()
+        );
 
       allow update: if isSignedIn()
         && request.auth.uid == resource.data.ownerUid

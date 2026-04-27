@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, X, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Calendar, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
 import { getIniciais } from './utils';
 
-const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t }) => {
+const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false }) => {
     const firstInputRef = useRef(null);
     const [novaDataIndisponivel, setNovaDataIndisponivel] = useState({ inicio: '', fim: '', motivo: '' });
 
@@ -74,14 +74,20 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
     const iniciais = getIniciais(alunoEmEdicao.nome || '?');
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (!isSaving && e.target === e.currentTarget) onClose(); }}>
+            <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                {isSaving && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/75 backdrop-blur-[2px] text-blue-700">
+                        <Loader2 size={28} className="animate-spin" />
+                        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em]">{t.modal.salvando || 'Salvando...'}</p>
+                    </div>
+                )}
                 <div className="bg-gradient-to-r from-blue-700 to-blue-600 p-5 flex justify-between items-center text-white">
                     <div>
                         <h3 className="font-black text-sm leading-tight">{alunoEmEdicao.id ? t.modal.editar : t.modal.novo}</h3>
                         <p className="text-[10px] opacity-80 mt-1">{alunoEmEdicao.id ? `ID #${alunoEmEdicao.id}` : '—'}</p>
                     </div>
-                    <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg"><X size={20} /></button>
+                    <button disabled={isSaving} onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"><X size={20} /></button>
                 </div>
 
                 <div className="p-6 overflow-y-auto max-h-[75vh] custom-scrollbar" onPaste={handlePaste}>
@@ -116,12 +122,47 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                     </div>
 
                     <form id="form-aluno" onSubmit={onSave} className="space-y-4">
+                        <fieldset disabled={isSaving} className="space-y-4 disabled:opacity-70">
                         <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
                         <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, tipo: e.target.value })}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder={t.campos.telefonePlaceholder} /></div>
                             <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.mail}</label><input type="email" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.email || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, email: e.target.value })} placeholder={t.campos.emailPlaceholder} /></div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.familia}</label>
+                            <datalist id="familias-cadastradas">
+                                {familiasOptions.map((familia) => (
+                                    <option key={familia} value={familia} />
+                                ))}
+                            </datalist>
+                            <input
+                                type="text"
+                                list="familias-cadastradas"
+                                className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600"
+                                value={alunoEmEdicao.familia || ""}
+                                onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, familia: e.target.value })}
+                                placeholder={t.campos.familiaPlaceholder}
+                            />
+                            <p className="text-[10px] text-gray-400 px-1">{t.campos.familiaAjuda}</p>
+                            {familiasOptions.length > 0 && (
+                                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pt-1 pb-1">
+                                    {familiasOptions.slice(0, 8).map((familia) => (
+                                        <button
+                                            key={familia}
+                                            type="button"
+                                            onClick={() => setAlunoEmEdicao({ ...alunoEmEdicao, familia })}
+                                            className={`shrink-0 rounded-lg border px-2.5 py-1 text-[10px] font-black transition ${alunoEmEdicao.familia === familia
+                                                ? 'border-indigo-500 bg-indigo-600 text-white'
+                                                : 'border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                                                }`}
+                                        >
+                                            {familia}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={2} className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={t.campos.obsPlaceholder} /></div>
 
@@ -162,12 +203,16 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                                 </div>
                             </div>
                         </div>
+                        </fieldset>
                     </form>
                 </div>
 
                 <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-2 justify-end rounded-b-3xl">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase hover:text-gray-600">{t.modal.cancelar}</button>
-                    <button type="submit" form="form-aluno" className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all hover:bg-blue-600">{t.modal.salvar}</button>
+                    <button type="button" disabled={isSaving} onClick={onClose} className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50">{t.modal.cancelar}</button>
+                    <button type="submit" form="form-aluno" disabled={isSaving} className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all hover:bg-blue-600 disabled:cursor-wait disabled:bg-blue-400 inline-flex items-center gap-2">
+                        {isSaving && <Loader2 size={14} className="animate-spin" />}
+                        {isSaving ? (t.modal.salvando || 'Salvando...') : t.modal.salvar}
+                    </button>
                 </div>
             </div>
         </div>

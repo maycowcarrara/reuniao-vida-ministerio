@@ -1,12 +1,13 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "4.4.215",
+  "version": "4.5.220",
   "type": "module",
   "scripts": {
     "predev": "npm version patch --no-git-tag-version",
-    "prebuild": "npm version patch --no-git-tag-version",
+    "predeploy": "npm version patch --no-git-tag-version",
     "predeploy:rules": "npm version patch --no-git-tag-version",
+    "predeploy:all": "npm version patch --no-git-tag-version",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -42,5 +43,13 @@
     "tailwindcss": "^4.1.18",
     "vite": "^7.2.4",
     "vite-plugin-pwa": "^1.2.0"
+  },
+  "overrides": {
+    "minimatch@3.1.5": {
+      "brace-expansion": "^1.1.13"
+    },
+    "@rollup/plugin-terser": {
+      "serialize-javascript": "^7.0.5"
+    }
   }
 }

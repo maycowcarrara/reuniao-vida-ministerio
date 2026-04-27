@@ -1,5 +1,6 @@
 import {
     collection,
+    deleteDoc,
     doc,
     serverTimestamp,
     setDoc,
@@ -10,8 +11,10 @@ import {
 import { db } from './firebase';
 
 export const NOTIFICATIONS_COLLECTION = 'notificacoes';
+const FIRESTORE_BATCH_LIMIT = 450;
 
 export const createInternalNotification = async ({
+    id = '',
     ownerUid,
     type,
     title,
@@ -28,7 +31,10 @@ export const createInternalNotification = async ({
     const safeOwnerUid = String(ownerUid || '').trim();
     if (!safeOwnerUid) return null;
 
-    const ref = doc(collection(db, NOTIFICATIONS_COLLECTION));
+    const safeId = String(id || '').trim();
+    const ref = safeId
+        ? doc(db, NOTIFICATIONS_COLLECTION, safeId)
+        : doc(collection(db, NOTIFICATIONS_COLLECTION));
     const createdAtIso = new Date().toISOString();
 
     await setDoc(ref, {
@@ -68,15 +74,44 @@ export const markAllNotificationsRead = async (notifications = []) => {
     const unread = (notifications || []).filter((item) => !item?.readAt && !item?.readAtIso);
     if (!unread.length) return;
 
-    const batch = writeBatch(db);
     const readAtIso = new Date().toISOString();
 
-    unread.forEach((item) => {
-        batch.update(doc(db, NOTIFICATIONS_COLLECTION, item.id), {
-            readAt: serverTimestamp(),
-            readAtIso
-        });
-    });
+    for (let index = 0; index < unread.length; index += FIRESTORE_BATCH_LIMIT) {
+        const batch = writeBatch(db);
+        const chunk = unread.slice(index, index + FIRESTORE_BATCH_LIMIT);
 
-    await batch.commit();
+        chunk.forEach((item) => {
+            batch.update(doc(db, NOTIFICATIONS_COLLECTION, item.id), {
+                readAt: serverTimestamp(),
+                readAtIso
+            });
+        });
+
+        await batch.commit();
+    }
+};
+
+export const deleteNotification = async (id) => {
+    const safeId = String(id || '').trim();
+    if (!safeId) return;
+
+    await deleteDoc(doc(db, NOTIFICATIONS_COLLECTION, safeId));
+};
+
+export const deleteReadNotifications = async (notifications = []) => {
+    const read = (notifications || []).filter((item) => item?.readAt || item?.readAtIso);
+    if (!read.length) return;
+
+    for (let index = 0; index < read.length; index += FIRESTORE_BATCH_LIMIT) {
+        const batch = writeBatch(db);
+        const chunk = read.slice(index, index + FIRESTORE_BATCH_LIMIT);
+
+        chunk.forEach((item) => {
+            if (item?.id) {
+                batch.delete(doc(db, NOTIFICATIONS_COLLECTION, item.id));
+            }
+        });
+
+        await batch.commit();
+    }
 };

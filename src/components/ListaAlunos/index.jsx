@@ -21,7 +21,7 @@ const StatCard = ({ icon, label, value, isActive, onClick, colorClass, activeCla
     </button>
 );
 
-const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) => {
+const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config, cargosMap }) => {
     const CARGOS_MAP = cargosMap || CARGOS_MAP_FALLBACK;
     const lang = normalizarIdioma(config?.idioma);
     const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
@@ -42,6 +42,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     const [modalHistoryOpen, setModalHistoryOpen] = useState(false);
     const [menuExportOpen, setMenuExportOpen] = useState(false);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+    const [salvandoAluno, setSalvandoAluno] = useState(false);
 
     // Dados em Edição/Visualização
     const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
@@ -150,6 +151,15 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
             });
     }, [alunos, termo, filtroStatus, filtrosTiposAtivos, filtroGenero, filtroEspecial, ordenacao, ordemCrescente, CARGOS_MAP]);
 
+    const familiasOptions = useMemo(() => {
+        const familias = new Set();
+        (alunos || []).forEach((aluno) => {
+            const familia = (aluno?.familia || '').trim();
+            if (familia) familias.add(familia);
+        });
+        return Array.from(familias).sort((a, b) => a.localeCompare(b));
+    }, [alunos]);
+
     // Exportação e Operações
     const baixar = (blob, nome) => {
         const url = URL.createObjectURL(blob);
@@ -179,6 +189,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                     [t.exportFields.cargo]: (CARGOS_MAP[getCargoKey(a.tipo, CARGOS_MAP)] || CARGOS_MAP.irmao)[lang],
                     [t.exportFields.whatsapp]: a.telefone || t.exportFields.naoInformado,
                     [t.exportFields.email]: a.email || t.exportFields.naoInformado,
+                    [t.exportFields.familia]: a.familia || "",
                     [t.exportFields.observacoes]: a.observacoes || "",
                     [t.exportFields.ultimaData]: ult.data || "-",
                     [t.exportFields.ultimaParte]: ult.parte || "-"
@@ -206,33 +217,41 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
     };
 
     const openNovo = () => {
-        setAlunoEmEdicao({ id: null, nome: '', tipo: 'irma', telefone: '', email: '', observacoes: '', historico: [], datasIndisponiveis: [] });
+        setAlunoEmEdicao({ id: null, nome: '', tipo: 'irma', telefone: '', email: '', familia: '', observacoes: '', historico: [], datasIndisponiveis: [] });
         setModalFormOpen(true);
     };
 
     const openEditar = (aluno) => {
-        setAlunoEmEdicao({ ...aluno, tipo: getCargoKey(aluno.tipo, CARGOS_MAP), telefone: aluno.telefone || '', email: aluno.email || '', observacoes: aluno.observacoes || '', historico: Array.isArray(aluno.historico) ? aluno.historico : [], datasIndisponiveis: Array.isArray(aluno.datasIndisponiveis) ? aluno.datasIndisponiveis : [] });
+        setAlunoEmEdicao({ ...aluno, tipo: getCargoKey(aluno.tipo, CARGOS_MAP), telefone: aluno.telefone || '', email: aluno.email || '', familia: aluno.familia || '', observacoes: aluno.observacoes || '', historico: Array.isArray(aluno.historico) ? aluno.historico : [], datasIndisponiveis: Array.isArray(aluno.datasIndisponiveis) ? aluno.datasIndisponiveis : [] });
         setModalFormOpen(true);
     };
 
     const handleSalvar = async (e) => {
         e.preventDefault();
-        const clean = { ...alunoEmEdicao, nome: (alunoEmEdicao.nome || '').trim(), telefone: (alunoEmEdicao.telefone || '').trim(), email: (alunoEmEdicao.email || '').trim(), observacoes: (alunoEmEdicao.observacoes || '').trim(), tipo: alunoEmEdicao.tipo || 'irma', datasIndisponiveis: alunoEmEdicao.datasIndisponiveis || [] };
+        const clean = { ...alunoEmEdicao, nome: (alunoEmEdicao.nome || '').trim(), telefone: (alunoEmEdicao.telefone || '').trim(), email: (alunoEmEdicao.email || '').trim(), familia: (alunoEmEdicao.familia || '').trim(), observacoes: (alunoEmEdicao.observacoes || '').trim(), tipo: alunoEmEdicao.tipo || 'irma', datasIndisponiveis: alunoEmEdicao.datasIndisponiveis || [] };
         if (!clean.nome) return;
         const isNovoAluno = !clean.id;
 
         try {
+            setSalvandoAluno(true);
+            const alunoParaSalvar = isNovoAluno
+                ? { ...clean, id: String(Math.max(0, ...(alunos || []).map(a => Number(a.id) || 0)) + 1) }
+                : clean;
+
             if (isNovoAluno) {
-                const maxId = Math.max(0, ...(alunos || []).map(a => Number(a.id) || 0));
-                await Promise.resolve(setAlunos([...(alunos || []), { ...clean, id: String(maxId + 1) }]));
+                if (onSalvarAluno) await Promise.resolve(onSalvarAluno(alunoParaSalvar));
+                else await Promise.resolve(setAlunos([...(alunos || []), alunoParaSalvar]));
             } else {
-                await Promise.resolve(setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a)));
+                if (onSalvarAluno) await Promise.resolve(onSalvarAluno(alunoParaSalvar));
+                else await Promise.resolve(setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a)));
             }
 
             setModalFormOpen(false);
             toast.success(isNovoAluno ? t.msg.cadastradoSucesso : t.msg.atualizadoSucesso);
         } catch (error) {
             toast.error(error, isNovoAluno ? t.msg.erroCadastrar : t.msg.erroAtualizar);
+        } finally {
+            setSalvandoAluno(false);
         }
     };
 
@@ -240,7 +259,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
         if (aluno.tipo !== 'desab') return alert(t.msg.erroSoDesabilitados);
         if (window.confirm(t.msg.confirmarExclusao)) {
             if (onExcluirAluno) await onExcluirAluno(aluno.id);
-            setAlunos(alunos.filter(a => a.id !== aluno.id));
+            else setAlunos(alunos.filter(a => a.id !== aluno.id));
             toast.success(t.msg.removerSucesso);
         }
     };
@@ -442,7 +461,7 @@ const ListaAlunos = ({ alunos, setAlunos, onExcluirAluno, config, cargosMap }) =
                 }}
             />
             {modalFormOpen && alunoEmEdicao && (
-                <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} />
+                <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} familiasOptions={familiasOptions} isSaving={salvandoAluno} />
             )}
         </div>
     );

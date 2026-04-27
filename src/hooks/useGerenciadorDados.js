@@ -15,6 +15,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { DEFAULT_CONFIG, normalizeSystemConfig } from '../config/appConfig';
 import { getSemanaSortTimestamp } from '../utils/revisarEnviar/dates';
 import {
+    deleteNotification,
+    deleteReadNotifications,
     markAllNotificationsRead,
     markNotificationRead,
     NOTIFICATIONS_COLLECTION
@@ -234,6 +236,14 @@ export function useGerenciadorDados() {
         await markAllNotificationsRead(notificacoes);
     };
 
+    const excluirNotificacao = async (id) => {
+        await deleteNotification(id);
+    };
+
+    const excluirNotificacoesLidas = async () => {
+        await deleteReadNotifications(notificacoes);
+    };
+
     return {
         dados,
         confirmacoes,
@@ -247,6 +257,8 @@ export function useGerenciadorDados() {
         importarBackupParaUsuario,
         resetarConta,
         marcarNotificacaoComoLida,
-        marcarTodasNotificacoesComoLidas
+        marcarTodasNotificacoesComoLidas,
+        excluirNotificacao,
+        excluirNotificacoesLidas
     };
 }

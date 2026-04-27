@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock } from 'lucide-react';
+import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock, UsersRound } from 'lucide-react';
 import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais } from './utils';
 
 const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onCopyPublicLink }) => {
@@ -43,6 +43,7 @@ const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete,
                             <div className="mt-1 text-[11px] text-gray-500 flex flex-wrap gap-x-3 gap-y-1">
                                 {aluno.telefone && (whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="flex items-center gap-1" title={t.campos.tel}><Phone size={12} className="text-green-500" /> {aluno.telefone}</a> : <span className="flex items-center gap-1"><Phone size={12} className="text-green-500" /> {aluno.telefone}</span>)}
                                 {aluno.email && <a href={`mailto:${aluno.email}`} className="flex items-center gap-1 truncate" title={t.campos.mail}><Mail size={12} className="text-blue-400" /> {aluno.email}</a>}
+                                {aluno.familia && <span className="flex items-center gap-1 font-bold text-indigo-600"><UsersRound size={12} className="text-indigo-400" /> {aluno.familia}</span>}
                             </div>
                         </div>
                         

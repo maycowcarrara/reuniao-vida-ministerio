@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock, UserPlus } from 'lucide-react';
+import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock, UserPlus, UsersRound } from 'lucide-react';
 import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais } from './utils';
 
 const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onCopyPublicLink }) => {
@@ -56,6 +56,7 @@ const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onC
             <div className="space-y-1 mb-3 text-[11px] font-medium text-gray-500 pl-1">
                 {aluno.telefone && (whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="flex items-center gap-1.5" title={t.campos.tel}><Phone size={11} className="text-green-500" /> {aluno.telefone}</a> : <div className="flex items-center gap-1.5"><Phone size={11} className="text-green-500" /> {aluno.telefone}</div>)}
                 {aluno.email && <a href={`mailto:${aluno.email}`} className="flex items-center gap-2 text-[10px] truncate" title={t.campos.mail}><Mail size={11} className="text-blue-400" /> {aluno.email}</a>}
+                {aluno.familia && <div className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600"><UsersRound size={11} className="text-indigo-400" /> {aluno.familia}</div>}
                 <div className="flex items-start gap-1.5 text-[10px] text-gray-500"><StickyNote size={11} className="text-gray-400 mt-[1px]" /><p className={`leading-snug ${aluno.observacoes ? 'text-gray-600' : 'text-gray-300 italic'} line-clamp-2`}>{aluno.observacoes ? aluno.observacoes : t.card.semObs}</p></div>
                 
                 {aluno.datasIndisponiveis && aluno.datasIndisponiveis.length > 0 && (

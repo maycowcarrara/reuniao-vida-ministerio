@@ -33,7 +33,8 @@ const Designar = ({
     onExcluirSemana,
     config = {},
     sharedWeekSelection = {},
-    setSharedWeekSelection = () => { }
+    setSharedWeekSelection = () => { },
+    substitutionShortcutRequest = null
 }) => {
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
@@ -57,6 +58,7 @@ const Designar = ({
     const [draggedAluno, setDraggedAluno] = useState(null);
     const [dragOverSlot, setDragOverSlot] = useState(null);
     const stickyHeaderRef = useRef(null);
+    const lastSubstitutionShortcutTokenRef = useRef(null);
     const [stickyOffset, setStickyOffset] = useState(176);
     const semanasSelecionadas = sharedWeekSelection || {};
     const setSemanasSelecionadas = setSharedWeekSelection;
@@ -104,6 +106,16 @@ const Designar = ({
         semana.historicoPendenteMotivo = motivo;
         semana.historicoPendenteDesde = now;
         semana.ultimaAlteracaoPublicadaEm = now;
+    };
+
+    const marcarNotificacaoSemanaPendente = (semana, now = new Date().toISOString()) => {
+        if (!semana || semana?.publicadaNoQuadro === false) return;
+        semana.notificacaoAlteradaEm = now;
+    };
+
+    const marcarNotificacaoPartePendente = (parte, semana, now = new Date().toISOString()) => {
+        if (!parte || semana?.publicadaNoQuadro === false) return parte;
+        return { ...parte, notificacaoAlteradaEm: now };
     };
 
     // FUNÇÃO ROBUSTA DE ORDENAÇÃO E EXTRAÇÃO DE DATAS
@@ -286,6 +298,44 @@ const Designar = ({
     };
 
     const totalSelecionadas = Object.values(semanasSelecionadas).filter(Boolean).length;
+
+    useEffect(() => {
+        if (!substitutionShortcutRequest?.token || lastSubstitutionShortcutTokenRef.current === substitutionShortcutRequest.token) return;
+
+        const normalizeRoleToSlot = (role) => {
+            if (role === 'resp') return 'estudante';
+            if (role === 'ajud') return 'ajudante';
+            if (['presidente', 'oracao', 'dirigente', 'leitor', 'estudante', 'ajudante'].includes(role)) return role;
+            return 'estudante';
+        };
+
+        const targetIdx = listaFiltradaPorFlag.findIndex((sem, idx) => {
+            const requestKey = String(substitutionShortcutRequest.semanaKey || '').trim();
+            const currentKey = getSemanaKey(sem, idx);
+            return (
+                (requestKey && currentKey === requestKey) ||
+                String(sem?.semana || '').trim() === String(substitutionShortcutRequest.semana || '').trim() ||
+                String(sem?.id || '').trim() === String(substitutionShortcutRequest.id || '').trim()
+            );
+        });
+
+        if (targetIdx === -1) return;
+        lastSubstitutionShortcutTokenRef.current = substitutionShortcutRequest.token;
+
+        const sem = listaFiltradaPorFlag[targetIdx];
+        const key = getSemanaKey(sem, targetIdx);
+        setSemanasSelecionadas({ [key]: true });
+        setSemanaAtivaIndex(targetIdx);
+        setSlotAtivo(null);
+        setModalSugestao({
+            aberto: true,
+            semanaIndex: targetIdx,
+            key: normalizeRoleToSlot(substitutionShortcutRequest.role),
+            parteId: substitutionShortcutRequest.parteId,
+            modo: 'substituicao',
+            anterior: substitutionShortcutRequest.pessoa || null
+        });
+    }, [substitutionShortcutRequest, listaFiltradaPorFlag, setSemanasSelecionadas]);
 
     const selecionarTodasVisiveis = () => {
         userClearedWeeksRef.current = false;
@@ -478,13 +528,14 @@ const Designar = ({
             if (targetSlot.key === 'presidente') {
                 registrarSubstituicao(semana.presidente, null);
                 semana.presidente = aluno;
+                marcarNotificacaoSemanaPendente(semana, now);
             }
             else {
                 const idxParte = semana.partes.findIndex(p => p.id === targetSlot.parteId);
                 if (idxParte !== -1) {
                     const parteAtual = semana.partes[idxParte];
                     registrarSubstituicao(parteAtual?.[targetSlot.key], parteAtual);
-                    semana.partes[idxParte] = { ...parteAtual, [targetSlot.key]: aluno };
+                    semana.partes[idxParte] = marcarNotificacaoPartePendente({ ...parteAtual, [targetSlot.key]: aluno }, semana, now);
                 }
             }
 
@@ -527,7 +578,7 @@ const Designar = ({
             const semana = { ...atual, partes: [...(atual.partes || [])] };
             const idx = semana.partes.findIndex(p => p.id === parteId);
             if (idx === -1) return lista;
-            semana.partes[idx] = { ...semana.partes[idx], ...patch };
+            semana.partes[idx] = marcarNotificacaoPartePendente({ ...semana.partes[idx], ...patch }, semana);
             marcarSemanaPublicadaPendente(semana, 'edicao_parte');
             lista[semanaRealIndex] = semana;
             return lista;
