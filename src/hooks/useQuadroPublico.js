@@ -33,6 +33,18 @@ export function useQuadroPublico(fallbackUid = '') {
 
         async function fetchDadosPublicos() {
             try {
+                const publicRef = doc(db, 'quadros_publicos', effectiveAdminUid);
+                const publicSnap = await getDoc(publicRef);
+
+                if (publicSnap.exists()) {
+                    const publicData = publicSnap.data() || {};
+                    setDados({
+                        configuracoes: normalizeSystemConfig(publicData.configuracoes || {}),
+                        historico_reunioes: Array.isArray(publicData.historico_reunioes) ? publicData.historico_reunioes : []
+                    });
+                    return;
+                }
+
                 // 1. Puxa o nome da Congregação
                 const configRef = doc(db, 'users', effectiveAdminUid, 'configuracoes', 'geral');
                 const configSnap = await getDoc(configRef);

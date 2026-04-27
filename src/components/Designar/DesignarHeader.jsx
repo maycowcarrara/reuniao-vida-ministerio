@@ -124,7 +124,7 @@ const DesignarHeader = ({
                             type="button"
                             onClick={() => setMobileFiltersOpen(true)}
                             className="flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 p-2.5 text-blue-700 shadow-sm"
-                            aria-label="Filtros"
+                            aria-label={TT.filtros || 'Filtros'}
                         >
                             <SlidersHorizontal size={18} />
                         </button>
@@ -132,7 +132,7 @@ const DesignarHeader = ({
                             <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-400">
                                 <span>{filtroLabel}</span>
                                 <span>-</span>
-                                <span>{totalSelecionadas} sel.</span>
+                                <span>{formatText(TT.selecionadasCurtoTpl || '{count} sel.', { count: totalSelecionadas })}</span>
                             </div>
                             <div className="truncate text-sm font-black text-gray-800">
                                 {semanaEmFoco?.semana?.split(' -')[0] || TT.selecioneSemana}
@@ -157,8 +157,8 @@ const DesignarHeader = ({
                     <div className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <div className="mb-3 flex items-center justify-between">
                             <div>
-                                <div className="text-sm font-black text-gray-900">Filtros</div>
-                                <div className="text-[10px] font-bold uppercase text-gray-400">{totalSelecionadas} semanas selecionadas</div>
+                                <div className="text-sm font-black text-gray-900">{TT.filtros || 'Filtros'}</div>
+                                <div className="text-[10px] font-bold uppercase text-gray-400">{formatText(TT.semanasSelecionadasTpl, { count: totalSelecionadas })}</div>
                             </div>
                             <button type="button" onClick={() => setMobileFiltersOpen(false)} className="rounded-xl border border-gray-200 p-2 text-gray-500">
                                 <X size={18} />

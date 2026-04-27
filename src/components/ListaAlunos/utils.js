@@ -48,9 +48,66 @@ export const calcularDias = (dataISO) => {
     return Math.floor((hoje - d) / 86400000);
 };
 
+const UNAVAILABLE_RETENTION_DAYS = 45;
+
+const getTodayLocalISO = () => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+};
+
+const parseLocalDate = (dateISO) => {
+    const [ano, mes, dia] = String(dateISO || '').split('-').map(Number);
+    if (!ano || !mes || !dia) return null;
+    return new Date(ano, mes - 1, dia, 12, 0, 0);
+};
+
+export const getUnavailableDateStatus = (dateRange) => {
+    const todayISO = getTodayLocalISO();
+    const fim = String(dateRange?.fim || '').trim();
+
+    if (!fim || fim >= todayISO) {
+        return { status: 'activeOrFuture', daysSinceEnd: null, expired: false, recentPast: false };
+    }
+
+    const fimDate = parseLocalDate(fim);
+    const todayDate = parseLocalDate(todayISO);
+    if (!fimDate || !todayDate) {
+        return { status: 'activeOrFuture', daysSinceEnd: null, expired: false, recentPast: false };
+    }
+
+    const daysSinceEnd = Math.floor((todayDate.getTime() - fimDate.getTime()) / 86400000);
+    const expired = daysSinceEnd > UNAVAILABLE_RETENTION_DAYS;
+
+    return {
+        status: expired ? 'expired' : 'recentPast',
+        daysSinceEnd,
+        expired,
+        recentPast: !expired
+    };
+};
+
+export const pruneExpiredUnavailableDates = (datasIndisponiveis = []) => (
+    Array.isArray(datasIndisponiveis)
+        ? datasIndisponiveis.filter((dateRange) => !getUnavailableDateStatus(dateRange).expired)
+        : []
+);
+
+export const normalizeUnavailableDatesForAluno = (aluno) => {
+    const atuais = Array.isArray(aluno?.datasIndisponiveis) ? aluno.datasIndisponiveis : [];
+    const filtradas = pruneExpiredUnavailableDates(atuais);
+
+    return {
+        aluno: atuais.length === filtradas.length ? aluno : { ...aluno, datasIndisponiveis: filtradas },
+        removedCount: atuais.length - filtradas.length
+    };
+};
+
 export const verificarAusenciaAtiva = (aluno) => {
     if (!aluno.datasIndisponiveis || !Array.isArray(aluno.datasIndisponiveis) || aluno.datasIndisponiveis.length === 0) return false;
-    const hojeISO = new Date().toISOString().split('T')[0];
+    const hojeISO = getTodayLocalISO();
     return aluno.datasIndisponiveis.some(d => d.inicio <= hojeISO && d.fim >= hojeISO);
 };
 

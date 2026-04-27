@@ -1,6 +1,6 @@
 import React from 'react';
 import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock, UsersRound } from 'lucide-react';
-import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais } from './utils';
+import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais, getUnavailableDateStatus } from './utils';
 
 const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onCopyPublicLink }) => {
     const cKey = getCargoKey(aluno.tipo, cargosMap);
@@ -64,13 +64,19 @@ const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete,
                     
                     {aluno.datasIndisponiveis && aluno.datasIndisponiveis.length > 0 && (
                         <div className="mt-2 flex gap-2 flex-wrap">
-                            {aluno.datasIndisponiveis.map((dt, idx) => (
-                                <div key={idx} className="bg-orange-50 text-orange-700 text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1.5 border border-orange-100" title={dt.motivo}>
-                                    <Calendar size={10} />
-                                    <span className="font-bold">{dt.inicio.split('-').reverse().join('/')} {t.campos.ate} {dt.fim.split('-').reverse().join('/')}</span>
-                                    {dt.motivo && <span className="opacity-70">- {dt.motivo}</span>}
-                                </div>
-                            ))}
+                            {aluno.datasIndisponiveis.map((dt, idx) => {
+                                const isPast = getUnavailableDateStatus(dt).recentPast;
+                                return (
+                                    <div key={idx} className={`text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1.5 border ${isPast ? 'bg-gray-50 text-gray-400 border-gray-200 opacity-75' : 'bg-orange-50 text-orange-700 border-orange-100'}`} title={dt.motivo}>
+                                        <Calendar size={10} />
+                                        <span className="font-bold">
+                                            {dt.inicio.split('-').reverse().join('/')} {t.campos.ate} {dt.fim.split('-').reverse().join('/')}
+                                            {isPast && <span className="ml-1 uppercase">({t.campos.encerrada || 'encerrada'})</span>}
+                                        </span>
+                                        {dt.motivo && <span className="opacity-70">- {dt.motivo}</span>}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
 

@@ -9,7 +9,8 @@ import {
     writeBatch,
     getDocs,
     query,
-    where
+    where,
+    limit
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { DEFAULT_CONFIG, normalizeSystemConfig } from '../config/appConfig';
@@ -29,7 +30,7 @@ const ESTADO_INICIAL = {
     historico_reunioes: []
 };
 
-export function useGerenciadorDados() {
+export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
     const [dados, setDados] = useState(ESTADO_INICIAL);
     const [usuario, setUsuario] = useState(null);
     const [confirmacoes, setConfirmacoes] = useState([]);
@@ -94,17 +95,23 @@ export function useGerenciadorDados() {
             setLoading(false);
         }, handleSnapshotError);
 
-        const unsubConfirmacoes = onSnapshot(collection(db, basePath, "confirmacoes"), (snap) => {
-            const lista = snap.docs
-                .map((d) => ({ id: d.id, ...d.data() }))
-                .sort((a, b) => (b.lastResponseAtIso || '').localeCompare(a.lastResponseAtIso || ''));
+        let unsubConfirmacoes = () => {};
+        if (syncConfirmacoes) {
+            unsubConfirmacoes = onSnapshot(collection(db, basePath, "confirmacoes"), (snap) => {
+                const lista = snap.docs
+                    .map((d) => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => (b.lastResponseAtIso || '').localeCompare(a.lastResponseAtIso || ''));
 
-            setConfirmacoes(lista);
-        }, handleSnapshotError);
+                setConfirmacoes(lista);
+            }, handleSnapshotError);
+        } else {
+            setConfirmacoes([]);
+        }
 
         const notificationsQuery = query(
             collection(db, NOTIFICATIONS_COLLECTION),
-            where('ownerUid', '==', uid)
+            where('ownerUid', '==', uid),
+            limit(75)
         );
 
         const unsubNotifications = onSnapshot(notificationsQuery, (snap) => {
@@ -122,7 +129,7 @@ export function useGerenciadorDados() {
             unsubConfirmacoes();
             unsubNotifications();
         };
-    }, [usuario]);
+    }, [usuario, syncConfirmacoes]);
 
     // --- AÇÕES ---
 
@@ -138,6 +145,16 @@ export function useGerenciadorDados() {
     const excluirItem = async (colecao, id) => {
         if (!usuario) return;
         await deleteDoc(doc(db, `users/${usuario.uid}/${colecao}`, String(id)));
+    };
+
+    const publicarQuadroPublico = async (payload) => {
+        if (!usuario) return;
+        const objetoLimpo = JSON.parse(JSON.stringify(payload || {}));
+        await setDoc(doc(db, 'quadros_publicos', usuario.uid), {
+            ...objetoLimpo,
+            ownerUid: usuario.uid,
+            updatedAtIso: new Date().toISOString()
+        }, { merge: true });
     };
 
     // --- FUNÇÃO SIMPLIFICADA: EXCLUIR SEMANA ---
@@ -253,6 +270,7 @@ export function useGerenciadorDados() {
         usuario,
         salvarItem,
         excluirItem,
+        publicarQuadroPublico,
         excluirSemanaELimparHistorico,
         importarBackupParaUsuario,
         resetarConta,

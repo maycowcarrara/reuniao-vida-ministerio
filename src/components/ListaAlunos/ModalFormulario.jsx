@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
-import { getIniciais } from './utils';
+import { getIniciais, getUnavailableDateStatus } from './utils';
 
 const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false }) => {
     const firstInputRef = useRef(null);
     const [novaDataIndisponivel, setNovaDataIndisponivel] = useState({ inicio: '', fim: '', motivo: '' });
+    const [familiaDropdownOpen, setFamiliaDropdownOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -72,6 +73,12 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
     };
 
     const iniciais = getIniciais(alunoEmEdicao.nome || '?');
+    const familiaBusca = (alunoEmEdicao.familia || '').trim().toLowerCase();
+    const familiasFiltradas = familiasOptions
+        .filter((familia) => familia.toLowerCase().includes(familiaBusca))
+        .slice(0, 6);
+    const familiaExataExiste = familiasOptions.some((familia) => familia.toLowerCase() === familiaBusca);
+    const showFamiliaDropdown = familiaDropdownOpen && familiasOptions.length > 0;
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (!isSaving && e.target === e.currentTarget) onClose(); }}>
@@ -132,19 +139,59 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.familia}</label>
-                            <datalist id="familias-cadastradas">
-                                {familiasOptions.map((familia) => (
-                                    <option key={familia} value={familia} />
-                                ))}
-                            </datalist>
-                            <input
-                                type="text"
-                                list="familias-cadastradas"
-                                className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600"
-                                value={alunoEmEdicao.familia || ""}
-                                onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, familia: e.target.value })}
-                                placeholder={t.campos.familiaPlaceholder}
-                            />
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    autoComplete="off"
+                                    className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600"
+                                    value={alunoEmEdicao.familia || ""}
+                                    onFocus={() => setFamiliaDropdownOpen(true)}
+                                    onBlur={() => window.setTimeout(() => setFamiliaDropdownOpen(false), 120)}
+                                    onChange={e => {
+                                        setAlunoEmEdicao({ ...alunoEmEdicao, familia: e.target.value });
+                                        setFamiliaDropdownOpen(true);
+                                    }}
+                                    placeholder={t.campos.familiaPlaceholder}
+                                />
+
+                                {showFamiliaDropdown && (
+                                    <div className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-xl shadow-slate-200/70">
+                                        <div className="px-3 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                            {t.campos.familiasCadastradas || 'Famílias cadastradas'}
+                                        </div>
+
+                                        {familiasFiltradas.length > 0 ? (
+                                            familiasFiltradas.map((familia) => (
+                                                <button
+                                                    key={familia}
+                                                    type="button"
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={() => {
+                                                        setAlunoEmEdicao({ ...alunoEmEdicao, familia });
+                                                        setFamiliaDropdownOpen(false);
+                                                    }}
+                                                    className="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-black text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700"
+                                                >
+                                                    <span className="truncate">{familia}</span>
+                                                    {alunoEmEdicao.familia === familia && (
+                                                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] text-indigo-700">{t.campos.selecionada || 'Selecionada'}</span>
+                                                    )}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-3 py-3 text-xs font-semibold text-slate-400">
+                                                {t.campos.nenhumaFamiliaEncontrada || 'Nenhuma família encontrada.'}
+                                            </div>
+                                        )}
+
+                                        {familiaBusca && !familiaExataExiste && (
+                                            <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">
+                                                {t.campos.criarFamiliaNova || 'Será criado como novo grupo ao salvar.'}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <p className="text-[10px] text-gray-400 px-1">{t.campos.familiaAjuda}</p>
                             {familiasOptions.length > 0 && (
                                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar pt-1 pb-1">
@@ -171,15 +218,23 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                             
                             {(alunoEmEdicao.datasIndisponiveis || []).length > 0 ? (
                                 <div className="space-y-1.5 mb-2 max-h-24 overflow-y-auto custom-scrollbar pr-1">
-                                    {alunoEmEdicao.datasIndisponiveis.map((dt, idx) => (
-                                        <div key={idx} className="flex justify-between items-center bg-orange-50 border border-orange-100 text-orange-800 text-xs px-2.5 py-1.5 rounded-lg">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold">{dt.inicio.split('-').reverse().join('/')} {t.campos.ate} {dt.fim.split('-').reverse().join('/')}</span>
-                                                {dt.motivo && <span className="text-[9px] opacity-80">{dt.motivo}</span>}
+                                    {alunoEmEdicao.datasIndisponiveis.map((dt, idx) => {
+                                        const statusData = getUnavailableDateStatus(dt);
+                                        const isPast = statusData.recentPast;
+
+                                        return (
+                                            <div key={idx} className={`flex justify-between items-center text-xs px-2.5 py-1.5 rounded-lg border ${isPast ? 'bg-gray-50 border-gray-200 text-gray-400 opacity-75' : 'bg-orange-50 border-orange-100 text-orange-800'}`}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold">
+                                                        {dt.inicio.split('-').reverse().join('/')} {t.campos.ate} {dt.fim.split('-').reverse().join('/')}
+                                                        {isPast && <span className="ml-1 font-black uppercase">({t.campos.encerrada || 'encerrada'})</span>}
+                                                    </span>
+                                                    {dt.motivo && <span className="text-[9px] opacity-80">{dt.motivo}</span>}
+                                                </div>
+                                                <button type="button" onClick={() => removerData(idx)} className={`${isPast ? 'text-gray-300' : 'text-orange-400'} hover:text-red-500 p-1 transition-colors`}><X size={14} /></button>
                                             </div>
-                                            <button type="button" onClick={() => removerData(idx)} className="text-orange-400 hover:text-red-500 p-1 transition-colors"><X size={14} /></button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <p className="text-[10px] text-gray-400 italic px-1">{t.campos.semDatas}</p>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock, UserPlus, UsersRound } from 'lucide-react';
-import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais } from './utils';
+import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais, getUnavailableDateStatus } from './utils';
 
 const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onCopyPublicLink }) => {
     const cKey = getCargoKey(aluno.tipo, cargosMap);
@@ -63,12 +63,18 @@ const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onC
                     <div className="mt-2 pt-2 border-t border-gray-50">
                         <span className="text-[9px] font-bold text-orange-500 uppercase flex items-center gap-1 mb-1"><Calendar size={10} /> {t.card.indisponivel}</span>
                         <div className="space-y-1">
-                            {aluno.datasIndisponiveis.map((dt, idx) => (
-                                <div key={idx} className="bg-orange-50 text-orange-700 text-[9px] px-1.5 py-0.5 rounded flex justify-between items-center border border-orange-100">
-                                    <span>{dt.inicio.split('-').reverse().join('/')} - {dt.fim.split('-').reverse().join('/')}</span>
-                                    {dt.motivo && <span className="opacity-70 truncate max-w-[60px]" title={dt.motivo}>{dt.motivo}</span>}
-                                </div>
-                            ))}
+                            {aluno.datasIndisponiveis.map((dt, idx) => {
+                                const isPast = getUnavailableDateStatus(dt).recentPast;
+                                return (
+                                    <div key={idx} className={`text-[9px] px-1.5 py-0.5 rounded flex justify-between items-center border ${isPast ? 'bg-gray-50 text-gray-400 border-gray-200 opacity-75' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
+                                        <span>
+                                            {dt.inicio.split('-').reverse().join('/')} - {dt.fim.split('-').reverse().join('/')}
+                                            {isPast && <span className="ml-1 uppercase">{t.campos.encerrada || 'encerrada'}</span>}
+                                        </span>
+                                        {dt.motivo && <span className="opacity-70 truncate max-w-[60px]" title={dt.motivo}>{dt.motivo}</span>}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

@@ -7,7 +7,7 @@ import {
 import { getWeekdayJsDay } from '../config/appConfig';
 import { getCanonicalWeekStartISO, getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
-import { useSectionMessages } from '../i18n';
+import { formatText, useSectionMessages } from '../i18n';
 
 export default function Dashboard({
     listaProgramacoes,
@@ -382,13 +382,13 @@ export default function Dashboard({
         let usadosNoTrimestre = 0;
         const precisandoAtencao = [];
         const balanceMap = new Map([
-            ['presidente', { label: 'Presidente', total: 0, pessoas: new Set() }],
-            ['oracao', { label: 'Oração', total: 0, pessoas: new Set() }],
-            ['leitura', { label: 'Leitura', total: 0, pessoas: new Set() }],
-            ['ministerio', { label: 'Ministério', total: 0, pessoas: new Set() }],
-            ['ajudante', { label: 'Ajudante', total: 0, pessoas: new Set() }],
-            ['vida', { label: 'Vida Cristã', total: 0, pessoas: new Set() }],
-            ['estudo', { label: 'Estudo/Leitor', total: 0, pessoas: new Set() }]
+            ['presidente', { label: localTxt.rolePresidente || 'Presidente', total: 0, pessoas: new Set() }],
+            ['oracao', { label: localTxt.roleOracao || 'Oração', total: 0, pessoas: new Set() }],
+            ['leitura', { label: localTxt.roleLeitura || 'Leitura', total: 0, pessoas: new Set() }],
+            ['ministerio', { label: localTxt.roleMinisterio || 'Ministério', total: 0, pessoas: new Set() }],
+            ['ajudante', { label: localTxt.roleAjudante || 'Ajudante', total: 0, pessoas: new Set() }],
+            ['vida', { label: localTxt.roleVida || 'Vida Cristã', total: 0, pessoas: new Set() }],
+            ['estudo', { label: localTxt.roleEstudoLeitor || 'Estudo/Leitor', total: 0, pessoas: new Set() }]
         ]);
 
         const addBalance = (key, pessoa) => {
@@ -616,45 +616,45 @@ export default function Dashboard({
         {
             key: 'historico',
             value: stats.semanasComHistoricoPendente,
-            label: 'Histórico para gravar',
-            hint: 'Alterações em semanas publicadas',
-            actionLabel: 'Gravar',
+            label: localTxt.pendHistoricoLabel,
+            hint: localTxt.pendHistoricoHint,
+            actionLabel: localTxt.pendHistoricoAction,
             onClick: () => setAbaAtiva('revisar'),
             tone: 'orange'
         },
         {
             key: 'agenda',
             value: stats.semanasComAgendaPendente,
-            label: 'Agenda para atualizar',
-            hint: stats.substituicoesPendentes ? `${stats.substituicoesPendentes} substituição(ões)` : 'Revisar alterações',
-            actionLabel: 'Revisar',
+            label: localTxt.pendAgendaLabel,
+            hint: stats.substituicoesPendentes ? formatText(localTxt.pendAgendaSubstituicoesTpl, { count: stats.substituicoesPendentes }) : localTxt.pendAgendaHint,
+            actionLabel: localTxt.pendAgendaAction,
             onClick: () => setAbaAtiva('revisar'),
             tone: 'sky'
         },
         {
             key: 'designacoes',
             value: stats.programacaoPorMes.reduce((sum, mes) => sum + mes.designacoesPendentes, 0),
-            label: 'Designações em aberto',
-            hint: 'Mês atual e próximo',
-            actionLabel: 'Designar',
+            label: localTxt.pendDesignacoesLabel,
+            hint: localTxt.pendDesignacoesHint,
+            actionLabel: localTxt.pendDesignacoesAction,
             onClick: () => setAbaAtiva('designar'),
             tone: 'blue'
         },
         {
             key: 'importar',
             value: stats.programacaoPorMes.reduce((sum, mes) => sum + mes.faltandoImportacao, 0),
-            label: 'Semanas a importar',
-            hint: 'Cobertura da programação',
-            actionLabel: 'Importar',
+            label: localTxt.pendImportarLabel,
+            hint: localTxt.pendImportarHint,
+            actionLabel: localTxt.pendImportarAction,
             onClick: () => setAbaAtiva('importar'),
             tone: 'indigo'
         },
         {
             key: 'rascunhos',
             value: (listaProgramacoes || []).filter((semana) => !semana?.arquivada && semana?.publicadaNoQuadro === false).length,
-            label: 'Rascunhos no quadro',
-            hint: 'Ocultos do público',
-            actionLabel: 'Publicar',
+            label: localTxt.pendRascunhosLabel,
+            hint: localTxt.pendRascunhosHint,
+            actionLabel: localTxt.pendRascunhosAction,
             onClick: () => setAbaAtiva('designar'),
             tone: 'emerald'
         }
@@ -692,10 +692,10 @@ export default function Dashboard({
                         <div>
                             <h2 className="flex items-center gap-2 text-sm font-black text-slate-800">
                                 <AlertTriangle size={17} className="text-amber-500" />
-                                Pendências administrativas
+                                {localTxt.pendenciasAdminTitulo}
                             </h2>
                             <p className="mt-1 text-xs font-medium text-slate-500">
-                                Ações fora do fluxo da próxima reunião e da saúde da congregação.
+                                {localTxt.pendenciasAdminDescricao}
                             </p>
                         </div>
                         <button
@@ -703,7 +703,7 @@ export default function Dashboard({
                             onClick={() => setAbaAtiva('revisar')}
                             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100"
                         >
-                            Abrir revisão <ArrowRight size={13} />
+                            {localTxt.abrirRevisao} <ArrowRight size={13} />
                         </button>
                     </div>
 

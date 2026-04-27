@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle, CheckCircle2, ChevronDown, Mail, MessageCircle, Tent, UsersRound, Loader2, RefreshCw, Send, SlidersHorizontal, XCircle } from 'lucide-react';
 
 import { formatarDataFolha } from '../../utils/revisarEnviar/dates';
@@ -49,6 +49,7 @@ const RevisarEnviarNotificarTab = ({
     const [manualBusy, setManualBusy] = useState({});
     const [activeActionMenu, setActiveActionMenu] = useState(null);
     const [checklistAberto, setChecklistAberto] = useState(false);
+    const confirmationCacheRef = useRef(new Map());
     const emailJsMissingConfig = getEmailJsMissingConfig();
     const emailJsReady = emailJsMissingConfig.length === 0;
     const emailJsConfigMessage = formatText(t.emailJsConfigMissingTpl, {
@@ -92,7 +93,18 @@ const RevisarEnviarNotificarTab = ({
 
     const prepararConfirmacao = async (confirmationData) => {
         if (!confirmationData) return { link: '', status: 'pendente' };
-        return ensurePublicConfirmation(confirmationData);
+        const cacheKey = String(confirmationData?.assignmentKey || '').trim();
+
+        if (cacheKey && confirmationCacheRef.current.has(cacheKey)) {
+            return confirmationCacheRef.current.get(cacheKey);
+        }
+
+        const confirmacao = await ensurePublicConfirmation(confirmationData);
+        if (cacheKey) {
+            confirmationCacheRef.current.set(cacheKey, confirmacao);
+        }
+
+        return confirmacao;
     };
 
     const montarPayloadEmail = async (payloadBase, confirmationData) => {
@@ -881,7 +893,7 @@ const RevisarEnviarNotificarTab = ({
                             onClick={() => onSolicitarSubstituicao(buildSubstitutionRequest(confirmationData, pessoa))}
                             className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-black text-amber-800 transition hover:bg-amber-100"
                         >
-                            <RefreshCw size={13} /> Substituição assistida
+                            <RefreshCw size={13} /> {t.substituicaoAssistida}
                         </button>
                     )}
 
@@ -920,7 +932,7 @@ const RevisarEnviarNotificarTab = ({
                                 onClick={() => onSolicitarSubstituicao(buildSubstitutionRequest(confirmationData, pessoa))}
                                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 text-[10px] font-black text-amber-800 transition hover:bg-amber-100"
                             >
-                                <RefreshCw size={13} /> Substituição assistida
+                                <RefreshCw size={13} /> {t.substituicaoAssistida}
                             </button>
                         )}
                         {renderButtons({ pessoa, msg, msgKey, compact, emailPayload, confirmationData })}
@@ -944,67 +956,67 @@ const RevisarEnviarNotificarTab = ({
                     <div>
                         <h4 className={`flex items-center gap-2 font-black ${checklistRevisao.ok ? 'text-emerald-800' : 'text-amber-800'}`}>
                             {checklistRevisao.ok ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
-                            Revisão final
+                            {t.checklistTitulo}
                         </h4>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-11">
-                        <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2" title="Total de designações encontradas nas semanas selecionadas.">
+                        <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2" title={t.checklistTotalHint}>
                             <p className="text-lg font-black text-blue-900">{checklistRevisao.totalDesignacoes}</p>
-                            <p className="text-[9px] font-black uppercase text-blue-700">designações</p>
+                            <p className="text-[9px] font-black uppercase text-blue-700">{t.checklistDesignacoes}</p>
                         </div>
-                        <div className="rounded-xl border border-slate-100 bg-white/80 px-3 py-2" title="Quantidade de semanas selecionadas para esta revisão.">
+                        <div className="rounded-xl border border-slate-100 bg-white/80 px-3 py-2" title={t.checklistSemanasHint}>
                             <p className="text-lg font-black text-slate-900">{checklistRevisao.semanas}</p>
-                            <p className="text-[9px] font-black uppercase text-slate-500">semanas</p>
+                            <p className="text-[9px] font-black uppercase text-slate-500">{t.checklistSemanas}</p>
                         </div>
-                        <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2" title="Partes que deveriam ter responsável, mas ainda estão vazias.">
+                        <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2" title={t.checklistSemDesignacaoHint}>
                             <p className="text-lg font-black text-amber-900">{checklistRevisao.semDesignado.length}</p>
-                            <p className="text-[9px] font-black uppercase text-amber-700">sem designação</p>
+                            <p className="text-[9px] font-black uppercase text-amber-700">{t.checklistSemDesignacao}</p>
                         </div>
-                        <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2" title="Pessoas com mais de uma designação na mesma semana selecionada.">
+                        <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2" title={t.checklistDuplicadosHint}>
                             <p className="text-lg font-black text-rose-900">{checklistRevisao.duplicados.length}</p>
-                            <p className="text-[9px] font-black uppercase text-rose-700">duplicados</p>
+                            <p className="text-[9px] font-black uppercase text-rose-700">{t.checklistDuplicados}</p>
                         </div>
-                        <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2" title="Designados sem telefone e sem e-mail cadastrados.">
+                        <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2" title={t.checklistSemContatoHint}>
                             <p className="text-lg font-black text-slate-900">{checklistRevisao.semContato.length}</p>
-                            <p className="text-[9px] font-black uppercase text-slate-600">sem contato</p>
+                            <p className="text-[9px] font-black uppercase text-slate-600">{t.checklistSemContato}</p>
                         </div>
-                        <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2" title="Mensagens de e-mail prontas para serem disparadas agora.">
+                        <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2" title={t.checklistEmailsHint}>
                             <p className="text-lg font-black text-indigo-900">{checklistRevisao.emailsNaFila}</p>
-                            <p className="text-[9px] font-black uppercase text-indigo-700">e-mails na fila</p>
+                            <p className="text-[9px] font-black uppercase text-indigo-700">{t.checklistEmailsFila}</p>
                         </div>
-                        <div className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2" title="Confirmações ainda pendentes nas semanas selecionadas.">
+                        <div className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2" title={t.checklistConfirmacoesPendentesHint}>
                             <p className="text-lg font-black text-orange-900">{checklistRevisao.confirmacoesPendentes}</p>
-                            <p className="text-[9px] font-black uppercase text-orange-700">conf. pend.</p>
+                            <p className="text-[9px] font-black uppercase text-orange-700">{t.checklistConfirmacoesPendentes}</p>
                         </div>
-                        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2" title="Respostas de confirmação já recebidas nas semanas selecionadas.">
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2" title={t.checklistConfirmacoesRecebidasHint}>
                             <p className="text-lg font-black text-emerald-900">{checklistRevisao.confirmacoesRecebidas}</p>
-                            <p className="text-[9px] font-black uppercase text-emerald-700">conf. receb.</p>
+                            <p className="text-[9px] font-black uppercase text-emerald-700">{t.checklistConfirmacoesRecebidas}</p>
                         </div>
-                        <div className="rounded-xl border border-purple-100 bg-purple-50 px-3 py-2" title="Substituições registradas nas semanas selecionadas.">
+                        <div className="rounded-xl border border-purple-100 bg-purple-50 px-3 py-2" title={t.checklistSubstituicoesHint}>
                             <p className="text-lg font-black text-purple-900">{checklistRevisao.substituicoes}</p>
-                            <p className="text-[9px] font-black uppercase text-purple-700">substituições</p>
+                            <p className="text-[9px] font-black uppercase text-purple-700">{t.checklistSubstituicoes}</p>
                         </div>
-                        <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2" title="Semanas alteradas que ainda precisam ser reenviadas para o Google Agenda.">
+                        <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2" title={t.checklistAgendaHint}>
                             <p className="text-lg font-black text-sky-900">{checklistRevisao.agendaPendente}</p>
-                            <p className="text-[9px] font-black uppercase text-sky-700">agenda pend.</p>
+                            <p className="text-[9px] font-black uppercase text-sky-700">{t.checklistAgendaPendente}</p>
                         </div>
-                        <div className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2" title="Semanas alteradas que ainda precisam atualizar o histórico dos alunos.">
+                        <div className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2" title={t.checklistHistoricoHint}>
                             <p className="text-lg font-black text-orange-900">{checklistRevisao.historicoPendente}</p>
-                            <p className="text-[9px] font-black uppercase text-orange-700">histórico pend.</p>
+                            <p className="text-[9px] font-black uppercase text-orange-700">{t.checklistHistoricoPendente}</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/70 pt-3">
                     <p className="text-xs font-semibold text-slate-600">
-                        {checklistRevisao.ok ? 'Nenhuma pendência crítica encontrada.' : `${checklistRevisao.criticos} ponto(s) importante(s) para conferir antes do envio.`}
+                        {checklistRevisao.ok ? t.checklistOk : formatText(t.checklistCriticosTpl, { count: checklistRevisao.criticos })}
                     </p>
                     <button
                         type="button"
                         onClick={() => setChecklistAberto((prev) => !prev)}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-white/80 bg-white/80 px-3 py-1.5 text-xs font-black text-slate-700 shadow-sm transition hover:bg-white"
                     >
-                        {checklistAberto ? 'Ocultar detalhes' : 'Ver detalhes'}
+                        {checklistAberto ? t.checklistOcultarDetalhes : t.checklistVerDetalhes}
                         <ChevronDown size={14} className={`transition-transform ${checklistAberto ? 'rotate-180' : ''}`} />
                     </button>
                 </div>
@@ -1013,8 +1025,8 @@ const RevisarEnviarNotificarTab = ({
                     <div className="mt-3 grid gap-2 text-xs text-slate-700 md:grid-cols-3">
                         {checklistRevisao.semDesignado.length > 0 && (
                             <div className="rounded-xl bg-white/80 p-3">
-                                <p className="font-black text-amber-800">Sem designação</p>
-                                <p className="mt-1 text-[11px] font-semibold text-slate-500">Partes que precisam de responsável.</p>
+                                <p className="font-black text-amber-800">{t.checklistSemDesignacaoTitulo}</p>
+                                <p className="mt-1 text-[11px] font-semibold text-slate-500">{t.checklistSemDesignacaoDesc}</p>
                                 <div className="mt-2 space-y-1.5">
                                     {checklistRevisao.semDesignado.slice(0, 4).map((item, idx) => (
                                         <p key={`${item.semana}-${item.item}-${idx}`}>
@@ -1026,8 +1038,8 @@ const RevisarEnviarNotificarTab = ({
                         )}
                         {checklistRevisao.duplicados.length > 0 && (
                             <div className="rounded-xl bg-white/80 p-3">
-                                <p className="font-black text-rose-800">Duplicados</p>
-                                <p className="mt-1 text-[11px] font-semibold text-slate-500">Mesma pessoa em mais de uma parte na semana.</p>
+                                <p className="font-black text-rose-800">{t.checklistDuplicadosTitulo}</p>
+                                <p className="mt-1 text-[11px] font-semibold text-slate-500">{t.checklistDuplicadosDesc}</p>
                                 <div className="mt-2 space-y-3">
                                     {checklistRevisao.duplicados.slice(0, 4).map((item, idx) => (
                                         <div key={`${item.pessoa}-${idx}`} className="rounded-lg border border-rose-100 bg-white/80 p-2">
@@ -1046,8 +1058,8 @@ const RevisarEnviarNotificarTab = ({
                         )}
                         {checklistRevisao.semContato.length > 0 && (
                             <div className="rounded-xl bg-white/80 p-3">
-                                <p className="font-black text-slate-800">Contato faltando</p>
-                                <p className="mt-1 text-[11px] font-semibold text-slate-500">Sem telefone e sem e-mail cadastrados.</p>
+                                <p className="font-black text-slate-800">{t.checklistContatoTitulo}</p>
+                                <p className="mt-1 text-[11px] font-semibold text-slate-500">{t.checklistContatoDesc}</p>
                                 <div className="mt-2 space-y-1.5">
                                     {checklistRevisao.semContato.slice(0, 4).map((item, idx) => (
                                         <p key={`${item.nome}-${item.role}-${idx}`}>
@@ -1060,13 +1072,13 @@ const RevisarEnviarNotificarTab = ({
                         {checklistRevisao.agendaPendente > 0 && (
                             <div className="rounded-xl bg-white/80 p-3">
                                 <p className="font-black text-sky-800">Google Agenda</p>
-                                <p className="mt-1">Sincronize novamente as semanas alteradas depois de revisar as substituições.</p>
+                                <p className="mt-1">{t.checklistAgendaDesc}</p>
                             </div>
                         )}
                         {checklistRevisao.historicoPendente > 0 && (
                             <div className="rounded-xl bg-white/80 p-3">
                                 <p className="font-black text-orange-800">Histórico</p>
-                                <p className="mt-1">Grave o histórico novamente para refletir as últimas alterações publicadas.</p>
+                                <p className="mt-1">{t.checklistHistoricoDesc}</p>
                             </div>
                         )}
                     </div>

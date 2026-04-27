@@ -271,7 +271,7 @@ export default function ModalSugestao({
                 <div className="bg-gradient-to-r from-blue-700 to-blue-600 p-4 text-white flex justify-between items-center shrink-0">
                     <div>
                         <h3 className="font-bold text-lg flex items-center gap-2">
-                            <CheckCircle size={20} className="text-green-300" /> {modo === 'substituicao' ? 'Substituir designado' : t.titulo}
+                            <CheckCircle size={20} className="text-green-300" /> {modo === 'substituicao' ? t.substituirDesignado : t.titulo}
                         </h3>
                         <div className="flex items-center gap-2 mt-1 text-blue-100 text-xs">
                             <Filter size={12} />
@@ -281,7 +281,7 @@ export default function ModalSugestao({
                             {modo === 'substituicao' && pessoaAtual?.nome && (
                                 <>
                                     <span className="opacity-50">|</span>
-                                    <span>Atual: <strong>{pessoaAtual.nome}</strong></span>
+                                    <span>{t.atual}: <strong>{pessoaAtual.nome}</strong></span>
                                 </>
                             )}
                         </div>

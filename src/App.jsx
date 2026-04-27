@@ -44,6 +44,9 @@ function RouteLoading({ text = 'Carregando...' }) {
 // 1. ADMIN PANEL (Seu Sistema de Gerenciamento)
 // ============================================================================
 function AdminPanel() {
+  const [abaAtiva, setAbaAtiva] = useState('dashboard');
+  const syncConfirmacoes = abaAtiva === 'dashboard' || abaAtiva === 'revisar';
+
   // 🔥 FUNÇÃO excluirSemanaELimparHistorico ADICIONADA AQUI:
   const {
     dados: dadosNuvem,
@@ -53,6 +56,7 @@ function AdminPanel() {
     usuario,
     salvarItem,
     excluirItem,
+    publicarQuadroPublico,
     excluirSemanaELimparHistorico,
     importarBackupParaUsuario,
     resetarConta,
@@ -60,9 +64,8 @@ function AdminPanel() {
     marcarTodasNotificacoesComoLidas,
     excluirNotificacao,
     excluirNotificacoesLidas
-  } = useGerenciadorDados();
+  } = useGerenciadorDados({ syncConfirmacoes });
   const dadosSistema = dadosNuvem;
-  const [abaAtiva, setAbaAtiva] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [sharedWeekSelection, setSharedWeekSelection] = useState({});
   const [reviewShortcutRequest, setReviewShortcutRequest] = useState(null);
@@ -243,36 +246,100 @@ function AdminPanel() {
     });
   };
 
+  const stableStringify = (value) => {
+    if (Array.isArray(value)) {
+      return `[${value.map(stableStringify).join(',')}]`;
+    }
+
+    if (value && typeof value === 'object') {
+      const entries = Object.keys(value)
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`);
+      return `{${entries.join(',')}}`;
+    }
+
+    return JSON.stringify(value);
+  };
+
+  const getProgramacaoDocId = (programacao) => String(programacao?.semana || '').trim().replace(/[/\s,.]/g, '-');
+
+  const hasMeaningfulChange = (next, current) => stableStringify(next || {}) !== stableStringify(current || {});
+
+  const buildQuadroPublicoPayload = (configuracoes, programacoes = []) => ({
+    configuracoes: normalizeSystemConfig(configuracoes || {}),
+    historico_reunioes: (programacoes || [])
+      .filter((semana) => semana && !semana.arquivada && semana.publicadaNoQuadro !== false)
+      .map((semana) => JSON.parse(JSON.stringify(semana)))
+  });
+
   const salvarAlteracao = async (novosDados) => {
     const operacoes = [];
     const configDestino = novosDados.configuracoes || dadosSistema?.configuracoes;
+    let configAlterada = false;
+    let programacoesAlteradas = false;
+    let programacoesPreparadasParaPublico = null;
+    let payloadQuadroPublico = null;
 
-    if (novosDados.configuracoes) {
+    if (novosDados.configuracoes && hasMeaningfulChange(novosDados.configuracoes, dadosSistema?.configuracoes)) {
+      configAlterada = true;
       operacoes.push(salvarItem('configuracoes', 'geral', novosDados.configuracoes));
     }
 
     if (Array.isArray(novosDados.alunos)) {
+      const alunosAtuaisPorId = new Map((dadosSistema?.alunos || []).map((aluno) => [String(aluno?.id), aluno]));
       novosDados.alunos.forEach(a => {
         if (a?.id != null && String(a.id).trim() !== '') {
-          operacoes.push(salvarItem('alunos', a.id, a));
+          const alunoAtual = alunosAtuaisPorId.get(String(a.id));
+          if (!alunoAtual || hasMeaningfulChange(a, alunoAtual)) {
+            operacoes.push(salvarItem('alunos', a.id, a));
+          }
         }
       });
     }
 
     if (Array.isArray(novosDados.historico_reunioes)) {
+      const programacoesAtuaisPorDocId = new Map(
+        (listaProgramacoes || [])
+          .map((programacao) => [getProgramacaoDocId(programacao), programacao])
+          .filter(([docId]) => docId)
+      );
       const programacoesPreparadas = prepararProgramacoesParaSalvar(
         novosDados.historico_reunioes,
         configDestino,
         dadosSistema?.configuracoes
       );
+      programacoesPreparadasParaPublico = programacoesPreparadas;
       programacoesPreparadas.forEach(p => {
         const programacaoNormalizada = p;
-        const semanaStr = String(programacaoNormalizada?.semana || '').trim();
-        if (semanaStr) operacoes.push(salvarItem('programacao', semanaStr.replace(/[/\s,.]/g, '-'), programacaoNormalizada));
+        const docId = getProgramacaoDocId(programacaoNormalizada);
+        if (docId) {
+          const programacaoAtual = programacoesAtuaisPorDocId.get(docId);
+          if (!programacaoAtual || hasMeaningfulChange(programacaoNormalizada, programacaoAtual)) {
+            programacoesAlteradas = true;
+            operacoes.push(salvarItem('programacao', docId, programacaoNormalizada));
+          }
+        }
       });
     }
 
-    await Promise.all(operacoes);
+    if (configAlterada || programacoesAlteradas) {
+      payloadQuadroPublico = buildQuadroPublicoPayload(
+        configDestino,
+        programacoesPreparadasParaPublico || listaProgramacoes
+      );
+    }
+
+    if (operacoes.length > 0) {
+      await Promise.all(operacoes);
+    }
+
+    if (payloadQuadroPublico) {
+      try {
+        await publicarQuadroPublico(payloadQuadroPublico);
+      } catch (error) {
+        console.warn('Nao foi possivel publicar o resumo do quadro publico:', error);
+      }
+    }
   };
 
   const setListaProgramacoes = (updater) => {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CalendarDays, Loader2, Calendar, X, Printer, Save, SlidersHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from '../../utils/toast';
 import { getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
+import { formatText } from '../../i18n';
 
 const RevisarEnviarHeader = ({
     t,
@@ -188,13 +189,13 @@ const RevisarEnviarHeader = ({
                                 </span>
                             )}
                             {(historicoOk || historicoPendente) && (
-                                <span className={`inline-flex items-center gap-0.5 rounded border px-1 py-0.5 text-[9px] font-black ${pillClass(historicoOk, historicoPendente)}`} title={historicoPendente ? 'Histórico pendente' : 'Histórico gravado'}>
+                                <span className={`inline-flex items-center gap-0.5 rounded border px-1 py-0.5 text-[9px] font-black ${pillClass(historicoOk, historicoPendente)}`} title={historicoPendente ? L('historicoPendente', 'Histórico pendente') : L('historicoGravado', 'Histórico gravado')}>
                                     {historicoPendente ? <AlertCircle size={9} /> : <CheckCircle2 size={9} />}
                                     H
                                 </span>
                             )}
                             {(agendaOk || agendaPendente) && (
-                                <span className={`inline-flex items-center gap-0.5 rounded border px-1 py-0.5 text-[9px] font-black ${pillClass(agendaOk, agendaPendente)}`} title={agendaPendente ? 'Google Agenda pendente' : 'Google Agenda sincronizada'}>
+                                <span className={`inline-flex items-center gap-0.5 rounded border px-1 py-0.5 text-[9px] font-black ${pillClass(agendaOk, agendaPendente)}`} title={agendaPendente ? L('agendaPendente', 'Google Agenda pendente') : L('agendaSincronizada', 'Google Agenda sincronizada')}>
                                     {agendaPendente ? <AlertCircle size={9} /> : <CheckCircle2 size={9} />}
                                     A
                                 </span>
@@ -268,7 +269,7 @@ const RevisarEnviarHeader = ({
                     type="button"
                     onClick={() => setMobileFiltersOpen(true)}
                     className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 p-2 text-blue-700 shadow-sm"
-                    aria-label="Filtros"
+                    aria-label={L('filtros', 'Filtros')}
                 >
                     <SlidersHorizontal size={18} />
                 </button>
@@ -301,8 +302,8 @@ const RevisarEnviarHeader = ({
                     <div className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <div className="mb-3 flex items-center justify-between">
                             <div>
-                                <div className="text-sm font-black text-gray-900">Filtros</div>
-                                <div className="text-[10px] font-bold uppercase text-gray-400">{selectedCount} semanas selecionadas</div>
+                                <div className="text-sm font-black text-gray-900">{L('filtros', 'Filtros')}</div>
+                                <div className="text-[10px] font-bold uppercase text-gray-400">{formatText(L('semanasSelecionadasTpl', '{count} semanas selecionadas'), { count: selectedCount })}</div>
                             </div>
                             <button type="button" onClick={() => setMobileFiltersOpen(false)} className="rounded-xl border border-gray-200 p-2 text-gray-500">
                                 <X size={18} />

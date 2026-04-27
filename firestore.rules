@@ -258,6 +258,19 @@ service cloud.firestore {
         && isAdminEmail();
     }
 
+    match /quadros_publicos/{userId} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if isAdminUser(userId)
+        && request.resource.data.ownerUid == userId
+        && request.resource.data.keys().hasOnly([
+          "ownerUid",
+          "updatedAtIso",
+          "configuracoes",
+          "historico_reunioes"
+        ]);
+    }
+
     match /notificacoes/{notificationId} {
       allow read: if isSignedIn()
         && request.auth.uid == resource.data.ownerUid

@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, UsersRound, User, UserRound, FilterX, FileJson, Download, FileText, FileSpreadsheet, Printer, ChevronDown, LayoutGrid, List, SortAsc, SortDesc, Calendar, AlertCircle, Plus, SlidersHorizontal, X } from 'lucide-react';
 import AlunoCard from './AlunoCard';
 import AlunoListItem from './AlunoListItem';
 import ModalHistorico from './ModalHistorico';
 import ModalFormulario from './ModalFormulario';
-import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva } from './utils';
+import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, normalizeUnavailableDatesForAluno, pruneExpiredUnavailableDates } from './utils';
 import { toast } from '../../utils/toast';
 
 // Subcomponente para os Cards Estatísticos
@@ -47,6 +47,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     // Dados em Edição/Visualização
     const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
     const [alunoHistorico, setAlunoHistorico] = useState(null);
+    const cleanupUnavailableSignatureRef = useRef('');
 
     const [viewMode, setViewMode] = useState(() => {
         try {
@@ -75,6 +76,32 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [menuExportOpen, modalHistoryOpen, modalFormOpen]);
+
+    useEffect(() => {
+        if (!onSalvarAluno || !Array.isArray(alunos) || alunos.length === 0) return;
+
+        const alunosComLimpeza = alunos
+            .map((aluno) => normalizeUnavailableDatesForAluno(aluno))
+            .filter((result) => result.removedCount > 0 && result.aluno?.id);
+
+        if (alunosComLimpeza.length === 0) {
+            cleanupUnavailableSignatureRef.current = '';
+            return;
+        }
+
+        const signature = alunosComLimpeza
+            .map((result) => `${result.aluno.id}:${(result.aluno.datasIndisponiveis || []).map((d) => `${d.inicio}-${d.fim}`).join(',')}`)
+            .join('|');
+
+        if (cleanupUnavailableSignatureRef.current === signature) return;
+        cleanupUnavailableSignatureRef.current = signature;
+
+        alunosComLimpeza.forEach((result) => {
+            Promise.resolve(onSalvarAluno(result.aluno)).catch((error) => {
+                console.error('Erro ao limpar datas indisponíveis vencidas:', error);
+            });
+        });
+    }, [alunos, onSalvarAluno]);
 
     // Calcular Estatísticas Iniciais (Ignorando Filtros)
     const stats = useMemo(() => {
@@ -115,7 +142,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 const info = CARGOS_MAP[cKey] || CARGOS_MAP.irmao;
 
                 // 1. Busca por Texto
-                const matchBusca = normalizar(a.nome).includes(buscaNorm) || normalizar(info.pt).includes(buscaNorm) || normalizar(info.es).includes(buscaNorm) || normalizar(a.observacoes || '').includes(buscaNorm);
+                const matchBusca = normalizar(a.nome).includes(buscaNorm) || normalizar(a.familia || '').includes(buscaNorm) || normalizar(info.pt).includes(buscaNorm) || normalizar(info.es).includes(buscaNorm) || normalizar(a.observacoes || '').includes(buscaNorm);
                 if (!matchBusca) return false;
 
                 // 2. Filtro de Status
@@ -222,13 +249,13 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     };
 
     const openEditar = (aluno) => {
-        setAlunoEmEdicao({ ...aluno, tipo: getCargoKey(aluno.tipo, CARGOS_MAP), telefone: aluno.telefone || '', email: aluno.email || '', familia: aluno.familia || '', observacoes: aluno.observacoes || '', historico: Array.isArray(aluno.historico) ? aluno.historico : [], datasIndisponiveis: Array.isArray(aluno.datasIndisponiveis) ? aluno.datasIndisponiveis : [] });
+        setAlunoEmEdicao({ ...aluno, tipo: getCargoKey(aluno.tipo, CARGOS_MAP), telefone: aluno.telefone || '', email: aluno.email || '', familia: aluno.familia || '', observacoes: aluno.observacoes || '', historico: Array.isArray(aluno.historico) ? aluno.historico : [], datasIndisponiveis: pruneExpiredUnavailableDates(aluno.datasIndisponiveis) });
         setModalFormOpen(true);
     };
 
     const handleSalvar = async (e) => {
         e.preventDefault();
-        const clean = { ...alunoEmEdicao, nome: (alunoEmEdicao.nome || '').trim(), telefone: (alunoEmEdicao.telefone || '').trim(), email: (alunoEmEdicao.email || '').trim(), familia: (alunoEmEdicao.familia || '').trim(), observacoes: (alunoEmEdicao.observacoes || '').trim(), tipo: alunoEmEdicao.tipo || 'irma', datasIndisponiveis: alunoEmEdicao.datasIndisponiveis || [] };
+        const clean = { ...alunoEmEdicao, nome: (alunoEmEdicao.nome || '').trim(), telefone: (alunoEmEdicao.telefone || '').trim(), email: (alunoEmEdicao.email || '').trim(), familia: (alunoEmEdicao.familia || '').trim(), observacoes: (alunoEmEdicao.observacoes || '').trim(), tipo: alunoEmEdicao.tipo || 'irma', datasIndisponiveis: pruneExpiredUnavailableDates(alunoEmEdicao.datasIndisponiveis) };
         if (!clean.nome) return;
         const isNovoAluno = !clean.id;
 
@@ -452,12 +479,21 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 onClose={() => { setModalHistoryOpen(false); setAlunoHistorico(null); }}
                 t={t}
                 lang={lang}
-                onUpdateAluno={(alunoAtualizado) => {
-                    // Atualiza a lista principal e manda salvar no banco de dados
-                    const novaLista = alunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a);
-                    setAlunos(novaLista);
-                    // Mantém a visualização do modal atualizada instantaneamente
+                onUpdateAluno={async (alunoAtualizado) => {
+                    // Mantem a visualizacao do modal atualizada instantaneamente.
                     setAlunoHistorico(alunoAtualizado);
+
+                    try {
+                        if (onSalvarAluno) {
+                            await Promise.resolve(onSalvarAluno(alunoAtualizado));
+                            return;
+                        }
+
+                        const novaLista = alunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a);
+                        await Promise.resolve(setAlunos(novaLista));
+                    } catch (error) {
+                        toast.error(error, t.msg.erroAtualizar);
+                    }
                 }}
             />
             {modalFormOpen && alunoEmEdicao && (

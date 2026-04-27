@@ -693,7 +693,7 @@ const Designar = ({
                 {hasActions && (
                     <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1 opacity-0 group-hover/slot:opacity-100 transition-all focus-within:opacity-100">
                         {canSubstitute && (
-                            <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao(slotCtx, value); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title="Substituir designado">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao(slotCtx, value); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title={TT.substituirDesignado}>
                                 <RefreshCw size={12} />
                             </button>
                         )}
@@ -707,7 +707,7 @@ const Designar = ({
                 {substituicao && (
                     <div className="mt-1 flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
                         <RefreshCw size={10} />
-                        <span className="truncate">Substituição: {substituicao.de?.nome || '—'} para {substituicao.para?.nome || value?.nome}</span>
+                        <span className="truncate">{TT.substituicao}: {substituicao.de?.nome || '—'} {TT.para} {substituicao.para?.nome || value?.nome}</span>
                     </div>
                 )}
             </div>
@@ -884,21 +884,21 @@ const Designar = ({
                                                             {isAssembly && tipoEvento.includes('congresso') && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1"><UsersRound size={10} /> {TT.congresso}</span>}
                                                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider ${publicadaNoQuadro ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                                                                  {publicadaNoQuadro ? <Eye size={10} /> : <EyeOff size={10} />}
-                                                                 {publicadaNoQuadro ? 'Publicada' : 'Rascunho'}
+                                                                 {publicadaNoQuadro ? TT.publicada : TT.rascunho}
                                                              </span>
                                                             {agendaPendenteSync && (
                                                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
-                                                                    <Calendar size={10} /> Agenda pendente
+                                                                    <Calendar size={10} /> {TT.agendaPendente}
                                                                 </span>
                                                             )}
                                                             {historicoPendenteSync && (
                                                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-orange-50 text-orange-700 border-orange-200">
-                                                                    <Archive size={10} /> Histórico pendente
+                                                                    <Archive size={10} /> {TT.historicoPendente}
                                                                 </span>
                                                             )}
                                                             {substituicoesSemana.length > 0 && (
                                                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-orange-50 text-orange-700 border-orange-200">
-                                                                    <RefreshCw size={10} /> {substituicoesSemana.length} subst.
+                                                                    <RefreshCw size={10} /> {formatText(TT.substituicoesAbrevTpl, { count: substituicoesSemana.length })}
                                                                 </span>
                                                             )}
                                                          </h3>
@@ -928,8 +928,8 @@ const Designar = ({
 
                                                 {(agendaPendenteSync || historicoPendenteSync) && !isAssembly && (
                                                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 flex items-center gap-2">
-                                                        <RefreshCw size={13} className="shrink-0" />
-                                                        <span>Há substituição nesta semana. Revise as notificações, grave o histórico e sincronize a Google Agenda depois da alteração.</span>
+                                                                    <RefreshCw size={13} className="shrink-0" />
+                                                                    <span>{TT.avisoSubstituicaoSemana}</span>
                                                     </div>
                                                 )}
 
@@ -989,14 +989,14 @@ const Designar = ({
                                                             </button>
                                                             <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1 opacity-0 group-hover/slot:opacity-100 transition-all focus-within:opacity-100">
                                                                 {publicadaNoQuadro && sem.presidente && (
-                                                                    <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao({ key: 'presidente', semanaIndex: idx }, sem.presidente); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title="Substituir presidente"><RefreshCw size={12} /></button>
+                                                                    <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao({ key: 'presidente', semanaIndex: idx }, sem.presidente); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title={TT.substituirPresidente}><RefreshCw size={12} /></button>
                                                                 )}
                                                                 <button type="button" onClick={(e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); }} className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 shadow-sm" title={TT.sugestaoInteligente}><Lightbulb size={12} /></button>
                                                             </div>
                                                             {substituicaoPresidente && (
                                                                 <div className="mt-1 flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
                                                                     <RefreshCw size={10} />
-                                                                    <span className="truncate">Substituição: {substituicaoPresidente.de?.nome || '—'} para {substituicaoPresidente.para?.nome || sem.presidente?.nome}</span>
+                                                                    <span className="truncate">{TT.substituicao}: {substituicaoPresidente.de?.nome || '—'} {TT.para} {substituicaoPresidente.para?.nome || sem.presidente?.nome}</span>
                                                                 </div>
                                                             )}
                                                         </div>
