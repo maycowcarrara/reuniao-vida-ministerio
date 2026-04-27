@@ -15,7 +15,9 @@ export default function ModalSugestao({
     semanaAtual,
     modalKey, // 'estudante', 'ajudante', 'presidente', 'oracao', 'dirigente', 'leitor'
     cargosMap,
-    lang = 'pt'
+    lang = 'pt',
+    modo = 'sugestao',
+    pessoaAtual = null
 }) {
     const [sugestoes, setSugestoes] = useState([]);
     const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer', isAjudante: false });
@@ -97,6 +99,12 @@ export default function ModalSugestao({
 
         // B. FILTRO DE PRIVILÉGIOS (O MOTOR DE REGRAS)
         let listaFiltrada = alunos.filter(aluno => {
+            if (modo === 'substituicao') {
+                const atualKey = pessoaAtual?.id || pessoaAtual?.nome;
+                const alunoKey = aluno?.id || aluno?.nome;
+                if (atualKey && alunoKey && String(atualKey) === String(alunoKey)) return false;
+            }
+
             if (aluno.tipo === 'desab') return false; // Desabilitados nunca entram
 
             const cargoInfo = cargosMap?.[aluno.tipo];
@@ -250,13 +258,19 @@ export default function ModalSugestao({
                 <div className="bg-gradient-to-r from-blue-700 to-blue-600 p-4 text-white flex justify-between items-center shrink-0">
                     <div>
                         <h3 className="font-bold text-lg flex items-center gap-2">
-                            <CheckCircle size={20} className="text-green-300" /> {t.titulo}
+                            <CheckCircle size={20} className="text-green-300" /> {modo === 'substituicao' ? 'Substituir designado' : t.titulo}
                         </h3>
                         <div className="flex items-center gap-2 mt-1 text-blue-100 text-xs">
                             <Filter size={12} />
                             <span>{t.filtro}: <strong>{t.labels[contexto.labelKey] || contexto.labelKey}</strong></span>
                             <span className="opacity-50">|</span>
                             <span>{t.genero}: <strong>{getGenderLabel()}</strong></span>
+                            {modo === 'substituicao' && pessoaAtual?.nome && (
+                                <>
+                                    <span className="opacity-50">|</span>
+                                    <span>Atual: <strong>{pessoaAtual.nome}</strong></span>
+                                </>
+                            )}
                         </div>
                     </div>
                     <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full transition">
@@ -268,6 +282,15 @@ export default function ModalSugestao({
                 <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 custom-scroll relative">
                     {sugestoes.map((aluno, index) => {
                         const meses = aluno.diasSemFazer !== 9999 ? Math.floor(aluno.diasSemFazer / 30) : null;
+                        const motivos = [
+                            aluno.diasSemFazer === 9999
+                                ? 'Nunca fez esta parte'
+                                : aluno.diasSemFazer < 0
+                                    ? 'Já tem parte futura'
+                                    : `${aluno.diasSemFazer} dias desde a última vez`,
+                            contexto.gender === 'todos' ? 'Perfil compatível' : 'Gênero compatível',
+                            aluno.ocupadoAgora ? 'Já usado nesta semana' : 'Livre nesta semana'
+                        ];
 
                         const mostrarSeparadorNuncaFez = index > 0 && aluno.diasSemFazer === 9999 && sugestoes[index - 1].diasSemFazer !== 9999;
 
@@ -313,6 +336,21 @@ export default function ModalSugestao({
                                                     {(cargosMap?.[aluno.tipo]?.[lang] || aluno.tipo)}
                                                 </span>
                                                 {aluno.ocupadoAgora && <span className="text-red-500 font-bold ml-1 flex items-center gap-1 text-[10px]"><AlertCircle size={10} /> {t.jaTemParte}</span>}
+                                            </div>
+                                            <div className="mt-1.5 flex flex-wrap gap-1">
+                                                {motivos.map((motivo) => (
+                                                    <span
+                                                        key={motivo}
+                                                        className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${motivo.includes('Já usado')
+                                                            ? 'bg-red-50 text-red-600'
+                                                            : motivo.includes('Nunca') || motivo.includes('dias')
+                                                                ? 'bg-green-50 text-green-700'
+                                                                : 'bg-blue-50 text-blue-700'
+                                                            }`}
+                                                    >
+                                                        {motivo}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>

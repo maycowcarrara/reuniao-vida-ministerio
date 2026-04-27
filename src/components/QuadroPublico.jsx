@@ -18,9 +18,11 @@ import {
     PlayCircle,
     Download
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useSectionMessages, useI18n } from '../i18n';
-import { getLanguageMeta, getWeekdayOffsetFromMonday, normalizeMeetingDay } from '../config/appConfig';
+import { getLanguageMeta } from '../config/appConfig';
+import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
+import { getEventoEspecialDaSemana, getTipoEventoSemana, getSemanaStartISO as getSemanaStartISOCompartilhado } from '../utils/eventos';
 
 // ============================================================================
 // CAPTURADOR GLOBAL DO PWA (Resolve o bug do React ser mais lento que o Chrome)
@@ -53,14 +55,6 @@ const formatarDataCompleta = (dataISO, lang, texts) => {
     const diaSemana = data.toLocaleDateString(locale, { weekday: 'long' });
     const dataStr = data.toLocaleDateString(locale, { day: '2-digit', month: 'long' });
     return `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)}, ${dataStr}`;
-};
-
-const obterDataExata = (dataSegundaISO, diaConfig) => {
-    if (!dataSegundaISO) return null;
-    const add = getWeekdayOffsetFromMonday(diaConfig);
-    const dt = new Date(dataSegundaISO + 'T12:00:00');
-    dt.setDate(dt.getDate() + add);
-    return dt.toISOString().split('T')[0];
 };
 
 const checkEstaSemana = (dataInicioISO) => {
@@ -133,17 +127,62 @@ const formatarContagemRegressiva = (ms) => {
     return `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
 };
 
+const ajustarDataParaTerça = (dataISO) => {
+    if (!dataISO) return null;
+
+    const [ano, mes, dia] = dataISO.split('-').map(Number);
+    const data = new Date(ano, mes - 1, dia, 12, 0, 0);
+
+    if (data.getDay() === 2) {
+        return dataISO;
+    }
+
+    const diff = 2 - data.getDay();
+    data.setDate(data.getDate() + diff);
+
+    const y = data.getFullYear();
+    const m = String(data.getMonth() + 1).padStart(2, '0');
+    const d = String(data.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+const getDataReuniaoISO = (sem, config) => {
+    const eventoEspecial = getEventoEspecialDaSemana(sem, config);
+    const tipoEvento = getTipoEventoSemana(sem, config);
+    const isVisita = tipoEvento === 'visita';
+    const fallbackStr = sem?.dataExata || sem?.dataReuniao || sem?.dataInicio || sem?.data || null;
+
+    if (eventoEspecial?.dataInput && !isVisita) {
+        return eventoEspecial.dataInput;
+    }
+
+    let dataCalculada = getMeetingDateISOFromSemana({
+        semanaStr: sem?.semana,
+        config,
+        isoFallback: fallbackStr,
+        overrideDia: isVisita ? 'terça-feira' : null,
+        textSources: [sem?.semana]
+    });
+
+    if (!dataCalculada) {
+        dataCalculada = fallbackStr;
+    }
+
+    if (isVisita) {
+        return ajustarDataParaTerça(dataCalculada);
+    }
+
+    return dataCalculada;
+};
+
 // ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
 
 export default function QuadroPublico({ programacoes, config, usuario }) {
-    const [busca, setBusca] = useState('');
-    const [autenticado, setAutenticado] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return window.localStorage.getItem('quadro_auth') === 'true';
-    });
-    const [senhaInput, setSenhaInput] = useState('');
+    const [searchParams] = useSearchParams();
+    const pessoaParam = searchParams.get('p') || '';
+    const [busca, setBusca] = useState(() => pessoaParam);
 
     const [semanaExpandida, setSemanaExpandida] = useState(0);
     const [agora, setAgora] = useState(new Date());
@@ -151,8 +190,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     // --- ESTADOS DO PWA (INSTALAÇÃO) ---
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [showInstallBanner, setShowInstallBanner] = useState(false);
-
-    const SENHA_CONGREGACAO = "2026";
 
     // --- DICIONÁRIO DE TRADUÇÕES ---
     const { lang } = useI18n();
@@ -203,16 +240,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         }
     };
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (senhaInput === SENHA_CONGREGACAO) {
-            setAutenticado(true);
-            localStorage.setItem('quadro_auth', 'true');
-        } else {
-            alert(T.codigoIncorreto);
-        }
-    };
-
     const semanasParaExibir = useMemo(() => {
         if (!programacoes) return [];
 
@@ -220,75 +247,41 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         hoje.setHours(0, 0, 0, 0);
         hoje.setDate(hoje.getDate() - 2);
 
-        // FUNÇÃO SALVA-VIDAS: Se o banco de dados não tiver a data, a gente descobre ela lendo o texto!
-        const extrairDataBaseISO = (sem) => {
-            if (sem.dataReuniao) return sem.dataReuniao;
-            if (sem.dataInicio) return sem.dataInicio;
-            if (sem.data) return sem.data;
-
-            if (sem.semana) {
-                const str = sem.semana.toLowerCase();
-                const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-                let mesIndex = 0;
-                for (let i = 0; i < meses.length; i++) {
-                    if (str.includes(meses[i])) { mesIndex = i % 12; break; }
-                }
-                const matchDia = str.match(/^(\d+)/);
-                const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
-                const matchAno = str.match(/(20\d{2})/);
-                const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
-
-                const d = new Date(ano, mesIndex, dia, 12, 0, 0);
-                return d.toISOString().split('T')[0];
-            }
-            return null;
-        };
-
         let filtradas = programacoes.filter(sem => {
             if (sem.arquivada) return false;
+            if (sem.publicadaNoQuadro === false) return false;
 
-            const dtCalculo = extrairDataBaseISO(sem); // Pega a data segura (Segunda-feira)
+            const dtCalculo = getSemanaStartISOCompartilhado(sem, config);
             if (!dtCalculo) return false;
 
-            // --- NOVA REGRA: Mostrar a semana até o DOMINGO dela passar ---
             const inicioSemana = new Date(dtCalculo + 'T12:00:00');
-
-            // Joga a data para o Domingo (Segunda + 6 dias)
             const fimSemana = new Date(inicioSemana);
             fimSemana.setDate(inicioSemana.getDate() + 6);
             fimSemana.setHours(23, 59, 59, 999);
 
-            // A semana só some do quadro na próxima segunda-feira!
             return fimSemana >= hoje;
         });
 
         filtradas = filtradas.map(sem => {
-            let dataCorreta;
-            const dtBase = extrairDataBaseISO(sem); // Pega a data segura novamente para os cálculos
-
-            if (sem.evento === 'visita') {
-                dataCorreta = obterDataExata(dtBase, 'Terça-feira');
-            } else if (sem.evento === 'assembleia' || sem.evento === 'congresso') {
-                dataCorreta = sem.dataEventoEspecial || dtBase;
-            } else {
-                dataCorreta = obterDataExata(dtBase, normalizeMeetingDay(config?.dia_reuniao));
-            }
+            const semanaStartISO = getSemanaStartISOCompartilhado(sem, config);
+            const dataCorreta = getDataReuniaoISO(sem, config);
 
             const partesComHorario = calcularHorarios(sem.partes, dataCorreta, config?.horario, lang);
             const meetingStartTimeStr = partesComHorario.length > 0 ? partesComHorario[0].startTimeStr : '--:--';
             const meetingEndTimeStr = partesComHorario.length > 0 ? partesComHorario[partesComHorario.length - 1].endTimeStr : '--:--';
 
-            return { ...sem, dataCorreta, partes: partesComHorario, meetingStartTimeStr, meetingEndTimeStr };
+            return { ...sem, semanaStartISO, dataCorreta, partes: partesComHorario, meetingStartTimeStr, meetingEndTimeStr };
         });
 
-        const termo = busca.toLowerCase().trim();
+        const termo = busca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
         if (termo) {
             filtradas = filtradas.map(sem => {
-                const temPres = sem.presidente?.nome?.toLowerCase().includes(termo);
+                const normalizarNome = (nome = '') => nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const temPres = normalizarNome(sem.presidente?.nome).includes(termo);
 
                 const partesFiltradas = (sem.partes || []).filter(p => {
                     const nomes = [p.estudante?.nome, p.ajudante?.nome, p.oracao?.nome, p.dirigente?.nome, p.leitor?.nome]
-                        .map(n => n?.toLowerCase() || '');
+                        .map(n => normalizarNome(n || ''));
                     return nomes.some(n => n.includes(termo));
                 });
 
@@ -299,8 +292,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             }).filter(Boolean);
         }
 
-        return filtradas.sort((a, b) => new Date(extrairDataBaseISO(a)).getTime() - new Date(extrairDataBaseISO(b)).getTime());
-    }, [programacoes, busca, config?.dia_reuniao, config?.horario, lang]);
+        return filtradas.sort((a, b) => new Date(a.semanaStartISO).getTime() - new Date(b.semanaStartISO).getTime());
+    }, [programacoes, busca, config, lang]);
 
     const y = agora.getFullYear();
     const m = String(agora.getMonth() + 1).padStart(2, '0');
@@ -337,33 +330,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const modoTempoReal = reuniaoAoVivo !== -1;
     const modoPreLive = !modoTempoReal && reuniaoEmContagem.index !== -1;
     const contagemRegressiva = formatarContagemRegressiva(reuniaoEmContagem.msRestantes);
-
-    if (!autenticado) {
-        return (
-            <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 font-sans">
-                <form onSubmit={handleLogin} className="bg-white p-8 rounded-[3rem] shadow-2xl w-full max-w-sm text-center border border-slate-200">
-                    <div className="bg-blue-600 text-white w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl rotate-3">
-                        <Lock size={40} className="-rotate-3" />
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-800 mb-2">{T.titulo}</h2>
-                    <p className="text-slate-500 text-sm mb-8 px-4 leading-relaxed">
-                        {T.descAcesso}
-                    </p>
-                    <input
-                        type="number"
-                        pattern="[0-9]*"
-                        placeholder="0000"
-                        className="w-full text-center text-4xl font-black tracking-[0.2em] bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 focus:border-blue-500 focus:bg-white outline-none transition-all mb-6 focus:ring-4 focus:ring-blue-500/20"
-                        value={senhaInput}
-                        onChange={e => setSenhaInput(e.target.value)}
-                    />
-                    <button type="submit" className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95">
-                        {T.btnAcesso}
-                    </button>
-                </form>
-            </div>
-        );
-    }
 
     const toggleSemana = (idx) => setSemanaExpandida(prev => prev === idx ? null : idx);
 
@@ -491,15 +457,16 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                     ) : (
                         semanasParaExibir.map((sem, idx) => {
                             const dataRef = sem.dataCorreta;
-                            const estaSemana = checkEstaSemana(sem.dataInicio);
+                            const estaSemana = checkEstaSemana(sem.semanaStartISO);
                             const isHoje = dataRef === hojeStr;
                             const estaAoVivo = modoTempoReal && reuniaoAoVivo === idx;
                             const estaEmContagem = modoPreLive && reuniaoEmContagem.index === idx;
                             const contagemSemana = estaEmContagem ? formatarContagemRegressiva(sem.partes[0].startObj.getTime() - agora.getTime()) : null;
 
-                            const isVisita = sem.evento === 'visita';
-                            const isAssembleia = sem.evento === 'assembleia' || sem.evento === 'congresso';
-                            const isEspecial = sem.evento && sem.evento !== 'normal' && !isVisita && !isAssembleia;
+                            const tipoEvento = getTipoEventoSemana(sem, config);
+                            const isVisita = tipoEvento === 'visita';
+                            const isAssembleia = tipoEvento === 'assembleia' || tipoEvento === 'congresso';
+                            const isEspecial = tipoEvento && tipoEvento !== 'normal' && !isVisita && !isAssembleia;
 
                             const isExpanded = busca ? true : estaAoVivo || estaEmContagem || semanaExpandida === idx;
 
@@ -524,7 +491,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                     )}
                                     {isAssembleia && (
                                         <div className="bg-purple-500 text-white text-[10px] font-black uppercase tracking-[0.1em] text-center py-2 flex items-center justify-center gap-2">
-                                            <Star size={12} className="fill-white" /> {sem.evento === 'congresso' ? T.congresso : T.assembleia}
+                                            <Star size={12} className="fill-white" /> {tipoEvento === 'congresso' ? T.congresso : T.assembleia}
                                         </div>
                                     )}
                                     {isEspecial && (
@@ -564,7 +531,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                 <div className="text-center py-6 px-4 bg-purple-50 rounded-2xl border border-purple-100">
                                                     <Star size={32} className="mx-auto mb-3 text-purple-300" />
                                                     <p className="font-black text-purple-900 text-sm">
-                                                        {sem.evento === 'congresso' ? T.congresso : T.assembleia}
+                                                        {tipoEvento === 'congresso' ? T.congresso : T.assembleia}
                                                     </p>
                                                     <p className="text-xs mt-1 text-purple-700 font-medium">
                                                         {T.msgAssembleia}

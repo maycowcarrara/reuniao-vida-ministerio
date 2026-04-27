@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ClipboardList, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, RefreshCcw, ExternalLink, ChevronLeft, Search, Ban } from 'lucide-react';
 import { TRANSLATIONS, getImportadorCatalogConfig } from '../../utils/importador/constants';
-import { isLikelyUrl, fetchHtmlViaProxy } from '../../utils/importador/helpers';
+import { isLikelyHtml, isLikelyUrl, fetchHtmlViaProxy } from '../../utils/importador/helpers';
 import { extrairDados } from '../../utils/importador/parser';
 import RevisarImportacao from './RevisarImportacao';
 // 🔥 IMPORTANDO O HOOK PARA VERIFICAR EVENTOS DO DASHBOARD
@@ -17,10 +17,45 @@ const loadCheerio = async () => {
     return cheerioModulePromise;
 };
 
+const FALLBACK_MESSAGES = {
+    pt: {
+        catalogCache: 'A lista automática está indisponível no momento. Exibindo a última versão salva neste navegador.',
+        catalogVazio: 'Não encontrei apostilas automaticamente agora. Tente atualizar ou use Link/Texto.',
+        semanasCache: 'Não foi possível consultar o JW.org agora. Exibindo semanas salvas anteriormente.',
+        semanasVazio: 'Não encontrei semanas dessa apostila automaticamente. Abra no JW.org ou use o modo Link.'
+    },
+    es: {
+        catalogCache: 'La lista automática no está disponible ahora. Se muestra la última versión guardada en este navegador.',
+        catalogVazio: 'No encontré guías automáticamente ahora. Intenta actualizar o usa Enlace/Texto.',
+        semanasCache: 'No fue posible consultar JW.org ahora. Se muestran semanas guardadas anteriormente.',
+        semanasVazio: 'No encontré semanas de esta guía automáticamente. Ábrela en JW.org o usa el modo Enlace.'
+    }
+};
+
+const formatCatalogSlugTitle = (slug) => (
+    decodeURIComponent((slug || '').replace(/[-_]+/g, ' '))
+        .replace(/\s+/g, ' ')
+        .trim()
+);
+
+const parseMarkdownLinks = (text) => {
+    const matches = [];
+    const regex = /\[([^\]]+)\]\((https:\/\/www\.jw\.org\/[^)\s]+)\)/g;
+    let match;
+    while ((match = regex.exec(text || '')) !== null) {
+        matches.push({
+            titulo: match[1].replace(/[*_`#]+/g, '').replace(/\s+/g, ' ').trim(),
+            url: match[2].trim(),
+        });
+    }
+    return matches;
+};
+
 export default function Importador({ onImportComplete, idioma = 'pt' }) {
     const lang = (idioma || 'pt').toLowerCase().startsWith('es') ? 'es' : 'pt';
     const t = TRANSLATIONS[lang];
     const catalogConfig = getImportadorCatalogConfig(lang);
+    const fallbackText = FALLBACK_MESSAGES[lang] || FALLBACK_MESSAGES.pt;
 
     // Puxando os eventos salvos no Dashboard
     const { dados: appDados } = useGerenciadorDados();
@@ -35,10 +70,12 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     // --- CATÁLOGO STATE ---
     const [catalogLoading, setCatalogLoading] = useState(false);
     const [catalogErro, setCatalogErro] = useState('');
+    const [catalogAviso, setCatalogAviso] = useState('');
     const [apostilas, setApostilas] = useState([]);
     const [apostilaSelecionada, setApostilaSelecionada] = useState(null);
     const [semanasLoading, setSemanasLoading] = useState(false);
     const [semanasErro, setSemanasErro] = useState('');
+    const [semanasAviso, setSemanasAviso] = useState('');
     const [semanas, setSemanas] = useState([]);
 
     const CATALOG_BASE = catalogConfig.catalogBase;
@@ -59,6 +96,19 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     // --- EFEITOS E HANDLERS ---
 
     const parseSemanas = useCallback(async (html) => {
+        if (!isLikelyHtml(html)) {
+            const reStart = /^(\d{1,2})(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2})(\s*de\s+[\p{L}]+)?/iu;
+            const reShort = /^(\d{1,2}\s*[-–]\s*\d{1,2})/;
+            const parsed = parseMarkdownLinks(html)
+                .filter(({ titulo, url }) => {
+                    const hrefLower = url.toLowerCase();
+                    const looksWeek = reStart.test(titulo) || reShort.test(titulo);
+                    return looksWeek && catalogConfig.weekLinkMatcher(hrefLower);
+                });
+
+            return [...new Map(parsed.map((item) => [item.url, item])).values()];
+        }
+
         const cheerio = await loadCheerio();
         const $ = cheerio.load(html);
         const out = [];
@@ -67,7 +117,12 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
 
         $('a[href]').each((_, el) => {
             const href = ($(el).attr('href') || '').trim();
-            const txt = ($(el).text() || '').replace(/\s+/g, ' ').trim();
+            const txt = (
+                $(el).text() ||
+                $(el).attr('title') ||
+                $(el).attr('aria-label') ||
+                ''
+            ).replace(/\s+/g, ' ').trim();
             if (!href || !txt) return;
             const looksWeek = reStart.test(txt) || reShort.test(txt);
             if (!looksWeek) return;
@@ -83,61 +138,132 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     }, [catalogConfig]);
 
     const parseApostilas = useCallback(async (html) => {
+        if (!isLikelyHtml(html)) {
+            const parsed = parseMarkdownLinks(html)
+                .filter(({ url }) => {
+                    const absLower = url.toLowerCase();
+                    return (
+                        absLower.includes(`/biblioteca/${CATALOG_BASE}/`.toLowerCase()) &&
+                        absLower !== CATALOG_URL.toLowerCase() &&
+                        !catalogConfig.weekLinkMatcher(absLower) &&
+                        !absLower.includes('/mwbr')
+                    );
+                })
+                .map(({ titulo, url }) => {
+                    const pathSegments = new URL(url).pathname.split('/').filter(Boolean);
+                    const slug = pathSegments[pathSegments.length - 1] || '';
+                    return {
+                        slug,
+                        titulo: titulo || formatCatalogSlugTitle(slug),
+                        url
+                    };
+                });
+
+            return [...new Map(parsed.map((item) => [item.url, item])).values()];
+        }
+
         const cheerio = await loadCheerio();
         const $ = cheerio.load(html);
         const out = [];
+        const catalogRoot = `/biblioteca/${CATALOG_BASE}/`;
+
         $('a[href]').each((_, el) => {
             const href = ($(el).attr('href') || '').trim();
-            if (href.includes(CATALOG_BASE) && href.includes('-mwb')) {
-               const abs = new URL(href, 'https://www.jw.org').toString();
-               const slug = abs.split('/').filter(Boolean).pop();
-               out.push({ slug, titulo: slug, url: abs }); 
-            }
+            if (!href) return;
+
+            const abs = new URL(href, 'https://www.jw.org').toString();
+            const absLower = abs.toLowerCase();
+
+            if (!absLower.includes(catalogRoot.toLowerCase())) return;
+            if (absLower === CATALOG_URL.toLowerCase()) return;
+            if (catalogConfig.weekLinkMatcher(absLower)) return;
+
+            const pathSegments = new URL(abs).pathname.split('/').filter(Boolean);
+            const slug = pathSegments[pathSegments.length - 1] || '';
+            if (!slug) return;
+
+            const tituloRaw = (
+                $(el).text() ||
+                $(el).attr('title') ||
+                $(el).attr('aria-label') ||
+                ''
+            ).replace(/\s+/g, ' ').trim();
+
+            out.push({
+                slug,
+                titulo: tituloRaw || formatCatalogSlugTitle(slug),
+                url: abs
+            });
         });
         return [...new Map(out.map(x => [x.url, x])).values()];
-    }, [CATALOG_BASE]);
+    }, [CATALOG_BASE, CATALOG_URL, catalogConfig]);
 
     const carregarCatalogo = useCallback(async () => {
         setCatalogLoading(true);
         setCatalogErro('');
+        setCatalogAviso('');
         try {
-            const { ok, text } = await fetchHtmlViaProxy(CATALOG_URL);
-            if (ok) {
-                setApostilas(await parseApostilas(text));
-            } else {
-                setCatalogErro(t.catalogErro);
-            }
+            const { ok, text, stale } = await fetchHtmlViaProxy(CATALOG_URL);
+            if (!ok) throw new Error('catalog-fetch');
+
+            const lista = await parseApostilas(text);
+            if (!lista.length) throw new Error('catalog-empty');
+
+            setApostilas(lista);
+            if (stale) setCatalogAviso(fallbackText.catalogCache);
         } catch {
             setCatalogErro(t.catalogErro);
-        }
+            setApostilas([]);
+        } 
         finally { setCatalogLoading(false); }
-    }, [CATALOG_URL, parseApostilas, t.catalogErro]);
+    }, [CATALOG_URL, fallbackText.catalogCache, parseApostilas, t.catalogErro]);
 
     const abrirApostila = async (item) => {
         setApostilaSelecionada(item);
         setSemanasLoading(true);
         setSemanasErro('');
+        setSemanasAviso('');
+        setSemanas([]);
         try {
-            const { ok, text } = await fetchHtmlViaProxy(item.url);
-            if(ok) setSemanas(await parseSemanas(text));
-            else setSemanasErro(t.semanasErro);
+            const { ok, text, stale } = await fetchHtmlViaProxy(item.url);
+            if (!ok) throw new Error('weeks-fetch');
+
+            const lista = await parseSemanas(text);
+            if (!lista.length) throw new Error('weeks-empty');
+
+            setSemanas(lista);
+            if (stale) setSemanasAviso(fallbackText.semanasCache);
         } catch {
             setSemanasErro(t.semanasErro);
+            setSemanas([]);
         }
         finally { setSemanasLoading(false); }
     };
 
     const processarImportacao = async (conteudo, tipo) => {
+        const conteudoLimpo = (conteudo || '').trim();
+        if (!conteudoLimpo) {
+            setErro(tipo === 'url' ? t.erroUrl : t.erroVazio);
+            return;
+        }
+
+        if (tipo === 'url' && (!isLikelyUrl(conteudoLimpo) || !conteudoLimpo.includes('jw.org'))) {
+            setErro(t.erroUrl);
+            return;
+        }
+
         setLoading(true);
         setErro('');
         try {
-            let html = conteudo;
+            let html = conteudoLimpo;
+            let tipoOrigem = isLikelyHtml(conteudoLimpo) ? 'html' : 'texto';
             if (tipo === 'url') {
-                const res = await fetchHtmlViaProxy(conteudo);
+                const res = await fetchHtmlViaProxy(conteudoLimpo);
                 if (!res.ok) throw new Error('Fetch Error');
                 html = res.text;
+                tipoOrigem = res.contentKind === 'html' ? 'html' : 'texto';
             }
-            const dados = await extrairDados(html, 'html', lang);
+            const dados = await extrairDados(html, tipoOrigem, lang);
             if (!dados) throw new Error('Parse Error');
 
             // 🔥 Trava de bloqueio para colar URL/Texto! Impede abrir a Revisão
@@ -216,7 +342,15 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                                     <div><div className="text-sm font-extrabold text-gray-800">{t.catalogTitulo}</div><div className="text-xs text-gray-500">{t.catalogSub}</div></div>
                                     <button onClick={carregarCatalogo} disabled={catalogLoading} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2 disabled:opacity-60"><RefreshCcw size={16} className={catalogLoading ? 'animate-spin' : ''} /> {t.catalogAtualizar}</button>
                                 </div>
-                                {catalogErro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{catalogErro}</div>}
+                                {catalogErro && (
+                                    <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex flex-col gap-3">
+                                        <div className="flex gap-2 items-start"><AlertTriangle size={16} />{catalogErro}</div>
+                                        <a href={CATALOG_URL} target="_blank" rel="noreferrer" className="w-fit px-3 py-2 rounded-xl border border-red-200 bg-white text-red-700 font-bold hover:bg-red-50 transition inline-flex items-center gap-2">
+                                            <ExternalLink size={14} /> {t.abrirNoJw}
+                                        </a>
+                                    </div>
+                                )}
+                                {catalogAviso && <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{catalogAviso}</div>}
                                 {catalogLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
                                     <div className="grid gap-2">
                                         {apostilas.map(a => (
@@ -224,6 +358,11 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                                                 <div className="font-extrabold text-gray-800">{a.titulo}</div>
                                             </button>
                                         ))}
+                                        {!apostilas.length && !catalogErro && (
+                                            <div className="border border-dashed border-gray-300 bg-gray-50 text-gray-600 rounded-2xl p-4 text-sm">
+                                                {fallbackText.catalogVazio}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </>
@@ -234,6 +373,7 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                                     <a href={apostilaSelecionada.url} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold hover:bg-gray-50 transition inline-flex items-center gap-2"><ExternalLink size={16} /> {t.abrirNoJw}</a>
                                 </div>
                                 {semanasErro && <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{semanasErro}</div>}
+                                {semanasAviso && <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-xs flex gap-2 items-start"><AlertTriangle size={16} />{semanasAviso}</div>}
                                 {semanasLoading ? <div className="text-center p-4"><Loader2 className="animate-spin mx-auto" /></div> : (
                                     <div className="space-y-2">
                                         {semanas.map(w => {
@@ -261,6 +401,11 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
                                                 </div>
                                             );
                                         })}
+                                        {!semanas.length && !semanasErro && (
+                                            <div className="border border-dashed border-gray-300 bg-gray-50 text-gray-600 rounded-2xl p-4 text-sm">
+                                                {fallbackText.semanasVazio}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </>

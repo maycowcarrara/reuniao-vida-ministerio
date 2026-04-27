@@ -1,8 +1,8 @@
 import React from 'react';
-import { Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock, UserPlus } from 'lucide-react';
+import { Copy, Edit2, History, Trash2, Phone, Mail, StickyNote, Calendar, Clock, UserPlus } from 'lucide-react';
 import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, buildWhatsappHref, getIniciais } from './utils';
 
-const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete }) => {
+const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onCopyPublicLink }) => {
     const cKey = getCargoKey(aluno.tipo, cargosMap);
     const info = cargosMap[cKey] || cargosMap.irmao;
     const ult = getUltimoRegistro(aluno);
@@ -46,6 +46,7 @@ const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete }) =
                 <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all no-print">
                     <button onClick={() => onEdit(aluno)} className="p-1.5 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-lg border shadow-sm" title={t.modal.editar}><Edit2 size={12} /></button>
                     <button onClick={() => onHistory(aluno)} className="p-1.5 bg-gray-50 text-gray-400 hover:text-orange-500 rounded-lg border shadow-sm" title={t.modal.historico}><History size={12} /></button>
+                    <button onClick={() => onCopyPublicLink?.(aluno)} className="p-1.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-lg border shadow-sm" title="Copiar link do quadro"><Copy size={12} /></button>
                     <button onClick={() => onDelete(aluno)} className={`p-1.5 rounded-lg border shadow-sm transition-colors ${podeExcluir ? "bg-white text-red-500 hover:bg-red-50 border-red-100" : "bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed"}`} title={podeExcluir ? t.modal.excluir : t.msg.erroSoDesabilitados}>
                         <Trash2 size={12} />
                     </button>

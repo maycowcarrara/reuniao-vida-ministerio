@@ -21,7 +21,7 @@ import "./revisarEnviar.print.css";
 import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
 
 import { getI18n } from '../../utils/revisarEnviar/translations';
-import { getMeetingDateISOFromSemana, formatarDataFolha } from '../../utils/revisarEnviar/dates';
+import { getMeetingDateISOFromSemana, formatarDataFolha, getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 import { buildWhatsappHref, buildMailtoHref } from '../../utils/revisarEnviar/links';
 import { addHistorico } from '../../utils/revisarEnviar/historico';
 import { toast } from '../../utils/toast';
@@ -34,6 +34,7 @@ const RevisarEnviar = ({
     config,
     confirmacoes = [],
     onAlunosChange,
+    onProgramacoesChange = null,
     sharedWeekSelection = {},
     setSharedWeekSelection = () => { },
     reviewShortcutRequest = null
@@ -132,42 +133,9 @@ const RevisarEnviar = ({
         return str;
     };
 
-    // --- PROCESSAMENTO E ORDENAÇÃO ROBUSTA (AGORA COM TIMESTAMP MATEMÁTICO!) ---
-    const getTimestamp = (sem) => {
-        if (!sem) return 0;
-        const dataStr = sem.dataInicio || sem.dataReuniao || sem.data;
-        if (dataStr) {
-            if (dataStr.includes('-')) {
-                const [ano, mes, dia] = dataStr.split('-');
-                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
-            }
-            if (dataStr.includes('/')) {
-                const [dia, mes, ano] = dataStr.split('/');
-                return new Date(ano, mes - 1, dia, 12, 0, 0).getTime();
-            }
-        }
-        if (sem.semana) {
-            const str = sem.semana.toLowerCase();
-            const meses = [
-                'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez',
-                'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
-            ];
-            let mesIndex = 0;
-            for (let i = 0; i < meses.length; i++) {
-                if (str.includes(meses[i])) { mesIndex = i % 12; break; }
-            }
-            const matchDia = str.match(/^(\d+)/);
-            const dia = matchDia ? parseInt(matchDia[1], 10) : 1;
-            const matchAno = str.match(/(20\d{2})/);
-            const ano = matchAno ? parseInt(matchAno[1], 10) : new Date().getFullYear();
-            return new Date(ano, mesIndex, dia, 12, 0, 0).getTime();
-        }
-        return 0;
-    };
-
     const historicoOrdenado = useMemo(() => {
-        return [...historico].sort((a, b) => getTimestamp(a) - getTimestamp(b));
-    }, [historico]);
+        return [...historico].sort((a, b) => getSemanaSortTimestamp(a, config) - getSemanaSortTimestamp(b, config));
+    }, [historico, config]);
 
     const historicoSelect = useMemo(() => [...historicoOrdenado].reverse(), [historicoOrdenado]);
 
@@ -456,6 +424,8 @@ const RevisarEnviar = ({
 
         let novosAlunos = [...alunos];
         let gravouAlgo = false;
+        let alterouHistorico = false;
+        const temPendenciaHistorico = semanasSelecionadas.some((sem) => !!sem?.historicoPendenteSync);
 
         console.log("=== INICIANDO SINCRONIZAÇÃO DE HISTÓRICO ===");
 
@@ -504,6 +474,7 @@ const RevisarEnviar = ({
 
                     if (caiNaSemana) {
                         console.log(`[LIXEIRA] Apagando registro -> Aluno: ${aluno.nome} | Parte: ${h.parte} | Data antiga: ${h.data}`);
+                        alterouHistorico = true;
                     }
 
                     return !caiNaSemana; // Se cai na semana, retorna false para APAGAR da lista
@@ -601,8 +572,27 @@ const RevisarEnviar = ({
 
         console.log("=== SINCRONIZAÇÃO TOTAL FINALIZADA ===");
 
-        if (gravouAlgo) {
-            onAlunosChange(novosAlunos);
+        if (gravouAlgo || alterouHistorico || temPendenciaHistorico) {
+            if (gravouAlgo || alterouHistorico) {
+                onAlunosChange(novosAlunos);
+            }
+            if (onProgramacoesChange) {
+                const sincronizadas = new Set(
+                    semanasSelecionadas
+                        .map((sem) => (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString())
+                        .filter(Boolean)
+                );
+                const syncedAt = new Date().toISOString();
+                onProgramacoesChange((prev) => (prev || []).map((sem) => {
+                    const key = (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString();
+                    if (!sincronizadas.has(key)) return sem;
+                    const proximaSemana = { ...(sem || {}), historicoGravadoEm: syncedAt };
+                    delete proximaSemana.historicoPendenteSync;
+                    delete proximaSemana.historicoPendenteMotivo;
+                    delete proximaSemana.historicoPendenteDesde;
+                    return proximaSemana;
+                }));
+            }
             toast.success(t.syncOk);
         } else {
             toast.info(t.nadaParaGravar);
@@ -766,6 +756,24 @@ const RevisarEnviar = ({
                         const resultado = await enviarEventosParaAgenda(tokenGoogle, calendarId, reunioesComDataExata, config);
 
                         if (resultado.sucesso) {
+                            if (onProgramacoesChange) {
+                                const sincronizadas = new Set(
+                                    reunioesSelecionadas
+                                        .map((sem) => (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString())
+                                        .filter(Boolean)
+                                );
+                                const syncedAt = new Date().toISOString();
+                                onProgramacoesChange((prev) => (prev || []).map((sem) => {
+                                    const key = (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString();
+                                    if (!sincronizadas.has(key)) return sem;
+                                    const proximaSemana = { ...(sem || {}), agendaSincronizadaEm: syncedAt };
+                                    delete proximaSemana.agendaPendenteSync;
+                                    delete proximaSemana.needsCalendarSync;
+                                    delete proximaSemana.agendaPendenteMotivo;
+                                    delete proximaSemana.agendaPendenteDesde;
+                                    return proximaSemana;
+                                }));
+                            }
                             toast.success(formatText(t.agendaSuccessTpl, { count: resultado.quantidade }));
                         } else {
                             toast.error(resultado.erro, t.agendaError);

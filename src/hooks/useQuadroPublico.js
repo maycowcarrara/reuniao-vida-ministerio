@@ -3,15 +3,29 @@ import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { normalizeSystemConfig } from '../config/appConfig';
 
-export function useQuadroPublico() {
+const LOCAL_ADMIN_UID_KEY = 'quadro_admin_uid';
+
+export function useQuadroPublico(fallbackUid = '') {
     const [dados, setDados] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // O seu UID
-    const ADMIN_UID = import.meta.env.VITE_ADMIN_UID;
+    const configuredAdminUid = String(import.meta.env.VITE_ADMIN_UID || '').trim();
+    const runtimeFallbackUid = String(fallbackUid || '').trim();
 
     useEffect(() => {
-        if (!ADMIN_UID) {
+        let storedAdminUid = '';
+
+        if (typeof window !== 'undefined') {
+            try {
+                storedAdminUid = String(window.localStorage.getItem(LOCAL_ADMIN_UID_KEY) || '').trim();
+            } catch {
+                storedAdminUid = '';
+            }
+        }
+
+        const effectiveAdminUid = configuredAdminUid || runtimeFallbackUid || storedAdminUid;
+
+        if (!effectiveAdminUid) {
             setDados({ configuracoes: {}, historico_reunioes: [] });
             setLoading(false);
             return;
@@ -20,12 +34,12 @@ export function useQuadroPublico() {
         async function fetchDadosPublicos() {
             try {
                 // 1. Puxa o nome da Congregação
-                const configRef = doc(db, 'users', ADMIN_UID, 'configuracoes', 'geral');
+                const configRef = doc(db, 'users', effectiveAdminUid, 'configuracoes', 'geral');
                 const configSnap = await getDoc(configRef);
                 const config = configSnap.exists() ? normalizeSystemConfig(configSnap.data()) : normalizeSystemConfig();
 
                 // 2. Puxa as programações
-                const progRef = collection(db, 'users', ADMIN_UID, 'programacao');
+                const progRef = collection(db, 'users', effectiveAdminUid, 'programacao');
                 const progSnap = await getDocs(progRef);
                 const programacoes = progSnap.docs.map(d => d.data());
 
@@ -41,7 +55,7 @@ export function useQuadroPublico() {
         }
 
         fetchDadosPublicos();
-    }, [ADMIN_UID]);
+    }, [configuredAdminUid, runtimeFallbackUid]);
 
     return { dados, loading };
 }

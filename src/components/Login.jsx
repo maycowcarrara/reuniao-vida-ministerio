@@ -4,7 +4,7 @@ import { auth, googleProvider } from "../services/firebase";
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '../utils/toast';
-import { useSectionMessages, formatText } from '../i18n';
+import { useSectionMessages } from '../i18n';
 
 export default function Login() {
     const [carregando, setCarregando] = useState(false);
@@ -13,22 +13,7 @@ export default function Login() {
     const handleLogin = async () => {
         setCarregando(true);
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const emailLogado = result.user.email;
-
-            // 🛑 AQUI ESTÃO OS E-MAILS AUTORIZADOS
-            const emailsPermitidos = [
-                'maycowcarrara@gmail.com',
-                'carraramaycow@gmail.com'
-            ];
-
-            if (!emailsPermitidos.includes(emailLogado)) {
-                // Se o e-mail não estiver na lista, desloga ele na hora!
-                await auth.signOut();
-                toast.error(formatText(t.semPermissaoTpl, { email: emailLogado }), t.acessoRestrito);
-            }
-            // Se o e-mail estiver na lista, o hook de autenticação vai liberar a tela sozinho!
-
+            await signInWithPopup(auth, googleProvider);
         } catch (error) {
             console.error("Erro login:", error);
             // Ignora o erro se o usuário apenas fechar a janelinha do Google
