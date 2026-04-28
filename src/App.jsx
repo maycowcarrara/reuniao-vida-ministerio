@@ -17,7 +17,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { toast } from './utils/toast';
 import { getMeetingDateISOFromSemana, getWeekStartISOFromSemana } from './utils/revisarEnviar/dates';
 import { getSemanaStartISO } from './utils/eventos';
-import { normalizeLanguage, normalizeMeetingDay, syncDocumentLanguage } from './config/appConfig';
+import { normalizeLanguage, normalizeMeetingDay, normalizeSystemConfig, syncDocumentLanguage } from './config/appConfig';
 import { getSectionMessages, I18nProvider } from './i18n';
 
 const LOCAL_ADMIN_UID_KEY = 'quadro_admin_uid';

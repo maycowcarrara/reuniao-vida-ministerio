@@ -105,7 +105,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
                 setConfirmacoes(lista);
             }, handleSnapshotError);
         } else {
-            setConfirmacoes([]);
+            queueMicrotask(() => setConfirmacoes([]));
         }
 
         const notificationsQuery = query(
