@@ -176,6 +176,9 @@ const getProgramacaoCollectionRef = (uid) =>
 const getConfigRef = (uid) =>
     doc(db, `users/${String(uid || '').trim()}/configuracoes`, 'geral');
 
+const getPublicBoardRef = (uid) =>
+    doc(db, 'quadros_publicos', String(uid || '').trim());
+
 const getMeetingDateForWeek = (week, config) => {
     const eventoEspecial = getEventoEspecialDaSemana(week, config);
     const tipoEvento = getTipoEventoSemana(week, config);
@@ -265,26 +268,45 @@ const validateConfirmationTarget = async (confirmationData = {}) => {
         return { isUnavailable: true, unavailableReason: 'missing_reference' };
     }
 
+    const findAssignmentInWeeks = (weeks = [], config = {}) => {
+        const matchingWeeks = (Array.isArray(weeks) ? weeks : [])
+            .filter((week) => String(week?.semana || '').trim() === semana);
+
+        if (!matchingWeeks.length) {
+            return { isUnavailable: true, unavailableReason: 'week_removed' };
+        }
+
+        const found = matchingWeeks.some((week) => {
+            const keys = collectAssignmentKeysForWeek(week, config);
+            return keys.has(assignmentKey);
+        });
+
+        if (!found) {
+            return { isUnavailable: true, unavailableReason: 'assignment_changed' };
+        }
+
+        return { isUnavailable: false, unavailableReason: '' };
+    };
+
+    const publicBoardSnap = await getDoc(getPublicBoardRef(ownerUid));
+    if (publicBoardSnap.exists()) {
+        const publicBoard = publicBoardSnap.data() || {};
+        const config = normalizeSystemConfig(publicBoard.configuracoes || {});
+        return findAssignmentInWeeks(publicBoard.historico_reunioes, config);
+    }
+
+    const canReadPrivateProgram = auth.currentUser?.uid === ownerUid;
+    if (!canReadPrivateProgram) {
+        return { isUnavailable: false, unavailableReason: 'validation_unavailable' };
+    }
+
     const [configSnap, weeksSnap] = await Promise.all([
         getDoc(getConfigRef(ownerUid)),
         getDocs(query(getProgramacaoCollectionRef(ownerUid), where('semana', '==', semana)))
     ]);
 
-    if (weeksSnap.empty) {
-        return { isUnavailable: true, unavailableReason: 'week_removed' };
-    }
-
     const config = normalizeSystemConfig(configSnap.exists() ? configSnap.data() : {});
-    const found = weeksSnap.docs.some((weekDoc) => {
-        const keys = collectAssignmentKeysForWeek(weekDoc.data(), config);
-        return keys.has(assignmentKey);
-    });
-
-    if (!found) {
-        return { isUnavailable: true, unavailableReason: 'assignment_changed' };
-    }
-
-    return { isUnavailable: false, unavailableReason: '' };
+    return findAssignmentInWeeks(weeksSnap.docs.map((weekDoc) => weekDoc.data()), config);
 };
 
 const ensureUniqueToken = async () => {

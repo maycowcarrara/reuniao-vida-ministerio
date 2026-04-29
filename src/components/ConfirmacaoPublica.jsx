@@ -57,11 +57,12 @@ export default function ConfirmacaoPublica() {
 
         navigate(
             {
+                pathname: `/c/${token}`,
                 search: nextSearch ? `?${nextSearch}` : ''
             },
             { replace: true }
         );
-    }, [navigate, searchParams]);
+    }, [navigate, searchParams, token]);
 
     const carregarRegistro = useCallback(async ({ silent = false } = {}) => {
         if (!token) {

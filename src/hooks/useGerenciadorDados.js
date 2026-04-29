@@ -139,7 +139,8 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
         const idNormalizado = id != null ? String(id).trim() : '';
         const docRef = idNormalizado ? doc(db, path, idNormalizado) : doc(collection(db, path));
         const objetoLimpo = JSON.parse(JSON.stringify(objeto));
-        await setDoc(docRef, { ...objetoLimpo, id: docRef.id }, { merge: true });
+        const deveMesclar = colecao !== 'programacao';
+        await setDoc(docRef, { ...objetoLimpo, id: docRef.id }, { merge: deveMesclar });
     };
 
     const excluirItem = async (colecao, id) => {
