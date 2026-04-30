@@ -30,7 +30,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Evita reload automatico quando o service worker encontra uma versao nova.
+      // A atualizacao forcada continua disponivel pelo botao "Versao" no app.
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'Reunião Vida e Ministério',
@@ -59,8 +61,8 @@ export default defineConfig({
       },
       // 🔥 ADIÇÃO IMPORTANTE PARA O MODO OFFLINE 🔥
       workbox: {
-        clientsClaim: true,
-        skipWaiting: true,
+        clientsClaim: false,
+        skipWaiting: false,
         cleanupOutdatedCaches: true,
         // Diz para o navegador fazer cache de todos esses tipos de arquivo
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],

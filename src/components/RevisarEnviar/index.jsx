@@ -907,7 +907,7 @@ const RevisarEnviar = ({
                                                                         className={`
                                                                             grid items-start border-b border-gray-100
                                                                             ${qtdSemanas === 1
-                                                                                ? 'grid-cols-[48px_1fr_240px] gap-x-4 py-2'
+                                                                                ? 'grid-cols-[48px_1fr_260px] gap-x-4 py-2'
                                                                                 : qtdSemanas === 2
                                                                                     ? 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5 print:py-[1.5px]'
                                                                                     : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5'
@@ -944,6 +944,7 @@ const RevisarEnviar = ({
                                                                         {/* Designados */}
                                                                         <div
                                                                             className={`
+                                                                                re-assignees
                                                                                 text-right flex flex-col items-end
                                                                                 ${qtdSemanas === 1
                                                                                     ? 'min-w-[260px] gap-1'
@@ -954,7 +955,7 @@ const RevisarEnviar = ({
                                                                             `}
                                                                         >
 
-                                                                            <span className={`${layout.names} text-black`}>
+                                                                            <span className={`re-assignee-primary ${layout.names} text-black`}>
                                                                                 {isEbc
                                                                                     ? `${t.dirigente}: `
                                                                                     : isOracao(parte)
@@ -965,14 +966,14 @@ const RevisarEnviar = ({
 
                                                                             {/* LEITOR NO ESTUDO BÍBLICO */}
                                                                             {isEbc && leitorEbc && (
-                                                                                <div className={`flex items-center gap-1 mt-0.5 ${layout.meta} text-gray-600 leading-tight`}>
+                                                                                <div className={`re-assignee-secondary re-reader-line flex items-center gap-1 mt-0.5 ${layout.meta} text-gray-600 leading-tight`}>
                                                                                     <BookOpen size={12} className="text-gray-500" />
                                                                                     <span>{t.leitor}: {leitorEbc.nome}</span>
                                                                                 </div>
                                                                             )}
 
                                                                             {parte?.ajudante && (
-                                                                                <p className={`${layout.meta} text-gray-600 leading-tight`}>
+                                                                                <p className={`re-assignee-secondary ${layout.meta} text-gray-600 leading-tight`}>
                                                                                     {t.ajudante}: {parte.ajudante.nome}
                                                                                 </p>
                                                                             )}

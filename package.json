@@ -1,7 +1,7 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "4.5.229",
+  "version": "4.5.232",
   "type": "module",
   "scripts": {
     "predev": "npm version patch --no-git-tag-version",

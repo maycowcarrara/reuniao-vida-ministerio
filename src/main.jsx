@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { ToastProvider } from './components/ToastProvider.jsx'
 import { registerAppUpdater, registerServiceWorkerRegistration } from './services/appUpdater.js'
+import { toast } from './utils/toast.js'
 import './index.css'
 import 'drag-drop-touch';
 
@@ -12,6 +13,11 @@ import { registerSW } from 'virtual:pwa-register'
 // Ativa o Service Worker imediatamente para garantir o cache offline
 const updateServiceWorker = registerSW({
   immediate: true,
+  onNeedRefresh() {
+    if (window.location.pathname.startsWith('/admin')) {
+      toast.info('Nova versao disponivel\nUse o botao Versao do Sistema quando puder recarregar o app.', { duration: 8000 })
+    }
+  },
   onRegisteredSW(_swUrl, registration) {
     registerServiceWorkerRegistration(registration)
   }

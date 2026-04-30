@@ -140,10 +140,30 @@
         AJUSTES ESPECÍFICOS DOS LAYOUTS DE IMPRESSÃO
        ======================================================= */
     
-    .page-content[data-qtd="1"] .ajudante,
-    .page-content[data-qtd="1"] .leitor {
-        font-size: 13.5pt;
-        line-height: 1.25;
+    .page-content .re-assignees {
+        text-align: right !important;
+    }
+
+    .page-content .re-assignee-primary,
+    .page-content .re-assignee-secondary {
+        margin-left: auto !important;
+        text-align: right !important;
+    }
+
+    .page-content .re-assignee-primary {
+        display: block !important;
+    }
+
+    .page-content .re-reader-line {
+        display: flex !important;
+        width: fit-content !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 1mm !important;
+    }
+
+    .page-content .re-reader-line svg {
+        flex: 0 0 auto !important;
     }
 
     /* 🔥 AJUSTE EXTREMO PARA CABER 2 SEMANAS NA FOLHA */
