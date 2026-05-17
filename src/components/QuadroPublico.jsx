@@ -721,60 +721,62 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                 </div>
                                                             ) : (
                                                                 /* === MODO NORMAL === */
-                                                                <div key={i} className="flex gap-3 relative">
+                                                                <div key={i} className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3 pb-6">
+                                                                    {i !== sem.partes.length - 1 && (
+                                                                        <div className="absolute left-5 top-10 bottom-[-1.5rem] w-[2px] -translate-x-1/2 bg-slate-200"></div>
+                                                                    )}
 
-                                                                    <div className="relative w-10 flex justify-center shrink-0">
-                                                                        {i !== sem.partes.length - 1 && (
-                                                                            <div className="absolute top-10 bottom-[-1.5rem] w-[2px] bg-slate-200"></div>
-                                                                        )}
+                                                                    <div className="col-start-1 row-start-1 flex justify-center">
                                                                         <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-100 flex flex-col items-center justify-center z-10 shadow-sm">
                                                                             <span className="text-[10px] font-black text-slate-600 leading-none">{parte.tempo}</span>
                                                                             <span className="text-[7px] font-bold text-slate-400 uppercase mt-0.5">min</span>
                                                                         </div>
                                                                     </div>
 
-                                                                    <div className="flex-1 pb-6 space-y-2">
-                                                                        {label && (
-                                                                            <span className={`inline-block text-[10px] font-black px-2 py-0.5 rounded uppercase ${label.css}`}>
-                                                                                {label.txt}
-                                                                            </span>
-                                                                        )}
-                                                                        <h4 className="text-sm font-bold text-slate-800 leading-snug pr-2">{parte.titulo}</h4>
-
-                                                                        {principal?.nome && (
-                                                                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-center mt-2">
-                                                                                <div className="flex-1">
-                                                                                    <p className="text-[13px] font-bold text-slate-900 flex items-center flex-wrap">
-                                                                                        {parte.oracao?.nome && !parte.estudante && !parte.dirigente && (
-                                                                                            <span className="text-slate-500 font-bold text-[10px] mr-1.5 uppercase tracking-wider bg-slate-200/50 px-1.5 py-0.5 rounded">{T.oracao}:</span>
-                                                                                        )}
-                                                                                        {principal.nome}
-                                                                                    </p>
-                                                                                    {parte.ajudante?.nome && (
-                                                                                        <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
-                                                                                            <ChevronRight size={10} className="text-blue-400" />
-                                                                                            {T.ajuda}: <span className="font-semibold text-slate-700">{parte.ajudante.nome}</span>
-                                                                                        </p>
-                                                                                    )}
-                                                                                    {parte.leitor?.nome && (
-                                                                                        <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
-                                                                                            <BookOpen size={10} className="text-blue-400" />
-                                                                                            {T.leitor}: <span className="font-semibold text-slate-700">{parte.leitor.nome}</span>
-                                                                                        </p>
-                                                                                    )}
-                                                                                </div>
-                                                                                <a
-                                                                                    href={gerarLinkAgenda(parte, dataRef, agendaTexts)}
-                                                                                    target="_blank"
-                                                                                    rel="noreferrer"
-                                                                                    className="p-2.5 rounded-xl border bg-white text-blue-600 border-slate-200 shadow-sm active:scale-95 transition-colors"
-                                                                                    title={T.salvarAgenda}
-                                                                                >
-                                                                                    <CalendarPlus size={18} />
-                                                                                </a>
-                                                                            </div>
-                                                                        )}
+                                                                    <div className="col-start-2 row-start-1 min-w-0 min-h-10 flex items-center">
+                                                                        <h4 className="flex flex-wrap items-center gap-x-2 gap-y-1 pr-2 text-sm font-bold text-slate-800 leading-snug">
+                                                                            {label && (
+                                                                                <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] ${label.css}`}>
+                                                                                    {label.txt}
+                                                                                </span>
+                                                                            )}
+                                                                            <span>{parte.titulo}</span>
+                                                                        </h4>
                                                                     </div>
+
+                                                                    {principal?.nome && (
+                                                                        <div className={`col-start-2 row-start-2 mt-2 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 ${parte.ajudante?.nome || parte.leitor?.nome ? 'py-3' : 'py-2.5'}`}>
+                                                                            <div className="flex-1">
+                                                                                <p className="text-[13px] font-bold text-slate-900 flex items-center flex-wrap">
+                                                                                    {parte.oracao?.nome && !parte.estudante && !parte.dirigente && (
+                                                                                        <span className="text-slate-500 font-bold text-[10px] mr-1.5 uppercase tracking-wider bg-slate-200/50 px-1.5 py-0.5 rounded">{T.oracao}:</span>
+                                                                                    )}
+                                                                                    {principal.nome}
+                                                                                </p>
+                                                                                {parte.ajudante?.nome && (
+                                                                                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-600">
+                                                                                        <ChevronRight size={10} className="text-blue-400" />
+                                                                                        {T.ajudante || 'Ajudante'}: <span className="font-bold text-slate-800">{parte.ajudante.nome}</span>
+                                                                                    </p>
+                                                                                )}
+                                                                                {parte.leitor?.nome && (
+                                                                                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-600">
+                                                                                        <BookOpen size={10} className="text-blue-400" />
+                                                                                        {T.leitor}: <span className="font-bold text-slate-800">{parte.leitor.nome}</span>
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                            <a
+                                                                                href={gerarLinkAgenda(parte, dataRef, agendaTexts)}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="rounded-lg border border-slate-200 bg-white p-2 text-blue-600 shadow-[0_1px_3px_rgba(15,23,42,0.12)] active:scale-95 transition-colors"
+                                                                                title={T.salvarAgenda}
+                                                                            >
+                                                                                <CalendarPlus size={15} />
+                                                                            </a>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         })}

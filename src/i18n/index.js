@@ -672,6 +672,9 @@ const PT_MESSAGES = {
         registros: "registros",
         editarParte: "Editar parte",
         adicionarParte: "Adicionar parte",
+        adicionar: "Adicionar",
+        moverCima: "Mover para cima",
+        moverBaixo: "Mover para baixo",
         salvar: "Salvar",
         cancelar: "Cancelar",
         minutos: "Minutos",
@@ -742,7 +745,8 @@ const PT_MESSAGES = {
         rascunho: "Rascunho",
         agendaPendente: "Agenda pendente",
         historicoPendente: "Histórico pendente",
-        substituicoesAbrevTpl: "{count} subst."
+        substituicoesAbrevTpl: "{count} subst.",
+        tempoTotalTooltipTpl: "Tempo total da reunião: {tempo}"
     },
     designarSidebar: {
         limpar: "Limpar",
@@ -1485,6 +1489,9 @@ const ES_MESSAGES = {
         registros: "registros",
         editarParte: "Editar parte",
         adicionarParte: "Añadir parte",
+        adicionar: "Añadir",
+        moverCima: "Mover hacia arriba",
+        moverBaixo: "Mover hacia abajo",
         salvar: "Guardar",
         cancelar: "Cancelar",
         minutos: "Minutos",
@@ -1555,7 +1562,8 @@ const ES_MESSAGES = {
         rascunho: "Borrador",
         agendaPendente: "Agenda pendiente",
         historicoPendente: "Historial pendiente",
-        substituicoesAbrevTpl: "{count} sust."
+        substituicoesAbrevTpl: "{count} sust.",
+        tempoTotalTooltipTpl: "Tiempo total de la reunión: {tempo}"
     },
     designarSidebar: {
         limpar: "Limpiar",

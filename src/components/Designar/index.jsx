@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Calendar, User, Search, UsersRound, UserRound, Clock,
     AlertTriangle, StickyNote, Trash2, Edit2, X, Save, UserPlus,
-    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc, Eye, EyeOff, RefreshCw, Plus
+    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc, Eye, EyeOff, RefreshCw, Plus, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 import ModalSugestao from './ModalSugestao';
@@ -17,6 +17,8 @@ import {
 } from './helpers';
 import { getCanonicalMeetingDateISO, getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
+import { formatHm } from '../../utils/importador/helpers';
+import { calcularTotalInfo } from '../../utils/importador/parser';
 import { formatText, useSectionMessages } from '../../i18n';
 import { getLanguageMeta } from '../../config/appConfig';
 
@@ -70,6 +72,20 @@ const Designar = ({
 
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
     const getSecaoTitulo = (secao) => TT.secoes?.[secao] || SECOES_META?.[secao]?.titulo || secao;
+    const getTempoTotalMeta = (partes) => {
+        const totalMin = calcularTotalInfo(partes).totalEfetivo;
+        const faixa = totalMin >= 104 && totalMin <= 106
+            ? 'ok'
+            : totalMin >= 100 && totalMin <= 103
+                ? 'alerta'
+                : 'erro';
+        const classes = {
+            ok: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            alerta: 'bg-amber-50 text-amber-700 border-amber-200',
+            erro: 'bg-red-50 text-red-700 border-red-200'
+        };
+        return { totalMin, label: formatHm(totalMin), className: classes[faixa] };
+    };
     const hasPessoaDesignada = (pessoa) => !!(pessoa?.id || pessoa?.nome);
     const mesmaPessoa = (a, b) => {
         if (!a || !b) return false;
@@ -715,6 +731,45 @@ const Designar = ({
         if (slotAtivo?.parteId === parteId) setSlotAtivo(null);
     };
 
+    const moverParteNaSemana = (parteId, semanaIndexFiltrado, direcao) => {
+        const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
+        if (isSemanaAssembleia(sem, config)) return;
+
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndexFiltrado);
+        if (semanaRealIndex === -1) return;
+
+        setListaProgramacoesSafe(prev => {
+            const lista = [...prev];
+            const atual = lista[semanaRealIndex];
+            if (!atual || isSemanaAssembleia(atual, config)) return lista;
+
+            const partes = [...(atual.partes || [])];
+            const idxAtual = partes.findIndex(p => p.id === parteId);
+            if (idxAtual === -1) return lista;
+
+            const parteAtual = partes[idxAtual];
+            if (isLinhaInicialFinal(parteAtual)) return lista;
+
+            const secaoAtual = normalizarSecao(parteAtual?.secao);
+            const indicesDaSecao = partes
+                .map((p, idx) => ({ p, idx }))
+                .filter(({ p }) => normalizarSecao(p?.secao) === secaoAtual && !isAbertura(p) && !isEncerramento(p))
+                .map(({ idx }) => idx);
+
+            const posicaoNaSecao = indicesDaSecao.indexOf(idxAtual);
+            const alvoNaSecao = direcao === 'cima' ? posicaoNaSecao - 1 : posicaoNaSecao + 1;
+            if (posicaoNaSecao === -1 || alvoNaSecao < 0 || alvoNaSecao >= indicesDaSecao.length) return lista;
+
+            const idxAlvo = indicesDaSecao[alvoNaSecao];
+            [partes[idxAtual], partes[idxAlvo]] = [partes[idxAlvo], partes[idxAtual]];
+
+            const semana = { ...atual, partes };
+            marcarSemanaPublicadaPendente(semana, 'ordem_partes');
+            lista[semanaRealIndex] = semana;
+            return lista;
+        });
+    };
+
     const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx, substituicao, permitirSubstituicao = false }) => {
         const isEmpty = !value;
         const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
@@ -818,6 +873,12 @@ const Designar = ({
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
                         {typeof parte.tempo !== 'undefined' && <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLinhaInicialFinal(parte) ? "bg-white text-gray-700 border border-gray-300" : "bg-white/20 text-white"}`}>{parte.tempo} min</span>}
+                        {!isLinhaInicialFinal(parte) && (
+                            <>
+                                <button type="button" onClick={() => moverParteNaSemana(parte.id, semanaIndexFiltrado, 'cima')} className="p-1 rounded border border-white/30 bg-white/15 text-white hover:bg-white/30 transition" title={TT.moverCima}><ArrowUp size={12} /></button>
+                                <button type="button" onClick={() => moverParteNaSemana(parte.id, semanaIndexFiltrado, 'baixo')} className="p-1 rounded border border-white/30 bg-white/15 text-white hover:bg-white/30 transition" title={TT.moverBaixo}><ArrowDown size={12} /></button>
+                            </>
+                        )}
                         <button type="button" onClick={() => abrirModalEditarParte(parte, semanaIndexFiltrado)} className={`p-1 rounded border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-gray-700 hover:bg-gray-50" : "border-white/20 bg-white/10 text-white hover:bg-white/20"}`} title={TT.editarParte}><Edit2 size={12} /></button>
                         <button type="button" onClick={() => handleExcluirParte(parte.id, semanaIndexFiltrado)} className={`p-1 rounded border transition ${isLinhaInicialFinal(parte) ? "border-gray-300 bg-white text-red-500 hover:bg-red-50" : "border-white/20 bg-white/10 text-white hover:bg-red-500 hover:border-red-500"}`} title={TT.excluirParte}><Trash2 size={12} /></button>
                     </div>
@@ -927,6 +988,7 @@ const Designar = ({
                                 ) : (
                                     semanasParaExibir.map(({ sem, idx, key }) => {
                                         const partesDaSemana = Array.isArray(sem?.partes) ? sem.partes : [];
+                                        const tempoTotalMeta = getTempoTotalMeta(partesDaSemana);
                                         const isArq = !!sem?.arquivada;
                                         const publicadaNoQuadro = sem?.publicadaNoQuadro !== false;
                                         const substituicoesSemana = getSubstituicoesSemana(sem);
@@ -953,7 +1015,7 @@ const Designar = ({
 
                                                 {/* CABEÇALHO DA SEMANA */}
                                                 <div className={`rounded-xl border px-3 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${isVisita ? 'bg-white/80 border-blue-200' : 'bg-white border-gray-100 shadow-sm'}`}>
-                                                    <div className="min-w-0 flex-1 flex flex-col gap-1.5 sm:gap-0 sm:flex-row sm:items-center sm:gap-4">
+                                                    <div className="min-w-0 flex-1 flex flex-col gap-1.5">
                                                         <h3 className="font-black text-[15px] text-gray-800 min-w-0 flex flex-wrap items-center gap-2">
                                                             <span className="min-w-0 truncate">{sem?.semana || `${TT.semana} ${idx + 1}`}</span>
                                                             {isVisita && <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-600 text-white border border-blue-700 flex items-center gap-1 uppercase tracking-wider animate-pulse"><Briefcase size={10} /> {TT.visitaSC}</span>}
@@ -963,6 +1025,11 @@ const Designar = ({
                                                                  {publicadaNoQuadro ? <Eye size={10} /> : <EyeOff size={10} />}
                                                                  {publicadaNoQuadro ? TT.publicada : TT.rascunho}
                                                              </span>
+                                                            {!isAssembly && (
+                                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider ${tempoTotalMeta.className}`} title={formatText(TT.tempoTotalTooltipTpl, { tempo: tempoTotalMeta.label })}>
+                                                                    <Clock size={10} /> {tempoTotalMeta.label}
+                                                                </span>
+                                                            )}
                                                             {agendaPendenteSync && (
                                                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
                                                                     <Calendar size={10} /> {TT.agendaPendente}
@@ -977,13 +1044,13 @@ const Designar = ({
                                                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider bg-orange-50 text-orange-700 border-orange-200">
                                                                     <RefreshCw size={10} /> {formatText(TT.substituicoesAbrevTpl, { count: substituicoesSemana.length })}
                                                                 </span>
-                                                            )}
+                                                             )}
                                                          </h3>
-                                                        <p className="text-[11px] text-gray-500 flex flex-wrap items-center gap-1">
+                                                        <p className="text-[11px] text-gray-500 flex items-center gap-1 min-w-0">
                                                             {displayDateExtenso ? (
                                                                 <>
-                                                                    <Calendar size={10} />
-                                                                    <strong className={isVisita ? 'text-blue-700' : ''}>
+                                                                    <Calendar size={10} className="shrink-0" />
+                                                                    <strong className={`min-w-0 ${isVisita ? 'text-blue-700' : ''}`}>
                                                                         {displayDateExtenso}
                                                                     </strong>
                                                                 </>
@@ -1091,8 +1158,9 @@ const Designar = ({
                                                                                 <span className="text-[10px] font-black tracking-widest uppercase">{getSecaoTitulo(secKey)}</span>
                                                                                 <div className="flex items-center gap-1.5">
                                                                                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${SECOES_META[secKey].pill}`}>{partesSecao.length} {TT.itens}</span>
-                                                                                    <button type="button" onClick={() => abrirModalNovaParte(secKey, idx)} className="p-1 rounded border border-white/20 bg-white/10 text-white hover:bg-white/20 transition" title={TT.adicionarParte}>
+                                                                                    <button type="button" onClick={() => abrirModalNovaParte(secKey, idx)} className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10px] font-black shadow-sm transition ${SECOES_META[secKey].actionButton}`} title={TT.adicionarParte}>
                                                                                         <Plus size={12} />
+                                                                                        <span>{TT.adicionar}</span>
                                                                                     </button>
                                                                                 </div>
                                                                             </div>

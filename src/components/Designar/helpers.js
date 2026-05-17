@@ -7,19 +7,22 @@ export const SECOES_META = {
         titulo: 'TESOUROS DA PALAVRA DE DEUS',
         header: 'bg-teal-700 text-white',
         pill: 'bg-white/20 text-white',
-        border: 'border-teal-200'
+        border: 'border-teal-200',
+        actionButton: 'border-teal-100 bg-teal-50 text-teal-900 hover:bg-teal-100'
     },
     ministerio: {
         titulo: 'FAÇA SEU MELHOR NO MINISTÉRIO',
         header: 'bg-yellow-600 text-white',
         pill: 'bg-white/20 text-white',
-        border: 'border-yellow-200'
+        border: 'border-yellow-200',
+        actionButton: 'border-yellow-100 bg-yellow-50 text-yellow-900 hover:bg-yellow-100'
     },
     vida: {
         titulo: 'NOSSA VIDA CRISTÃ',
         header: 'bg-red-700 text-white',
         pill: 'bg-white/20 text-white',
-        border: 'border-red-200'
+        border: 'border-red-200',
+        actionButton: 'border-red-100 bg-red-50 text-red-900 hover:bg-red-100'
     }
 };
 
