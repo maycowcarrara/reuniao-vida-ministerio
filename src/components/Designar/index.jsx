@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Calendar, User, Search, UsersRound, UserRound, Clock,
     AlertTriangle, StickyNote, Trash2, Edit2, X, Save, UserPlus,
-    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc, Eye, EyeOff, RefreshCw
+    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc, Eye, EyeOff, RefreshCw, Plus
 } from 'lucide-react';
 
 import ModalSugestao from './ModalSugestao';
@@ -69,6 +69,7 @@ const Designar = ({
         (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
 
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
+    const getSecaoTitulo = (secao) => TT.secoes?.[secao] || SECOES_META?.[secao]?.titulo || secao;
     const hasPessoaDesignada = (pessoa) => !!(pessoa?.id || pessoa?.nome);
     const mesmaPessoa = (a, b) => {
         if (!a || !b) return false;
@@ -578,8 +579,60 @@ const Designar = ({
             const semana = { ...atual, partes: [...(atual.partes || [])] };
             const idx = semana.partes.findIndex(p => p.id === parteId);
             if (idx === -1) return lista;
-            semana.partes[idx] = marcarNotificacaoPartePendente({ ...semana.partes[idx], ...patch }, semana);
+            const parteAtualizada = marcarNotificacaoPartePendente({ ...semana.partes[idx], ...patch }, semana);
+            semana.partes[idx] = parteAtualizada;
+            if (patch?.secao && normalizarSecao(patch.secao) !== normalizarSecao(atual.partes[idx]?.secao)) {
+                semana.partes.splice(idx, 1);
+                const insertAt = getIndiceInsercaoParte(semana.partes, patch.secao);
+                semana.partes.splice(insertAt, 0, parteAtualizada);
+            }
             marcarSemanaPublicadaPendente(semana, 'edicao_parte');
+            lista[semanaRealIndex] = semana;
+            return lista;
+        });
+    };
+
+    const getIndiceInsercaoParte = (partes, secao) => {
+        const alvo = normalizarSecao(secao);
+        const alvoOrdem = SECOES_ORDEM.indexOf(alvo);
+        const lastSame = partes.reduce((last, p, idx) => (
+            normalizarSecao(p?.secao) === alvo && !isAbertura(p) && !isEncerramento(p) ? idx : last
+        ), -1);
+        if (lastSame >= 0) return lastSame + 1;
+
+        const firstLaterSection = partes.findIndex((p) => {
+            if (isAbertura(p) || isEncerramento(p)) return false;
+            const ordem = SECOES_ORDEM.indexOf(normalizarSecao(p?.secao));
+            return ordem > alvoOrdem;
+        });
+        if (firstLaterSection >= 0) return firstLaterSection;
+
+        const firstClosing = partes.findIndex(isEncerramento);
+        return firstClosing >= 0 ? firstClosing : partes.length;
+    };
+
+    const adicionarParteNaSemanaRealIndex = (semanaRealIndex, valores) => {
+        setListaProgramacoesSafe(prev => {
+            const lista = [...prev];
+            const atual = lista[semanaRealIndex];
+            if (!atual || isSemanaAssembleia(atual, config)) return lista;
+
+            const semana = { ...atual, partes: [...(atual.partes || [])] };
+            const secao = valores?.secao || 'tesouros';
+            const novaParte = marcarNotificacaoPartePendente({
+                id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                titulo: valores?.titulo || '',
+                descricao: valores?.descricao || '',
+                tempo: valores?.tempo || '5',
+                tipo: 'parte',
+                secao,
+                estudante: null,
+                ajudante: null
+            }, semana);
+
+            const insertAt = getIndiceInsercaoParte(semana.partes, secao);
+            semana.partes.splice(insertAt, 0, novaParte);
+            marcarSemanaPublicadaPendente(semana, 'adicao_parte');
             lista[semanaRealIndex] = semana;
             return lista;
         });
@@ -593,25 +646,49 @@ const Designar = ({
         }
         setParteEditCtx({
             parteId: parte.id, semanaIndex: semanaIndexFiltrado,
-            valores: { titulo: (parte?.titulo ?? '').toString(), descricao: (parte?.descricao ?? '').toString(), tempo: String(parte?.tempo ?? '') }
+            isLinhaInicialFinal: isLinhaInicialFinal(parte),
+            valores: { titulo: (parte?.titulo ?? '').toString(), descricao: (parte?.descricao ?? '').toString(), tempo: String(parte?.tempo ?? ''), secao: normalizarSecao(parte?.secao) }
+        });
+        setModalEditarOpen(true);
+    };
+
+    const abrirModalNovaParte = (secao, semanaIndexFiltrado) => {
+        const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
+        if (isSemanaAssembleia(sem, config)) {
+            alert(TT.acoesBloqueadasSemanaEvento);
+            return;
+        }
+        setParteEditCtx({
+            modo: 'novo',
+            semanaIndex: semanaIndexFiltrado,
+            valores: { titulo: '', descricao: '', tempo: '5', secao }
         });
         setModalEditarOpen(true);
     };
 
     const salvarEdicaoParte = () => {
-        if (!parteEditCtx?.parteId) return;
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(parteEditCtx.semanaIndex) ? parteEditCtx.semanaIndex : semanaAtivaIndexAtual);
         if (semanaRealIndex === -1) return;
 
+        if (parteEditCtx?.modo === 'novo') {
+            adicionarParteNaSemanaRealIndex(semanaRealIndex, parteEditCtx.valores || {});
+            setModalEditarOpen(false);
+            setParteEditCtx(null);
+            return;
+        }
+
+        if (!parteEditCtx?.parteId) return;
         const sem = listaProgramacoes[semanaRealIndex];
         const parte = (sem?.partes || []).find(p => p.id === parteEditCtx.parteId);
         if (!parte) return;
 
         const travarTempo = isLinhaInicialFinal(parte);
+        const travarSecao = isLinhaInicialFinal(parte);
         atualizarParteNaSemanaRealIndex(semanaRealIndex, parteEditCtx.parteId, {
             titulo: parteEditCtx.valores.titulo,
             descricao: parteEditCtx.valores.descricao,
-            ...(travarTempo ? {} : { tempo: parteEditCtx.valores.tempo })
+            ...(travarTempo ? {} : { tempo: parteEditCtx.valores.tempo }),
+            ...(travarSecao ? {} : { secao: parteEditCtx.valores.secao || 'tesouros' })
         });
         setModalEditarOpen(false);
         setParteEditCtx(null);
@@ -1011,8 +1088,13 @@ const Designar = ({
                                                                     <div key={secKey} className="space-y-2">
                                                                         <div className={`rounded-lg overflow-hidden border ${SECOES_META[secKey].border} shadow-sm`}>
                                                                             <div className={`${SECOES_META[secKey].header} px-3 py-1.5 flex items-center justify-between`}>
-                                                                                <span className="text-[10px] font-black tracking-widest uppercase">{SECOES_META[secKey].titulo}</span>
-                                                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${SECOES_META[secKey].pill}`}>{partesSecao.length} {TT.itens}</span>
+                                                                                <span className="text-[10px] font-black tracking-widest uppercase">{getSecaoTitulo(secKey)}</span>
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${SECOES_META[secKey].pill}`}>{partesSecao.length} {TT.itens}</span>
+                                                                                    <button type="button" onClick={() => abrirModalNovaParte(secKey, idx)} className="p-1 rounded border border-white/20 bg-white/10 text-white hover:bg-white/20 transition" title={TT.adicionarParte}>
+                                                                                        <Plus size={12} />
+                                                                                    </button>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                         {partesSecao.length === 0 ? (
@@ -1064,13 +1146,23 @@ const Designar = ({
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setModalEditarOpen(false); setParteEditCtx(null); }} />
                     <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border overflow-hidden">
                         <div className="px-4 py-3 bg-gray-900 text-white flex items-center justify-between">
-                            <div className="text-sm font-black">{TT.editarParte}</div>
+                            <div className="text-sm font-black">{parteEditCtx?.modo === 'novo' ? TT.adicionarParte : TT.editarParte}</div>
                             <button type="button" onClick={() => { setModalEditarOpen(false); setParteEditCtx(null); }} className="p-1 rounded hover:bg-white/10 transition" title={TT.cancelar}>
                                 <X size={18} />
                             </button>
                         </div>
 
                         <div className="p-4 space-y-3">
+                            {!parteEditCtx?.isLinhaInicialFinal && (
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">{TT.secao}</label>
+                                    <select value={parteEditCtx?.valores?.secao ?? 'tesouros'} onChange={(e) => setParteEditCtx(prev => ({ ...prev, valores: { ...(prev?.valores || {}), secao: e.target.value } }))} className="w-full px-3 py-2 border rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-blue-200 bg-white">
+                                        {SECOES_ORDEM.map(secKey => (
+                                            <option key={secKey} value={secKey}>{getSecaoTitulo(secKey)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div>
                                 <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">{TT.titulo}</label>
                                 <input type="text" value={parteEditCtx?.valores?.titulo ?? ''} onChange={(e) => setParteEditCtx(prev => ({ ...prev, valores: { ...(prev?.valores || {}), titulo: e.target.value } }))} className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200" />

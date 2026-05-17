@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Edit, Plus, Info, CheckCircle, AlertTriangle, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { TRANSLATIONS, SECAO_UI } from '../../utils/importador/constants';
 import { formatHm } from '../../utils/importador/helpers';
@@ -10,6 +10,7 @@ import { formatText } from '../../i18n';
 export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel, lang = 'pt' }) {
     const t = TRANSLATIONS[lang];
     const { dados: appDados } = useGerenciadorDados();
+    const [secaoNovaParte, setSecaoNovaParte] = useState('tesouros');
 
     const totalInfo = useMemo(() => calcularTotalInfo(dados?.partes || [], lang), [dados, lang]);
     const totalMin = totalInfo.totalEfetivo;
@@ -43,6 +44,23 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
         if (secao === 'ministerio') return t.secaoMinisterio;
         if (secao === 'vida') return t.secaoVida;
         return t.secaoNA;
+    };
+
+    const adicionarParteManual = () => {
+        setDados({
+            ...dados,
+            partes: [
+                ...dados.partes,
+                {
+                    id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    titulo: '',
+                    tempo: '5',
+                    tipo: 'parte',
+                    secao: secaoNovaParte,
+                    descricao: ''
+                }
+            ]
+        });
     };
 
     // 🔥 REGRA DE BLOQUEIO CORRIGIDA
@@ -149,6 +167,15 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                                         <label className="text-[9px] font-bold text-gray-500 uppercase text-center block leading-none mb-1">{t.rotulos.tempo}</label>
                                         <input type="text" inputMode="numeric" value={p.tempo} onChange={(e) => updateParte(idx, 'tempo', e.target.value.replace(/[^\d]/g, ''))} className={`w-full h-10 text-center font-mono text-sm border rounded-xl px-3 py-2 bg-white/70 outline-none focus:ring-4 ${ui.focus}`} />
                                     </div>
+                                    <div className="col-span-6 md:col-span-2">
+                                        <label className="text-[9px] font-bold text-gray-500 uppercase text-center block leading-none mb-1">{t.rotulos.secao}</label>
+                                        <select value={p.secao || ''} onChange={(e) => updateParte(idx, 'secao', e.target.value)} className={`w-full h-10 text-xs font-bold border rounded-xl px-2 py-2 bg-white/70 outline-none focus:ring-4 ${ui.focus}`}>
+                                            <option value="">{t.secaoNA}</option>
+                                            <option value="tesouros">{t.secaoTesouros}</option>
+                                            <option value="ministerio">{t.secaoMinisterio}</option>
+                                            <option value="vida">{t.secaoVida}</option>
+                                        </select>
+                                    </div>
                                     <div className="col-span-12">
                                         <label className="text-[9px] font-bold text-gray-500 uppercase">{t.rotulos.detalhes}</label>
                                         <textarea value={p.descricao} onChange={(e) => updateParte(idx, 'descricao', e.target.value)} className={`w-full text-xs text-gray-700 outline-none resize-y h-14 max-h-56 border rounded-xl p-3 bg-white/70 focus:ring-4 ${ui.focus}`} placeholder={t.placeholderDetalhes} />
@@ -160,8 +187,15 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                     })}
                 </div>
                 
-                <div className="flex gap-3 mt-4">
-                    <button onClick={() => setDados({...dados, partes: [...dados.partes, { id: Math.random(), titulo: '', tempo: '5', tipo: 'parte', secao: 'tesouros', descricao: '' }]})} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 transition inline-flex items-center justify-center gap-2"><Plus size={18} /> {t.addLinha}</button>
+                <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                    <div className="flex-1 flex gap-2">
+                        <select value={secaoNovaParte} onChange={(e) => setSecaoNovaParte(e.target.value)} className="w-40 px-3 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-xs text-gray-700 outline-none focus:ring-4 focus:ring-blue-100">
+                            <option value="tesouros">{t.secaoTesouros}</option>
+                            <option value="ministerio">{t.secaoMinisterio}</option>
+                            <option value="vida">{t.secaoVida}</option>
+                        </select>
+                        <button onClick={adicionarParteManual} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 transition inline-flex items-center justify-center gap-2"><Plus size={18} /> {t.addLinha}</button>
+                    </div>
                     <button onClick={handleConfirm} className="flex-1 px-4 py-3 bg-green-600 text-white rounded-2xl font-bold shadow hover:bg-green-700 transition inline-flex items-center justify-center gap-2"><CheckCircle size={18} /> {t.confirmar}</button>
                 </div>
             </div>

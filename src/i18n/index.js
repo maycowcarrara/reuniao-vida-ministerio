@@ -671,6 +671,7 @@ const PT_MESSAGES = {
         alunos: "Alunos",
         registros: "registros",
         editarParte: "Editar parte",
+        adicionarParte: "Adicionar parte",
         salvar: "Salvar",
         cancelar: "Cancelar",
         minutos: "Minutos",
@@ -698,6 +699,12 @@ const PT_MESSAGES = {
         titulo: "Título",
         descricao: "Descrição",
         tempo: "Tempo",
+        secao: "Seção",
+        secoes: {
+            tesouros: "TESOUROS DA PALAVRA DE DEUS",
+            ministerio: "FAÇA SEU MELHOR NO MINISTÉRIO",
+            vida: "NOSSA VIDA CRISTÃ"
+        },
         visitaSC: "Visita SC",
         assembleia: "Assembleia",
         congresso: "Congresso",
@@ -1477,6 +1484,7 @@ const ES_MESSAGES = {
         alunos: "Estudiantes",
         registros: "registros",
         editarParte: "Editar parte",
+        adicionarParte: "Añadir parte",
         salvar: "Guardar",
         cancelar: "Cancelar",
         minutos: "Minutos",
@@ -1504,6 +1512,12 @@ const ES_MESSAGES = {
         titulo: "Título",
         descricao: "Descripción",
         tempo: "Tiempo",
+        secao: "Sección",
+        secoes: {
+            tesouros: "TESOROS DE LA BIBLIA",
+            ministerio: "SEAMOS MEJORES MAESTROS",
+            vida: "NUESTRA VIDA CRISTIANA"
+        },
         visitaSC: "Visita SC",
         assembleia: "Asamblea",
         congresso: "Congreso",

@@ -57,6 +57,13 @@ const formatarDataCompleta = (dataISO, lang, texts) => {
     return `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)}, ${dataStr}`;
 };
 
+const formatLocalDateISO = (data = new Date()) => {
+    const y = data.getFullYear();
+    const m = String(data.getMonth() + 1).padStart(2, '0');
+    const d = String(data.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
 const checkEstaSemana = (dataInicioISO) => {
     if (!dataInicioISO) return false;
     const hoje = new Date();
@@ -240,26 +247,19 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         }
     };
 
+    const hojeStr = formatLocalDateISO(agora);
+
     const semanasParaExibir = useMemo(() => {
         if (!programacoes) return [];
-
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        hoje.setDate(hoje.getDate() - 2);
 
         let filtradas = programacoes.filter(sem => {
             if (sem.arquivada) return false;
             if (sem.publicadaNoQuadro === false) return false;
 
-            const dtCalculo = getSemanaStartISOCompartilhado(sem, config);
-            if (!dtCalculo) return false;
+            const dataReuniaoISO = getDataReuniaoISO(sem, config);
+            if (!dataReuniaoISO) return false;
 
-            const inicioSemana = new Date(dtCalculo + 'T12:00:00');
-            const fimSemana = new Date(inicioSemana);
-            fimSemana.setDate(inicioSemana.getDate() + 6);
-            fimSemana.setHours(23, 59, 59, 999);
-
-            return fimSemana >= hoje;
+            return dataReuniaoISO >= hojeStr;
         });
 
         filtradas = filtradas.map(sem => {
@@ -293,12 +293,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         }
 
         return filtradas.sort((a, b) => new Date(a.semanaStartISO).getTime() - new Date(b.semanaStartISO).getTime());
-    }, [programacoes, busca, config, lang]);
+    }, [programacoes, busca, config, lang, hojeStr]);
 
-    const y = agora.getFullYear();
-    const m = String(agora.getMonth() + 1).padStart(2, '0');
-    const d = String(agora.getDate()).padStart(2, '0');
-    const hojeStr = `${y}-${m}-${d}`;
     const reuniaoAoVivo = useMemo(() => {
         return semanasParaExibir.findIndex((sem) => {
             if (!sem.partes?.length || sem.termosBuscados) return false;
