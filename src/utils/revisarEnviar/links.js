@@ -1,10 +1,12 @@
 // src/utils/revisarEnviar/links.js
+import { prependMeetingSectionTag } from '../meetingSections';
+
 export const buildWhatsappHref = (telefone, msg) => {
     const raw = (telefone ?? '').toString();
     const digits = raw.replace(/\D/g, '');
     if (!digits) return null;
     const waNumber = (digits.length === 10 || digits.length === 11) ? `55${digits}` : digits;
-    return `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+    return `https://wa.me/${waNumber}?text=${encodeURIComponent(String(msg ?? '').normalize('NFC'))}`;
 };
 
 export const buildMailtoHref = (email, subject, body) => {
@@ -39,7 +41,7 @@ export const parseHorario = (h) => {
     return { hh, mm };
 };
 
-export const buildAgendaLink = ({ config, semana, dataISO, tituloParte, responsavelNome, ajudanteNome }) => {
+export const buildAgendaLink = ({ config, semana, dataISO, tituloParte, responsavelNome, ajudanteNome, secao }) => {
     if (!dataISO) return null;
 
     const duracaoMin = 105; // padrão: 1h45 (ajuste se quiser)
@@ -50,14 +52,15 @@ export const buildAgendaLink = ({ config, semana, dataISO, tituloParte, responsa
     const start = new Date(ano, mes - 1, dia, hh, mm, 0);
     const end = new Date(start.getTime() + duracaoMin * 60000);
 
-    const text = `Designação para a Reunião - ${tituloParte || semana || ''}`.trim();
+    const tituloComIcone = prependMeetingSectionTag(tituloParte, secao, config?.idioma) || (tituloParte || semana || '');
+    const text = `Designação para a Reunião - ${tituloComIcone || semana || ''}`.trim();
 
     const detailsLines = [
         `Semana: ${semana || ''}`.trim(),
         '',
         `Responsável: ${responsavelNome || ''}`.trim(),
         ajudanteNome ? `Ajudante: ${ajudanteNome}` : null,
-        tituloParte ? `Parte: ${tituloParte}` : null,
+        tituloParte ? `Parte: ${tituloComIcone}` : null,
     ].filter(Boolean);
 
     const url =

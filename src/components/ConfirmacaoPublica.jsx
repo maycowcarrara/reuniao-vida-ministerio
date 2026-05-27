@@ -10,6 +10,7 @@ import {
     respondToPublicWeekReminder
 } from '../services/confirmacoesPublicas';
 import { formatarDataFolha } from '../utils/revisarEnviar/dates';
+import { prependMeetingSectionTag } from '../utils/meetingSections';
 
 const STATUS_STYLES = {
     pendente: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -226,6 +227,10 @@ export default function ConfirmacaoPublica() {
     }
 
     const dataFmt = registro?.dataISO ? formatarDataFolha(registro.dataISO, lang) : '—';
+    const tituloParteExibicao = registro?.tituloParteExibicao
+        || prependMeetingSectionTag(registro?.tituloParte, registro?.secao, lang)
+        || registro?.tituloParte
+        || '—';
 
     if (registroIndisponivel) {
         return (
@@ -263,7 +268,7 @@ export default function ConfirmacaoPublica() {
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:col-span-2">
                                 <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">{t.parte}</p>
-                                <p className="mt-1.5 text-base font-black text-slate-900">{registro?.tituloParte || '—'}</p>
+                                <p className="mt-1.5 text-base font-black text-slate-900">{tituloParteExibicao}</p>
                             </div>
                         </div>
 
@@ -343,7 +348,7 @@ export default function ConfirmacaoPublica() {
 
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">{t.parte}</p>
-                            <p className="mt-1.5 text-base font-black text-slate-900">{registro?.tituloParte || '—'}</p>
+                            <p className="mt-1.5 text-base font-black text-slate-900">{tituloParteExibicao}</p>
                         </div>
 
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">

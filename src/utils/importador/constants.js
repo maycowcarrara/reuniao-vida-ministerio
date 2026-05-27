@@ -28,22 +28,22 @@ export const getImportadorCatalogConfig = (lang) => {
 
 export const SECAO_UI = {
     tesouros: {
-        chip: 'bg-slate-100 text-slate-900 border-slate-200',
-        wrap: 'border-slate-200 bg-slate-50/60',
-        left: 'border-l-slate-500',
-        focus: 'focus:ring-slate-200 focus:border-slate-300',
+        chip: 'jw-sec-chip-soft-tesouros',
+        wrap: 'jw-sec-surface-tesouros',
+        left: 'jw-sec-left-tesouros',
+        focus: 'jw-sec-focus-tesouros',
     },
     ministerio: {
-        chip: 'bg-amber-100 text-amber-900 border-amber-200',
-        wrap: 'border-amber-200 bg-amber-50/40',
-        left: 'border-l-amber-400',
-        focus: 'focus:ring-amber-200 focus:border-amber-300',
+        chip: 'jw-sec-chip-soft-ministerio',
+        wrap: 'jw-sec-surface-ministerio',
+        left: 'jw-sec-left-ministerio',
+        focus: 'jw-sec-focus-ministerio',
     },
     vida: {
-        chip: 'bg-rose-100 text-rose-900 border-rose-200',
-        wrap: 'border-rose-200 bg-rose-50/40',
-        left: 'border-l-rose-400',
-        focus: 'focus:ring-rose-200 focus:border-rose-300',
+        chip: 'jw-sec-chip-soft-vida',
+        wrap: 'jw-sec-surface-vida',
+        left: 'jw-sec-left-vida',
+        focus: 'jw-sec-focus-vida',
     },
     na: {
         chip: 'bg-gray-100 text-gray-700 border-gray-200',

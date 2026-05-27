@@ -8,6 +8,7 @@ import { buildAgendaLink } from '../../utils/revisarEnviar/links';
 import { toast } from '../../utils/toast';
 import { getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
+import { prependMeetingSectionTag } from '../../utils/meetingSections';
 import {
     ensurePublicConfirmation,
     registerNotificationChannelByAssignment,
@@ -17,9 +18,9 @@ import {
 } from '../../services/confirmacoesPublicas';
 
 const SECAO_UI = {
-    tesouros: { chip: 'bg-slate-600', wrap: 'border-slate-200 bg-slate-50', text: 'text-slate-900' },
-    ministerio: { chip: 'bg-yellow-600', wrap: 'border-amber-200 bg-amber-50', text: 'text-amber-950' },
-    vida: { chip: 'bg-red-700', wrap: 'border-rose-200 bg-rose-50', text: 'text-rose-950' },
+    tesouros: { chip: 'jw-sec-bg-tesouros', wrap: 'jw-sec-surface-tesouros', text: 'jw-sec-text-tesouros' },
+    ministerio: { chip: 'jw-sec-bg-ministerio', wrap: 'jw-sec-surface-ministerio', text: 'jw-sec-text-ministerio' },
+    vida: { chip: 'jw-sec-bg-vida', wrap: 'jw-sec-surface-vida', text: 'jw-sec-text-vida' },
 };
 
 const RevisarEnviarNotificarTab = ({
@@ -63,6 +64,8 @@ const RevisarEnviarNotificarTab = ({
         estudante: t.estudante || 'Estudante',
         ajudante: t.ajudante || 'Ajudante'
     };
+    const formatarTituloExibicao = (tituloParte = '', secao = '') =>
+        prependMeetingSectionTag(tituloParte, secao, config?.idioma) || tituloParte;
 
     const confirmacoesMap = useMemo(() => {
         return (confirmacoes || []).reduce((acc, item) => {
@@ -140,6 +143,7 @@ const RevisarEnviarNotificarTab = ({
                 dataISO: confirmationData?.dataISO,
                 responsavelNome: pessoa?.nome,
                 tituloParte: confirmationData?.tituloParte,
+                secao: confirmationData?.secao,
                 isVisita: confirmationData?.isVisita,
                 linkConfirmacao: confirmacao.weekLink
             });
@@ -221,6 +225,7 @@ const RevisarEnviarNotificarTab = ({
         const [dataISO, semana, parteId, pessoaId, role] = String(confirmationData?.assignmentKey || '').split('|');
         return {
             dataISO,
+            semanaKey: confirmationData?.semanaKey || dataISO,
             semana: confirmationData?.semana || semana,
             parteId: parteId === 'presidente' ? undefined : parteId,
             role: confirmationData?.role || role,
@@ -251,6 +256,8 @@ const RevisarEnviarNotificarTab = ({
 
     const withNotificationMeta = (confirmationData, sem, parte = null) => ({
         ...confirmationData,
+        semanaKey: sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '',
+        secao: parte?.secao || '',
         notificacaoAlteradaEm: getNotificacaoAlteradaEm(sem, parte)
     });
 
@@ -355,6 +362,7 @@ const RevisarEnviarNotificarTab = ({
                         semana: sem.semana,
                         dataISO,
                         tituloParte: titulo,
+                        secao: parte?.secao,
                         responsavelNome: pessoa.nome,
                         ajudanteNome: ajudante?.nome
                     });
@@ -365,6 +373,7 @@ const RevisarEnviarNotificarTab = ({
                         semana: sem.semana,
                         dataISO,
                         tituloParte: titulo,
+                        tituloParteExibicao: formatarTituloExibicao(titulo, parte?.secao),
                         pessoaNome: pessoa.nome,
                         role,
                         congregacaoNome: config?.nome_cong,
@@ -381,7 +390,7 @@ const RevisarEnviarNotificarTab = ({
                                 Nome: pessoa.nome,
                                 Ajudante: ajudante?.nome || "—",
                                 Data: dataReuniaoFormatada,
-                                Desig: titulo,
+                                Desig: formatarTituloExibicao(titulo, parte?.secao),
                                 Sala: salaOverride || 'Principal',
                                 Link: agendaLink,
                                 LinkAgenda: agendaLink,
@@ -1207,6 +1216,7 @@ const RevisarEnviarNotificarTab = ({
                             responsavelNome: estudante.nome,
                             ajudanteNome: ajud?.nome || '',
                             tituloParte,
+                            secao: p?.secao,
                             descricaoParte: descricao,
                             minutosParte: min,
                             isVisita,
@@ -1226,6 +1236,7 @@ const RevisarEnviarNotificarTab = ({
                             semana: sem.semana,
                             dataISO,
                             tituloParte,
+                            secao: p?.secao,
                             responsavelNome: estudante.nome,
                             ajudanteNome: ajud?.nome
                         });
@@ -1236,6 +1247,7 @@ const RevisarEnviarNotificarTab = ({
                             semana: sem.semana,
                             dataISO,
                             tituloParte,
+                            tituloParteExibicao: formatarTituloExibicao(tituloParte, p?.secao),
                             pessoaNome: estudante.nome,
                             role: 'resp',
                             congregacaoNome: config?.nome_cong,
@@ -1248,7 +1260,7 @@ const RevisarEnviarNotificarTab = ({
                             Nome: estudante.nome,
                             Ajudante: ajud?.nome || "—",
                             Data: dataReuniaoFormatada,
-                            Desig: tituloParte,
+                            Desig: formatarTituloExibicao(tituloParte, p?.secao),
                             Sala: p.sala || 'Principal',
                             Link: agendaLinkResp,
                             LinkAgenda: agendaLinkResp,
@@ -1269,6 +1281,7 @@ const RevisarEnviarNotificarTab = ({
                                 responsavelNome: estudante.nome,
                                 ajudanteNome: ajud.nome,
                                 tituloParte,
+                                secao: p?.secao,
                                 descricaoParte: descricao,
                                 minutosParte: min,
                                 isVisita,
@@ -1288,6 +1301,7 @@ const RevisarEnviarNotificarTab = ({
                                 semana: sem.semana,
                                 dataISO,
                                 tituloParte: `${t.ajudante} - ${tituloParte}`,
+                                secao: p?.secao,
                                 responsavelNome: ajud.nome
                             });
 
@@ -1295,7 +1309,7 @@ const RevisarEnviarNotificarTab = ({
                                 Nome: ajud.nome,
                                 Ajudante: "—",
                                 Data: dataReuniaoFormatada,
-                                Desig: `${t.ajudante} - ${tituloParte}`,
+                                Desig: formatarTituloExibicao(`${t.ajudante} - ${tituloParte}`, p?.secao),
                                 Sala: p.sala || 'Principal',
                                 Link: agendaLinkAjud,
                                 LinkAgenda: agendaLinkAjud,
@@ -1308,6 +1322,7 @@ const RevisarEnviarNotificarTab = ({
                                 semana: sem.semana,
                                 dataISO,
                                 tituloParte: `${t.ajudante} - ${tituloParte}`,
+                                tituloParteExibicao: formatarTituloExibicao(`${t.ajudante} - ${tituloParte}`, p?.secao),
                                 pessoaNome: ajud.nome,
                                 role: 'ajud',
                                 congregacaoNome: config?.nome_cong,
@@ -1459,6 +1474,7 @@ const RevisarEnviarNotificarTab = ({
                                 responsavelNome: dirigente.nome,
                                 ajudanteNome: '',
                                 tituloParte: tituloFinal,
+                                secao: p?.secao,
                                 descricaoParte: descricao,
                                 minutosParte: min,
                                 isVisita,
@@ -1478,6 +1494,7 @@ const RevisarEnviarNotificarTab = ({
                                 semana: sem.semana,
                                 dataISO,
                                 tituloParte: tituloFinal,
+                                secao: p?.secao,
                                 responsavelNome: dirigente.nome
                             });
 
@@ -1487,6 +1504,7 @@ const RevisarEnviarNotificarTab = ({
                                 semana: sem.semana,
                                 dataISO,
                                 tituloParte: tituloFinal,
+                                tituloParteExibicao: formatarTituloExibicao(tituloFinal, p?.secao),
                                 pessoaNome: dirigente.nome,
                                 role: 'dirigente',
                                 congregacaoNome: config?.nome_cong,
@@ -1499,7 +1517,7 @@ const RevisarEnviarNotificarTab = ({
                                 Nome: dirigente.nome,
                                 Ajudante: "—",
                                 Data: dataReuniaoFormatada,
-                                Desig: tituloFinal,
+                                Desig: formatarTituloExibicao(tituloFinal, p?.secao),
                                 Sala: 'Principal',
                                 Link: agendaLink,
                                 LinkAgenda: agendaLink,
@@ -1529,6 +1547,7 @@ const RevisarEnviarNotificarTab = ({
                                 responsavelNome: leitor.nome,
                                 ajudanteNome: '',
                                 tituloParte: tituloFinal,
+                                secao: p?.secao,
                                 descricaoParte: descricao,
                                 minutosParte: min,
                                 isVisita,
@@ -1548,6 +1567,7 @@ const RevisarEnviarNotificarTab = ({
                                 semana: sem.semana,
                                 dataISO,
                                 tituloParte: tituloFinal,
+                                secao: p?.secao,
                                 responsavelNome: leitor.nome
                             });
 
@@ -1557,6 +1577,7 @@ const RevisarEnviarNotificarTab = ({
                                 semana: sem.semana,
                                 dataISO,
                                 tituloParte: tituloFinal,
+                                tituloParteExibicao: formatarTituloExibicao(tituloFinal, p?.secao),
                                 pessoaNome: leitor.nome,
                                 role: 'leitor',
                                 congregacaoNome: config?.nome_cong,
@@ -1569,7 +1590,7 @@ const RevisarEnviarNotificarTab = ({
                                 Nome: leitor.nome,
                                 Ajudante: "—",
                                 Data: dataReuniaoFormatada,
-                                Desig: tituloFinal,
+                                Desig: formatarTituloExibicao(tituloFinal, p?.secao),
                                 Sala: 'Principal',
                                 Link: agendaLink,
                                 LinkAgenda: agendaLink,

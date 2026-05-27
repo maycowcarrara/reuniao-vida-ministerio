@@ -52,6 +52,8 @@ const Designar = ({
 
     const [modalEditarOpen, setModalEditarOpen] = useState(false);
     const [parteEditCtx, setParteEditCtx] = useState(null);
+    const [modalEditarSemanaOpen, setModalEditarSemanaOpen] = useState(false);
+    const [semanaEditCtx, setSemanaEditCtx] = useState(null);
 
     const [modalSugestao, setModalSugestao] = useState({
         aberto: false, semanaIndex: null, parteId: null, key: null
@@ -68,7 +70,7 @@ const Designar = ({
     const TT = useSectionMessages('designar');
 
     const getSemanaKey = (sem, idx) =>
-        (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
+        (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? String(idx)).toString();
 
     const getCargoInfo = (cargoKey) => cargosMap?.[cargoKey] || (CARGO_FALLBACK?.[lang] || CARGO_FALLBACK.pt);
     const getSecaoTitulo = (secao) => TT.secoes?.[secao] || SECOES_META?.[secao]?.titulo || secao;
@@ -403,6 +405,8 @@ const Designar = ({
         setSlotAtivo(null);
         setModalEditarOpen(false);
         setParteEditCtx(null);
+        setModalEditarSemanaOpen(false);
+        setSemanaEditCtx(null);
 
         setListaProgramacoesSafe(prev => prev.filter((s, idx) => getSemanaKey(s, idx) !== semanaKey));
         setSemanasSelecionadas(prev => { const next = { ...prev }; delete next[semanaKey]; return next; });
@@ -668,6 +672,19 @@ const Designar = ({
         setModalEditarOpen(true);
     };
 
+    const abrirModalEditarSemana = (semanaIndexFiltrado) => {
+        const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
+        if (!sem) return;
+        setSemanaEditCtx({
+            semanaIndex: semanaIndexFiltrado,
+            semanaKey: getSemanaKey(sem, semanaIndexFiltrado),
+            valores: {
+                semana: (sem?.semana ?? '').toString()
+            }
+        });
+        setModalEditarSemanaOpen(true);
+    };
+
     const abrirModalNovaParte = (secao, semanaIndexFiltrado) => {
         const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
         if (isSemanaAssembleia(sem, config)) {
@@ -708,6 +725,45 @@ const Designar = ({
         });
         setModalEditarOpen(false);
         setParteEditCtx(null);
+    };
+
+    const salvarEdicaoSemana = () => {
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(semanaEditCtx?.semanaIndex) ? semanaEditCtx.semanaIndex : semanaAtivaIndexAtual);
+        if (semanaRealIndex === -1) return;
+
+        const proximoTituloSemana = String(semanaEditCtx?.valores?.semana || '').trim();
+        if (!proximoTituloSemana) {
+            alert(TT.tituloSemanaObrigatorio);
+            return;
+        }
+
+        const semanaAtual = listaProgramacoes?.[semanaRealIndex];
+        const proximaKey = getSemanaKey({ ...semanaAtual, semana: proximoTituloSemana }, semanaRealIndex);
+
+        setListaProgramacoesSafe(prev => {
+            const lista = [...prev];
+            const atual = lista[semanaRealIndex];
+            if (!atual) return lista;
+
+            const now = new Date().toISOString();
+            const semana = { ...atual, semana: proximoTituloSemana };
+            marcarNotificacaoSemanaPendente(semana, now);
+            marcarSemanaPublicadaPendente(semana, 'edicao_semana', now);
+            lista[semanaRealIndex] = semana;
+            return lista;
+        });
+
+        setSemanasSelecionadas((prev) => {
+            if (!semanaEditCtx?.semanaKey || semanaEditCtx.semanaKey === proximaKey) return prev;
+            const next = { ...(prev || {}) };
+            const estavaSelecionada = !!next[semanaEditCtx.semanaKey];
+            delete next[semanaEditCtx.semanaKey];
+            if (estavaSelecionada) next[proximaKey] = true;
+            return next;
+        });
+
+        setModalEditarSemanaOpen(false);
+        setSemanaEditCtx(null);
     };
 
     const handleExcluirParte = (parteId, semanaIndexFiltrado) => {
@@ -1058,6 +1114,9 @@ const Designar = ({
                                                         </p>
                                                     </div>
                                                     <div className="flex w-full sm:w-auto justify-end gap-1.5 shrink-0">
+                                                        <button onClick={() => abrirModalEditarSemana(idx)} className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 transition" title={TT.editarSemana}>
+                                                            <Edit2 size={14} />
+                                                        </button>
                                                         <button onClick={() => togglePublicacaoSemana(key)} className={`p-1.5 rounded-lg border bg-white transition ${publicadaNoQuadro ? 'text-emerald-600 hover:bg-emerald-50 border-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`} title={publicadaNoQuadro ? 'Ocultar do quadro público' : 'Publicar no quadro público'}>
                                                             {publicadaNoQuadro ? <Eye size={14} /> : <EyeOff size={14} />}
                                                         </button>
@@ -1251,6 +1310,41 @@ const Designar = ({
                                 <X size={16} /> {TT.cancelar}
                             </button>
                             <button type="button" onClick={salvarEdicaoParte} className="px-3 py-2 rounded-lg border bg-blue-600 hover:bg-blue-700 text-white transition text-sm font-bold inline-flex items-center gap-2">
+                                <Save size={16} /> {TT.salvar}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {modalEditarSemanaOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setModalEditarSemanaOpen(false); setSemanaEditCtx(null); }} />
+                    <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border overflow-hidden">
+                        <div className="px-4 py-3 bg-blue-600 text-white flex items-center justify-between">
+                            <div className="text-sm font-black">{TT.editarSemana}</div>
+                            <button type="button" onClick={() => { setModalEditarSemanaOpen(false); setSemanaEditCtx(null); }} className="p-1 rounded hover:bg-white/10 transition" title={TT.cancelar}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">{TT.tituloSemana}</label>
+                                <input
+                                    type="text"
+                                    value={semanaEditCtx?.valores?.semana ?? ''}
+                                    onChange={(e) => setSemanaEditCtx(prev => ({ ...prev, valores: { ...(prev?.valores || {}), semana: e.target.value } }))}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="px-4 py-3 bg-gray-50 border-t flex items-center justify-end gap-2">
+                            <button type="button" onClick={() => { setModalEditarSemanaOpen(false); setSemanaEditCtx(null); }} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-100 transition text-sm font-bold inline-flex items-center gap-2">
+                                <X size={16} /> {TT.cancelar}
+                            </button>
+                            <button type="button" onClick={salvarEdicaoSemana} className="px-3 py-2 rounded-lg border bg-blue-600 hover:bg-blue-700 text-white transition text-sm font-bold inline-flex items-center gap-2">
                                 <Save size={16} /> {TT.salvar}
                             </button>
                         </div>

@@ -1,6 +1,7 @@
 // src/utils/revisarEnviar/messages.js
 import { formatarDataFolha } from './dates';
 import { buildAgendaLink } from './links';
+import { prependMeetingSectionLabel } from '../meetingSections';
 
 export const fill = (str, vars) => {
     let out = str;
@@ -18,6 +19,7 @@ export const montarMensagemDesignacao = ({
     responsavelNome,
     ajudanteNome,
     tituloParte,
+    secao,
     descricaoParte,
     minutosParte,
     isVisita = false,
@@ -28,6 +30,8 @@ export const montarMensagemDesignacao = ({
     if (isVisita) {
         dataFmt += ` ${t.visitDateLabel}`;
     }
+
+    const tituloParteComSecao = prependMeetingSectionLabel(tituloParte, secao, config?.idioma) || tituloParte;
 
     const bloco = [
         // Se for visita, coloca o destaque antes do título padrão
@@ -42,8 +46,8 @@ export const montarMensagemDesignacao = ({
         ajudanteNome ? fill(t.msgAjudante, { nome: ajudanteNome }) : null,
         '',
         minutosParte
-            ? fill(t.msgParteComMin, { titulo: tituloParte, min: minutosParte })
-            : fill(t.msgParte, { titulo: tituloParte }),
+            ? fill(t.msgParteComMin, { titulo: tituloParteComSecao, min: minutosParte })
+            : fill(t.msgParte, { titulo: tituloParteComSecao }),
         descricaoParte ? fill(t.msgDetalhes, { descricao: descricaoParte }) : null,
         '',
         t.msgObservacao,
@@ -54,6 +58,7 @@ export const montarMensagemDesignacao = ({
         semana,
         dataISO,
         tituloParte,
+        secao,
         responsavelNome: responsavelNome || '',
         ajudanteNome: ajudanteNome || '',
     });
@@ -72,6 +77,7 @@ export const montarMensagemLembreteSemana = ({
     dataISO,
     responsavelNome,
     tituloParte,
+    secao,
     isVisita = false,
     linkConfirmacao = ''
 }) => {
@@ -80,10 +86,12 @@ export const montarMensagemLembreteSemana = ({
         dataFmt += ` ${t.visitDateLabel}`;
     }
 
+    const tituloParteComSecao = prependMeetingSectionLabel(tituloParte, secao, config?.idioma) || tituloParte;
+
     const bloco = [
         fill(t.msgLembreteSemana, { nome: responsavelNome || '' }),
         fill(t.msgData, { data: dataFmt }),
-        fill(t.msgParte, { titulo: tituloParte || '' }),
+        fill(t.msgParte, { titulo: tituloParteComSecao || '' }),
         t.msgLembreteObservacao,
         linkConfirmacao ? fill(t.msgConfirmarSemana, { link: linkConfirmacao }) : null
     ].filter(Boolean);

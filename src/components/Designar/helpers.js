@@ -5,24 +5,24 @@ export const SECOES_ORDEM = ['tesouros', 'ministerio', 'vida'];
 export const SECOES_META = {
     tesouros: {
         titulo: 'TESOUROS DA PALAVRA DE DEUS',
-        header: 'bg-teal-700 text-white',
+        header: 'jw-sec-bg-tesouros text-white',
         pill: 'bg-white/20 text-white',
-        border: 'border-teal-200',
-        actionButton: 'border-teal-100 bg-teal-50 text-teal-900 hover:bg-teal-100'
+        border: 'jw-sec-border-tesouros',
+        actionButton: 'jw-sec-action-tesouros'
     },
     ministerio: {
         titulo: 'FAÇA SEU MELHOR NO MINISTÉRIO',
-        header: 'bg-yellow-600 text-white',
+        header: 'jw-sec-bg-ministerio text-white',
         pill: 'bg-white/20 text-white',
-        border: 'border-yellow-200',
-        actionButton: 'border-yellow-100 bg-yellow-50 text-yellow-900 hover:bg-yellow-100'
+        border: 'jw-sec-border-ministerio',
+        actionButton: 'jw-sec-action-ministerio'
     },
     vida: {
         titulo: 'NOSSA VIDA CRISTÃ',
-        header: 'bg-red-700 text-white',
+        header: 'jw-sec-bg-vida text-white',
         pill: 'bg-white/20 text-white',
-        border: 'border-red-200',
-        actionButton: 'border-red-100 bg-red-50 text-red-900 hover:bg-red-100'
+        border: 'jw-sec-border-vida',
+        actionButton: 'jw-sec-action-vida'
     }
 };
 

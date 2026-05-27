@@ -2,15 +2,118 @@
 
 @theme {
   --color-jw-blue: #4a6da7;
-  --color-jw-tesouros: #626367;
-  --color-jw-ministerio: #c18626;
-  --color-jw-vida: #942926;
+  --color-jw-tesouros: #4c7a86;
+  --color-jw-ministerio: #d19a00;
+  --color-jw-vida: #c74216;
 }
 
 /* RESET AGRESSIVO */
 :root {
   color-scheme: light;
   background-color: #f3f4f6;
+  --color-jw-tesouros-ink: #2f6671;
+  --color-jw-tesouros-soft: #e7f0f2;
+  --color-jw-tesouros-soft-strong: #dbe9ec;
+  --color-jw-tesouros-border: #bfd0d5;
+  --color-jw-tesouros-ring: rgba(76, 122, 134, 0.18);
+
+  --color-jw-ministerio-ink: #9d6b17;
+  --color-jw-ministerio-soft: #f9eed2;
+  --color-jw-ministerio-soft-strong: #f3e5bb;
+  --color-jw-ministerio-border: #ead29a;
+  --color-jw-ministerio-ring: rgba(209, 154, 0, 0.18);
+
+  --color-jw-vida-ink: #8a3128;
+  --color-jw-vida-soft: #f8e3dc;
+  --color-jw-vida-soft-strong: #f2d2c5;
+  --color-jw-vida-border: #e8b29f;
+  --color-jw-vida-ring: rgba(199, 66, 22, 0.18);
+}
+
+.jw-sec-bg-tesouros { background-color: var(--color-jw-tesouros) !important; }
+.jw-sec-bg-ministerio { background-color: var(--color-jw-ministerio) !important; }
+.jw-sec-bg-vida { background-color: var(--color-jw-vida) !important; }
+
+.jw-sec-text-tesouros { color: var(--color-jw-tesouros-ink) !important; }
+.jw-sec-text-ministerio { color: var(--color-jw-ministerio-ink) !important; }
+.jw-sec-text-vida { color: var(--color-jw-vida-ink) !important; }
+
+.jw-sec-border-tesouros { border-color: var(--color-jw-tesouros-border) !important; }
+.jw-sec-border-ministerio { border-color: var(--color-jw-ministerio-border) !important; }
+.jw-sec-border-vida { border-color: var(--color-jw-vida-border) !important; }
+
+.jw-sec-chip-soft-tesouros {
+  background-color: var(--color-jw-tesouros-soft) !important;
+  color: var(--color-jw-tesouros-ink) !important;
+  border-color: var(--color-jw-tesouros-border) !important;
+}
+
+.jw-sec-chip-soft-ministerio {
+  background-color: var(--color-jw-ministerio-soft) !important;
+  color: var(--color-jw-ministerio-ink) !important;
+  border-color: var(--color-jw-ministerio-border) !important;
+}
+
+.jw-sec-chip-soft-vida {
+  background-color: var(--color-jw-vida-soft) !important;
+  color: var(--color-jw-vida-ink) !important;
+  border-color: var(--color-jw-vida-border) !important;
+}
+
+.jw-sec-surface-tesouros {
+  background-color: var(--color-jw-tesouros-soft) !important;
+  border-color: var(--color-jw-tesouros-border) !important;
+}
+
+.jw-sec-surface-ministerio {
+  background-color: var(--color-jw-ministerio-soft) !important;
+  border-color: var(--color-jw-ministerio-border) !important;
+}
+
+.jw-sec-surface-vida {
+  background-color: var(--color-jw-vida-soft) !important;
+  border-color: var(--color-jw-vida-border) !important;
+}
+
+.jw-sec-left-tesouros { border-left-color: var(--color-jw-tesouros) !important; }
+.jw-sec-left-ministerio { border-left-color: var(--color-jw-ministerio) !important; }
+.jw-sec-left-vida { border-left-color: var(--color-jw-vida) !important; }
+
+.jw-sec-action-tesouros {
+  border-color: var(--color-jw-tesouros-border) !important;
+  background-color: var(--color-jw-tesouros-soft) !important;
+  color: var(--color-jw-tesouros-ink) !important;
+}
+
+.jw-sec-action-ministerio {
+  border-color: var(--color-jw-ministerio-border) !important;
+  background-color: var(--color-jw-ministerio-soft) !important;
+  color: var(--color-jw-ministerio-ink) !important;
+}
+
+.jw-sec-action-vida {
+  border-color: var(--color-jw-vida-border) !important;
+  background-color: var(--color-jw-vida-soft) !important;
+  color: var(--color-jw-vida-ink) !important;
+}
+
+.jw-sec-action-tesouros:hover { background-color: var(--color-jw-tesouros-soft-strong) !important; }
+.jw-sec-action-ministerio:hover { background-color: var(--color-jw-ministerio-soft-strong) !important; }
+.jw-sec-action-vida:hover { background-color: var(--color-jw-vida-soft-strong) !important; }
+
+.jw-sec-focus-tesouros:focus {
+  border-color: var(--color-jw-tesouros-border) !important;
+  box-shadow: 0 0 0 4px var(--color-jw-tesouros-ring) !important;
+}
+
+.jw-sec-focus-ministerio:focus {
+  border-color: var(--color-jw-ministerio-border) !important;
+  box-shadow: 0 0 0 4px var(--color-jw-ministerio-ring) !important;
+}
+
+.jw-sec-focus-vida:focus {
+  border-color: var(--color-jw-vida-border) !important;
+  box-shadow: 0 0 0 4px var(--color-jw-vida-ring) !important;
 }
 
 body {

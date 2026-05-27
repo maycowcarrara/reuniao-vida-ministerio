@@ -341,11 +341,13 @@ export const ensurePublicConfirmation = async ({
     semana,
     dataISO,
     tituloParte,
+    tituloParteExibicao,
     pessoaNome,
     role,
     congregacaoNome,
     agendaLink = '',
-    sala = 'Principal'
+    sala = 'Principal',
+    secao = ''
 }) => {
     const user = getCurrentUser();
     const safeKey = String(assignmentKey || '').trim();
@@ -378,11 +380,13 @@ export const ensurePublicConfirmation = async ({
         semana: semana || '',
         dataISO: dataISO || '',
         tituloParte: tituloParte || '',
+        tituloParteExibicao: tituloParteExibicao || '',
         pessoaNome: pessoaNome || '',
         role: role || '',
         congregacaoNome: congregacaoNome || '',
         agendaLink: agendaLink || '',
         sala: sala || 'Principal',
+        secao: secao || '',
         status,
         weekReminderStatus,
         createdAt,

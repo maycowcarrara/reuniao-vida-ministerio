@@ -288,12 +288,12 @@
         color: #fff !important;
     }
 
-    .page-content[data-qtd="4"] .re-chip-tes,
-    .page-content[data-qtd="5"] .re-chip-tes { background: #475569 !important; color: #fff !important; }
-    .page-content[data-qtd="4"] .re-chip-min,
-    .page-content[data-qtd="5"] .re-chip-min { background: #ca8a04 !important; color: #fff !important; }
+    .page-content[data-qtd="4"] .re-chip-tesouros,
+    .page-content[data-qtd="5"] .re-chip-tesouros { background: var(--color-jw-tesouros) !important; color: #fff !important; }
+    .page-content[data-qtd="4"] .re-chip-ministerio,
+    .page-content[data-qtd="5"] .re-chip-ministerio { background: var(--color-jw-ministerio) !important; color: #fff !important; }
     .page-content[data-qtd="4"] .re-chip-vida,
-    .page-content[data-qtd="5"] .re-chip-vida { background: #b91c1c !important; color: #fff !important; }
+    .page-content[data-qtd="5"] .re-chip-vida { background: var(--color-jw-vida) !important; color: #fff !important; }
     
     .page-content[data-qtd="4"] .re-line,
     .page-content[data-qtd="5"] .re-line {

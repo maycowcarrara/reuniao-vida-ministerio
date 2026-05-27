@@ -22,6 +22,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useSectionMessages, useI18n } from '../i18n';
 import { getLanguageMeta } from '../config/appConfig';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
+import { prependMeetingSectionIcon } from '../utils/meetingSections';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, getSemanaStartISO as getSemanaStartISOCompartilhado } from '../utils/eventos';
 
 // ============================================================================
@@ -119,9 +120,9 @@ const gerarLinkAgenda = (parte, dataSemanaISO, texts) => {
     const nomeAjudante = parte.ajudante?.nome ? `${texts.ajudante}: ${parte.ajudante.nome}\n` : '';
     const nomeLeitor = parte.leitor?.nome ? `${texts.leitor}: ${parte.leitor.nome}\n` : '';
 
-    const secaoLabel = texts?.secoes?.[parte.secao] || parte.secao || texts.reuniao;
-    const texto = encodeURIComponent(`${texts.reuniao}: ${parte.titulo}`);
-    const desc = encodeURIComponent(`${texts.secao}: ${secaoLabel}\n${texts.tempo}: ${parte.tempo} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
+    const tituloComIcone = prependMeetingSectionIcon(parte.titulo, parte.secao);
+    const texto = encodeURIComponent(`${texts.reuniao}: ${tituloComIcone}`);
+    const desc = encodeURIComponent(`${texts.tempo}: ${parte.tempo} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
 
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${texto}&dates=${start}/${end}&details=${desc}`;
 };
@@ -206,9 +207,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         ajudante: T.ajuda,
         leitor: T.leitor,
         reuniao: T.reuniao,
-        secao: T.secao,
         tempo: T.tempo,
-        secoes: T.secoes,
     };
 
     // --- EFEITOS GERAIS E CAPTURADOR PWA ---
@@ -629,9 +628,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                             // -------------------------------------------------------------
 
                                                             const configLabels = {
-                                                                tesouros: { txt: T.secoes.tesouros, css: "bg-slate-100 text-slate-600" },
-                                                                ministerio: { txt: T.secoes.ministerio, css: "bg-amber-100 text-amber-800" },
-                                                                vida: { txt: T.secoes.vida, css: "bg-rose-100 text-rose-800" }
+                                                                tesouros: { txt: T.secoes.tesouros, css: "jw-sec-chip-soft-tesouros" },
+                                                                ministerio: { txt: T.secoes.ministerio, css: "jw-sec-chip-soft-ministerio" },
+                                                                vida: { txt: T.secoes.vida, css: "jw-sec-chip-soft-vida" }
                                                             };
                                                             const label = configLabels[parte.secao] || null;
 

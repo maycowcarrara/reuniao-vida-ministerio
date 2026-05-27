@@ -2,6 +2,7 @@
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { normalizeLanguage } from '../config/appConfig';
 import { getSectionMessages } from '../i18n';
+import { getMeetingSectionTag } from '../utils/meetingSections';
 
 export const iniciarSincronizacao = async () => {
     const auth = getAuth();
@@ -147,17 +148,19 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                     }
                 }
 
+                const secaoTag = getMeetingSectionTag(parte.secao, lang);
+                const tituloExibicaoComIcone = secaoTag ? `${secaoTag} - ${tituloExibicao}` : tituloExibicao;
                 const horaFormatada = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const tempoOriginal = parseInt(parte.tempo || "5", 10);
                 const tempoVisual = (ehLeitura || ehMinisterio) ? `${tempoOriginal}m + 1m` : `${duracao}m`;
 
                 programacaoLinhas.push({
                     id: `parte${index}`,
-                    texto: `🕒 ${horaFormatada} (${tempoVisual}) | ${tituloExibicao}${nomesExibicao}`
+                    texto: `🕒 ${horaFormatada} (${tempoVisual}) | ${tituloExibicaoComIcone}${nomesExibicao}`
                 });
 
                 partesProcessadas.push({
-                    parteOriginal: parte, start, end, tituloExibicao, pessoa, ajudanteStr,
+                    parteOriginal: parte, start, end, tituloExibicaoComIcone, pessoa, ajudanteStr,
                     id: `parte${index}`, vazia: !pessoa
                 });
             });
@@ -221,13 +224,14 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
 
                 let cor = "9";
                 const secao = (p.parteOriginal.secao || '').toLowerCase();
-                if (secao === 'tesouros') cor = "8";
-                else if (secao === 'ministerio') cor = "6";
-                else if (secao === 'vida' || (p.tituloExibicao).toLowerCase().includes('estudo') || (p.tituloExibicao).toLowerCase().includes('estudio')) cor = "11";
+                const tituloEventoLower = (p.tituloExibicaoComIcone || '').toLowerCase();
+                if (secao === 'tesouros') cor = "7";
+                else if (secao === 'ministerio') cor = "5";
+                else if (secao === 'vida' || tituloEventoLower.includes('estudo') || tituloEventoLower.includes('estudio')) cor = "11";
 
                 const eventoParte = {
                     id: `${baseIdUnico}${p.id}`,
-                    summary: `[RVM] ${p.tituloExibicao} - ${p.pessoa}${p.ajudanteStr}`,
+                    summary: `[RVM] ${p.tituloExibicaoComIcone} - ${p.pessoa}${p.ajudanteStr}`,
                     description: gerarDescricaoHTML(p.id, p.parteOriginal.descricao),
                     start: { dateTime: p.start.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     end: { dateTime: p.end.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },

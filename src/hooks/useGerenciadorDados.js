@@ -15,6 +15,7 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import { DEFAULT_CONFIG, normalizeSystemConfig } from '../config/appConfig';
 import { getSemanaSortTimestamp } from '../utils/revisarEnviar/dates';
+import { reconcileProgramacaoIds } from '../utils/programacoes';
 import {
     deleteNotification,
     deleteReadNotifications,
@@ -197,14 +198,13 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
                 batch.set(ref, { ...aluno, id: alunoId });
             });
 
-            programacao.forEach(semana => {
+            reconcileProgramacaoIds(programacao, dados?.historico_reunioes || []).forEach(semana => {
                 if (!semana) return;
-                const semanaStr = String(semana.semana || '');
-                if (semanaStr.trim() !== '') {
-                    const semanaId = semanaStr.replace(/[/\s]/g, '-');
-                    const ref = doc(db, `users/${uid}/programacao`, semanaId);
-                    batch.set(ref, { ...semana, semana: semanaStr });
-                }
+                const semanaStr = String(semana.semana || '').trim();
+                const semanaId = String(semana.id || '').trim();
+                if (!semanaId) return;
+                const ref = doc(db, `users/${uid}/programacao`, semanaId);
+                batch.set(ref, { ...semana, semana: semanaStr, id: semanaId });
             });
 
             await batch.commit();

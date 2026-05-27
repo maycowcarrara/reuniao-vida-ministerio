@@ -72,7 +72,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
 
         // 2. Procura se a semana já foi salva com a flag de assembleia
         const semanaConflito = programacaoSalva.find(
-            (p) => (dataImportada && (p.dataInicio === dataImportada || p.dataExata === dataImportada)) || p.semana === dados.semana
+            (p) => dataImportada && (p.dataInicio === dataImportada || p.dataExata === dataImportada || p.dataReuniao === dataImportada)
         );
 
         const ehAssembleiaNaProg = semanaConflito && (

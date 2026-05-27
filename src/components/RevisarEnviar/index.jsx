@@ -210,7 +210,7 @@ const RevisarEnviar = ({
     const userClearedRef = useRef(false);
     const printSelecionadas = useMemo(() => sharedWeekSelection || {}, [sharedWeekSelection]);
     const setPrintSelecionadas = setSharedWeekSelection;
-    const getSemanaKey = (sem, idx) => (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
+    const getSemanaKey = (sem, idx) => (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? String(idx)).toString();
 
     useEffect(() => {
         const startChanged = prevStartSeguroRef.current !== startSeguro;
@@ -580,12 +580,12 @@ const RevisarEnviar = ({
             if (onProgramacoesChange) {
                 const sincronizadas = new Set(
                     semanasSelecionadas
-                        .map((sem) => (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString())
+                        .map((sem) => (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString())
                         .filter(Boolean)
                 );
                 const syncedAt = new Date().toISOString();
                 onProgramacoesChange((prev) => (prev || []).map((sem) => {
-                    const key = (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString();
+                    const key = (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString();
                     if (!sincronizadas.has(key)) return sem;
                     const proximaSemana = { ...(sem || {}), historicoGravadoEm: syncedAt };
                     delete proximaSemana.historicoPendenteSync;
@@ -760,12 +760,12 @@ const RevisarEnviar = ({
                             if (onProgramacoesChange) {
                                 const sincronizadas = new Set(
                                     reunioesSelecionadas
-                                        .map((sem) => (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString())
+                                        .map((sem) => (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString())
                                         .filter(Boolean)
                                 );
                                 const syncedAt = new Date().toISOString();
                                 onProgramacoesChange((prev) => (prev || []).map((sem) => {
-                                    const key = (sem?.id || sem?.semana || sem?.dataReuniao || sem?.dataInicio || '').toString();
+                                    const key = (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString();
                                     if (!sincronizadas.has(key)) return sem;
                                     const proximaSemana = { ...(sem || {}), agendaSincronizadaEm: syncedAt };
                                     delete proximaSemana.agendaPendenteSync;
@@ -892,10 +892,10 @@ const RevisarEnviar = ({
                                                                                 leading-tight
                                                                                 print:mt-1 print:mb-0
                                                                                 ${parte.secao === 'tesouros'
-                                                                                    ? 'text-slate-700'
+                                                                                    ? 'jw-sec-text-tesouros'
                                                                                     : parte.secao === 'ministerio'
-                                                                                        ? 'text-amber-700'
-                                                                                        : 'text-rose-700'
+                                                                                        ? 'jw-sec-text-ministerio'
+                                                                                        : 'jw-sec-text-vida'
                                                                                 }
                                                                             `}
                                                                         >

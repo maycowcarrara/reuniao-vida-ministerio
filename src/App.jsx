@@ -17,6 +17,13 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { toast } from './utils/toast';
 import { getMeetingDateISOFromSemana, getWeekStartISOFromSemana } from './utils/revisarEnviar/dates';
 import { getSemanaStartISO } from './utils/eventos';
+import {
+  createProgramacaoId,
+  ensureUniqueProgramacaoIds,
+  getLegacyProgramacaoTitleKey,
+  getProgramacaoIdentitySignature,
+  getProgramacaoReferenceDateISO
+} from './utils/programacoes';
 import { normalizeLanguage, normalizeMeetingDay, normalizeSystemConfig, syncDocumentLanguage } from './config/appConfig';
 import { getSectionMessages, I18nProvider } from './i18n';
 
@@ -261,7 +268,7 @@ function AdminPanel() {
     return JSON.stringify(value);
   };
 
-  const getProgramacaoDocId = (programacao) => String(programacao?.semana || '').trim().replace(/[/\s,.]/g, '-');
+  const getProgramacaoDocId = (programacao) => createProgramacaoId(programacao);
 
   const hasMeaningfulChange = (next, current) => stableStringify(next || {}) !== stableStringify(current || {});
 
@@ -303,10 +310,12 @@ function AdminPanel() {
           .map((programacao) => [getProgramacaoDocId(programacao), programacao])
           .filter(([docId]) => docId)
       );
-      const programacoesPreparadas = prepararProgramacoesParaSalvar(
-        novosDados.historico_reunioes,
-        configDestino,
-        dadosSistema?.configuracoes
+      const programacoesPreparadas = ensureUniqueProgramacaoIds(
+        prepararProgramacoesParaSalvar(
+          novosDados.historico_reunioes,
+          configDestino,
+          dadosSistema?.configuracoes
+        )
       );
       programacoesPreparadasParaPublico = programacoesPreparadas;
       programacoesPreparadas.forEach(p => {
@@ -345,12 +354,14 @@ function AdminPanel() {
   const setListaProgramacoes = (updater) => {
     const current = listaProgramacoes;
     const nextRaw = typeof updater === 'function' ? updater(current) : (Array.isArray(updater) ? updater : []);
-    const next = nextRaw.filter(Boolean).map(p => normalizeProgramacaoDates(p, dadosSistema?.configuracoes));
+    const next = ensureUniqueProgramacaoIds(
+      nextRaw.filter(Boolean).map(p => normalizeProgramacaoDates(p, dadosSistema?.configuracoes))
+    );
     salvarAlteracao({ ...dadosSistema, historico_reunioes: next });
   };
 
   const getWeekSelectionKey = (sem, idx = 0) =>
-    (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? sem?.semana ?? String(idx)).toString();
+    (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? String(idx)).toString();
 
   const handleAbrirNotificacoesSemana = (semana) => {
     const key = getWeekSelectionKey(semana);
@@ -362,7 +373,7 @@ function AdminPanel() {
   };
 
   const handleSolicitarSubstituicao = (request) => {
-    const key = request?.semanaKey || request?.semana || '';
+    const key = request?.semanaKey || request?.dataISO || '';
     if (key) {
       setSharedWeekSelection({ [key]: true });
     }
@@ -467,8 +478,24 @@ function AdminPanel() {
       }
     }
 
-    const keyNova = nextProg.semana.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const idxAtual = listaProgramacoes.findIndex(p => (p.semana || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === keyNova);
+    nextProg.id = createProgramacaoId(nextProg);
+
+    const dataRefNova = getProgramacaoReferenceDateISO(nextProg);
+    const signatureNova = getProgramacaoIdentitySignature(nextProg);
+    const legacyTitleKeyNovo = getLegacyProgramacaoTitleKey(nextProg);
+    const idxAtual = listaProgramacoes.findIndex((p) => {
+      const idAtual = String(p?.id || '').trim();
+      if (idAtual && idAtual === nextProg.id) return true;
+
+      const dataRefAtual = getProgramacaoReferenceDateISO(p);
+      if (dataRefNova && dataRefNova === dataRefAtual) return true;
+
+      const signatureAtual = getProgramacaoIdentitySignature(p);
+      if (signatureNova && signatureNova === signatureAtual) return true;
+
+      const legacyTitleKeyAtual = getLegacyProgramacaoTitleKey(p);
+      return !!legacyTitleKeyNovo && legacyTitleKeyNovo === legacyTitleKeyAtual;
+    });
 
     if (idxAtual === -1) { setListaProgramacoes(prev => [...prev, nextProg]); return; }
 
@@ -476,9 +503,17 @@ function AdminPanel() {
     setDupModal({ open: false, existing: null, incoming: null, resolve: null });
 
     if (choice === 'replace') {
-      setListaProgramacoes(prev => { const out = [...prev]; out[idxAtual] = { ...out[idxAtual], ...nextProg }; return out; });
+      setListaProgramacoes(prev => {
+        const out = [...prev];
+        out[idxAtual] = { ...out[idxAtual], ...nextProg, id: out[idxAtual]?.id || nextProg.id };
+        return out;
+      });
     } else if (choice === 'duplicate') {
-      setListaProgramacoes(prev => [...prev, { ...nextProg, semana: `${nextProg.semana} (cópia)` }]);
+      setListaProgramacoes(prev => [...prev, {
+        ...nextProg,
+        id: createProgramacaoId(nextProg, { forceRandom: true }),
+        semana: `${nextProg.semana} (cópia)`
+      }]);
     }
   };
 
