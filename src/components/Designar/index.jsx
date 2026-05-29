@@ -826,12 +826,11 @@ const Designar = ({
         });
     };
 
-    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx, substituicao, permitirSubstituicao = false }) => {
+    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx, substituicao, permitirSubstituicao = false, icon: SlotIcon = null, buttonRadiusClass = 'rounded-lg', substituteTitle = TT.substituirDesignado }) => {
         const isEmpty = !value;
         const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
         const canSubstitute = permitirSubstituicao && !!value && !!slotCtx;
         const hasActions = !!onSuggest || canSubstitute;
-        const actionPadding = hasActions ? (canSubstitute && !!onSuggest ? 'pr-20' : 'pr-12') : '';
 
         const currentColorClass = active
             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
@@ -844,7 +843,7 @@ const Designar = ({
 
         return (
             <div
-                className="relative w-full group/slot"
+                className="relative w-full min-w-0 group/slot"
                 onDragOver={(e) => {
                     e.preventDefault();
                     if (draggedAluno && slotCtx && (!dragOverSlot || dragOverSlot.key !== slotCtx.key || dragOverSlot.parteId !== slotCtx.parteId)) {
@@ -861,37 +860,46 @@ const Designar = ({
                     if (draggedAluno && slotCtx) atribuirAluno(draggedAluno, slotCtx);
                 }}
             >
-                <button
-                    type="button"
-                    onClick={onClick}
-                    className={`w-full py-2 px-3 ${actionPadding} rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
-                    title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
-                >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={`text-[10px] font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 min-w-0 w-full">
+                    <button
+                        type="button"
+                        onClick={onClick}
+                        className={`w-full min-w-0 py-2 px-3 ${buttonRadiusClass} border-2 transition-all text-left relative focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
+                        title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
+                    >
                         {value ? (
-                            <p className={`font-bold text-[13px] truncate min-w-0 ${active ? 'text-blue-900' : textColorClass}`}>{value.nome}</p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                {SlotIcon && <SlotIcon size={14} className={`shrink-0 ${active ? 'text-blue-500' : 'text-green-500'}`} />}
+                                <div className="flex items-baseline gap-1.5 min-w-0">
+                                    <span className={`text-[10px] leading-tight font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>
+                                    <p className={`font-bold text-[13px] leading-tight truncate min-w-0 ${active ? 'text-blue-900' : textColorClass}`}>{value.nome}</p>
+                                </div>
+                            </div>
                         ) : (
-                            <p className={`text-[11px] italic flex items-center gap-1 min-w-0 ${active ? 'text-blue-400' : textColorClass}`}>
-                                <UserPlus size={12} className={active ? 'opacity-100' : 'opacity-60'} /> {emptyText || hint || TT.cliquePara}
-                            </p>
+                            <div className={`text-[11px] italic flex items-center gap-1 min-w-0 ${active ? 'text-blue-400' : textColorClass}`}>
+                                {SlotIcon && <SlotIcon size={14} className={`shrink-0 ${active ? 'text-blue-500' : 'text-red-300'}`} />}
+                                <span className={`text-[10px] leading-tight font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>
+                                <p className="flex items-center gap-1 min-w-0">
+                                    <UserPlus size={12} className={active ? 'opacity-100' : 'opacity-60'} /> {emptyText || hint || TT.cliquePara}
+                                </p>
+                            </div>
                         )}
-                    </div>
-                </button>
-                {hasActions && (
-                    <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1">
-                        {canSubstitute && (
-                            <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao(slotCtx, value); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title={TT.substituirDesignado}>
-                                <RefreshCw size={12} />
-                            </button>
-                        )}
-                        {onSuggest && (
-                            <button type="button" onClick={onSuggest} className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 shadow-sm" title={TT.sugestaoInteligente}>
-                                <Lightbulb size={12} />
-                            </button>
-                        )}
-                    </div>
-                )}
+                    </button>
+                    {hasActions && (
+                        <div className="shrink-0 justify-self-end flex items-center gap-1 self-center">
+                            {canSubstitute && (
+                                <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao(slotCtx, value); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title={substituteTitle}>
+                                    <RefreshCw size={12} />
+                                </button>
+                            )}
+                            {onSuggest && (
+                                <button type="button" onClick={onSuggest} className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 shadow-sm" title={TT.sugestaoInteligente}>
+                                    <Lightbulb size={12} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
                 {substituicao && (
                     <div className="mt-1 flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
                         <RefreshCw size={10} />
@@ -1148,61 +1156,19 @@ const Designar = ({
                                                 ) : (
                                                     <>
                                                         {/* PRESIDENTE */}
-                                                        <div
-                                                            className="relative group/slot w-full shadow-sm rounded-xl"
-                                                            onDragOver={(e) => {
-                                                                e.preventDefault();
-                                                                if (draggedAluno && (!dragOverSlot || dragOverSlot.key !== 'presidente' || dragOverSlot.semanaIndex !== idx)) {
-                                                                    setDragOverSlot({ key: 'presidente', semanaIndex: idx });
-                                                                }
-                                                            }}
-                                                            onDragLeave={(e) => {
-                                                                e.preventDefault();
-                                                                if (!e.currentTarget.contains(e.relatedTarget)) setDragOverSlot(null);
-                                                            }}
-                                                            onDrop={(e) => {
-                                                                e.preventDefault();
-                                                                setDragOverSlot(null);
-                                                                if (draggedAluno) atribuirAluno(draggedAluno, { key: 'presidente', semanaIndex: idx });
-                                                            }}
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
-                                                                className={`bg-white py-2 px-3 ${sem.presidente ? 'pr-20' : 'pr-12'} rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx
-                                                                    ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]"
-                                                                    : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx
-                                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                                        : sem.presidente
-                                                                            ? "border-green-200 bg-green-50"
-                                                                            : "border-red-200 bg-red-50 border-dashed"
-                                                                    }`}
-                                                            >
-                                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                                    <div className="flex items-center gap-1.5 shrink-0">
-                                                                        <User size={14} className={sem.presidente ? 'text-green-500' : 'text-red-300'} />
-                                                                        <span className={`text-[10px] font-black uppercase ${sem.presidente ? 'text-green-600' : 'text-red-300'}`}>{TT.presidente}:</span>
-                                                                    </div>
-                                                                    {sem.presidente ? (
-                                                                        <p className="font-bold text-[13px] text-green-900 truncate min-w-0">{sem.presidente.nome}</p>
-                                                                    ) : (
-                                                                        <p className="text-[11px] text-red-400 italic flex items-center gap-1 min-w-0"><UserPlus size={12} className="opacity-60" /> {TT.cliquePara}</p>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                            <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1">
-                                                                {publicadaNoQuadro && sem.presidente && (
-                                                                    <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao({ key: 'presidente', semanaIndex: idx }, sem.presidente); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title={TT.substituirPresidente}><RefreshCw size={12} /></button>
-                                                                )}
-                                                                <button type="button" onClick={(e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); }} className="p-1.5 rounded-full bg-yellow-100 text-yellow-600 hover:bg-yellow-200 shadow-sm" title={TT.sugestaoInteligente}><Lightbulb size={12} /></button>
-                                                            </div>
-                                                            {substituicaoPresidente && (
-                                                                <div className="mt-1 flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
-                                                                    <RefreshCw size={10} />
-                                                                    <span className="truncate">{TT.substituicao}: {substituicaoPresidente.de?.nome || '—'} {TT.para} {substituicaoPresidente.para?.nome || sem.presidente?.nome}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                        {renderSlotButton({
+                                                            label: TT.presidente,
+                                                            value: sem.presidente || null,
+                                                            onClick: () => setSlotAtivo({ key: 'presidente', semanaIndex: idx }),
+                                                            active: slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx,
+                                                            onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: idx, key: 'presidente' }); },
+                                                            slotCtx: { key: 'presidente', semanaIndex: idx },
+                                                            substituicao: substituicaoPresidente,
+                                                            permitirSubstituicao: publicadaNoQuadro,
+                                                            icon: User,
+                                                            buttonRadiusClass: 'rounded-xl',
+                                                            substituteTitle: TT.substituirPresidente
+                                                        })}
 
                                                         {/* PARTES INICIAIS E SECOES */}
                                                         <div className="space-y-2">{partesDaSemana.filter(isAbertura).map(p => renderParteCard(p, idx))}</div>
