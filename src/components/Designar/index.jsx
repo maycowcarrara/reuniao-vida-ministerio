@@ -831,7 +831,7 @@ const Designar = ({
         const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
         const canSubstitute = permitirSubstituicao && !!value && !!slotCtx;
         const hasActions = !!onSuggest || canSubstitute;
-        const actionPadding = hasActions ? (canSubstitute && !!onSuggest ? 'pr-16' : 'pr-10') : '';
+        const actionPadding = hasActions ? (canSubstitute && !!onSuggest ? 'pr-20' : 'pr-12') : '';
 
         const currentColorClass = active
             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
@@ -867,19 +867,19 @@ const Designar = ({
                     className={`w-full py-2 px-3 ${actionPadding} rounded-lg border-2 transition-all text-left relative group focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
                     title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
                 >
-                    <div className="flex flex-row items-center justify-between gap-2">
-                        <span className={`text-[10px] font-black uppercase shrink-0 w-16 sm:w-20 ${active ? 'text-blue-500' : labelColorClass}`}>{label}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`text-[10px] font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>
                         {value ? (
-                            <p className={`font-bold text-[13px] truncate text-right flex-1 ${active ? 'text-blue-900' : textColorClass}`}>{value.nome}</p>
+                            <p className={`font-bold text-[13px] truncate min-w-0 ${active ? 'text-blue-900' : textColorClass}`}>{value.nome}</p>
                         ) : (
-                            <p className={`text-[11px] italic flex items-center justify-end gap-1 flex-1 ${active ? 'text-blue-400' : textColorClass}`}>
+                            <p className={`text-[11px] italic flex items-center gap-1 min-w-0 ${active ? 'text-blue-400' : textColorClass}`}>
                                 <UserPlus size={12} className={active ? 'opacity-100' : 'opacity-60'} /> {emptyText || hint || TT.cliquePara}
                             </p>
                         )}
                     </div>
                 </button>
                 {hasActions && (
-                    <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1 opacity-0 group-hover/slot:opacity-100 transition-all focus-within:opacity-100">
+                    <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1">
                         {canSubstitute && (
                             <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao(slotCtx, value); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title={TT.substituirDesignado}>
                                 <RefreshCw size={12} />
@@ -1169,7 +1169,7 @@ const Designar = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setSlotAtivo({ key: 'presidente', semanaIndex: idx })}
-                                                                className={`bg-white py-2 px-3 ${sem.presidente ? 'pr-16' : 'pr-10'} rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx
+                                                                className={`bg-white py-2 px-3 ${sem.presidente ? 'pr-20' : 'pr-12'} rounded-xl border-2 text-left w-full transition-all hover:border-blue-300 ${dragOverSlot?.key === 'presidente' && dragOverSlot?.semanaIndex === idx
                                                                     ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]"
                                                                     : slotAtivo?.key === 'presidente' && slotAtivo?.semanaIndex === idx
                                                                         ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
@@ -1178,19 +1178,19 @@ const Designar = ({
                                                                             : "border-red-200 bg-red-50 border-dashed"
                                                                     }`}
                                                             >
-                                                                <div className="flex flex-row items-center justify-between gap-2">
-                                                                    <div className="flex items-center gap-1.5 w-20 sm:w-24 shrink-0">
+                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                    <div className="flex items-center gap-1.5 shrink-0">
                                                                         <User size={14} className={sem.presidente ? 'text-green-500' : 'text-red-300'} />
-                                                                        <span className={`text-[10px] font-black uppercase ${sem.presidente ? 'text-green-600' : 'text-red-300'}`}>{TT.presidente}</span>
+                                                                        <span className={`text-[10px] font-black uppercase ${sem.presidente ? 'text-green-600' : 'text-red-300'}`}>{TT.presidente}:</span>
                                                                     </div>
                                                                     {sem.presidente ? (
-                                                                        <p className="font-bold text-[13px] text-green-900 truncate flex-1 text-right">{sem.presidente.nome}</p>
+                                                                        <p className="font-bold text-[13px] text-green-900 truncate min-w-0">{sem.presidente.nome}</p>
                                                                     ) : (
-                                                                        <p className="text-[11px] text-red-400 italic flex items-center justify-end gap-1 flex-1"><UserPlus size={12} className="opacity-60" /> {TT.cliquePara}</p>
+                                                                        <p className="text-[11px] text-red-400 italic flex items-center gap-1 min-w-0"><UserPlus size={12} className="opacity-60" /> {TT.cliquePara}</p>
                                                                     )}
                                                                 </div>
                                                             </button>
-                                                            <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1 opacity-0 group-hover/slot:opacity-100 transition-all focus-within:opacity-100">
+                                                            <div className="absolute top-1/2 -translate-y-1/2 right-1 z-10 flex items-center gap-1">
                                                                 {publicadaNoQuadro && sem.presidente && (
                                                                     <button type="button" onClick={(e) => { e.stopPropagation(); abrirSubstituicao({ key: 'presidente', semanaIndex: idx }, sem.presidente); }} className="p-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 shadow-sm" title={TT.substituirPresidente}><RefreshCw size={12} /></button>
                                                                 )}
