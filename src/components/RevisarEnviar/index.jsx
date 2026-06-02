@@ -27,6 +27,13 @@ import { addHistorico } from '../../utils/revisarEnviar/historico';
 import { toast } from '../../utils/toast';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
+import {
+    getMeetingPartTypeNormalized,
+    getPrayerPartPosition,
+    isBibleStudyPart,
+    isPrayerPart,
+    isSongOnlyPart
+} from '../../utils/meetingParts';
 
 const RevisarEnviar = ({
     historico,
@@ -63,35 +70,9 @@ const RevisarEnviar = ({
             .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase();
 
-    const getTipo = (p) => (p?.tipo ?? p?.type ?? '').toString();
-
-    const isOracao = (p) => {
-        const tipo = normalizar(getTipo(p));
-        const titulo = normalizar(p?.titulo ?? '');
-        return tipo.includes('oracao') || titulo.includes('oracao');
-    };
-
-    const isEstudo = (p) => {
-        const tipo = normalizar(getTipo(p));
-        const titulo = normalizar(p?.titulo ?? '');
-        return (
-            tipo.includes('estudo') ||
-            titulo.includes('estudo biblico de congregacao') ||
-            titulo.includes('estudio biblico de la congregacion') ||
-            titulo.includes('estudo biblico') ||
-            titulo.includes('estudio biblico')
-        );
-    };
-
-    const getOracaoPos = (p) => {
-        const tipo = normalizar(getTipo(p));
-        const titulo = normalizar(p?.titulo ?? '');
-        const raw = `${tipo} ${titulo}`.trim();
-
-        if (raw.includes('inicial') || raw.includes('inicio') || raw.includes('abertura')) return 'inicio';
-        if (raw.includes('final') || raw.includes('encerr') || raw.includes('encerramento')) return 'final';
-        return null;
-    };
+    const isOracao = (p) => isPrayerPart(p);
+    const isEstudo = (p) => isBibleStudyPart(p);
+    const getOracaoPos = (p) => getPrayerPartPosition(p);
 
     const nomeCurto = (nome = '') => {
         const partes = nome.trim().split(/\s+/);
@@ -619,15 +600,7 @@ const RevisarEnviar = ({
         const partesReais = partes.filter((p) => {
             if (isOracao(p)) return false;
 
-            const tipo = normalizar((p?.tipo ?? p?.type ?? '').toString());
-            const titulo = normalizar((p?.titulo ?? '').toString());
-
-            const ehCantico = tipo.includes('cantico') ||
-                titulo.includes('cantico') ||
-                tipo.includes('cancion') ||
-                titulo.includes('cancion');
-
-            return !ehCantico;
+            return !isSongOnlyPart(p);
         });
 
         const linhas = [];
@@ -861,7 +834,7 @@ const RevisarEnviar = ({
                                                     <div className="print-block flex flex-col justify-start">
                                                         {(semana?.partes || []).map((parte, idxPart) => {
                                                             const prev = semana.partes[idxPart - 1];
-                                                            const firstTipo = normalizar(getTipo(semana.partes?.[0]));
+                                                            const firstTipo = getMeetingPartTypeNormalized(semana.partes?.[0]);
                                                             const isIntroEnd =
                                                                 idxPart === 1 &&
                                                                 firstTipo.includes('oracao');

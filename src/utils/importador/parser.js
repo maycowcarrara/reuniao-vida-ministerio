@@ -208,7 +208,7 @@ const extrairSemanaDeString = (s) => {
 };
 
 const isSongPrayerText = (n) => {
-    return (n.includes('cantico') || n.includes('cancion')) && (n.includes('oracao') || n.includes('oracion'));
+    return (n.includes('cantico') || n.includes('cancion')) && (n.includes('e oracao') || n.includes('y oracion'));
 };
 
 const extrairTempoETexto = (linha) => {
@@ -310,7 +310,11 @@ export const extrairDados = async (conteudo, tipoOrigem, lang) => {
         const tempoSozinho = linha.match(regexTempoSozinho);
         const splitTempo = extrairTempoETexto(linha);
         const looksLikeNumeroTitulo = /^\d+\.\s+/.test(linha.trim());
-        const hasCantOrOrac = nLine.includes('cantico') || nLine.includes('cancion') || nLine.includes('oracao') || nLine.includes('oracion');
+        const hasCantOrOrac =
+            nLine.includes('cantico') ||
+            nLine.includes('cancion') ||
+            nLine.includes('e oracao') ||
+            nLine.includes('y oracion');
         const isIniciaisFinais = termos.iniciais.some(x => nLine.includes(x)) || termos.finais.some(x => nLine.includes(x)) || termos.conclusao.some(x => nLine.includes(x));
 
         // Merge logic

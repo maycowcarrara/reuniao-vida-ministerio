@@ -1,5 +1,6 @@
 import React from 'react';
 import { getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
+import { isBibleStudyPart, isPrayerPart, isSongOnlyPart } from '../../utils/meetingParts';
 
 const NavegadorSemanas = ({
     listaSemanas,
@@ -13,19 +14,7 @@ const NavegadorSemanas = ({
 }) => {
     if (!listaSemanas || listaSemanas.length === 0) return null;
 
-    const normalizeStr = (value) => (value || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const hasPessoaDesignada = (value) => !!(value?.id || value?.nome);
-    const isPrayerPart = (parte) => {
-        const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
-        const titulo = normalizeStr(parte?.titulo ?? '');
-        return tipo.includes('oracao') || titulo.includes('oracao');
-    };
-    const isBibleStudyPart = (parte) => {
-        const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
-        const titulo = normalizeStr(parte?.titulo ?? '');
-        return tipo.includes('estudo') || titulo.includes('estudo biblico') || titulo.includes('estudio biblico');
-    };
-    const isSongOnlyPart = (parte) => normalizeStr(parte?.tipo ?? parte?.type ?? '') === 'cantico';
     const getSemanaProgress = (sem) => {
         const totals = { total: 0, preenchidas: 0 };
         const addRequiredSlot = (value) => {

@@ -8,6 +8,7 @@ import { getWeekdayJsDay } from '../config/appConfig';
 import { getCanonicalWeekStartISO, getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
 import { formatText, useSectionMessages } from '../i18n';
+import { isBibleStudyPart, isPrayerPart, isSongOnlyPart } from '../utils/meetingParts';
 
 export default function Dashboard({
     listaProgramacoes,
@@ -109,23 +110,6 @@ export default function Dashboard({
 
         const getSemanaStartISO = (sem) => getCanonicalWeekStartISO({ sem, config });
 
-        const isPrayerPart = (parte) => {
-            const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
-            const titulo = normalizeStr(parte?.titulo ?? '');
-            return tipo.includes('oracao') || titulo.includes('oracao');
-        };
-
-        const isBibleStudyPart = (parte) => {
-            const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
-            const titulo = normalizeStr(parte?.titulo ?? '');
-            return tipo.includes('estudo') || titulo.includes('estudo biblico') || titulo.includes('estudio biblico');
-        };
-
-        const isSongOnlyPart = (parte) => {
-            const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
-            return tipo === 'cantico';
-        };
-
         const countRequiredAssignmentsForWeek = (semana) => {
             const addRequiredSlot = (value, acc) => {
                 acc.total += 1;
@@ -186,17 +170,12 @@ export default function Dashboard({
             if (semana.presidente) addAssignment(semana.presidente, 'presidente', 'presidente');
 
             (semana.partes || []).forEach((parte) => {
-                const tipo = normalizeStr(parte?.tipo ?? parte?.type ?? '');
-                const titulo = normalizeStr(parte?.titulo ?? '');
-                const isOracao = tipo.includes('oracao') || titulo.includes('oracao');
-                const isEstudo = tipo.includes('estudo') || titulo.includes('estudo biblico') || titulo.includes('estudio biblico');
-
-                if (isOracao) {
+                if (isPrayerPart(parte)) {
                     addAssignment(parte.oracao || parte.estudante, 'oracao', parte.id);
                     return;
                 }
 
-                if (isEstudo) {
+                if (isBibleStudyPart(parte)) {
                     addAssignment(parte.dirigente || parte.estudante, 'dirigente', parte.id);
                     addAssignment(parte.leitor || semana.leitor, 'leitor', parte.id);
                     return;

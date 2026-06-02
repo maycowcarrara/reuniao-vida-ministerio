@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import {
     Search,
     Calendar,
@@ -194,6 +194,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
     const [semanaExpandida, setSemanaExpandida] = useState(0);
     const [agora, setAgora] = useState(new Date());
+    const mainScrollRef = useRef(null);
+    const parteAoVivoRef = useRef(null);
 
     // --- ESTADOS DO PWA (INSTALAÇÃO) ---
     const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -304,6 +306,22 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             return inicio && fim && agora >= inicio && agora < fim;
         });
     }, [semanasParaExibir, agora]);
+    const parteAoVivoAtual = useMemo(() => {
+        if (reuniaoAoVivo === -1) return null;
+
+        const sem = semanasParaExibir[reuniaoAoVivo];
+        if (!sem?.partes?.length || sem.termosBuscados) return null;
+
+        const parteIndex = sem.partes.findIndex((parte) => agora >= parte.startObj && agora < parte.endObj);
+        if (parteIndex === -1) return null;
+
+        const parte = sem.partes[parteIndex];
+        return {
+            semanaIndex: reuniaoAoVivo,
+            parteIndex,
+            key: `${sem.semanaStartISO || reuniaoAoVivo}-${parte.id || parte.startTimeStr || parteIndex}`
+        };
+    }, [semanasParaExibir, reuniaoAoVivo, agora]);
     const reuniaoEmContagem = useMemo(() => {
         const index = semanasParaExibir.findIndex((sem) => {
             if (!sem.partes?.length || sem.termosBuscados) return false;
@@ -325,8 +343,33 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const modoTempoReal = reuniaoAoVivo !== -1;
     const modoPreLive = !modoTempoReal && reuniaoEmContagem.index !== -1;
     const contagemRegressiva = formatarContagemRegressiva(reuniaoEmContagem.msRestantes);
+    const parteAoVivoKey = parteAoVivoAtual?.key;
 
     const toggleSemana = (idx) => setSemanaExpandida(prev => prev === idx ? null : idx);
+
+    useLayoutEffect(() => {
+        if (!modoTempoReal || !parteAoVivoKey) return undefined;
+
+        const scrollNode = mainScrollRef.current;
+        const parteNode = parteAoVivoRef.current;
+        if (!scrollNode || !parteNode) return undefined;
+
+        const frameId = window.requestAnimationFrame(() => {
+            const scrollRect = scrollNode.getBoundingClientRect();
+            const parteRect = parteNode.getBoundingClientRect();
+            const desiredOffset = scrollNode.clientHeight * 0.3;
+            const currentScrollTop = scrollNode.scrollTop;
+            const maxScrollTop = scrollNode.scrollHeight - scrollNode.clientHeight;
+            const nextScrollTop = currentScrollTop + (parteRect.top - scrollRect.top) - desiredOffset;
+
+            scrollNode.scrollTo({
+                top: Math.max(0, Math.min(nextScrollTop, maxScrollTop)),
+                behavior: 'smooth'
+            });
+        });
+
+        return () => window.cancelAnimationFrame(frameId);
+    }, [modoTempoReal, parteAoVivoKey]);
 
     return (
         <div className="h-screen bg-slate-50 font-sans flex flex-col overflow-hidden">
@@ -418,7 +461,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
+            <main ref={mainScrollRef} className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
                 <div className="max-w-2xl mx-auto space-y-6">
 
                     {/* BANNER DE INSTALAÇÃO PWA */}
@@ -636,7 +679,11 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                                                             return estaAoVivo ? (
                                                                 /* === MODO TEMPO REAL === */
-                                                                <div key={i} className={`flex gap-2 relative ${jaPassou ? 'opacity-60 grayscale-[30%]' : ''}`}>
+                                                                <div
+                                                                    key={i}
+                                                                    ref={isAcontecendo ? parteAoVivoRef : undefined}
+                                                                    className={`flex gap-2 relative ${jaPassou ? 'opacity-60 grayscale-[30%]' : ''}`}
+                                                                >
 
                                                                     <div className="w-[40px] shrink-0 text-right pt-0.5">
                                                                         <span className={`text-[11px] font-black tracking-tighter ${jaPassou ? 'text-slate-400' : isAcontecendo ? 'text-emerald-600' : 'text-slate-600'}`}>

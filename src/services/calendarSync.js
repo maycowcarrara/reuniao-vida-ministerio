@@ -3,6 +3,7 @@ import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { normalizeLanguage } from '../config/appConfig';
 import { getSectionMessages } from '../i18n';
 import { getMeetingSectionTag } from '../utils/meetingSections';
+import { isPrayerPart } from '../utils/meetingParts';
 
 export const iniciarSincronizacao = async () => {
     const auth = getAuth();
@@ -135,9 +136,8 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
 
                 let nomesExibicao = pessoa ? ` - ${pessoa}${ajudanteStr}` : '';
 
-                const tipo = (parte.tipo || '').toLowerCase();
                 const tituloOriginal = (parte.titulo || '');
-                const ehOracao = tipo.includes('oracao') || tipo.includes('oração') || tipo.includes('oración');
+                const ehOracao = isPrayerPart(parte);
 
                 let tituloExibicao = tituloOriginal;
                 if (ehOracao) {

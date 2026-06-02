@@ -15,6 +15,7 @@ import { db, auth } from './firebase';
 import { createInternalNotification } from './notificacoesInternas';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../utils/eventos';
+import { isBibleStudyPart, isPrayerPart } from '../utils/meetingParts';
 
 const PRIVATE_COLLECTION = 'confirmacoes';
 const PUBLIC_COLLECTION = 'confirmacoes_publicas';
@@ -138,37 +139,11 @@ const getTodayLocalISODate = () => {
 const isPastEventDate = (dateISO) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateISO || '').trim())
     && String(dateISO).trim() < getTodayLocalISODate();
 
-const normalizeText = (value = '') =>
-    value
-        .toString()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-        .toLowerCase();
-
 const buildAssignmentKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
     [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
 
 const buildNotificationId = ({ token, type, changeKey }) =>
     [token || '', type || '', changeKey || ''].map((part) => String(part).trim()).join('_');
-
-const isPrayerPart = (part) => {
-    const type = normalizeText(part?.tipo ?? part?.type ?? '');
-    const title = normalizeText(part?.titulo ?? '');
-    return type.includes('oracao') || type.includes('oracion') || title.includes('oracao') || title.includes('oracion');
-};
-
-const isBibleStudyPart = (part) => {
-    const type = normalizeText(part?.tipo ?? part?.type ?? '');
-    const title = normalizeText(part?.titulo ?? '');
-
-    return (
-        type.includes('estudo') ||
-        type.includes('estudio') ||
-        title.includes('estudo biblico') ||
-        title.includes('estudio biblico')
-    );
-};
 
 const getProgramacaoCollectionRef = (uid) =>
     collection(db, `users/${String(uid || '').trim()}/programacao`);
