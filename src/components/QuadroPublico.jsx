@@ -39,6 +39,11 @@ window.addEventListener('beforeinstallprompt', (e) => {
 // FUNÇÕES AUXILIARES (HELPERS)
 // ============================================================================
 
+const normalizarTexto = (texto) => {
+    if (!texto) return '';
+    return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
 const extrairNumeroCantico = (texto) => {
     if (!texto) return '';
     const regex = /(c[âa]ntico|canci[oó]n)\s*(\d+)/i;
@@ -191,6 +196,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const [searchParams] = useSearchParams();
     const pessoaParam = searchParams.get('p') || '';
     const [busca, setBusca] = useState(() => pessoaParam);
+    const termo = useMemo(() => busca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(), [busca]);
 
     const [semanaExpandida, setSemanaExpandida] = useState(0);
     const [agora, setAgora] = useState(new Date());
@@ -274,19 +280,49 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             return { ...sem, semanaStartISO, dataCorreta, partes: partesComHorario, meetingStartTimeStr, meetingEndTimeStr };
         });
 
-        const termo = busca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
         if (termo) {
             filtradas = filtradas.map(sem => {
-                const normalizarNome = (nome = '') => nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                const temPres = normalizarNome(sem.presidente?.nome).includes(termo);
+                const dataCompleta = formatarDataCompleta(sem.dataCorreta, lang, T);
+                const matchSemanaMetadata = normalizarTexto(sem.semana || '').includes(termo) ||
+                                            normalizarTexto(dataCompleta).includes(termo);
 
-                const partesFiltradas = (sem.partes || []).filter(p => {
-                    const nomes = [p.estudante?.nome, p.ajudante?.nome, p.oracao?.nome, p.dirigente?.nome, p.leitor?.nome]
-                        .map(n => normalizarNome(n || ''));
-                    return nomes.some(n => n.includes(termo));
-                });
+                const isPalavraPresidente = termo.length >= 3 && 'presidente'.includes(termo);
+                const temPres = normalizarTexto(sem.presidente?.nome).includes(termo) || 
+                                (isPalavraPresidente && !!sem.presidente?.nome);
 
-                if (temPres || partesFiltradas.length > 0) {
+                let partesFiltradas = [];
+                if (matchSemanaMetadata) {
+                    partesFiltradas = sem.partes || [];
+                } else {
+                    partesFiltradas = (sem.partes || []).filter(p => {
+                        // 1. Pesquisa por nome da pessoa designada
+                        const nomes = [p.estudante?.nome, p.ajudante?.nome, p.oracao?.nome, p.dirigente?.nome, p.leitor?.nome]
+                            .map(n => normalizarTexto(n || ''));
+                        const matchNome = nomes.some(n => n.includes(termo));
+
+                        // 2. Pesquisa pelo título da parte
+                        const titulo = normalizarTexto(p.titulo || '');
+                        const matchTitulo = titulo.includes(termo);
+
+                        // 3. Pesquisa pelo chip da seção (chave interna ou tradução)
+                        const secaoTraduzida = T.secoes?.[p.secao] || '';
+                        const matchSecao = normalizarTexto(p.secao || '').includes(termo) || 
+                                           normalizarTexto(secaoTraduzida).includes(termo);
+
+                        // 4. Pesquisa pela palavra ajudante (ou equivalentes/traduções)
+                        const isPalavraAjudante = termo.length >= 3 && (
+                            'ajudante'.includes(termo) ||
+                            'ajuda'.includes(termo) ||
+                            'ayudante'.includes(termo) ||
+                            'ayuda'.includes(termo)
+                        );
+                        const matchAjudante = isPalavraAjudante && !!p.ajudante?.nome;
+
+                        return matchNome || matchTitulo || matchSecao || matchAjudante;
+                    });
+                }
+
+                if (matchSemanaMetadata || temPres || partesFiltradas.length > 0) {
                     return { ...sem, partes: partesFiltradas, filtrado: true, termosBuscados: true };
                 }
                 return null;
@@ -294,7 +330,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         }
 
         return filtradas.sort((a, b) => new Date(a.semanaStartISO).getTime() - new Date(b.semanaStartISO).getTime());
-    }, [programacoes, busca, config, lang, hojeStr]);
+    }, [programacoes, config, lang, hojeStr, T, termo]);
 
     const reuniaoAoVivo = useMemo(() => {
         return semanasParaExibir.findIndex((sem) => {
@@ -596,7 +632,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                     )}
 
                                                     {/* PRESIDENTE */}
-                                                    {sem.presidente && (!busca || sem.presidente.nome.toLowerCase().includes(busca.toLowerCase())) && (
+                                                     {sem.presidente && (!busca || normalizarTexto(sem.presidente.nome).includes(termo) || (termo.length >= 3 && 'presidente'.includes(termo))) && (
                                                         <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-4">
                                                             <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                                                                 <User size={20} />
