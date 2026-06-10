@@ -41,8 +41,9 @@ const SidebarAlunos = ({
             let dataBaseStr = null;
             const key = String(semanaKey).toLowerCase();
 
-            if (/^\d{4}-\d{2}-\d{2}/.test(key)) {
-                dataBaseStr = key.substring(0, 10);
+            const matchISO = key.match(/(\d{4}-\d{2}-\d{2})/);
+            if (matchISO) {
+                dataBaseStr = matchISO[1];
             } else {
                 const matchDia = key.match(/^(\d{1,2})/);
                 const matchMes = key.match(/(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/);

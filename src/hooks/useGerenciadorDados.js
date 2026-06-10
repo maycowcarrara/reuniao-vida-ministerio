@@ -223,7 +223,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
             const uid = usuario.uid;
             const collections = ['alunos', 'programacao', 'configuracoes', 'confirmacoes'];
 
-            // Firestore não deleta coleções inteiras nativamente, precisamos deletar doc por doc
+            // 1. Deletar coleções privadas do usuário
             for (const colName of collections) {
                 const colRef = collection(db, `users/${uid}/${colName}`);
                 const snapshot = await getDocs(colRef);
@@ -235,6 +235,32 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
                     });
                     await batch.commit();
                 }
+            }
+
+            // 2. Deletar documento do quadro público
+            const quadroRef = doc(db, 'quadros_publicos', uid);
+            await deleteDoc(quadroRef);
+
+            // 3. Deletar confirmações públicas do usuário
+            const publicConfRef = collection(db, 'confirmacoes_publicas');
+            const publicConfSnap = await getDocs(query(publicConfRef, where('ownerUid', '==', uid)));
+            if (!publicConfSnap.empty) {
+                const batch = writeBatch(db);
+                publicConfSnap.docs.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+            }
+
+            // 4. Deletar notificações associadas
+            const notificationsRef = collection(db, 'notificacoes');
+            const notificationsSnap = await getDocs(query(notificationsRef, where('ownerUid', '==', uid)));
+            if (!notificationsSnap.empty) {
+                const batch = writeBatch(db);
+                notificationsSnap.docs.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
             }
 
             // Reseta estado local imediatamente para feedback visual

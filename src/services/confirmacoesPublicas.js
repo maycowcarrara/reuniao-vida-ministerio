@@ -7,7 +7,8 @@ import {
     serverTimestamp,
     setDoc,
     updateDoc,
-    where
+    where,
+    writeBatch
 } from 'firebase/firestore';
 
 import { normalizeLanguage, normalizeSystemConfig } from '../config/appConfig';
@@ -498,15 +499,17 @@ const updateConfirmationState = async (token, mode, status, options = {}) => {
         };
     }
 
-    await updateDoc(publicRef, payload);
+    const batch = writeBatch(db);
+    batch.update(publicRef, payload);
     if (current?.ownerUid && current?.assignmentKey) {
-        await setDoc(buildPrivateRef(current.ownerUid, current.assignmentKey), {
+        batch.set(buildPrivateRef(current.ownerUid, current.assignmentKey), {
             ...payload,
             token: safeToken,
             assignmentKey: current.assignmentKey,
             ownerUid: current.ownerUid
         }, { merge: true });
     }
+    await batch.commit();
 
     if (changed) {
         const copy = mode === 'week'
