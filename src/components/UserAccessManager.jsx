@@ -31,6 +31,10 @@ const COPY = {
         invalidEmail: 'Informe um email válido.',
         duplicateEmail: 'Este email já possui acesso.',
         ownerEmail: 'O proprietário já possui acesso permanente.',
+        confirmAdd: 'Adicionar {email} como usuário desta congregação?',
+        confirmRemove: 'Remover o acesso de {email}?',
+        confirmPromote: 'Promover {email} a administrador?',
+        confirmDemote: 'Remover {email} da função de administrador?',
         saved: 'Acesso atualizado.',
         loadError: 'Não foi possível carregar os usuários autorizados.',
         saveError: 'Não foi possível atualizar o acesso.'
@@ -52,13 +56,17 @@ const COPY = {
         invalidEmail: 'Introduzca un correo válido.',
         duplicateEmail: 'Este correo ya tiene acceso.',
         ownerEmail: 'El propietario ya tiene acceso permanente.',
+        confirmAdd: '¿Agregar a {email} como usuario de esta congregación?',
+        confirmRemove: '¿Quitar el acceso de {email}?',
+        confirmPromote: '¿Promover a {email} como administrador?',
+        confirmDemote: '¿Quitar a {email} del rol de administrador?',
         saved: 'Acceso actualizado.',
         loadError: 'No fue posible cargar los usuarios autorizados.',
         saveError: 'No fue posible actualizar el acceso.'
     }
 };
 
-export default function UserAccessManager({ lang = 'pt' }) {
+export default function UserAccessManager({ lang = 'pt', onRoleChange }) {
     const texts = COPY[lang === 'es' ? 'es' : 'pt'];
     const dataOwnerUid = getConfiguredDataOwnerUid();
     const ownerUid = getConfiguredOwnerUid();
@@ -101,6 +109,11 @@ export default function UserAccessManager({ lang = 'pt' }) {
     }, [accessRef, currentUser, texts.loadError]);
 
     const canManage = isOwner || admins.includes(currentEmail);
+    const accessRole = isOwner ? 'owner' : admins.includes(currentEmail) ? 'admin' : 'user';
+
+    useEffect(() => {
+        onRoleChange?.(accessRole);
+    }, [accessRole, onRoleChange]);
 
     const updateAccess = async (updater) => {
         if (!accessRef || !canManage) return;
@@ -152,6 +165,7 @@ export default function UserAccessManager({ lang = 'pt' }) {
             toast.info(texts.duplicateEmail);
             return;
         }
+        if (!window.confirm(texts.confirmAdd.replace('{email}', email))) return;
 
         await updateAccess((current) => ({
             ...current,
@@ -161,6 +175,8 @@ export default function UserAccessManager({ lang = 'pt' }) {
     };
 
     const handleRemove = async (email) => {
+        if (!window.confirm(texts.confirmRemove.replace('{email}', email))) return;
+
         await updateAccess((current) => ({
             emails: current.emails.filter((item) => item !== email),
             admins: isOwner
@@ -171,10 +187,13 @@ export default function UserAccessManager({ lang = 'pt' }) {
 
     const handleToggleAdmin = async (email) => {
         if (!isOwner) return;
+        const emailIsAdmin = admins.includes(email);
+        const confirmationText = emailIsAdmin ? texts.confirmDemote : texts.confirmPromote;
+        if (!window.confirm(confirmationText.replace('{email}', email))) return;
 
         await updateAccess((current) => ({
             ...current,
-            admins: current.admins.includes(email)
+            admins: emailIsAdmin
                 ? current.admins.filter((item) => item !== email)
                 : [...current.admins, email]
         }));

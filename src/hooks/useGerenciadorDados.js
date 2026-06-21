@@ -7,6 +7,7 @@ import {
     setDoc,
     deleteDoc,
     writeBatch,
+    getDoc,
     getDocs,
     query,
     where,
@@ -24,7 +25,11 @@ import {
     NOTIFICATIONS_COLLECTION
 } from '../services/notificacoesInternas';
 import { toast } from '../utils/toast';
-import { resolveDataOwnerUid } from '../services/adminAccess';
+import {
+    isConfiguredOwner,
+    normalizeAccessEmail,
+    resolveDataOwnerUid
+} from '../services/adminAccess';
 
 const ESTADO_INICIAL = {
     configuracoes: DEFAULT_CONFIG,
@@ -137,6 +142,22 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
 
     // --- AÇÕES ---
 
+    const assertCanManageDataRecovery = async () => {
+        if (!usuario || !dataOwnerUid) throw new Error('Usuário não autenticado.');
+        if (isConfiguredOwner(usuario)) return;
+
+        const accessSnapshot = await getDoc(doc(db, `users/${dataOwnerUid}/configuracoes`, 'acessos'));
+        const admins = Array.isArray(accessSnapshot.data()?.admins)
+            ? accessSnapshot.data().admins.map(normalizeAccessEmail)
+            : [];
+
+        if (!admins.includes(normalizeAccessEmail(usuario.email))) {
+            const error = new Error('Somente administradores podem importar backup ou resetar os dados.');
+            error.code = 'permission-denied';
+            throw error;
+        }
+    };
+
     const salvarItem = async (colecao, id, objeto) => {
         if (!usuario || !dataOwnerUid) return;
         const path = `users/${dataOwnerUid}/${colecao}`;
@@ -179,6 +200,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
 
     const importarBackupParaUsuario = async (jsonFile) => {
         if (!usuario || !dataOwnerUid) return;
+        await assertCanManageDataRecovery();
 
         try {
             const dadosImport = jsonFile.dadosSistema || jsonFile;
@@ -221,6 +243,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
     // --- NOVA FUNÇÃO: RESETAR CONTA (LIMPA TUDO) ---
     const resetarConta = async () => {
         if (!usuario || !dataOwnerUid) return;
+        await assertCanManageDataRecovery();
 
         try {
             const uid = dataOwnerUid;

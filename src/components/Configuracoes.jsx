@@ -22,6 +22,8 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
     const fileInputRef = useRef(null);
     const [processando, setProcessando] = useState(false);
     const [backupPreview, setBackupPreview] = useState(null);
+    const [accessRole, setAccessRole] = useState('user');
+    const canManageDataRecovery = accessRole === 'owner' || accessRole === 'admin';
 
     // ESTADO LOCAL para o nome da congregação (Evita o "piscar" das letras)
     const [nomeCongLocal, setNomeCongLocal] = useState('');
@@ -49,7 +51,8 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
             arquivo: 'archivo',
             cancelar: 'Cancelar',
             confirmar: 'Restaurar ahora',
-            semConfig: 'sin configuración'
+            semConfig: 'sin configuración',
+            restrito: 'Solo administradores pueden restaurar o reiniciar los datos.'
         }
         : {
             titulo: 'Revisar restauração',
@@ -60,7 +63,8 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
             arquivo: 'arquivo',
             cancelar: 'Cancelar',
             confirmar: 'Restaurar agora',
-            semConfig: 'sem configuração'
+            semConfig: 'sem configuração',
+            restrito: 'Somente administradores podem restaurar ou resetar os dados.'
         };
     const atualizarConfig = (campo, valor) => {
         salvarAlteracao({
@@ -99,6 +103,10 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
 
     // --- 2. GATILHO PARA ABRIR O SELETOR DE ARQUIVOS ---
     const abrirSeletorArquivo = () => {
+        if (!canManageDataRecovery) {
+            toast.info(previewTexts.restrito);
+            return;
+        }
         fileInputRef.current.click();
     };
 
@@ -122,6 +130,11 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
 
     // --- 3. PROCESSAR O ARQUIVO SELECIONADO ---
     const handleArquivoSelecionado = async (e) => {
+        if (!canManageDataRecovery) {
+            e.target.value = '';
+            toast.info(previewTexts.restrito);
+            return;
+        }
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -139,6 +152,11 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
 
     const confirmarRestauracaoPreview = async () => {
         if (!backupPreview?.json) return;
+        if (!canManageDataRecovery) {
+            setBackupPreview(null);
+            toast.info(previewTexts.restrito);
+            return;
+        }
 
         setProcessando(true);
         try {
@@ -165,6 +183,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                 type="file"
                 ref={fileInputRef}
                 accept=".json"
+                disabled={!canManageDataRecovery}
                 style={{ display: 'none' }}
                 onChange={handleArquivoSelecionado}
             />
@@ -308,7 +327,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                 </div>
             </div>
 
-            <UserAccessManager lang={activeLocale} />
+            <UserAccessManager lang={activeLocale} onRoleChange={setAccessRole} />
 
             <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
@@ -334,7 +353,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${canManageDataRecovery ? 'sm:grid-cols-2' : ''}`}>
                 <div className="bg-emerald-50 border-2 border-emerald-100 p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] flex flex-col justify-between transition-colors hover:border-emerald-200">
                     <div>
                         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-600 mb-4">
@@ -353,6 +372,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                     </button>
                 </div>
 
+                {canManageDataRecovery && (
                 <div className="bg-rose-50 border-2 border-rose-100 p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] flex flex-col justify-between transition-colors hover:border-rose-200">
                     <div>
                         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-100 rounded-xl sm:rounded-2xl flex items-center justify-center text-rose-600 mb-4">
@@ -380,6 +400,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                         )}
                     </button>
                 </div>
+                )}
             </div>
         </div>
     );
