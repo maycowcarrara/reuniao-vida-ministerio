@@ -3,7 +3,6 @@ import path from 'node:path';
 import { cert, deleteApp, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import {
-  Blob,
   DocumentReference,
   GeoPoint,
   getFirestore,
@@ -118,7 +117,6 @@ export async function closeClients(...clients) {
 }
 
 export const firestoreTypes = {
-  Blob,
   DocumentReference,
   GeoPoint,
   Timestamp

@@ -24,7 +24,8 @@ const stats = {
   plannedCreates: 0,
   created: 0,
   createErrors: 0,
-  fieldOverridesDetected: 0
+  fieldOverridesDetected: 0,
+  ttlConfigsDetected: 0
 };
 
 async function getAccessToken(client) {
@@ -100,14 +101,15 @@ function sanitizeIndex(index) {
 }
 
 async function listCompositeIndexes(client, token) {
-  const url = `${firestoreAdminBase(client.projectId)}/collectionGroups/-/indexes?pageSize=100`;
+  const url = `${firestoreAdminBase(client.projectId)}/collectionGroups/-/indexes`;
   return listPaged(token, url, 'indexes');
 }
 
 async function listFieldOverrides(client, token) {
-  const url = `${firestoreAdminBase(client.projectId)}/collectionGroups/-/fields?pageSize=100`;
+  const filter = encodeURIComponent('indexConfig.usesAncestorConfig=false OR ttlConfig:*');
+  const url = `${firestoreAdminBase(client.projectId)}/collectionGroups/-/fields?filter=${filter}`;
   const fields = await listPaged(token, url, 'fields');
-  return fields.filter((field) => field.indexConfig && field.indexConfig.usesAncestorConfig === false);
+  return fields;
 }
 
 try {
@@ -124,7 +126,10 @@ try {
 
   stats.sourceCompositeIndexes = sourceIndexes.length;
   stats.targetCompositeIndexesBefore = targetIndexes.length;
-  stats.fieldOverridesDetected = fieldOverrides.length;
+  stats.fieldOverridesDetected = fieldOverrides.filter(
+    (field) => field.indexConfig && field.indexConfig.usesAncestorConfig === false
+  ).length;
+  stats.ttlConfigsDetected = fieldOverrides.filter((field) => field.ttlConfig).length;
 
   const targetSignatures = new Set(targetIndexes.map(indexSignature));
   const toCreate = sourceIndexes.filter((index) => {
@@ -137,10 +142,11 @@ try {
 
   stats.plannedCreates = toCreate.length;
 
-  if (fieldOverrides.length > 0) {
+  if (stats.fieldOverridesDetected > 0 || stats.ttlConfigsDetected > 0) {
     console.warn(
-      `Foram detectados ${fieldOverrides.length} field overrides/single-field indexes no projeto antigo. ` +
-      'Este script recria apenas indices compostos; field overrides devem ser conferidos manualmente no console Firebase.'
+      `Foram detectados ${stats.fieldOverridesDetected} field overrides e ` +
+      `${stats.ttlConfigsDetected} configuracoes TTL no projeto antigo. ` +
+      'Este script recria apenas indices compostos; essas configuracoes devem ser conferidas manualmente no console Firebase.'
     );
   }
 

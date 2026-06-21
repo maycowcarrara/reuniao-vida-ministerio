@@ -46,7 +46,7 @@ function mapValueForTarget(value) {
   if (
     value instanceof firestoreTypes.Timestamp ||
     value instanceof firestoreTypes.GeoPoint ||
-    value instanceof firestoreTypes.Blob ||
+    Buffer.isBuffer(value) ||
     value instanceof Date
   ) {
     return value;
