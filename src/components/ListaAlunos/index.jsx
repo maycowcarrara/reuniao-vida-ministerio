@@ -203,8 +203,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
 
     const handleExport = (tipo) => {
         if (tipo === 'json') {
-            // AQUI É A GRANDE SACADA: 
-            // O Backup JSON ignora `alunosProcessados` (os visíveis na tela) e força a exportação de `alunos` (o banco de dados bruto e completo, com todos os dados e imagens intactas).
+            // O JSON exporta a lista completa de alunos, sem aplicar os filtros visíveis na tela.
             baixar(new Blob([JSON.stringify({ alunos: alunos }, null, 2)], { type: 'application/json' }), t.exportFiles.json);
         }
         else {

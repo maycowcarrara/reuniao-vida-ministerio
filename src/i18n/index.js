@@ -17,11 +17,6 @@ const PT_MESSAGES = {
         semana: "Semana",
         cliquePara: "Clique para designar",
         arquivar: "Finalizar e Arquivar",
-        backup: "Banco de Dados",
-        carregar: "Abrir Banco",
-        salvar: "Salvar",
-        exportarBanco: "Exportar Banco",
-        infoBackup: "Salve ou restaure todas as suas informações (Alunos, Designações e Histórico) em um arquivo JSON único.",
         registros: "registros",
         info: { nunca: "Estreia", dias: "dias" },
         ordem: { nome: "Nome", dias: "Tempo" },
@@ -68,14 +63,6 @@ const PT_MESSAGES = {
     },
     adminPanel: {
         carregando: "Carregando...",
-        backupOk: "✅ Backup restaurado com sucesso!",
-        backupInvalido: "⚠️ Arquivo inválido.",
-        backupSalvo: "✅ Backup salvo com sucesso!",
-        backupErroSalvar: "⚠️ Erro ao salvar backup.",
-        alertaReset1: "⚠️ PERIGO: Isso vai apagar TUDO.\nTem certeza?",
-        alertaReset2: "⚠️ ÚLTIMA CHANCE: Clique em OK para apagar.",
-        bancoLimpo: "✅ Banco limpo!",
-        erroLimpar: "Erro ao limpar.",
         eventoOk: "✅ Evento agendado!",
         dupTitulo: "Semana já existe",
         dupDesc: "O que deseja fazer com a semana duplicada?",
@@ -116,16 +103,6 @@ const PT_MESSAGES = {
         dia: "Dia da Reunião",
         horario: "Horário",
         idioma: "Idioma do Sistema",
-        backupTitulo: "Backup e Segurança",
-        backupDesc: "Baixe uma cópia completa dos seus dados para o seu dispositivo.",
-        btnBaixar: "Baixar Backup (JSON)",
-        restaurarTitulo: "Restaurar Backup",
-        restaurarDesc: "Apaga os dados atuais da sua conta e importa um arquivo de backup do seu dispositivo.",
-        btnRestaurar: "Restaurar Arquivo",
-        confirmarRestauracao: "⚠️ PERIGO: Isso vai APAGAR todos os dados da sua conta atual e substituir pelo arquivo selecionado.\n\nTem certeza que deseja continuar?",
-        sucesso: "✅ Backup restaurado com sucesso!",
-        erro: "Erro ao restaurar:",
-        processando: "Processando",
         dias: ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo']
     },
     login: {
@@ -339,7 +316,7 @@ const PT_MESSAGES = {
             semHistorico: "Nenhum histórico registrado."
         },
         exportLabels: {
-            json: "JSON (Backup)",
+            json: "JSON",
             csv: "Excel (CSV)",
             txt: "Texto Simples",
             pdf: "Imprimir Todos"
@@ -362,7 +339,7 @@ const PT_MESSAGES = {
             obs: "OBS"
         },
         exportFiles: {
-            json: "backup_alunos_completo.json",
+            json: "lista_alunos_completa.json",
             csv: "relatorio_alunos.csv",
             txt: "relatorio_alunos.txt"
         },
@@ -837,11 +814,6 @@ const ES_MESSAGES = {
         semana: "Semana",
         cliquePara: "Haz clic para asignar",
         arquivar: "Finalizar y Archivar",
-        backup: "Base de Datos",
-        carregar: "Abrir Base",
-        salvar: "Guardar",
-        exportarBanco: "Exportar Base",
-        infoBackup: "Guarde o restaure toda su información (Estudiantes, Asignaciones e Historial) en un solo archivo JSON.",
         registros: "registros",
         info: { nunca: "Estreno", dias: "días" },
         ordem: { nome: "Nombre", dias: "Tiempo" },
@@ -888,14 +860,6 @@ const ES_MESSAGES = {
     },
     adminPanel: {
         carregando: "Cargando...",
-        backupOk: "✅ ¡Copia de seguridad restaurada con éxito!",
-        backupInvalido: "⚠️ Archivo inválido.",
-        backupSalvo: "✅ ¡Copia de seguridad guardada con éxito!",
-        backupErroSalvar: "⚠️ Error al guardar la copia de seguridad.",
-        alertaReset1: "⚠️ PELIGRO: Esto borrará TODO.\n¿Estás seguro?",
-        alertaReset2: "⚠️ ÚLTIMA OPORTUNIDAD: Haz clic en OK para borrar.",
-        bancoLimpo: "✅ ¡Base de datos limpia!",
-        erroLimpar: "Error al limpiar.",
         eventoOk: "✅ ¡Evento programado!",
         dupTitulo: "La semana ya existe",
         dupDesc: "¿Qué deseas hacer con la semana duplicada?",
@@ -936,16 +900,6 @@ const ES_MESSAGES = {
         dia: "Día de la Reunión",
         horario: "Horario",
         idioma: "Idioma del Sistema",
-        backupTitulo: "Copia de Seguridad",
-        backupDesc: "Descargue una copia completa de sus datos a su dispositivo.",
-        btnBaixar: "Descargar Respaldo (JSON)",
-        restaurarTitulo: "Restaurar Respaldo",
-        restaurarDesc: "Borra los datos actuales de su cuenta e importa un archivo de respaldo desde su dispositivo.",
-        btnRestaurar: "Restaurar Archivo",
-        confirmarRestauracao: "⚠️ PELIGRO: Esto BORRARÁ todos los datos de su cuenta actual y los reemplazará con el archivo seleccionado.\n\n¿Está seguro de continuar?",
-        sucesso: "✅ ¡Respaldo restaurado con éxito!",
-        erro: "Error al restaurar:",
-        processando: "Procesando",
         dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
     },
     login: {
@@ -1159,7 +1113,7 @@ const ES_MESSAGES = {
             semHistorico: "No hay historial registrado."
         },
         exportLabels: {
-            json: "JSON (Respaldo)",
+            json: "JSON",
             csv: "Excel (CSV)",
             txt: "Texto Simple",
             pdf: "Imprimir Todos"
@@ -1182,7 +1136,7 @@ const ES_MESSAGES = {
             obs: "OBS"
         },
         exportFiles: {
-            json: "respaldo_estudiantes_completo.json",
+            json: "lista_estudiantes_completa.json",
             csv: "reporte_estudiantes.csv",
             txt: "reporte_estudiantes.txt"
         },

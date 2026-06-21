@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Globe, X, Minimize, WifiOff, Menu, LayoutDashboard, Send } from 'lucide-react';
 
@@ -66,8 +66,6 @@ function AdminPanel() {
     excluirItem,
     publicarQuadroPublico,
     excluirSemanaELimparHistorico,
-    importarBackupParaUsuario,
-    resetarConta,
     marcarNotificacaoComoLida,
     marcarTodasNotificacoesComoLidas,
     excluirNotificacao,
@@ -80,7 +78,6 @@ function AdminPanel() {
   const [substitutionShortcutRequest, setSubstitutionShortcutRequest] = useState(null);
   const [dupModal, setDupModal] = useState({ open: false, existing: null, incoming: null, resolve: null });
 
-  const fileInputRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isOnline = useOnlineStatus();
 
@@ -382,63 +379,6 @@ function AdminPanel() {
     setAbaAtiva('designar');
   };
 
-  const handleAbrirBackup = async () => {
-    try {
-      if (window.showOpenFilePicker) {
-        const [handle] = await window.showOpenFilePicker({ types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }] });
-        const file = await handle.getFile();
-        const content = await file.text();
-        await importarBackupParaUsuario(JSON.parse(content));
-        toast.success(APP_TEXTS.backupOk);
-        return;
-      }
-      if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click(); }
-    } catch (e) { if (e.name !== 'AbortError') console.error(e); }
-  };
-
-  const handleFileInputChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const content = await file.text();
-      await importarBackupParaUsuario(JSON.parse(content));
-      toast.success(APP_TEXTS.backupOk);
-    } catch (error) {
-      toast.error(error, APP_TEXTS.backupInvalido);
-    }
-  };
-
-  const handleSalvarBackup = async () => {
-    try {
-      const jsonText = JSON.stringify(dadosSistema, null, 2);
-      const filename = `backup_${new Date().toISOString().split('T')[0]}.json`;
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({ suggestedName: filename, types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }] });
-        const writable = await handle.createWritable();
-        await writable.write(jsonText);
-        await writable.close();
-        toast.success(APP_TEXTS.backupSalvo);
-        return;
-      }
-      const url = URL.createObjectURL(new Blob([jsonText], { type: 'application/json' }));
-      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
-      toast.success(APP_TEXTS.backupSalvo);
-    } catch (e) {
-      if (e.name !== 'AbortError') toast.error(e, APP_TEXTS.backupErroSalvar);
-    }
-  };
-
-  const handleResetarTudo = async () => {
-    if (!window.confirm(APP_TEXTS.alertaReset1)) return;
-    if (!window.confirm(APP_TEXTS.alertaReset2)) return;
-    try {
-      await resetarConta();
-      toast.success(APP_TEXTS.bancoLimpo);
-    } catch (error) {
-      toast.error(error, APP_TEXTS.erroLimpar);
-    }
-  };
-
   const upsertProgramacaoComConfirmacao = async (novaProg) => {
     let nextProg = { ...novaProg, semana: (novaProg.semana || '').trim() };
     if (!nextProg.dataInicio) {
@@ -585,9 +525,7 @@ function AdminPanel() {
     <I18nProvider lang={lang}>
       {/* AS CLASSES DE IMPRESSÃO FORAM ADICIONADAS NESTA DIV (print:block print:h-auto print:overflow-visible) */}
       <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden relative print:block print:h-auto print:overflow-visible">
-        <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileInputChange} />
-
-      {dupModal.open && (
+        {dupModal.open && (
         <div className="fixed inset-0 z-[999] bg-black/60 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden p-5 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
@@ -611,9 +549,6 @@ function AdminPanel() {
           abaAtiva={abaAtiva}
           setAbaAtiva={setAbaAtiva}
           usuario={usuario}
-          handleAbrirBackup={handleAbrirBackup}
-          handleSalvarBackup={handleSalvarBackup}
-          handleResetarTudo={handleResetarTudo}
           logout={() => auth.signOut()}
           listaProgramacoes={listaProgramacoes}
           alunos={dadosSistema?.alunos || []}
@@ -766,7 +701,7 @@ function AdminPanel() {
               />
             )}
             {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} onSalvarAluno={(aluno) => salvarItem('alunos', aluno.id, aluno)} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
-            {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} importarBackup={importarBackupParaUsuario} resetarConta={resetarConta} />}
+            {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} />}
           </Suspense>
         </div>
       </main>

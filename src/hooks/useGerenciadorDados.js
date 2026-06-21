@@ -6,9 +6,6 @@ import {
     doc,
     setDoc,
     deleteDoc,
-    writeBatch,
-    getDoc,
-    getDocs,
     query,
     where,
     limit
@@ -16,7 +13,6 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import { DEFAULT_CONFIG, normalizeSystemConfig } from '../config/appConfig';
 import { getSemanaSortTimestamp } from '../utils/revisarEnviar/dates';
-import { reconcileProgramacaoIds } from '../utils/programacoes';
 import {
     deleteNotification,
     deleteReadNotifications,
@@ -25,11 +21,7 @@ import {
     NOTIFICATIONS_COLLECTION
 } from '../services/notificacoesInternas';
 import { toast } from '../utils/toast';
-import {
-    isConfiguredOwner,
-    normalizeAccessEmail,
-    resolveDataOwnerUid
-} from '../services/adminAccess';
+import { resolveDataOwnerUid } from '../services/adminAccess';
 
 const ESTADO_INICIAL = {
     configuracoes: DEFAULT_CONFIG,
@@ -142,22 +134,6 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
 
     // --- AÇÕES ---
 
-    const assertCanManageDataRecovery = async () => {
-        if (!usuario || !dataOwnerUid) throw new Error('Usuário não autenticado.');
-        if (isConfiguredOwner(usuario)) return;
-
-        const accessSnapshot = await getDoc(doc(db, `users/${dataOwnerUid}/configuracoes`, 'acessos'));
-        const admins = Array.isArray(accessSnapshot.data()?.admins)
-            ? accessSnapshot.data().admins.map(normalizeAccessEmail)
-            : [];
-
-        if (!admins.includes(normalizeAccessEmail(usuario.email))) {
-            const error = new Error('Somente administradores podem importar backup ou resetar os dados.');
-            error.code = 'permission-denied';
-            throw error;
-        }
-    };
-
     const salvarItem = async (colecao, id, objeto) => {
         if (!usuario || !dataOwnerUid) return;
         const path = `users/${dataOwnerUid}/${colecao}`;
@@ -198,110 +174,6 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
         }
     };
 
-    const importarBackupParaUsuario = async (jsonFile) => {
-        if (!usuario || !dataOwnerUid) return;
-        await assertCanManageDataRecovery();
-
-        try {
-            const dadosImport = jsonFile.dadosSistema || jsonFile;
-            const cong = normalizeSystemConfig(dadosImport.configuracoes || {});
-            const alunos = Array.isArray(dadosImport.alunos) ? dadosImport.alunos : [];
-            const programacao = Array.isArray(dadosImport.historico_reunioes) ? dadosImport.historico_reunioes :
-                Array.isArray(dadosImport.historicoreunioes) ? dadosImport.historicoreunioes :
-                    Array.isArray(jsonFile.listaProgramacoes) ? jsonFile.listaProgramacoes : [];
-
-            const batch = writeBatch(db);
-            const uid = dataOwnerUid;
-
-            const configRef = doc(db, `users/${uid}/configuracoes`, "geral");
-            batch.set(configRef, cong);
-
-            alunos.forEach(aluno => {
-                if (!aluno) return;
-                const alunoId = String(aluno.id || doc(collection(db, "temp")).id);
-                const ref = doc(db, `users/${uid}/alunos`, alunoId);
-                batch.set(ref, { ...aluno, id: alunoId });
-            });
-
-            reconcileProgramacaoIds(programacao, dados?.historico_reunioes || []).forEach(semana => {
-                if (!semana) return;
-                const semanaStr = String(semana.semana || '').trim();
-                const semanaId = String(semana.id || '').trim();
-                if (!semanaId) return;
-                const ref = doc(db, `users/${uid}/programacao`, semanaId);
-                batch.set(ref, { ...semana, semana: semanaStr, id: semanaId });
-            });
-
-            await batch.commit();
-
-        } catch (error) {
-            console.error("Erro na importação:", error);
-            throw error;
-        }
-    };
-
-    // --- NOVA FUNÇÃO: RESETAR CONTA (LIMPA TUDO) ---
-    const resetarConta = async () => {
-        if (!usuario || !dataOwnerUid) return;
-        await assertCanManageDataRecovery();
-
-        try {
-            const uid = dataOwnerUid;
-            const collections = ['alunos', 'programacao', 'confirmacoes'];
-
-            // 1. Deletar coleções privadas do usuário
-            for (const colName of collections) {
-                const colRef = collection(db, `users/${uid}/${colName}`);
-                const snapshot = await getDocs(colRef);
-
-                if (!snapshot.empty) {
-                    const batch = writeBatch(db);
-                    snapshot.docs.forEach((doc) => {
-                        batch.delete(doc.ref);
-                    });
-                    await batch.commit();
-                }
-            }
-
-            // Limpa apenas as preferências gerais. O documento de acessos
-            // pertence ao controle administrativo e deve sobreviver ao reset.
-            await deleteDoc(doc(db, `users/${uid}/configuracoes`, 'geral'));
-
-            // 2. Deletar documento do quadro público
-            const quadroRef = doc(db, 'quadros_publicos', uid);
-            await deleteDoc(quadroRef);
-
-            // 3. Deletar confirmações públicas do usuário
-            const publicConfRef = collection(db, 'confirmacoes_publicas');
-            const publicConfSnap = await getDocs(query(publicConfRef, where('ownerUid', '==', uid)));
-            if (!publicConfSnap.empty) {
-                const batch = writeBatch(db);
-                publicConfSnap.docs.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-            }
-
-            // 4. Deletar notificações associadas
-            const notificationsRef = collection(db, 'notificacoes');
-            const notificationsSnap = await getDocs(query(notificationsRef, where('ownerUid', '==', uid)));
-            if (!notificationsSnap.empty) {
-                const batch = writeBatch(db);
-                notificationsSnap.docs.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-            }
-
-            // Reseta estado local imediatamente para feedback visual
-            setDados(ESTADO_INICIAL);
-
-        } catch (error) {
-            console.error("Erro ao resetar conta:", error);
-            throw error;
-        }
-    };
-
     const marcarNotificacaoComoLida = async (id) => {
         await markNotificationRead(id);
     };
@@ -330,8 +202,6 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
         excluirItem,
         publicarQuadroPublico,
         excluirSemanaELimparHistorico,
-        importarBackupParaUsuario,
-        resetarConta,
         marcarNotificacaoComoLida,
         marcarTodasNotificacoesComoLidas,
         excluirNotificacao,

@@ -1,71 +1,23 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import {
     Settings,
-    Download,
-    Upload,
-    AlertTriangle,
-    FileJson,
     Building2,
     Calendar as CalendarIcon,
     Clock,
     Globe,
-    ChevronDown,
-    CheckCircle,
-    X
+    ChevronDown
 } from 'lucide-react';
-import { toast } from '../utils/toast';
 import { useSectionMessages } from '../i18n';
 import { getWeekdayOptions, normalizeLanguage, normalizeMeetingDay } from '../config/appConfig';
 import UserAccessManager from './UserAccessManager';
 
-export default function Configuracoes({ dados, salvarAlteracao, lang, importarBackup, resetarConta }) {
-    const fileInputRef = useRef(null);
-    const [processando, setProcessando] = useState(false);
-    const [backupPreview, setBackupPreview] = useState(null);
-    const [accessRole, setAccessRole] = useState('user');
-    const canManageDataRecovery = accessRole === 'owner' || accessRole === 'admin';
-
-    // ESTADO LOCAL para o nome da congregação (Evita o "piscar" das letras)
-    const [nomeCongLocal, setNomeCongLocal] = useState('');
-
-    // Sincroniza o estado local quando os dados da nuvem chegam
-    useEffect(() => {
-        if (dados?.configuracoes?.nome_cong) {
-            setNomeCongLocal(dados.configuracoes.nome_cong);
-        }
-    }, [dados?.configuracoes?.nome_cong]);
-
+export default function Configuracoes({ dados, salvarAlteracao, lang }) {
     const T = useSectionMessages('configuracoes');
     const activeLocale = normalizeLanguage(lang);
     const isPortugueseActive = activeLocale === 'pt';
     const isSpanishActive = activeLocale === 'es';
     const meetingDay = normalizeMeetingDay(dados?.configuracoes?.dia_reuniao);
     const weekdayOptions = getWeekdayOptions(lang);
-    const previewTexts = activeLocale === 'es'
-        ? {
-            titulo: 'Revisar restauración',
-            desc: 'Confirma el contenido antes de reemplazar los datos actuales.',
-            alunos: 'estudiantes',
-            semanas: 'semanas',
-            config: 'configuración',
-            arquivo: 'archivo',
-            cancelar: 'Cancelar',
-            confirmar: 'Restaurar ahora',
-            semConfig: 'sin configuración',
-            restrito: 'Solo administradores pueden restaurar o reiniciar los datos.'
-        }
-        : {
-            titulo: 'Revisar restauração',
-            desc: 'Confira o conteúdo antes de substituir os dados atuais.',
-            alunos: 'alunos',
-            semanas: 'semanas',
-            config: 'configuração',
-            arquivo: 'arquivo',
-            cancelar: 'Cancelar',
-            confirmar: 'Restaurar agora',
-            semConfig: 'sem configuração',
-            restrito: 'Somente administradores podem restaurar ou resetar os dados.'
-        };
     const atualizarConfig = (campo, valor) => {
         salvarAlteracao({
             ...dados,
@@ -73,184 +25,8 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
         });
     };
 
-    // --- 1. EXPORTAR (DOWNLOAD) ---
-    const realizarBackup = () => {
-        const dataStr = new Date().toISOString().split('T')[0];
-        const nomeArquivo = `backup_congregacao_${dataStr}.json`;
-
-        const backupCompleto = {
-            meta_dados: {
-                versao: "2.1 (Firebase)",
-                data_exportacao: new Date().toISOString(),
-                origem: "Sistema Web"
-            },
-            configuracoes: dados.configuracoes || {},
-            alunos: dados.alunos || [],
-            historico_reunioes: dados.historico_reunioes || []
-        };
-
-        const jsonString = JSON.stringify(backupCompleto, null, 2);
-        const blob = new Blob([jsonString], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = nomeArquivo;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    // --- 2. GATILHO PARA ABRIR O SELETOR DE ARQUIVOS ---
-    const abrirSeletorArquivo = () => {
-        if (!canManageDataRecovery) {
-            toast.info(previewTexts.restrito);
-            return;
-        }
-        fileInputRef.current.click();
-    };
-
-    const montarPreviewBackup = (jsonImportado, fileName = '') => {
-        const dadosImport = jsonImportado.dadosSistema || jsonImportado;
-        const alunos = Array.isArray(dadosImport.alunos) ? dadosImport.alunos : [];
-        const programacao = Array.isArray(dadosImport.historico_reunioes) ? dadosImport.historico_reunioes :
-            Array.isArray(dadosImport.historicoreunioes) ? dadosImport.historicoreunioes :
-                Array.isArray(jsonImportado.listaProgramacoes) ? jsonImportado.listaProgramacoes : [];
-        const configuracoes = dadosImport.configuracoes || {};
-
-        return {
-            fileName,
-            json: jsonImportado,
-            alunos: alunos.length,
-            semanas: programacao.length,
-            configuracoes: Object.keys(configuracoes).length,
-            nomeCong: configuracoes.nome_cong || ''
-        };
-    };
-
-    // --- 3. PROCESSAR O ARQUIVO SELECIONADO ---
-    const handleArquivoSelecionado = async (e) => {
-        if (!canManageDataRecovery) {
-            e.target.value = '';
-            toast.info(previewTexts.restrito);
-            return;
-        }
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        try {
-            const text = await file.text();
-            const jsonImportado = JSON.parse(text);
-            setBackupPreview(montarPreviewBackup(jsonImportado, file.name));
-            e.target.value = '';
-
-        } catch (error) {
-            console.error(error);
-            toast.error(error, T.erro.trim());
-        }
-    };
-
-    const confirmarRestauracaoPreview = async () => {
-        if (!backupPreview?.json) return;
-        if (!canManageDataRecovery) {
-            setBackupPreview(null);
-            toast.info(previewTexts.restrito);
-            return;
-        }
-
-        setProcessando(true);
-        try {
-            if (resetarConta) {
-                await resetarConta();
-            }
-
-            await importarBackup(backupPreview.json);
-
-            toast.success(T.sucesso);
-            setBackupPreview(null);
-        } catch (error) {
-            console.error(error);
-            toast.error(error, T.erro.trim());
-        } finally {
-            setProcessando(false);
-        }
-    };
-
     return (
         <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6 px-3 pt-3 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500 sm:p-6">
-
-            <input
-                type="file"
-                ref={fileInputRef}
-                accept=".json"
-                disabled={!canManageDataRecovery}
-                style={{ display: 'none' }}
-                onChange={handleArquivoSelecionado}
-            />
-
-            {backupPreview && (
-                <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
-                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
-                            <div>
-                                <h3 className="text-lg font-black text-slate-900">{previewTexts.titulo}</h3>
-                                <p className="mt-1 text-sm text-slate-500">{previewTexts.desc}</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setBackupPreview(null)}
-                                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <div className="space-y-3 p-5">
-                            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold text-slate-500">
-                                <span className="uppercase tracking-widest">{previewTexts.arquivo}</span>
-                                <p className="mt-1 truncate text-sm text-slate-800">{backupPreview.fileName}</p>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-center">
-                                    <p className="text-2xl font-black text-blue-800">{backupPreview.alunos}</p>
-                                    <p className="text-[10px] font-black uppercase text-blue-500">{previewTexts.alunos}</p>
-                                </div>
-                                <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-3 text-center">
-                                    <p className="text-2xl font-black text-indigo-800">{backupPreview.semanas}</p>
-                                    <p className="text-[10px] font-black uppercase text-indigo-500">{previewTexts.semanas}</p>
-                                </div>
-                                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-center">
-                                    <p className="text-2xl font-black text-emerald-800">{backupPreview.configuracoes ? <CheckCircle className="mx-auto mt-1" size={22} /> : '0'}</p>
-                                    <p className="text-[10px] font-black uppercase text-emerald-500">{previewTexts.config}</p>
-                                </div>
-                            </div>
-
-                            <p className="rounded-2xl bg-rose-50 p-3 text-xs font-bold leading-relaxed text-rose-700">
-                                {T.confirmarRestauracao}
-                            </p>
-                        </div>
-
-                        <div className="flex gap-2 border-t border-slate-100 p-5">
-                            <button
-                                type="button"
-                                onClick={() => setBackupPreview(null)}
-                                className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50"
-                            >
-                                {previewTexts.cancelar}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={confirmarRestauracaoPreview}
-                                disabled={processando}
-                                className="flex-1 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-rose-200 transition hover:bg-rose-700 disabled:bg-rose-300"
-                            >
-                                {processando ? T.processando : previewTexts.confirmar}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <div className="flex items-center gap-3 mb-6 sm:mb-8">
                 <div className="bg-blue-600 p-2.5 sm:p-3 rounded-2xl shadow-lg shadow-blue-200 shrink-0">
@@ -279,9 +55,9 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                             <input
                                 type="text"
                                 placeholder={T.placeholderCongregacao}
-                                value={nomeCongLocal}
-                                onChange={(e) => setNomeCongLocal(e.target.value)}
-                                onBlur={() => atualizarConfig('nome_cong', nomeCongLocal)}
+                                key={dados?.configuracoes?.nome_cong || ''}
+                                defaultValue={dados?.configuracoes?.nome_cong || ''}
+                                onBlur={(e) => atualizarConfig('nome_cong', e.currentTarget.value)}
                                 className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-slate-800 font-bold text-base sm:text-sm"
                             />
                         </div>
@@ -327,7 +103,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                 </div>
             </div>
 
-            <UserAccessManager lang={activeLocale} onRoleChange={setAccessRole} />
+            <UserAccessManager lang={activeLocale} />
 
             <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
@@ -351,56 +127,6 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                         🇪🇸 Español
                     </button>
                 </div>
-            </div>
-
-            <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${canManageDataRecovery ? 'sm:grid-cols-2' : ''}`}>
-                <div className="bg-emerald-50 border-2 border-emerald-100 p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] flex flex-col justify-between transition-colors hover:border-emerald-200">
-                    <div>
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-600 mb-4">
-                            <Download size={20} className="sm:w-6 sm:h-6" />
-                        </div>
-                        <h3 className="font-black text-emerald-900 text-base sm:text-lg mb-1.5">{T.backupTitulo}</h3>
-                        <p className="text-xs sm:text-sm text-emerald-700 font-medium mb-6 leading-relaxed">
-                            {T.backupDesc}
-                        </p>
-                    </div>
-                    <button
-                        onClick={realizarBackup}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm sm:text-base"
-                    >
-                        <FileJson size={18} /> {T.btnBaixar}
-                    </button>
-                </div>
-
-                {canManageDataRecovery && (
-                <div className="bg-rose-50 border-2 border-rose-100 p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] flex flex-col justify-between transition-colors hover:border-rose-200">
-                    <div>
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-100 rounded-xl sm:rounded-2xl flex items-center justify-center text-rose-600 mb-4">
-                            <AlertTriangle size={20} className="sm:w-6 sm:h-6" />
-                        </div>
-                        <h3 className="font-black text-rose-900 text-base sm:text-lg mb-1.5">{T.restaurarTitulo}</h3>
-                        <p className="text-xs sm:text-sm text-rose-700 font-medium mb-6 leading-relaxed">
-                            {T.restaurarDesc}
-                        </p>
-                    </div>
-                    <button
-                        onClick={abrirSeletorArquivo}
-                        disabled={processando}
-                        className="w-full bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-rose-200 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm sm:text-base"
-                    >
-                        {processando ? (
-                            <span className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                {T.processando}
-                            </span>
-                        ) : (
-                            <>
-                                <Upload size={18} /> {T.btnRestaurar}
-                            </>
-                        )}
-                    </button>
-                </div>
-                )}
             </div>
         </div>
     );

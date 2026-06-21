@@ -168,7 +168,7 @@ Valores canônicos aceitos internamente:
 
 Compatibilidade:
 
-- backups e dados antigos com valores como `Segunda-feira`, `Terça-feira`, `Lunes`, `Martes` continuam funcionando
+- dados legados com valores como `Segunda-feira`, `Terça-feira`, `Lunes`, `Martes` continuam funcionando
 - a normalização converte esses valores antigos automaticamente para o formato canônico
 
 ### Fluxo recomendado para novas telas
