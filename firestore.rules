@@ -6,14 +6,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function ownerUid() {
+    function dataOwnerUid() {
       return "X8GNogUkSlNyzsjjyRHIlXA31FL2";
+    }
+
+    function primaryOwnerUid() {
+      return "gubeVvLdUsRySGKrcn9G2G9xxJg1";
     }
 
     function isOwnerUser(userId) {
       return isSignedIn()
-        && userId == ownerUid()
-        && request.auth.uid == ownerUid();
+        && userId == dataOwnerUid()
+        && request.auth.uid == primaryOwnerUid();
     }
 
     function accessConfig(userId) {
@@ -22,9 +26,26 @@ service cloud.firestore {
 
     function isGrantedUser(userId) {
       return isSignedIn()
-        && userId == ownerUid()
+        && userId == dataOwnerUid()
         && exists(/databases/$(database)/documents/users/$(userId)/configuracoes/acessos)
         && request.auth.token.email in accessConfig(userId).data.emails;
+    }
+
+    function isAccessAdmin(userId) {
+      return isOwnerUser(userId) || (
+        isGrantedUser(userId)
+        && request.auth.token.email in accessConfig(userId).data.get("admins", [])
+      );
+    }
+
+    function isValidAccessConfig() {
+      return request.resource.data.keys().hasOnly(["ownerUid", "emails", "admins", "updatedAtIso"])
+        && request.resource.data.ownerUid == primaryOwnerUid()
+        && request.resource.data.emails is list
+        && request.resource.data.admins is list
+        && request.resource.data.emails.size() <= 50
+        && request.resource.data.admins.size() <= 50
+        && request.resource.data.emails.hasAll(request.resource.data.admins);
     }
 
     function canManageOwner(userId) {
@@ -251,10 +272,12 @@ service cloud.firestore {
       allow write: if (
           docId == "acessos"
           && isOwnerUser(userId)
-          && request.resource.data.keys().hasOnly(["ownerUid", "emails", "updatedAtIso"])
-          && request.resource.data.ownerUid == userId
-          && request.resource.data.emails is list
-          && request.resource.data.emails.size() <= 50
+          && isValidAccessConfig()
+        ) || (
+          docId == "acessos"
+          && isAccessAdmin(userId)
+          && isValidAccessConfig()
+          && request.resource.data.admins == resource.data.get("admins", [])
         ) || (
           docId != "acessos"
           && isAdminUser(userId)

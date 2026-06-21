@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import {
     getConfiguredOwnerEmail,
+    getConfiguredDataOwnerUid,
     getConfiguredOwnerUid,
     isConfiguredOwner,
     normalizeAccessEmail
@@ -17,12 +18,16 @@ const COPY = {
         title: 'Controle de usuários',
         description: 'Os usuários autorizados acessam esta mesma congregação. O cadastro não cria uma nova congregação.',
         owner: 'Proprietário',
-        additional: 'Usuários adicionais',
+        admin: 'Administrador',
+        user: 'Usuário',
         placeholder: 'email@gmail.com',
         add: 'Adicionar',
         remove: 'Remover acesso',
         empty: 'Nenhum usuário adicional cadastrado.',
-        ownerOnly: 'Somente o proprietário pode adicionar ou remover usuários.',
+        ownerOnly: 'Somente administradores podem adicionar ou remover usuários.',
+        adminManagement: 'Administradores podem adicionar e remover usuários. Somente o proprietário define outros administradores.',
+        makeAdmin: 'Tornar administrador',
+        removeAdmin: 'Remover como administrador',
         invalidEmail: 'Informe um email válido.',
         duplicateEmail: 'Este email já possui acesso.',
         ownerEmail: 'O proprietário já possui acesso permanente.',
@@ -34,12 +39,16 @@ const COPY = {
         title: 'Control de usuarios',
         description: 'Los usuarios autorizados acceden a esta misma congregación. El registro no crea otra congregación.',
         owner: 'Propietario',
-        additional: 'Usuarios adicionales',
+        admin: 'Administrador',
+        user: 'Usuario',
         placeholder: 'correo@gmail.com',
         add: 'Agregar',
         remove: 'Quitar acceso',
         empty: 'No hay usuarios adicionales registrados.',
-        ownerOnly: 'Solo el propietario puede agregar o quitar usuarios.',
+        ownerOnly: 'Solo los administradores pueden agregar o quitar usuarios.',
+        adminManagement: 'Los administradores pueden agregar y quitar usuarios. Solo el propietario define otros administradores.',
+        makeAdmin: 'Hacer administrador',
+        removeAdmin: 'Quitar como administrador',
         invalidEmail: 'Introduzca un correo válido.',
         duplicateEmail: 'Este correo ya tiene acceso.',
         ownerEmail: 'El propietario ya tiene acceso permanente.',
@@ -51,18 +60,21 @@ const COPY = {
 
 export default function UserAccessManager({ lang = 'pt' }) {
     const texts = COPY[lang === 'es' ? 'es' : 'pt'];
+    const dataOwnerUid = getConfiguredDataOwnerUid();
     const ownerUid = getConfiguredOwnerUid();
     const ownerEmail = getConfiguredOwnerEmail();
     const currentUser = auth.currentUser;
-    const canManage = isConfiguredOwner(currentUser);
+    const isOwner = isConfiguredOwner(currentUser);
+    const currentEmail = normalizeAccessEmail(currentUser?.email);
     const [emails, setEmails] = useState([]);
+    const [admins, setAdmins] = useState([]);
     const [emailInput, setEmailInput] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
     const accessRef = useMemo(
-        () => ownerUid ? doc(db, 'users', ownerUid, 'configuracoes', 'acessos') : null,
-        [ownerUid]
+        () => dataOwnerUid ? doc(db, 'users', dataOwnerUid, 'configuracoes', 'acessos') : null,
+        [dataOwnerUid]
     );
 
     useEffect(() => {
@@ -75,7 +87,11 @@ export default function UserAccessManager({ lang = 'pt' }) {
             const nextEmails = Array.isArray(snapshot.data()?.emails)
                 ? snapshot.data().emails.map(normalizeAccessEmail).filter(Boolean)
                 : [];
+            const nextAdmins = Array.isArray(snapshot.data()?.admins)
+                ? snapshot.data().admins.map(normalizeAccessEmail).filter(Boolean)
+                : [];
             setEmails([...new Set(nextEmails)].sort());
+            setAdmins([...new Set(nextAdmins)].sort());
             setLoading(false);
         }, (error) => {
             console.error('Erro ao carregar acessos:', error);
@@ -84,16 +100,33 @@ export default function UserAccessManager({ lang = 'pt' }) {
         });
     }, [accessRef, currentUser, texts.loadError]);
 
-    const saveEmails = async (nextEmails) => {
+    const canManage = isOwner || admins.includes(currentEmail);
+
+    const updateAccess = async (updater) => {
         if (!accessRef || !canManage) return;
 
         setSaving(true);
         try {
-            await setDoc(accessRef, {
-                ownerUid,
-                emails: [...new Set(nextEmails.map(normalizeAccessEmail).filter(Boolean))].sort(),
-                updatedAtIso: new Date().toISOString()
-            }, { merge: false });
+            await runTransaction(db, async (transaction) => {
+                const snapshot = await transaction.get(accessRef);
+                const currentEmails = Array.isArray(snapshot.data()?.emails)
+                    ? snapshot.data().emails.map(normalizeAccessEmail).filter(Boolean)
+                    : [];
+                const currentAdmins = Array.isArray(snapshot.data()?.admins)
+                    ? snapshot.data().admins.map(normalizeAccessEmail).filter(Boolean)
+                    : [];
+                const next = updater({
+                    emails: [...new Set(currentEmails)],
+                    admins: [...new Set(currentAdmins)]
+                });
+
+                transaction.set(accessRef, {
+                    ownerUid,
+                    emails: [...new Set(next.emails.map(normalizeAccessEmail).filter(Boolean))].sort(),
+                    admins: [...new Set(next.admins.map(normalizeAccessEmail).filter(Boolean))].sort(),
+                    updatedAtIso: new Date().toISOString()
+                });
+            });
             toast.success(texts.saved);
         } catch (error) {
             console.error('Erro ao salvar acessos:', error);
@@ -120,12 +153,31 @@ export default function UserAccessManager({ lang = 'pt' }) {
             return;
         }
 
-        await saveEmails([...emails, email]);
+        await updateAccess((current) => ({
+            ...current,
+            emails: [...current.emails, email]
+        }));
         setEmailInput('');
     };
 
     const handleRemove = async (email) => {
-        await saveEmails(emails.filter((item) => item !== email));
+        await updateAccess((current) => ({
+            emails: current.emails.filter((item) => item !== email),
+            admins: isOwner
+                ? current.admins.filter((item) => item !== email)
+                : current.admins
+        }));
+    };
+
+    const handleToggleAdmin = async (email) => {
+        if (!isOwner) return;
+
+        await updateAccess((current) => ({
+            ...current,
+            admins: current.admins.includes(email)
+                ? current.admins.filter((item) => item !== email)
+                : [...current.admins, email]
+        }));
     };
 
     return (
@@ -154,13 +206,31 @@ export default function UserAccessManager({ lang = 'pt' }) {
                     <div className="px-4 py-4 text-sm font-medium text-slate-400">...</div>
                 ) : emails.length === 0 ? (
                     <div className="px-4 py-4 text-sm font-medium text-slate-400">{texts.empty}</div>
-                ) : emails.map((email) => (
-                    <div key={email} className="flex items-center gap-3 px-4 py-3">
+                ) : emails.map((email) => {
+                    const emailIsAdmin = admins.includes(email);
+                    const canRemoveEmail = canManage && (isOwner || !emailIsAdmin);
+
+                    return (
+                    <div key={email} className="flex items-center gap-2 px-4 py-3">
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-bold text-slate-700">{email}</p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{texts.additional}</p>
+                            <p className={`text-[10px] font-black uppercase tracking-widest ${emailIsAdmin ? 'text-cyan-700' : 'text-slate-400'}`}>
+                                {emailIsAdmin ? texts.admin : texts.user}
+                            </p>
                         </div>
-                        {canManage && (
+                        {isOwner && (
+                            <button
+                                type="button"
+                                onClick={() => handleToggleAdmin(email)}
+                                disabled={saving}
+                                className={`rounded-xl p-2 transition disabled:opacity-40 ${emailIsAdmin ? 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100' : 'text-slate-400 hover:bg-cyan-50 hover:text-cyan-700'}`}
+                                title={emailIsAdmin ? texts.removeAdmin : texts.makeAdmin}
+                                aria-label={`${emailIsAdmin ? texts.removeAdmin : texts.makeAdmin}: ${email}`}
+                            >
+                                <ShieldCheck size={17} />
+                            </button>
+                        )}
+                        {canRemoveEmail && (
                             <button
                                 type="button"
                                 onClick={() => handleRemove(email)}
@@ -173,7 +243,8 @@ export default function UserAccessManager({ lang = 'pt' }) {
                             </button>
                         )}
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             {canManage ? (
@@ -196,6 +267,9 @@ export default function UserAccessManager({ lang = 'pt' }) {
                 </form>
             ) : (
                 <p className="mt-4 text-xs font-semibold text-slate-500">{texts.ownerOnly}</p>
+            )}
+            {canManage && (
+                <p className="mt-3 text-xs font-semibold text-slate-500">{texts.adminManagement}</p>
             )}
         </section>
     );
