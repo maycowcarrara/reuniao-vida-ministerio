@@ -263,7 +263,7 @@ service cloud.firestore {
 
     match /users/{userId}/programacao/{docId} {
       allow get: if true;
-      allow list: if false;
+      allow list: if isAdminUser(userId);
       allow write: if isAdminUser(userId);
     }
 
