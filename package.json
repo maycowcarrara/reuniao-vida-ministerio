@@ -1,7 +1,7 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "4.7.253",
+  "version": "4.7.257",
   "type": "module",
   "scripts": {
     "predev": "npm version patch --no-git-tag-version",
@@ -14,7 +14,17 @@
     "preview": "vite preview",
     "deploy": "npm run build && firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
-    "deploy:all": "npm run build && firebase deploy"
+    "deploy:all": "npm run build && firebase deploy",
+    "firebase:new:deploy:rules": "firebase deploy --project rvm-palmas-pr --only firestore:rules",
+    "firebase:new:deploy:hosting": "npm run build && firebase deploy --project rvm-palmas-pr --only hosting",
+    "firebase:new:deploy:all": "npm run build && firebase deploy --project rvm-palmas-pr",
+    "migrate:auth:dry": "node scripts/firebase-migration/migrate-auth-users.mjs --dry-run",
+    "migrate:auth": "node scripts/firebase-migration/migrate-auth-users.mjs --execute --yes",
+    "migrate:firestore:dry": "node scripts/firebase-migration/migrate-firestore.mjs --dry-run",
+    "migrate:firestore": "node scripts/firebase-migration/migrate-firestore.mjs --execute --yes",
+    "migrate:indexes:dry": "node scripts/firebase-migration/migrate-indexes.mjs --dry-run",
+    "migrate:indexes": "node scripts/firebase-migration/migrate-indexes.mjs --execute --yes",
+    "migrate:verify": "node scripts/firebase-migration/verify-target.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -38,6 +48,8 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "firebase-admin": "^14.0.0",
+    "firebase-tools": "^15.22.0",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",

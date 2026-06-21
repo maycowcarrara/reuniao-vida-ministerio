@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "vidaeministerio"
+    "default": "rvm-palmas-pr",
+    "old": "vidaeministerio",
+    "new": "rvm-palmas-pr"
   }
 }
