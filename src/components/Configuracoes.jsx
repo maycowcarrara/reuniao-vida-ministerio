@@ -16,6 +16,7 @@ import {
 import { toast } from '../utils/toast';
 import { useSectionMessages } from '../i18n';
 import { getWeekdayOptions, normalizeLanguage, normalizeMeetingDay } from '../config/appConfig';
+import UserAccessManager from './UserAccessManager';
 
 export default function Configuracoes({ dados, salvarAlteracao, lang, importarBackup, resetarConta }) {
     const fileInputRef = useRef(null);
@@ -306,6 +307,8 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, importarBa
                     </div>
                 </div>
             </div>
+
+            <UserAccessManager lang={activeLocale} />
 
             <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>

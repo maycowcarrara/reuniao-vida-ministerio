@@ -6,17 +6,33 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAdminEmail() {
-      return request.auth.token.email in [
-        "maycowcarrara@gmail.com",
-        "carraramaycow@gmail.com"
-      ];
+    function ownerUid() {
+      return "X8GNogUkSlNyzsjjyRHIlXA31FL2";
+    }
+
+    function isOwnerUser(userId) {
+      return isSignedIn()
+        && userId == ownerUid()
+        && request.auth.uid == ownerUid();
+    }
+
+    function accessConfig(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)/configuracoes/acessos);
+    }
+
+    function isGrantedUser(userId) {
+      return isSignedIn()
+        && userId == ownerUid()
+        && exists(/databases/$(database)/documents/users/$(userId)/configuracoes/acessos)
+        && request.auth.token.email in accessConfig(userId).data.emails;
+    }
+
+    function canManageOwner(userId) {
+      return isOwnerUser(userId) || isGrantedUser(userId);
     }
 
     function isAdminUser(userId) {
-      return isSignedIn()
-        && request.auth.uid == userId
-        && isAdminEmail();
+      return canManageOwner(userId);
     }
 
     function isConfirmationStatus(status) {
@@ -230,15 +246,29 @@ service cloud.firestore {
     }
 
     match /users/{userId}/configuracoes/{docId} {
-      allow get: if true;
+      allow get: if docId != "acessos" || canManageOwner(userId);
       allow list: if false;
-      allow write: if isAdminUser(userId);
+      allow write: if (
+          docId == "acessos"
+          && isOwnerUser(userId)
+          && request.resource.data.keys().hasOnly(["ownerUid", "emails", "updatedAtIso"])
+          && request.resource.data.ownerUid == userId
+          && request.resource.data.emails is list
+          && request.resource.data.emails.size() <= 50
+        ) || (
+          docId != "acessos"
+          && isAdminUser(userId)
+        );
     }
 
     match /users/{userId}/programacao/{docId} {
       allow get: if true;
       allow list: if false;
       allow write: if isAdminUser(userId);
+    }
+
+    match /users/{userId}/alunos/{docId} {
+      allow read, write: if isAdminUser(userId);
     }
 
     match /users/{userId}/confirmacoes/{assignmentKey} {
@@ -253,27 +283,18 @@ service cloud.firestore {
       allow delete: if isAdminUser(userId);
     }
 
-    match /users/{userId}/{document=**} {
-      allow read, write: if isAdminUser(userId);
-    }
-
     match /confirmacoes_publicas/{token} {
       allow get: if true;
       allow list: if false;
       allow create: if isSignedIn()
-        && request.resource.data.ownerUid == request.auth.uid
-        && isAdminEmail()
+        && canManageOwner(request.resource.data.ownerUid)
         && request.resource.data.keys().hasOnly(confirmationBaseKeys())
         && isConfirmationStatus(request.resource.data.status)
         && isWeekReminderStatus(request.resource.data.weekReminderStatus);
       allow update: if (
-          isSignedIn()
-          && request.auth.uid == resource.data.ownerUid
-          && isAdminEmail()
+          canManageOwner(resource.data.ownerUid)
         ) || isValidPublicConfirmationUpdate();
-      allow delete: if isSignedIn()
-        && request.auth.uid == resource.data.ownerUid
-        && isAdminEmail();
+      allow delete: if canManageOwner(resource.data.ownerUid);
     }
 
     match /quadros_publicos/{userId} {
@@ -290,30 +311,21 @@ service cloud.firestore {
     }
 
     match /notificacoes/{notificationId} {
-      allow read: if isSignedIn()
-        && request.auth.uid == resource.data.ownerUid
-        && isAdminEmail();
+      allow read: if canManageOwner(resource.data.ownerUid);
 
       allow create: if request.resource.data.id == notificationId
         && (
-          (
-            isSignedIn()
-            && request.auth.uid == request.resource.data.ownerUid
-            && isAdminEmail()
-          ) || isValidNotificationCreate()
+          canManageOwner(request.resource.data.ownerUid)
+          || isValidNotificationCreate()
         );
 
-      allow update: if isSignedIn()
-        && request.auth.uid == resource.data.ownerUid
-        && isAdminEmail()
+      allow update: if canManageOwner(resource.data.ownerUid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           "readAt",
           "readAtIso"
         ]);
 
-      allow delete: if isSignedIn()
-        && request.auth.uid == resource.data.ownerUid
-        && isAdminEmail();
+      allow delete: if canManageOwner(resource.data.ownerUid);
     }
   }
 }

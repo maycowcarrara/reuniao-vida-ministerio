@@ -26,6 +26,7 @@ import {
 } from './utils/programacoes';
 import { normalizeLanguage, normalizeMeetingDay, normalizeSystemConfig, syncDocumentLanguage } from './config/appConfig';
 import { getSectionMessages, I18nProvider } from './i18n';
+import { resolveDataOwnerUid } from './services/adminAccess';
 
 const LOCAL_ADMIN_UID_KEY = 'quadro_admin_uid';
 
@@ -821,7 +822,7 @@ function App() {
       if (typeof window !== 'undefined') {
         try {
           if (user?.uid) {
-            window.localStorage.setItem(LOCAL_ADMIN_UID_KEY, user.uid);
+            window.localStorage.setItem(LOCAL_ADMIN_UID_KEY, resolveDataOwnerUid(user));
           }
         } catch {
           // Ignora falhas de storage e segue com o fluxo normal do app.

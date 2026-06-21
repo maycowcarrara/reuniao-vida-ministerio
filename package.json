@@ -16,6 +16,7 @@
     "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy:all": "npm run build && firebase deploy",
     "firebase:new:deploy:rules": "firebase deploy --project rvm-palmas-pr --only firestore:rules",
+    "firebase:new:deploy:indexes": "firebase deploy --project rvm-palmas-pr --only firestore:indexes",
     "firebase:new:deploy:hosting": "npm run build && firebase deploy --project rvm-palmas-pr --only hosting",
     "firebase:new:deploy:all": "npm run build && firebase deploy --project rvm-palmas-pr",
     "migrate:auth:dry": "node scripts/firebase-migration/migrate-auth-users.mjs --dry-run",

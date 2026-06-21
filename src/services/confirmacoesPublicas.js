@@ -17,6 +17,7 @@ import { createInternalNotification } from './notificacoesInternas';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../utils/eventos';
 import { isBibleStudyPart, isPrayerPart } from '../utils/meetingParts';
+import { resolveDataOwnerUid } from './adminAccess';
 
 const PRIVATE_COLLECTION = 'confirmacoes';
 const PUBLIC_COLLECTION = 'confirmacoes_publicas';
@@ -25,12 +26,12 @@ const TOKEN_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxy
 const PRIMARY_STATUSES = ['pendente', 'confirmado', 'nao_pode'];
 const WEEK_REMINDER_STATUSES = ['nao_enviado', 'pendente', 'confirmado', 'imprevisto'];
 
-const getCurrentUser = () => {
+const getCurrentOwnerUid = () => {
     const user = auth.currentUser;
     if (!user?.uid) {
         throw new Error('Usuário autenticado não encontrado para gerar confirmação.');
     }
-    return user;
+    return resolveDataOwnerUid(user);
 };
 
 const randomIndex = (max) => {
@@ -271,7 +272,7 @@ const validateConfirmationTarget = async (confirmationData = {}) => {
         return findAssignmentInWeeks(publicBoard.historico_reunioes, config);
     }
 
-    const canReadPrivateProgram = auth.currentUser?.uid === ownerUid;
+    const canReadPrivateProgram = resolveDataOwnerUid(auth.currentUser) === ownerUid;
     if (!canReadPrivateProgram) {
         return { isUnavailable: false, unavailableReason: 'validation_unavailable' };
     }
@@ -325,14 +326,14 @@ export const ensurePublicConfirmation = async ({
     sala = 'Principal',
     secao = ''
 }) => {
-    const user = getCurrentUser();
+    const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
 
     if (!safeKey) {
         throw new Error('Chave da designação ausente para gerar confirmação.');
     }
 
-    const privateRef = buildPrivateRef(user.uid, safeKey);
+    const privateRef = buildPrivateRef(ownerUid, safeKey);
     const privateSnap = await getDoc(privateRef);
     const privateData = privateSnap.exists() ? privateSnap.data() : {};
 
@@ -351,7 +352,7 @@ export const ensurePublicConfirmation = async ({
     const baseData = {
         token,
         assignmentKey: safeKey,
-        ownerUid: user.uid,
+        ownerUid,
         lang: normalizeLanguage(lang),
         semana: semana || '',
         dataISO: dataISO || '',
@@ -562,13 +563,13 @@ export const respondToPublicWeekReminder = async (token, status, options = {}) =
     updateConfirmationState(token, 'week', status, options);
 
 export const respondToConfirmationByAssignment = async (assignmentKey, status, options = {}) => {
-    const user = getCurrentUser();
+    const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
     if (!safeKey) {
         throw new Error('Chave da designação inválida.');
     }
 
-    const privateSnap = await getDoc(buildPrivateRef(user.uid, safeKey));
+    const privateSnap = await getDoc(buildPrivateRef(ownerUid, safeKey));
     if (!privateSnap.exists()) {
         throw new Error('Confirmação ainda não foi preparada para esta designação.');
     }
@@ -582,13 +583,13 @@ export const respondToConfirmationByAssignment = async (assignmentKey, status, o
 };
 
 export const respondToWeekReminderByAssignment = async (assignmentKey, status, options = {}) => {
-    const user = getCurrentUser();
+    const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
     if (!safeKey) {
         throw new Error('Chave da designação inválida.');
     }
 
-    const privateSnap = await getDoc(buildPrivateRef(user.uid, safeKey));
+    const privateSnap = await getDoc(buildPrivateRef(ownerUid, safeKey));
     if (!privateSnap.exists()) {
         throw new Error('Confirmação ainda não foi preparada para esta designação.');
     }
@@ -602,11 +603,11 @@ export const respondToWeekReminderByAssignment = async (assignmentKey, status, o
 };
 
 export const registerConfirmationReminder = async (assignmentKey) => {
-    const user = getCurrentUser();
+    const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
     if (!safeKey) return;
 
-    const privateRef = buildPrivateRef(user.uid, safeKey);
+    const privateRef = buildPrivateRef(ownerUid, safeKey);
     const privateSnap = await getDoc(privateRef);
     if (!privateSnap.exists()) return;
 
@@ -629,12 +630,12 @@ export const registerConfirmationReminder = async (assignmentKey) => {
 };
 
 export const registerNotificationChannelByAssignment = async (assignmentKey, channel) => {
-    const user = getCurrentUser();
+    const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
     const safeChannel = String(channel || '').trim();
     if (!safeKey || !safeChannel) return;
 
-    const privateRef = buildPrivateRef(user.uid, safeKey);
+    const privateRef = buildPrivateRef(ownerUid, safeKey);
     const privateSnap = await getDoc(privateRef);
     if (!privateSnap.exists()) return;
 

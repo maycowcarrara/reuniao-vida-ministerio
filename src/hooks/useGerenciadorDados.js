@@ -24,6 +24,7 @@ import {
     NOTIFICATIONS_COLLECTION
 } from '../services/notificacoesInternas';
 import { toast } from '../utils/toast';
+import { resolveDataOwnerUid } from '../services/adminAccess';
 
 const ESTADO_INICIAL = {
     configuracoes: DEFAULT_CONFIG,
@@ -38,6 +39,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
     const [notificacoes, setNotificacoes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [accessError, setAccessError] = useState(null);
+    const dataOwnerUid = resolveDataOwnerUid(usuario);
 
     // 1. Monitorar Login
     useEffect(() => {
@@ -61,7 +63,8 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
     useEffect(() => {
         if (!usuario) return;
 
-        const uid = usuario.uid;
+        const uid = dataOwnerUid;
+        if (!uid) return;
         const basePath = `users/${uid}`;
         let handledPermissionError = false;
 
@@ -130,13 +133,13 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
             unsubConfirmacoes();
             unsubNotifications();
         };
-    }, [usuario, syncConfirmacoes]);
+    }, [usuario, dataOwnerUid, syncConfirmacoes]);
 
     // --- AÇÕES ---
 
     const salvarItem = async (colecao, id, objeto) => {
-        if (!usuario) return;
-        const path = `users/${usuario.uid}/${colecao}`;
+        if (!usuario || !dataOwnerUid) return;
+        const path = `users/${dataOwnerUid}/${colecao}`;
         const idNormalizado = id != null ? String(id).trim() : '';
         const docRef = idNormalizado ? doc(db, path, idNormalizado) : doc(collection(db, path));
         const objetoLimpo = JSON.parse(JSON.stringify(objeto));
@@ -145,16 +148,16 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
     };
 
     const excluirItem = async (colecao, id) => {
-        if (!usuario) return;
-        await deleteDoc(doc(db, `users/${usuario.uid}/${colecao}`, String(id)));
+        if (!usuario || !dataOwnerUid) return;
+        await deleteDoc(doc(db, `users/${dataOwnerUid}/${colecao}`, String(id)));
     };
 
     const publicarQuadroPublico = async (payload) => {
-        if (!usuario) return;
+        if (!usuario || !dataOwnerUid) return;
         const objetoLimpo = JSON.parse(JSON.stringify(payload || {}));
-        await setDoc(doc(db, 'quadros_publicos', usuario.uid), {
+        await setDoc(doc(db, 'quadros_publicos', dataOwnerUid), {
             ...objetoLimpo,
-            ownerUid: usuario.uid,
+            ownerUid: dataOwnerUid,
             updatedAtIso: new Date().toISOString()
         }, { merge: true });
     };
@@ -162,12 +165,12 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
     // --- FUNÇÃO SIMPLIFICADA: EXCLUIR SEMANA ---
     // Mantivemos o mesmo nome para não quebrar a importação no App.jsx
     const excluirSemanaELimparHistorico = async (semanaId) => {
-        if (!usuario) return;
+        if (!usuario || !dataOwnerUid) return;
 
         try {
             // Como a limpeza do histórico dos alunos agora acontece no Frontend (Designar.jsx),
             // aqui nós apenas deletamos a programação do banco de dados.
-            await deleteDoc(doc(db, `users/${usuario.uid}/programacao`, semanaId));
+            await deleteDoc(doc(db, `users/${dataOwnerUid}/programacao`, semanaId));
         } catch (error) {
             console.error("Erro ao excluir semana:", error);
             throw error;
@@ -175,7 +178,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
     };
 
     const importarBackupParaUsuario = async (jsonFile) => {
-        if (!usuario) return;
+        if (!usuario || !dataOwnerUid) return;
 
         try {
             const dadosImport = jsonFile.dadosSistema || jsonFile;
@@ -186,7 +189,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
                     Array.isArray(jsonFile.listaProgramacoes) ? jsonFile.listaProgramacoes : [];
 
             const batch = writeBatch(db);
-            const uid = usuario.uid;
+            const uid = dataOwnerUid;
 
             const configRef = doc(db, `users/${uid}/configuracoes`, "geral");
             batch.set(configRef, cong);
@@ -217,11 +220,11 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
 
     // --- NOVA FUNÇÃO: RESETAR CONTA (LIMPA TUDO) ---
     const resetarConta = async () => {
-        if (!usuario) return;
+        if (!usuario || !dataOwnerUid) return;
 
         try {
-            const uid = usuario.uid;
-            const collections = ['alunos', 'programacao', 'configuracoes', 'confirmacoes'];
+            const uid = dataOwnerUid;
+            const collections = ['alunos', 'programacao', 'confirmacoes'];
 
             // 1. Deletar coleções privadas do usuário
             for (const colName of collections) {
@@ -236,6 +239,10 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
                     await batch.commit();
                 }
             }
+
+            // Limpa apenas as preferências gerais. O documento de acessos
+            // pertence ao controle administrativo e deve sobreviver ao reset.
+            await deleteDoc(doc(db, `users/${uid}/configuracoes`, 'geral'));
 
             // 2. Deletar documento do quadro público
             const quadroRef = doc(db, 'quadros_publicos', uid);
@@ -295,6 +302,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
         loading,
         accessError,
         usuario,
+        dataOwnerUid,
         salvarItem,
         excluirItem,
         publicarQuadroPublico,
