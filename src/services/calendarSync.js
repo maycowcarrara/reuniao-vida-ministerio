@@ -5,6 +5,49 @@ import { getSectionMessages } from '../i18n';
 import { getMeetingSectionTag } from '../utils/meetingSections';
 import { isPrayerPart } from '../utils/meetingParts';
 
+const getGoogleCalendarErrorMessage = (response, data) => {
+    const googleError = data?.error;
+    const firstError = Array.isArray(googleError?.errors) ? googleError.errors[0] : null;
+    const reason = firstError?.reason || googleError?.status || '';
+    const message = googleError?.message || '';
+    const reasonLower = reason.toString().toLowerCase();
+    const messageLower = message.toString().toLowerCase();
+
+    if (
+        reasonLower.includes('accessnotconfigured') ||
+        messageLower.includes('has not been used') ||
+        messageLower.includes('is disabled')
+    ) {
+        return 'A API Google Calendar nao esta ativada no projeto Google/Firebase usado pelo app. Ative a Google Calendar API no projeto novo e tente novamente.';
+    }
+
+    if (
+        reasonLower.includes('insufficient') ||
+        reasonLower.includes('access_token_scope_insufficient') ||
+        messageLower.includes('insufficient')
+    ) {
+        return 'A permissao concedida ao app nao inclui acesso ao Google Agenda. Revogue o acesso do app na sua Conta Google e autorize novamente.';
+    }
+
+    if (response.status === 401) {
+        return 'O Google nao aceitou a autorizacao atual. Entre novamente com a conta Google e autorize o acesso ao Agenda.';
+    }
+
+    if (message) {
+        return `Google Agenda recusou a consulta (${response.status}): ${message}`;
+    }
+
+    return `Google Agenda recusou a consulta (${response.status}).`;
+};
+
+const readGoogleJson = async (response) => {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
+
 export const iniciarSincronizacao = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
@@ -26,9 +69,15 @@ export const iniciarSincronizacao = async () => {
         const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const data = await response.json();
+        const data = await readGoogleJson(response);
 
-        if (!data.items) throw new Error(getSectionMessages('calendarSync', 'pt').nenhumCalendario);
+        if (!response.ok) {
+            throw new Error(getGoogleCalendarErrorMessage(response, data));
+        }
+
+        if (!Array.isArray(data?.items) || data.items.length === 0) {
+            throw new Error(getSectionMessages('calendarSync', 'pt').nenhumCalendario);
+        }
 
         return {
             sucesso: true,
