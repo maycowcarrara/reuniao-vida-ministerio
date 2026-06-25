@@ -120,14 +120,6 @@ const DesignarHeader = ({
             <div ref={headerRef} className="w-full sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200 transition-all">
                 <div className="max-w-7xl mx-auto px-2.5 sm:px-4 md:px-6 py-2.5 sm:py-4 flex flex-col gap-3">
                     <div className="sm:hidden flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setMobileFiltersOpen(true)}
-                            className="flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 p-2.5 text-blue-700 shadow-sm"
-                            aria-label={TT.filtros || 'Filtros'}
-                        >
-                            <SlidersHorizontal size={18} />
-                        </button>
                         <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-400">
                                 <span>{filtroLabel}</span>
@@ -138,6 +130,14 @@ const DesignarHeader = ({
                                 {semanaEmFoco?.semana?.split(' -')[0] || TT.selecioneSemana}
                             </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => setMobileFiltersOpen(true)}
+                            className="flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 p-2.5 text-blue-700 shadow-sm"
+                            aria-label={TT.filtros || 'Filtros'}
+                        >
+                            <SlidersHorizontal size={18} />
+                        </button>
                     </div>
 
                     {/* LINHA 1: FILTROS E ACOES DE ARQUIVO */}

@@ -15,8 +15,7 @@ import {
     ChevronUp,
     CheckCircle2,
     X,
-    PlayCircle,
-    Download
+    PlayCircle
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSectionMessages, useI18n } from '../i18n';
@@ -24,16 +23,7 @@ import { getLanguageMeta } from '../config/appConfig';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { prependMeetingSectionIcon } from '../utils/meetingSections';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, getSemanaStartISO as getSemanaStartISOCompartilhado } from '../utils/eventos';
-
-// ============================================================================
-// CAPTURADOR GLOBAL DO PWA (Resolve o bug do React ser mais lento que o Chrome)
-// ============================================================================
-let globalDeferredPrompt = null;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); // Impede o prompt nativo de aparecer logo
-    globalDeferredPrompt = e; // Guarda o evento na "gaveta"
-    window.dispatchEvent(new Event('pwa-pronto')); // Avisa o React que o evento chegou
-});
+import PwaInstallButton from './PwaInstallButton';
 
 // ============================================================================
 // FUNÇÕES AUXILIARES (HELPERS)
@@ -203,10 +193,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const mainScrollRef = useRef(null);
     const parteAoVivoRef = useRef(null);
 
-    // --- ESTADOS DO PWA (INSTALAÇÃO) ---
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [showInstallBanner, setShowInstallBanner] = useState(false);
-
     // --- DICIONÁRIO DE TRADUÇÕES ---
     const { lang } = useI18n();
     const T = useSectionMessages('quadroPublico');
@@ -218,41 +204,11 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         tempo: T.tempo,
     };
 
-    // --- EFEITOS GERAIS E CAPTURADOR PWA ---
+    // --- EFEITOS GERAIS ---
     useEffect(() => {
         const timer = setInterval(() => setAgora(new Date()), 1000);
-
-        // Verifica se o evento já foi capturado pela "armadilha global" antes do React carregar
-        const checkPrompt = () => {
-            if (globalDeferredPrompt) {
-                setDeferredPrompt(globalDeferredPrompt);
-                setShowInstallBanner(true);
-            }
-        };
-
-        // Verifica imediatamente ao montar
-        checkPrompt();
-
-        // Fica à escuta caso o evento venha depois
-        window.addEventListener('pwa-pronto', checkPrompt);
-
-        return () => {
-            clearInterval(timer);
-            window.removeEventListener('pwa-pronto', checkPrompt);
-        };
+        return () => clearInterval(timer);
     }, []);
-
-    const handleInstallClick = async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                setShowInstallBanner(false);
-            }
-            setDeferredPrompt(null);
-            globalDeferredPrompt = null;
-        }
-    };
 
     const hojeStr = formatLocalDateISO(agora);
 
@@ -458,19 +414,22 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                             </div>
                         </div>
 
-                        {usuario ? (
-                            <Link
-                                to="/admin"
-                                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 border border-white/10 shrink-0"
-                            >
-                                <LayoutDashboard size={14} />
-                                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">{T.voltarPainel}</span>
-                            </Link>
-                        ) : (
-                            <div className="bg-blue-800/60 p-2 rounded-xl border border-blue-500/30 shadow-inner shrink-0">
-                                <LayoutDashboard size={18} className="text-blue-100" />
-                            </div>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <PwaInstallButton variant="header" />
+                            {usuario ? (
+                                <Link
+                                    to="/admin"
+                                    className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 border border-white/10 shrink-0"
+                                >
+                                    <LayoutDashboard size={14} />
+                                    <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">{T.voltarPainel}</span>
+                                </Link>
+                            ) : (
+                                <div className="bg-blue-800/60 p-2 rounded-xl border border-blue-500/30 shadow-inner shrink-0">
+                                    <LayoutDashboard size={18} className="text-blue-100" />
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="relative w-full group">
@@ -499,29 +458,6 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
             <main ref={mainScrollRef} className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
                 <div className="max-w-2xl mx-auto space-y-6">
-
-                    {/* BANNER DE INSTALAÇÃO PWA */}
-                    {showInstallBanner && (
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-lg flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-white/20 p-2 rounded-xl shrink-0">
-                                    <Download size={20} />
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-bold">{T.instalarApp}</h4>
-                                    <p className="text-[10px] text-blue-100 mt-0.5">{T.acessoRapido}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                                <button onClick={handleInstallClick} className="bg-white text-blue-700 text-xs font-bold px-3 py-1.5 rounded-lg active:scale-95 transition-transform shadow-sm">
-                                    {T.btnInstalar}
-                                </button>
-                                <button onClick={() => setShowInstallBanner(false)} className="p-1.5 text-blue-200 hover:text-white transition-colors">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
                     {semanasParaExibir.length === 0 ? (
                         <div className="text-center py-20 text-slate-300">

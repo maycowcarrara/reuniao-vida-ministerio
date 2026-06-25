@@ -89,6 +89,16 @@ const PT_MESSAGES = {
         atualizacaoErro: "Não foi possível atualizar a versão agora.",
         avatarAlt: "Perfil"
     },
+    pwaInstall: {
+        installApp: "Instalar App",
+        installShort: "Instalar",
+        iosTitle: "Instalar no iPhone",
+        iosIntro: "No Safari, use o menu Compartilhar para adicionar este app à Tela de Início.",
+        iosStepShare: "Toque em Compartilhar na barra do Safari.",
+        iosStepAdd: "Escolha Adicionar à Tela de Início.",
+        iosStepConfirm: "Confirme em Adicionar.",
+        close: "Fechar"
+    },
     toast: {
         fechar: "Fechar toast",
         aviso: "Aviso",
@@ -885,6 +895,16 @@ const ES_MESSAGES = {
         atualizacaoIniciada: "Actualizando sistema...\nBuscando la versión más reciente para recargar la app.",
         atualizacaoErro: "No fue posible actualizar la versión ahora.",
         avatarAlt: "Perfil"
+    },
+    pwaInstall: {
+        installApp: "Instalar App",
+        installShort: "Instalar",
+        iosTitle: "Instalar en iPhone",
+        iosIntro: "En Safari, use el menú Compartir para agregar esta app a la pantalla de inicio.",
+        iosStepShare: "Toque Compartir en la barra de Safari.",
+        iosStepAdd: "Elija Agregar a inicio.",
+        iosStepConfirm: "Confirme en Agregar.",
+        close: "Cerrar"
     },
     toast: {
         fechar: "Cerrar notificación",

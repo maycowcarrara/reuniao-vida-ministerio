@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
     Calendar, Users, LayoutDashboard, Send, Settings,
-    ChevronLeft, LogOut, Home, Maximize, RefreshCw, X, Cloud, Download
+    ChevronLeft, LogOut, Home, Maximize, RefreshCw, X, Cloud
 } from 'lucide-react';
 // Importa o package.json diretamente para ler a versão
 import packageJson from '../../package.json';
 import { formatText, useSectionMessages } from '../i18n';
 import { refreshAppVersion } from '../services/appUpdater';
 import { toast } from '../utils/toast';
+import PwaInstallButton from './PwaInstallButton';
 
 function SidebarButton({ active, onClick, icon, label, badge, sidebarOpen }) {
     const iconElement = React.createElement(icon, { size: 18, className: 'shrink-0' });
@@ -46,39 +47,9 @@ export default function Sidebar({
     toggleFullscreen
 }) {
     const versaoSistema = packageJson.version;
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [atualizandoVersao, setAtualizandoVersao] = useState(false);
     const totalSemanasAtivas = (listaProgramacoes || []).filter(semana => !semana?.arquivada).length;
     const totalAlunosAtivos = (alunos || []).filter(aluno => aluno?.tipo !== 'desab').length;
-
-    // --- ESCUTA O EVENTO DE INSTALAÇÃO DO PWA ---
-    useEffect(() => {
-        const handleBeforeInstallPrompt = (e) => {
-            // Previne o mini-infobar padrão do navegador em dispositivos móveis
-            e.preventDefault();
-            // Guarda o evento para ser disparado pelo nosso botão
-            setDeferredPrompt(e);
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        };
-    }, []);
-
-    const handleInstallApp = async () => {
-        if (deferredPrompt) {
-            // Mostra o prompt de instalação do navegador
-            deferredPrompt.prompt();
-            // Aguarda a resposta do usuário
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                // Se aceitou, limpa o prompt e esconde o botão
-                setDeferredPrompt(null);
-            }
-        }
-    };
 
     const SIDEBAR_TEXTS = useSectionMessages('sidebar');
     const alertaAtualizacao = formatText(SIDEBAR_TEXTS.alertaAtualizacao, { version: versaoSistema });
@@ -164,16 +135,7 @@ export default function Sidebar({
                 {sidebarOpen && (
                     <div className="p-4 bg-blue-900/40 border-t border-blue-500/30 flex flex-col gap-2 shrink-0">
 
-                        {/* Botão de Instalar PWA (Aparece dinamicamente) */}
-                        {deferredPrompt && (
-                            <button
-                                onClick={handleInstallApp}
-                                className="flex w-full items-center gap-3 px-2 py-2 text-sm font-bold text-green-300 hover:text-green-100 hover:bg-green-800/30 border border-green-800/30 rounded-md transition-colors"
-                            >
-                                <Download size={16} />
-                                <span>{SIDEBAR_TEXTS.instalarApp}</span>
-                            </button>
-                        )}
+                        <PwaInstallButton variant="sidebar" />
 
                         {/* Botão de Tela Cheia */}
                         <button
