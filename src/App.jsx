@@ -316,10 +316,12 @@ function AdminPanel() {
         )
       );
       programacoesPreparadasParaPublico = programacoesPreparadas;
+      const proximosDocIds = new Set();
       programacoesPreparadas.forEach(p => {
         const programacaoNormalizada = p;
         const docId = getProgramacaoDocId(programacaoNormalizada);
         if (docId) {
+          proximosDocIds.add(docId);
           const programacaoAtual = programacoesAtuaisPorDocId.get(docId);
           if (!programacaoAtual || hasMeaningfulChange(programacaoNormalizada, programacaoAtual)) {
             programacoesAlteradas = true;
@@ -327,6 +329,10 @@ function AdminPanel() {
           }
         }
       });
+
+      if (!programacoesAlteradas) {
+        programacoesAlteradas = [...programacoesAtuaisPorDocId.keys()].some((docId) => !proximosDocIds.has(docId));
+      }
     }
 
     if (configAlterada || programacoesAlteradas) {

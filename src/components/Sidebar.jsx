@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Calendar, Users, LayoutDashboard, Send, Settings,
-    ChevronLeft, LogOut, Home, Maximize, RefreshCw, X, Cloud
+    ChevronLeft, LogOut, Home, Maximize, RefreshCw, X, Cloud, Share2
 } from 'lucide-react';
 // Importa o package.json diretamente para ler a versão
 import packageJson from '../../package.json';
@@ -9,6 +9,8 @@ import { formatText, useSectionMessages } from '../i18n';
 import { refreshAppVersion } from '../services/appUpdater';
 import { toast } from '../utils/toast';
 import PwaInstallButton from './PwaInstallButton';
+
+const DEFAULT_APP_SHARE_URL = 'https://rvm-palmas-pr.web.app';
 
 function SidebarButton({ active, onClick, icon, label, badge, sidebarOpen }) {
     const iconElement = React.createElement(icon, { size: 18, className: 'shrink-0' });
@@ -66,6 +68,65 @@ export default function Sidebar({
         } catch (error) {
             setAtualizandoVersao(false);
             toast.error(error, SIDEBAR_TEXTS.atualizacaoErro);
+        }
+    };
+
+    const getAppShareUrl = () => {
+        const origin = window.location?.origin;
+        if (origin && /^https?:\/\//i.test(origin) && origin !== 'null') {
+            return origin;
+        }
+        return DEFAULT_APP_SHARE_URL;
+    };
+
+    const copyShareText = async (text) => {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        if (!copied) {
+            throw new Error(SIDEBAR_TEXTS.compartilharAppErro);
+        }
+    };
+
+    const handleShareApp = async () => {
+        const url = getAppShareUrl();
+        const shareText = SIDEBAR_TEXTS.compartilharAppTexto;
+        const shareData = {
+            title: SIDEBAR_TEXTS.compartilharAppTitulo,
+            text: shareText,
+            url
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                await copyShareText(`${shareText}\n\n${url}`);
+                toast.success(SIDEBAR_TEXTS.compartilharAppCopiado);
+            }
+            if (window.innerWidth < 768) {
+                setSidebarOpen(false);
+            }
+        } catch (error) {
+            if (error?.name === 'AbortError') return;
+            try {
+                await copyShareText(`${shareText}\n\n${url}`);
+                toast.success(SIDEBAR_TEXTS.compartilharAppCopiado);
+            } catch (copyError) {
+                toast.error(copyError, SIDEBAR_TEXTS.compartilharAppErro);
+            }
         }
     };
 
@@ -136,6 +197,17 @@ export default function Sidebar({
                     <div className="p-4 bg-blue-900/40 border-t border-blue-500/30 flex flex-col gap-2 shrink-0">
 
                         <PwaInstallButton variant="sidebar" />
+
+                        <button
+                            type="button"
+                            onClick={handleShareApp}
+                            className="flex w-full items-center gap-3 px-2 py-2 text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-800/50 rounded-md transition-colors"
+                            title={SIDEBAR_TEXTS.compartilharApp}
+                            aria-label={SIDEBAR_TEXTS.compartilharApp}
+                        >
+                            <Share2 size={16} />
+                            <span>{SIDEBAR_TEXTS.compartilharApp}</span>
+                        </button>
 
                         {/* Botão de Tela Cheia */}
                         <button

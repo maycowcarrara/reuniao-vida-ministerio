@@ -49,7 +49,7 @@ const AlunoListItem = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete,
                         
                         <div className="flex items-center gap-2 shrink-0">
                             <span className={`text-[10px] font-black flex items-center gap-1 ${d === null ? 'text-gray-300' : d < 60 ? 'text-green-600' : 'text-red-500'}`}><Clock size={12} /> {d !== null ? `${d}d` : t.card.nunca}</span>
-                            <div className="hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-all no-print">
+                            <div className="hidden sm:flex gap-1 transition-all no-print">
                                 <button onClick={() => onEdit(aluno)} className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-xl border shadow-sm" title={t.modal.editar}><Edit2 size={14} /></button>
                                 <button onClick={() => onHistory(aluno)} className="p-2 bg-gray-50 text-gray-400 hover:text-orange-500 rounded-xl border shadow-sm" title={t.modal.historico}><History size={14} /></button>
                                 <button onClick={() => onCopyPublicLink?.(aluno)} className="p-2 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-xl border shadow-sm" title="Copiar link do quadro"><Copy size={14} /></button>

@@ -43,7 +43,7 @@ const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onC
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all no-print">
+                <div className="flex flex-col gap-1 transition-all no-print">
                     <button onClick={() => onEdit(aluno)} className="p-1.5 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-lg border shadow-sm" title={t.modal.editar}><Edit2 size={12} /></button>
                     <button onClick={() => onHistory(aluno)} className="p-1.5 bg-gray-50 text-gray-400 hover:text-orange-500 rounded-lg border shadow-sm" title={t.modal.historico}><History size={12} /></button>
                     <button onClick={() => onCopyPublicLink?.(aluno)} className="p-1.5 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-lg border shadow-sm" title="Copiar link do quadro"><Copy size={12} /></button>
