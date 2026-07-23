@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Archive, RotateCcw, Trash2, Briefcase, Tent, SlidersHorizontal, X } from 'lucide-react';
+import { Archive, RotateCcw, Trash2, Briefcase, Tent, SlidersHorizontal, X, RefreshCw } from 'lucide-react';
 import { isSemanaAssembleia } from './helpers';
 import { getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
@@ -15,7 +15,8 @@ const DesignarHeader = ({
     listaFiltradaPorFlag, getSemanaKey,
     semanasSelecionadas, setSemanasSelecionadas,
     semanaAtivaIndex, setSemanaAtivaIndex,
-    userClearedWeeksRef
+    userClearedWeeksRef,
+    onRepublicarQuadroPublico
 }) => {
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -52,6 +53,10 @@ const DesignarHeader = ({
 
             <button type="button" onClick={apagarArquivadas} className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-full text-xs font-bold border bg-red-50 text-red-700 hover:bg-red-100 border-red-200 transition shadow-sm inline-flex items-center justify-center gap-1" title={TT.apagarArquivadas}>
                 <Trash2 size={14} /> {TT.apagarArquivadas}
+            </button>
+
+            <button type="button" onClick={onRepublicarQuadroPublico} disabled={!onRepublicarQuadroPublico} className={`w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-full text-xs font-bold border transition shadow-sm inline-flex items-center justify-center gap-1 ${onRepublicarQuadroPublico ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : 'bg-gray-50 text-gray-400 cursor-not-allowed border-gray-100'}`} title={TT.republicarQuadro}>
+                <RefreshCw size={14} /> {TT.republicarQuadro}
             </button>
         </div>
     );

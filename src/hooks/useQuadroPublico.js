@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { normalizeSystemConfig } from '../config/appConfig';
 
@@ -31,20 +31,12 @@ export function useQuadroPublico(fallbackUid = '') {
             return;
         }
 
-        async function fetchDadosPublicos() {
+        setLoading(true);
+
+        let active = true;
+
+        async function fetchFallbackDadosPublicos() {
             try {
-                const publicRef = doc(db, 'quadros_publicos', effectiveAdminUid);
-                const publicSnap = await getDoc(publicRef);
-
-                if (publicSnap.exists()) {
-                    const publicData = publicSnap.data() || {};
-                    setDados({
-                        configuracoes: normalizeSystemConfig(publicData.configuracoes || {}),
-                        historico_reunioes: Array.isArray(publicData.historico_reunioes) ? publicData.historico_reunioes : []
-                    });
-                    return;
-                }
-
                 // 1. Puxa o nome da Congregação
                 const configRef = doc(db, 'users', effectiveAdminUid, 'configuracoes', 'geral');
                 const configSnap = await getDoc(configRef);
@@ -55,18 +47,49 @@ export function useQuadroPublico(fallbackUid = '') {
                 const progSnap = await getDocs(progRef);
                 const programacoes = progSnap.docs.map(d => d.data());
 
+                if (!active) return;
+
                 setDados({
                     configuracoes: config,
                     historico_reunioes: programacoes
                 });
             } catch (error) {
                 console.error("Erro ao buscar quadro público:", error);
+                if (active) {
+                    setDados({ configuracoes: {}, historico_reunioes: [] });
+                }
             } finally {
-                setLoading(false);
+                if (active) setLoading(false);
             }
         }
 
-        fetchDadosPublicos();
+        const publicRef = doc(db, 'quadros_publicos', effectiveAdminUid);
+        const unsubscribe = onSnapshot(publicRef, (publicSnap) => {
+            if (!active) return;
+
+            if (publicSnap.exists()) {
+                const publicData = publicSnap.data() || {};
+                setDados({
+                    configuracoes: normalizeSystemConfig(publicData.configuracoes || {}),
+                    historico_reunioes: Array.isArray(publicData.historico_reunioes) ? publicData.historico_reunioes : []
+                });
+                setLoading(false);
+                return;
+            }
+
+            fetchFallbackDadosPublicos();
+        }, (error) => {
+            console.error("Erro ao escutar quadro público:", error);
+            if (active) {
+                setDados({ configuracoes: {}, historico_reunioes: [] });
+                setLoading(false);
+            }
+        });
+
+        return () => {
+            active = false;
+            unsubscribe();
+        };
     }, [configuredAdminUid, runtimeFallbackUid]);
 
     return { dados, loading };

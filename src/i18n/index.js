@@ -73,7 +73,8 @@ const PT_MESSAGES = {
         verQuadro: "Ver Quadro",
         minhaCong: "Minha Congregação",
         sairTelaCheia: "Sair da Tela Cheia",
-        loadingQuadro: "Carregando Quadro..."
+        loadingQuadro: "Carregando Quadro...",
+        quadroRepublicado: "Quadro público republicado."
     },
     sidebar: {
         telaCheia: "Tela Cheia",
@@ -720,6 +721,7 @@ const PT_MESSAGES = {
         filtros: "Filtros",
         selecionarTodas: "Todas",
         limparSelecao: "Limpar",
+        republicarQuadro: "Atualizar quadro",
         nenhumaSemanaArquivada: "Nenhuma semana arquivada para apagar.",
         confirmarExcluirSemanaTpl: "Excluir a semana {semana}? Isso também apagará os históricos dos alunos associados a esta semana.",
         confirmarApagarArquivadasTpl: "Apagar arquivadas? ({count})\nIsso também apagará os históricos dos alunos associados a estas semanas.",
@@ -885,7 +887,8 @@ const ES_MESSAGES = {
         verQuadro: "Ver Tablero",
         minhaCong: "Mi Congregación",
         sairTelaCheia: "Salir de Pantalla Completa",
-        loadingQuadro: "Cargando Tablero..."
+        loadingQuadro: "Cargando Tablero...",
+        quadroRepublicado: "Tablero público republicado."
     },
     sidebar: {
         telaCheia: "Pantalla Completa",
@@ -1532,6 +1535,7 @@ const ES_MESSAGES = {
         filtros: "Filtros",
         selecionarTodas: "Todas",
         limparSelecao: "Limpiar",
+        republicarQuadro: "Actualizar tablero",
         nenhumaSemanaArquivada: "No hay semanas archivadas para borrar.",
         confirmarExcluirSemanaTpl: "¿Eliminar la semana {semana}? Esto también borrará los historiales de los estudiantes asociados a esta semana.",
         confirmarApagarArquivadasTpl: "¿Borrar archivadas? ({count})\nEsto también borrará los historiales de los estudiantes asociados a estas semanas.",

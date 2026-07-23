@@ -36,7 +36,8 @@ const Designar = ({
     config = {},
     sharedWeekSelection = {},
     setSharedWeekSelection = () => { },
-    substitutionShortcutRequest = null
+    substitutionShortcutRequest = null,
+    onRepublicarQuadroPublico = null
 }) => {
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
@@ -203,8 +204,21 @@ const Designar = ({
         return (a?.semana || '').localeCompare(b?.semana || '');
     });
 
-    const setListaProgramacoesSafe = (updater) => {
-        setListaProgramacoes(prev => normalizeAndSortProgramacoes(typeof updater === 'function' ? updater(prev) : updater));
+    const getNextProgramacoes = (prev, updater) => normalizeAndSortProgramacoes(typeof updater === 'function' ? updater(prev) : updater);
+
+    const setListaProgramacoesSafe = (updater, options = {}) => {
+        if (options.republicarQuadro) {
+            const next = getNextProgramacoes(listaProgramacoes, updater);
+            setListaProgramacoes(next);
+            if (onRepublicarQuadroPublico) {
+                onRepublicarQuadroPublico(next).catch((error) => {
+                    console.error('Erro ao republicar quadro publico:', error);
+                });
+            }
+            return;
+        }
+
+        setListaProgramacoes(prev => getNextProgramacoes(prev, updater));
     };
 
     const listaFiltradaPorFlag = useMemo(() => {
@@ -465,7 +479,14 @@ const Designar = ({
                 publicadaNoQuadro: !publicada,
                 publicacaoQuadroAtualizadaEm: new Date().toISOString()
             };
-        }));
+        }), { republicarQuadro: true });
+    };
+
+    const republicarQuadroPublico = () => {
+        if (!onRepublicarQuadroPublico) return;
+        onRepublicarQuadroPublico(normalizeAndSortProgramacoes(listaProgramacoes)).catch((error) => {
+            console.error('Erro ao republicar quadro publico:', error);
+        });
     };
 
     const getUltimoRegistro = (aluno) => {
@@ -1013,6 +1034,7 @@ const Designar = ({
                 semanaAtivaIndex={semanaAtivaIndexAtual}
                 setSemanaAtivaIndex={setSemanaAtivaIndex}
                 userClearedWeeksRef={userClearedWeeksRef}
+                onRepublicarQuadroPublico={republicarQuadroPublico}
             />
 
             <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-4">

@@ -277,6 +277,19 @@ function AdminPanel() {
       .map((semana) => JSON.parse(JSON.stringify(semana)))
   });
 
+  const republicarQuadroPublicoAtual = async (programacoesOverride = listaProgramacoes) => {
+    const programacoesPreparadas = ensureUniqueProgramacaoIds(
+      prepararProgramacoesParaSalvar(
+        Array.isArray(programacoesOverride) ? programacoesOverride : listaProgramacoes,
+        dadosSistema?.configuracoes,
+        dadosSistema?.configuracoes
+      )
+    );
+
+    await publicarQuadroPublico(buildQuadroPublicoPayload(dadosSistema?.configuracoes, programacoesPreparadas));
+    toast.success(APP_TEXTS.quadroRepublicado || 'Quadro publico republicado.');
+  };
+
   const salvarAlteracao = async (novosDados) => {
     const operacoes = [];
     const configDestino = novosDados.configuracoes || dadosSistema?.configuracoes;
@@ -689,6 +702,7 @@ function AdminPanel() {
                 sharedWeekSelection={sharedWeekSelection}
                 setSharedWeekSelection={setSharedWeekSelection}
                 substitutionShortcutRequest={substitutionShortcutRequest}
+                onRepublicarQuadroPublico={republicarQuadroPublicoAtual}
               />
             )}
 

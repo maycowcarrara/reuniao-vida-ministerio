@@ -156,7 +156,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
             ...objetoLimpo,
             ownerUid: dataOwnerUid,
             updatedAtIso: new Date().toISOString()
-        }, { merge: true });
+        });
     };
 
     // --- FUNÇÃO SIMPLIFICADA: EXCLUIR SEMANA ---
