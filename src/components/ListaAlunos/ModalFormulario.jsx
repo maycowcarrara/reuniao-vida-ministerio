@@ -81,8 +81,8 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
     const showFamiliaDropdown = familiaDropdownOpen && familiasOptions.length > 0;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (!isSaving && e.target === e.currentTarget) onClose(); }}>
-            <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-2 sm:p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (!isSaving && e.target === e.currentTarget) onClose(); }}>
+            <div className="relative flex max-h-[calc(100vh-1rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200 sm:max-h-[calc(100vh-2rem)]">
                 {isSaving && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/75 backdrop-blur-[2px] text-blue-700">
                         <Loader2 size={28} className="animate-spin" />
@@ -97,10 +97,10 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                     <button disabled={isSaving} onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"><X size={20} /></button>
                 </div>
 
-                <div className="p-6 overflow-y-auto max-h-[75vh] custom-scrollbar" onPaste={handlePaste}>
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 custom-scrollbar sm:p-6" onPaste={handlePaste}>
                     
                     {/* ZONA DO AVATAR */}
-                    <div className="flex items-center gap-4 mb-5 p-3 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <div className="mb-5 flex items-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-3">
                         <div className="w-14 h-14 rounded-full overflow-hidden bg-white border border-gray-200 flex items-center justify-center text-gray-400 font-bold text-lg shrink-0 relative group">
                             {alunoEmEdicao.avatar ? (
                                 <>
@@ -118,7 +118,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                                 iniciais
                             )}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="min-w-0 text-xs text-gray-500">
                             <p className="font-bold flex items-center gap-1.5 text-gray-700"><ImageIcon size={14} className="text-blue-500" /> {t.campos.foto}</p>
                             <p className="text-[10px] mt-0.5">
                                 {t.campos.fotoInstrucao.split('{TECLA}')[0]}
@@ -128,22 +128,22 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                         </div>
                     </div>
 
-                    <form id="form-aluno" onSubmit={onSave} className="space-y-4">
-                        <fieldset disabled={isSaving} className="space-y-4 disabled:opacity-70">
-                        <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, tipo: e.target.value })}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>
+                    <form id="form-aluno" onSubmit={onSave} className="min-w-0 space-y-4">
+                        <fieldset disabled={isSaving} className="min-w-0 space-y-4 disabled:opacity-70">
+                        <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
+                        <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, tipo: e.target.value })}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder={t.campos.telefonePlaceholder} /></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.mail}</label><input type="email" className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.email || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, email: e.target.value })} placeholder={t.campos.emailPlaceholder} /></div>
+                        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder={t.campos.telefonePlaceholder} /></div>
+                            <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.mail}</label><input type="email" className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.email || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, email: e.target.value })} placeholder={t.campos.emailPlaceholder} /></div>
                         </div>
-                        <div className="space-y-1">
+                        <div className="min-w-0 space-y-1">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.familia}</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     autoComplete="off"
-                                    className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600"
+                                    className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600"
                                     value={alunoEmEdicao.familia || ""}
                                     onFocus={() => setFamiliaDropdownOpen(true)}
                                     onBlur={() => window.setTimeout(() => setFamiliaDropdownOpen(false), 120)}
@@ -194,26 +194,26 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                             </div>
                             <p className="text-[10px] text-gray-400 px-1">{t.campos.familiaAjuda}</p>
                             {familiasOptions.length > 0 && (
-                                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pt-1 pb-1">
+                                <div className="flex flex-wrap gap-1.5 pt-1">
                                     {familiasOptions.slice(0, 8).map((familia) => (
                                         <button
                                             key={familia}
                                             type="button"
                                             onClick={() => setAlunoEmEdicao({ ...alunoEmEdicao, familia })}
-                                            className={`shrink-0 rounded-lg border px-2.5 py-1 text-[10px] font-black transition ${alunoEmEdicao.familia === familia
+                                            className={`max-w-full rounded-lg border px-2.5 py-1 text-[10px] font-black transition ${alunoEmEdicao.familia === familia
                                                 ? 'border-indigo-500 bg-indigo-600 text-white'
                                                 : 'border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
                                                 }`}
                                         >
-                                            {familia}
+                                            <span className="block max-w-[10rem] truncate">{familia}</span>
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
-                        <div className="space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={2} className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={t.campos.obsPlaceholder} /></div>
+                        <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={2} className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={t.campos.obsPlaceholder} /></div>
 
-                        <div className="space-y-2 pt-4 border-t border-gray-100 mt-2">
+                        <div className="min-w-0 space-y-2 pt-4 border-t border-gray-100 mt-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1.5"><Calendar size={12} /> {t.campos.datasIndisponiveis}</label>
                             
                             {(alunoEmEdicao.datasIndisponiveis || []).length > 0 ? (
@@ -223,15 +223,15 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                                         const isPast = statusData.recentPast;
 
                                         return (
-                                            <div key={idx} className={`flex justify-between items-center text-xs px-2.5 py-1.5 rounded-lg border ${isPast ? 'bg-gray-50 border-gray-200 text-gray-400 opacity-75' : 'bg-orange-50 border-orange-100 text-orange-800'}`}>
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold">
+                                            <div key={idx} className={`flex min-w-0 items-center justify-between gap-2 text-xs px-2.5 py-1.5 rounded-lg border ${isPast ? 'bg-gray-50 border-gray-200 text-gray-400 opacity-75' : 'bg-orange-50 border-orange-100 text-orange-800'}`}>
+                                                <div className="min-w-0 flex flex-col">
+                                                    <span className="font-bold break-words">
                                                         {dt.inicio.split('-').reverse().join('/')} {t.campos.ate} {dt.fim.split('-').reverse().join('/')}
                                                         {isPast && <span className="ml-1 font-black uppercase">({t.campos.encerrada || 'encerrada'})</span>}
                                                     </span>
-                                                    {dt.motivo && <span className="text-[9px] opacity-80">{dt.motivo}</span>}
+                                                    {dt.motivo && <span className="truncate text-[9px] opacity-80">{dt.motivo}</span>}
                                                 </div>
-                                                <button type="button" onClick={() => removerData(idx)} className={`${isPast ? 'text-gray-300' : 'text-orange-400'} hover:text-red-500 p-1 transition-colors`}><X size={14} /></button>
+                                                <button type="button" onClick={() => removerData(idx)} className={`${isPast ? 'text-gray-300' : 'text-orange-400'} shrink-0 hover:text-red-500 p-1 transition-colors`}><X size={14} /></button>
                                             </div>
                                         );
                                     })}
@@ -240,19 +240,19 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                                 <p className="text-[10px] text-gray-400 italic px-1">{t.campos.semDatas}</p>
                             )}
 
-                            <div className="flex flex-wrap gap-2 items-end bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                                <div className="flex-1 min-w-[100px]">
+                            <div className="grid min-w-0 grid-cols-1 gap-2 rounded-xl border border-gray-100 bg-gray-50 p-2.5 sm:grid-cols-2">
+                                <div className="min-w-0">
                                     <label className="text-[9px] font-bold text-gray-500 mb-0.5 block">{t.campos.dataInicio}</label>
-                                    <input type="date" className="w-full px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.inicio} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, inicio: e.target.value })} />
+                                    <input type="date" className="block w-full min-w-0 px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.inicio} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, inicio: e.target.value })} />
                                 </div>
-                                <div className="flex-1 min-w-[100px]">
+                                <div className="min-w-0">
                                     <label className="text-[9px] font-bold text-gray-500 mb-0.5 block">{t.campos.dataFim}</label>
-                                    <input type="date" className="w-full px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.fim} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, fim: e.target.value })} />
+                                    <input type="date" className="block w-full min-w-0 px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.fim} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, fim: e.target.value })} />
                                 </div>
-                                <div className="w-full flex gap-2 items-end mt-1">
-                                    <div className="flex-1">
+                                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:col-span-2">
+                                    <div className="min-w-0">
                                         <label className="text-[9px] font-bold text-gray-500 mb-0.5 block">{t.campos.motivo}</label>
-                                        <input type="text" placeholder={t.campos.motivoPlaceholder} className="w-full px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.motivo} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, motivo: e.target.value })} />
+                                        <input type="text" placeholder={t.campos.motivoPlaceholder} className="block w-full min-w-0 px-2 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 outline-none focus:border-orange-400 bg-white" value={novaDataIndisponivel.motivo} onChange={e => setNovaDataIndisponivel({ ...novaDataIndisponivel, motivo: e.target.value })} />
                                     </div>
                                     <button type="button" onClick={adicionarData} className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${novaDataIndisponivel.inicio && novaDataIndisponivel.fim ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`} disabled={!novaDataIndisponivel.inicio || !novaDataIndisponivel.fim}>+</button>
                                 </div>
@@ -262,7 +262,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                     </form>
                 </div>
 
-                <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-2 justify-end rounded-b-3xl">
+                <div className="flex shrink-0 justify-end gap-2 rounded-b-3xl border-t border-gray-100 bg-gray-50 p-4">
                     <button type="button" disabled={isSaving} onClick={onClose} className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50">{t.modal.cancelar}</button>
                     <button type="submit" form="form-aluno" disabled={isSaving} className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all hover:bg-blue-600 disabled:cursor-wait disabled:bg-blue-400 inline-flex items-center gap-2">
                         {isSaving && <Loader2 size={14} className="animate-spin" />}
