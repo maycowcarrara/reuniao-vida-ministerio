@@ -33,3 +33,6 @@ dist-ssr
 .env.production.local
 serviceAccountKey.json
 *-firebase-adminsdk-*.json
+*adminsdk*.json
+*service-account*.json
+*service_account*.json

@@ -7,11 +7,11 @@ service cloud.firestore {
     }
 
     function dataOwnerUid() {
-      return "X8GNogUkSlNyzsjjyRHIlXA31FL2";
+      return "P8B0fY6m8JVjoLFGZEcXQ1uWsWs2";
     }
 
     function primaryOwnerUid() {
-      return "gubeVvLdUsRySGKrcn9G2G9xxJg1";
+      return "P8B0fY6m8JVjoLFGZEcXQ1uWsWs2";
     }
 
     function isOwnerUser(userId) {

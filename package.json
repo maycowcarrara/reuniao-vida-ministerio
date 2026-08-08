@@ -1,31 +1,29 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "4.8.276",
+  "version": "4.8.279",
   "type": "module",
   "scripts": {
-    "predev": "npm version patch --no-git-tag-version",
-    "predeploy": "npm version patch --no-git-tag-version",
-    "predeploy:all": "npm version patch --no-git-tag-version",
+    "version:patch": "npm version patch --no-git-tag-version",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && firebase deploy --project rvm-palmas-pr --only hosting",
-    "deploy:rules": "firebase deploy --project rvm-palmas-pr --only firestore:rules",
-    "deploy:indexes": "firebase deploy --project rvm-palmas-pr --only firestore:indexes",
-    "deploy:all": "npm run build && firebase deploy --project rvm-palmas-pr",
-    "firebase:new:deploy:rules": "firebase deploy --project rvm-palmas-pr --only firestore:rules",
-    "firebase:new:deploy:indexes": "firebase deploy --project rvm-palmas-pr --only firestore:indexes",
-    "firebase:new:deploy:hosting": "npm run build && firebase deploy --project rvm-palmas-pr --only hosting",
-    "firebase:new:deploy:all": "npm run build && firebase deploy --project rvm-palmas-pr",
+    "deploy": "npm run new-congregation:check && npm run version:patch && npm run build && firebase deploy --project rvm-sbssc --only hosting",
+    "deploy:rules": "npm run new-congregation:check && firebase deploy --project rvm-sbssc --only firestore:rules",
+    "deploy:indexes": "npm run new-congregation:check && firebase deploy --project rvm-sbssc --only firestore:indexes",
+    "deploy:all": "npm run new-congregation:check && npm run version:patch && npm run build && firebase deploy --project rvm-sbssc",
+    "worker:jw:dev": "npx wrangler dev --config workers/jw-proxy/wrangler.jsonc",
+    "worker:jw:deploy": "npx wrangler deploy --config workers/jw-proxy/wrangler.jsonc",
+    "worker:jw:whoami": "npx wrangler whoami",
     "migrate:auth:dry": "node scripts/firebase-migration/migrate-auth-users.mjs --dry-run",
     "migrate:auth": "node scripts/firebase-migration/migrate-auth-users.mjs --execute --yes",
     "migrate:firestore:dry": "node scripts/firebase-migration/migrate-firestore.mjs --dry-run",
     "migrate:firestore": "node scripts/firebase-migration/migrate-firestore.mjs --execute --yes",
     "migrate:indexes:dry": "node scripts/firebase-migration/migrate-indexes.mjs --dry-run",
     "migrate:indexes": "node scripts/firebase-migration/migrate-indexes.mjs --execute --yes",
-    "migrate:verify": "node scripts/firebase-migration/verify-target.mjs"
+    "migrate:verify": "node scripts/firebase-migration/verify-target.mjs",
+    "new-congregation:check": "node scripts/firebase-migration/check-new-target.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -55,7 +53,8 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "vite": "^7.2.4",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "wrangler": "^4.120.0"
   },
   "overrides": {
     "minimatch@3.1.5": {
