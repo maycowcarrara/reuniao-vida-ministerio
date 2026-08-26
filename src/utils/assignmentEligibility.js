@@ -155,7 +155,6 @@ const LEGACY_BY_TIPO = {
         'vida_crista',
         'leitor_ebc',
         'oracao',
-        'dirigente_sentinela',
         'leitor_sentinela',
         'indicador_entrada',
         'indicador_auditorio',
