@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, CheckSquare, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
+import { Calendar, CheckSquare, X, Image as ImageIcon, Loader2, Save, Trash2, Undo2 } from 'lucide-react';
 import { getIniciais, getUnavailableDateStatus } from './utils';
 import {
     getAssignmentCapabilitiesByGroup,
@@ -8,16 +8,95 @@ import {
     normalizeAssignmentCapabilities,
 } from '../../utils/assignmentEligibility';
 
+const normalizeForDirtyCheck = (value) => {
+    if (Array.isArray(value)) return value.map(normalizeForDirtyCheck);
+    if (value && typeof value === 'object') {
+        return Object.keys(value)
+            .sort()
+            .reduce((acc, key) => {
+                acc[key] = normalizeForDirtyCheck(value[key]);
+                return acc;
+            }, {});
+    }
+    return value ?? null;
+};
+
+const getAlunoSignature = (aluno) => JSON.stringify(normalizeForDirtyCheck(aluno || {}));
+
 const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false }) => {
     const firstInputRef = useRef(null);
+    const formRef = useRef(null);
+    const [initialAlunoSignature] = useState(() => getAlunoSignature(alunoEmEdicao));
     const [novaDataIndisponivel, setNovaDataIndisponivel] = useState({ inicio: '', fim: '', motivo: '' });
     const [familiaDropdownOpen, setFamiliaDropdownOpen] = useState(false);
+    const [confirmarSaidaOpen, setConfirmarSaidaOpen] = useState(false);
+
+    const hasPendingUnavailableDate = Boolean(
+        novaDataIndisponivel.inicio ||
+        novaDataIndisponivel.fim ||
+        novaDataIndisponivel.motivo.trim()
+    );
+    const hasUnsavedChanges = getAlunoSignature(alunoEmEdicao) !== initialAlunoSignature || hasPendingUnavailableDate;
+
+    const solicitarFechamento = () => {
+        if (isSaving) return;
+        if (hasUnsavedChanges) {
+            setConfirmarSaidaOpen(true);
+            return;
+        }
+        onClose();
+    };
+
+    const salvarESair = () => {
+        setConfirmarSaidaOpen(false);
+        formRef.current?.requestSubmit();
+    };
+
+    const descartarESair = () => {
+        setConfirmarSaidaOpen(false);
+        onClose();
+    };
 
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => firstInputRef.current?.focus(), 50);
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (confirmarSaidaOpen) {
+                    setConfirmarSaidaOpen(false);
+                    return;
+                }
+                if (isSaving) return;
+                if (hasUnsavedChanges) {
+                    setConfirmarSaidaOpen(true);
+                    return;
+                }
+                onClose();
+            }
+        };
+
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isOpen, confirmarSaidaOpen, hasUnsavedChanges, isSaving, onClose]);
+
+    useEffect(() => {
+        if (!isOpen || !hasUnsavedChanges) return undefined;
+
+        const onBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [isOpen, hasUnsavedChanges]);
 
     if (!isOpen || !alunoEmEdicao) return null;
 
@@ -112,7 +191,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-2 sm:p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (!isSaving && e.target === e.currentTarget) onClose(); }}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-2 sm:p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (e.target === e.currentTarget) solicitarFechamento(); }}>
             <div className="relative flex max-h-[calc(100vh-1rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200 sm:max-h-[calc(100vh-2rem)]">
                 {isSaving && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/75 backdrop-blur-[2px] text-blue-700">
@@ -125,7 +204,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                         <h3 className="font-black text-sm leading-tight">{alunoEmEdicao.id ? t.modal.editar : t.modal.novo}</h3>
                         <p className="text-[10px] opacity-80 mt-1">{alunoEmEdicao.id ? `ID #${alunoEmEdicao.id}` : '—'}</p>
                     </div>
-                    <button disabled={isSaving} onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"><X size={20} /></button>
+                    <button disabled={isSaving} onClick={solicitarFechamento} className="p-1 hover:bg-white/10 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"><X size={20} /></button>
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 custom-scrollbar sm:p-6" onPaste={handlePaste}>
@@ -159,7 +238,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                         </div>
                     </div>
 
-                    <form id="form-aluno" onSubmit={onSave} className="min-w-0 space-y-4">
+                    <form ref={formRef} id="form-aluno" onSubmit={onSave} className="min-w-0 space-y-4">
                         <fieldset disabled={isSaving} className="min-w-0 space-y-4 disabled:opacity-70">
                         <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
                         <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => handleTipoChange(e.target.value)}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>
@@ -328,12 +407,46 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                 </div>
 
                 <div className="flex shrink-0 justify-end gap-2 rounded-b-3xl border-t border-gray-100 bg-gray-50 p-4">
-                    <button type="button" disabled={isSaving} onClick={onClose} className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50">{t.modal.cancelar}</button>
+                    <button type="button" disabled={isSaving} onClick={solicitarFechamento} className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50">{t.modal.cancelar}</button>
                     <button type="submit" form="form-aluno" disabled={isSaving} className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all hover:bg-blue-600 disabled:cursor-wait disabled:bg-blue-400 inline-flex items-center gap-2">
                         {isSaving && <Loader2 size={14} className="animate-spin" />}
                         {isSaving ? (t.modal.salvando || 'Salvando...') : t.modal.salvar}
                     </button>
                 </div>
+
+                {confirmarSaidaOpen && (
+                    <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+                        <div className="w-full max-w-sm rounded-3xl border border-white/60 bg-white p-5 shadow-2xl">
+                            <h4 className="text-sm font-black text-slate-900">{t.modal.alteracoesPendentesTitulo || 'Salvar alterações?'}</h4>
+                            <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
+                                {t.modal.alteracoesPendentesDescricao || 'Você fez alterações neste cadastro. Salve antes de sair ou descarte o que foi alterado.'}
+                            </p>
+                            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmarSaidaOpen(false)}
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-black uppercase text-slate-500 transition hover:bg-slate-50"
+                                >
+                                    <X size={14} /> {t.modal.continuarEditando || 'Continuar'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={descartarESair}
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-red-100 bg-red-50 px-3 py-2.5 text-[10px] font-black uppercase text-red-700 transition hover:bg-red-100"
+                                >
+                                    <Undo2 size={14} /> {t.modal.descartar || 'Descartar'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={salvarESair}
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-blue-700 px-3 py-2.5 text-[10px] font-black uppercase text-white shadow-lg transition hover:bg-blue-600"
+                                >
+                                    <Save size={14} /> {t.modal.salvar}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

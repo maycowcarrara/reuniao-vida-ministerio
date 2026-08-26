@@ -71,12 +71,11 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
             if (e.key === 'Escape') {
                 if (menuExportOpen) setMenuExportOpen(false);
                 if (modalHistoryOpen) setModalHistoryOpen(false);
-                if (modalFormOpen) setModalFormOpen(false);
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [menuExportOpen, modalHistoryOpen, modalFormOpen]);
+    }, [menuExportOpen, modalHistoryOpen]);
 
     useEffect(() => {
         if (!onSalvarAluno || !Array.isArray(alunos) || alunos.length === 0) return;

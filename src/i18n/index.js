@@ -316,7 +316,7 @@ const PT_MESSAGES = {
             partesHabilitadas: "Partes que pode fazer"
         },
         card: { nunca: "Estreia", diasAtras: "dias atrás", com: "Com", semObs: "Sem observações", ausente: "Ausência Programada", ausenteBadge: "Ausente", indisponivel: "Indisponível:" },
-        modal: { editar: "Editar Aluno", novo: "Novo Cadastro", salvar: "Salvar", salvando: "Salvando...", cancelar: "Cancelar", historico: "Histórico Completo", excluir: "Excluir" },
+        modal: { editar: "Editar Aluno", novo: "Novo Cadastro", salvar: "Salvar", salvando: "Salvando...", cancelar: "Cancelar", historico: "Histórico Completo", excluir: "Excluir", alteracoesPendentesTitulo: "Salvar alterações?", alteracoesPendentesDescricao: "Você fez alterações neste cadastro. Salve antes de sair ou descarte o que foi alterado.", continuarEditando: "Continuar", descartar: "Descartar" },
         filtros: { todos: "Todos", ativos: "Somente Ativos" },
         msg: {
             confirmarExclusao: "Tem certeza que deseja excluir este aluno permanentemente?",
@@ -1132,7 +1132,7 @@ const ES_MESSAGES = {
             partesHabilitadas: "Partes que puede hacer"
         },
         card: { nunca: "Estreno", diasAtras: "días atrás", com: "Con", semObs: "Sin observaciones", ausente: "Ausencia Programada", ausenteBadge: "Ausente", indisponivel: "No disponible:" },
-        modal: { editar: "Editar Estudiante", novo: "Nuevo Registro", salvar: "Guardar", salvando: "Guardando...", cancelar: "Cancelar", historico: "Historial Completo", excluir: "Eliminar" },
+        modal: { editar: "Editar Estudiante", novo: "Nuevo Registro", salvar: "Guardar", salvando: "Guardando...", cancelar: "Cancelar", historico: "Historial Completo", excluir: "Eliminar", alteracoesPendentesTitulo: "¿Guardar cambios?", alteracoesPendentesDescricao: "Hiciste cambios en este registro. Guárdalos antes de salir o descarta lo modificado.", continuarEditando: "Continuar", descartar: "Descartar" },
         filtros: { todos: "Todos", ativos: "Solo Activos" },
         msg: {
             confirmarExclusao: "¿Está seguro de que desea eliminar a este estudiante permanentemente?",
