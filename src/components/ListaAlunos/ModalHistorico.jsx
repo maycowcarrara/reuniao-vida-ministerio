@@ -1,7 +1,8 @@
 import React from 'react';
 import { BarChart3, CalendarDays, History, Trash2, X } from 'lucide-react';
+import { formatHistoricoParte } from './utils';
 
-const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno }) => {
+const ModalHistorico = ({ aluno, isOpen, onClose, t, lang = 'pt', onUpdateAluno }) => {
     if (!isOpen || !aluno) return null;
 
     // Função que é ativada ao clicar na lixeira
@@ -27,7 +28,7 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno }) => {
     const resumoHistorico = (() => {
         const validos = historicoOrdenado.filter((h) => h.data);
         const tipos = validos.reduce((acc, item) => {
-            const key = item.parte || 'Parte';
+            const key = formatHistoricoParte(item.parte, lang) || 'Parte';
             acc[key] = (acc[key] || 0) + 1;
             return acc;
         }, {});
@@ -92,7 +93,7 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, onUpdateAluno }) => {
                         <div key={h.indexOriginal} className="relative flex justify-between items-center text-xs border-b border-gray-50 pb-2 group hover:bg-gray-50/50 transition-colors px-1 -mx-1 rounded">
                             <span className="absolute -left-[13px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-orange-400 shadow-sm" />
                             <div className="pr-4 flex-1">
-                                <p className="font-bold text-gray-700">{h.parte}</p>
+                                <p className="font-bold text-gray-700">{formatHistoricoParte(h.parte, lang) || 'Parte'}</p>
                                 {h.ajudante && <p className="text-[10px] text-blue-500 italic font-bold mt-0.5">{t?.card?.com || 'com'}: {h.ajudante}</p>}
                             </div>
                             <div className="flex items-center gap-2">

@@ -114,13 +114,13 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
             if (gen === 'F') irmas++;
             if (verificarAusenciaAtiva(a)) ausentes++;
 
-            const ult = getUltimoRegistro(a);
+            const ult = getUltimoRegistro(a, lang);
             const d = calcularDias(ult.data);
             if (d !== null && d > 60) atrasados++;
         });
 
         return { total: ativos.length, irmaos, irmas, ausentes, atrasados };
-    }, [alunos, CARGOS_MAP]);
+    }, [alunos, CARGOS_MAP, lang]);
 
     // Lógica para saber se há NENHUM filtro ativo
     const hasActiveFilters = termo !== '' || filtrosTiposAtivos.length > 0 || filtroGenero !== 'todos' || filtroEspecial !== 'todos' || filtroStatus !== 'todos';
@@ -157,7 +157,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 // 5. Filtro Especial
                 if (filtroEspecial === 'ausentes' && !verificarAusenciaAtiva(a)) return false;
                 if (filtroEspecial === 'atrasados') {
-                    const ult = getUltimoRegistro(a);
+                    const ult = getUltimoRegistro(a, lang);
                     const d = calcularDias(ult.data);
                     if (d === null || d <= 60) return false;
                 }
@@ -169,14 +169,14 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                     const res = (a.nome || '').localeCompare(b.nome || '');
                     return ordemCrescente ? res : res * -1;
                 }
-                const ultA = getUltimoRegistro(a);
-                const ultB = getUltimoRegistro(b);
+                const ultA = getUltimoRegistro(a, lang);
+                const ultB = getUltimoRegistro(b, lang);
                 const diasA = calcularDias(ultA.data) ?? 999999;
                 const diasB = calcularDias(ultB.data) ?? 999999;
                 const res = diasA - diasB;
                 return ordemCrescente ? res : res * -1;
             });
-    }, [alunos, termo, filtroStatus, filtrosTiposAtivos, filtroGenero, filtroEspecial, ordenacao, ordemCrescente, CARGOS_MAP]);
+    }, [alunos, termo, filtroStatus, filtrosTiposAtivos, filtroGenero, filtroEspecial, ordenacao, ordemCrescente, CARGOS_MAP, lang]);
 
     const familiasOptions = useMemo(() => {
         const familias = new Set();
@@ -209,7 +209,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         else {
             // Para CSV e TXT, exportamos só o que foi filtrado na tela
             const rows = alunosProcessados.map(a => {
-                const ult = getUltimoRegistro(a);
+                const ult = getUltimoRegistro(a, lang);
                 return {
                     [t.exportFields.nome]: a.nome,
                     [t.exportFields.cargo]: (CARGOS_MAP[getCargoKey(a.tipo, CARGOS_MAP)] || CARGOS_MAP.irmao)[lang],

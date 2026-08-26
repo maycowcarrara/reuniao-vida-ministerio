@@ -9,6 +9,13 @@ import { getCanonicalWeekStartISO, getMeetingDateISOFromSemana } from '../utils/
 import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
 import { formatText, useSectionMessages } from '../i18n';
 import { isBibleStudyPart, isPrayerPart, isSongOnlyPart } from '../utils/meetingParts';
+import {
+    FIM_DE_SEMANA_RESPONSABILIDADES,
+    MEIO_SEMANA_RESPONSABILIDADES,
+    hasFimDeSemanaData,
+    normalizeFimDeSemana,
+    normalizeResponsabilidades
+} from '../utils/fimDeSemana';
 
 export default function Dashboard({
     listaProgramacoes,
@@ -38,6 +45,7 @@ export default function Dashboard({
         const inicioProximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
         const inicioMesSeguinte = new Date(hoje.getFullYear(), hoje.getMonth() + 2, 1);
         const localeMes = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'pt-BR';
+        const lang = config?.idioma === 'es' ? 'es' : 'pt';
 
         const getDataReuniaoISO = (sem) => {
             const eventoEspecial = getEventoEspecialDaSemana(sem, config);
@@ -76,6 +84,17 @@ export default function Dashboard({
             }
 
             return dataCalculada;
+        };
+
+        const getDataFimDeSemanaISO = (sem) => {
+            const fallbackStr = sem?.fimDeSemana?.data || sem?.dataInicio || sem?.dataExata || sem?.dataReuniao || sem?.data;
+            return getMeetingDateISOFromSemana({
+                semanaStr: sem?.semana,
+                config,
+                isoFallback: fallbackStr,
+                overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+                textSources: [sem?.semana]
+            }) || fallbackStr;
         };
 
         const toISODateOnly = (dateObj) => {
@@ -117,6 +136,18 @@ export default function Dashboard({
                     acc.preenchidas += 1;
                 }
             };
+            const addRequiredText = (value, acc) => {
+                acc.total += 1;
+                if ((value || '').toString().trim()) {
+                    acc.preenchidas += 1;
+                }
+            };
+            const addRequiredResponsabilidades = (responsabilidades, defs, acc) => {
+                const normalized = normalizeResponsabilidades(responsabilidades, defs);
+                defs.forEach(({ storageKey }) => {
+                    addRequiredSlot((normalized[storageKey] || []).find((pessoa) => pessoa?.id || pessoa?.nome), acc);
+                });
+            };
 
             const totals = { total: 0, preenchidas: 0 };
 
@@ -138,6 +169,20 @@ export default function Dashboard({
 
                 addRequiredSlot(parte?.estudante, totals);
             });
+
+            addRequiredResponsabilidades(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES, totals);
+
+            const fds = normalizeFimDeSemana(semana?.fimDeSemana);
+            if (fds.ativo && hasFimDeSemanaData(semana?.fimDeSemana)) {
+                addRequiredSlot(fds.presidente, totals);
+                addRequiredSlot(fds.oracaoFinal, totals);
+                addRequiredSlot(fds.estudoSentinela?.dirigente, totals);
+                addRequiredSlot(fds.estudoSentinela?.leitor, totals);
+                if (getTipoEventoSemana(semana, config) === 'visita') {
+                    addRequiredText(fds.visitaSuperintendente?.discursoFinal, totals);
+                }
+                addRequiredResponsabilidades(fds.responsabilidades, FIM_DE_SEMANA_RESPONSABILIDADES, totals);
+            }
 
             return totals;
         };
@@ -184,6 +229,40 @@ export default function Dashboard({
                 addAssignment(parte.estudante, 'resp', parte.id);
                 addAssignment(parte.ajudante, 'ajud', parte.id);
             });
+
+            const responsabilidadesMeioSemana = normalizeResponsabilidades(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+            MEIO_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => {
+                (responsabilidadesMeioSemana[storageKey] || []).forEach((pessoa, itemIndex) => {
+                    addAssignment(pessoa, slotKey, `meio_${storageKey}_${itemIndex}`);
+                });
+            });
+
+            const fds = normalizeFimDeSemana(semana?.fimDeSemana);
+            if (fds.ativo && hasFimDeSemanaData(semana?.fimDeSemana)) {
+                const dataFds = getDataFimDeSemanaISO(semana) || dataISO;
+                const addWeekendAssignment = (pessoa, role, parteId) => {
+                    const pessoaId = pessoa?.id || pessoa?.nome;
+                    if (!pessoaId) return;
+
+                    assignmentKeys.push(buildAssignmentKey({
+                        dataISO: dataFds,
+                        semana: semana.semana,
+                        parteId,
+                        pessoaId,
+                        role
+                    }));
+                };
+
+                addWeekendAssignment(fds.presidente, 'presidente_fds', 'fds_presidente');
+                addWeekendAssignment(fds.oracaoFinal, 'oracao_fds', 'fds_oracao_final');
+                addWeekendAssignment(fds.estudoSentinela?.dirigente, 'dirigente_sentinela', 'fds_dirigente_sentinela');
+                addWeekendAssignment(fds.estudoSentinela?.leitor, 'leitor_sentinela', 'fds_leitor_sentinela');
+                FIM_DE_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => {
+                    (fds.responsabilidades?.[storageKey] || []).forEach((pessoa, itemIndex) => {
+                        addWeekendAssignment(pessoa, slotKey, `fds_${storageKey}_${itemIndex}`);
+                    });
+                });
+            }
 
             const confirmadas = assignmentKeys.filter((key) => confirmacoesMap.get(key)?.status === 'confirmado').length;
             const recusadas = assignmentKeys.filter((key) => confirmacoesMap.get(key)?.status === 'nao_pode').length;
@@ -339,7 +418,15 @@ export default function Dashboard({
                 'ministerio',
                 'discurso',
                 'estudobiblico',
-                'vidacrista'
+                'vidacrista',
+                'presidente_fds',
+                'oracao_fds',
+                'dirigente_sentinela',
+                'leitor_sentinela',
+                'indicador_entrada',
+                'indicador_auditorio',
+                'microfones_volantes',
+                'audio_video'
             ].includes(parte);
         });
 
@@ -357,17 +444,25 @@ export default function Dashboard({
         const hojeTs = new Date().getTime();
         const trimestresTs = hojeTs - (90 * 24 * 60 * 60 * 1000);
         const quatroMesesTs = hojeTs - (120 * 24 * 60 * 60 * 1000);
+        const presidenteFimSemanaLabel = lang === 'es' ? 'Presidente fin de semana' : 'Presidente fim de semana';
+        const sentinelaLabel = lang === 'es' ? 'Atalaya' : 'Sentinela';
 
         let usadosNoTrimestre = 0;
         const precisandoAtencao = [];
         const balanceMap = new Map([
             ['presidente', { label: localTxt.rolePresidente || 'Presidente', total: 0, pessoas: new Set() }],
+            ['presidente_fds', { label: presidenteFimSemanaLabel, total: 0, pessoas: new Set() }],
             ['oracao', { label: localTxt.roleOracao || 'Oração', total: 0, pessoas: new Set() }],
             ['leitura', { label: localTxt.roleLeitura || 'Leitura', total: 0, pessoas: new Set() }],
             ['ministerio', { label: localTxt.roleMinisterio || 'Ministério', total: 0, pessoas: new Set() }],
             ['ajudante', { label: localTxt.roleAjudante || 'Ajudante', total: 0, pessoas: new Set() }],
             ['vida', { label: localTxt.roleVida || 'Vida Cristã', total: 0, pessoas: new Set() }],
-            ['estudo', { label: localTxt.roleEstudoLeitor || 'Estudo/Leitor', total: 0, pessoas: new Set() }]
+            ['estudo', { label: localTxt.roleEstudoLeitor || 'Estudo/Leitor', total: 0, pessoas: new Set() }],
+            ['sentinela', { label: sentinelaLabel, total: 0, pessoas: new Set() }],
+            ...MEIO_SEMANA_RESPONSABILIDADES.map((def) => [
+                def.slotKey,
+                { label: def.labels?.[lang] || def.labels?.pt || def.slotKey, total: 0, pessoas: new Set() }
+            ])
         ]);
 
         const addBalance = (key, pessoa) => {
@@ -439,6 +534,22 @@ export default function Dashboard({
                     addBalance('ajudante', parte?.ajudante);
                 }
             });
+
+            const responsabilidadesMeioSemana = normalizeResponsabilidades(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+            MEIO_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => {
+                (responsabilidadesMeioSemana[storageKey] || []).forEach((pessoa) => addBalance(slotKey, pessoa));
+            });
+
+            const fds = normalizeFimDeSemana(semana?.fimDeSemana);
+            if (fds.ativo && hasFimDeSemanaData(semana?.fimDeSemana)) {
+                addBalance('presidente_fds', fds.presidente);
+                addBalance('oracao', fds.oracaoFinal);
+                addBalance('sentinela', fds.estudoSentinela?.dirigente);
+                addBalance('sentinela', fds.estudoSentinela?.leitor);
+                FIM_DE_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => {
+                    (fds.responsabilidades?.[storageKey] || []).forEach((pessoa) => addBalance(slotKey, pessoa));
+                });
+            }
         });
 
         const roleBalance = Array.from(balanceMap.entries()).map(([key, item]) => ({

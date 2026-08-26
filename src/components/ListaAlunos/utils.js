@@ -23,12 +23,72 @@ export const normalizarIdioma = normalizeLanguage;
 
 export const normalizar = (texto) => texto ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
 
+const HISTORICO_PARTE_LABELS = {
+    pt: {
+        presidente: 'Presidente',
+        presidente_fds: 'Presidente',
+        oracao: 'Oração',
+        oracao_fds: 'Oração final',
+        dirigente: 'Dirigente',
+        dirigente_sentinela: 'Dirigente da Sentinela',
+        leitor: 'Leitor',
+        leitor_sentinela: 'Leitor da Sentinela',
+        resp: 'Parte',
+        ajud: 'Ajudante',
+        ajudante: 'Ajudante',
+        indicador_entrada: 'Ind. entrada',
+        indicador_auditorio: 'Ind. auditório',
+        microfones_volantes: 'Microfones',
+        audio_video: 'Áudio/vídeo',
+        estudo_biblico_congregacao: 'Estudo bíblico',
+        joias: 'Joias espirituais',
+        leitura: 'Leitura da Bíblia',
+        tesouros: 'Tesouros',
+        ministerio: 'Ministério',
+        discurso: 'Discurso',
+        vidacrista: 'Vida cristã'
+    },
+    es: {
+        presidente: 'Presidente',
+        presidente_fds: 'Presidente',
+        oracao: 'Oración',
+        oracao_fds: 'Oración final',
+        dirigente: 'Conductor',
+        dirigente_sentinela: 'Conductor de La Atalaya',
+        leitor: 'Lector',
+        leitor_sentinela: 'Lector de La Atalaya',
+        resp: 'Asignación',
+        ajud: 'Ayudante',
+        ajudante: 'Ayudante',
+        indicador_entrada: 'Acomodador entrada',
+        indicador_auditorio: 'Acomodador auditorio',
+        microfones_volantes: 'Micrófonos',
+        audio_video: 'Audio/video',
+        estudo_biblico_congregacao: 'Estudio bíblico',
+        joias: 'Perlas espirituales',
+        leitura: 'Lectura de la Biblia',
+        tesouros: 'Tesoros',
+        ministerio: 'Ministerio',
+        discurso: 'Discurso',
+        vidacrista: 'Vida cristiana'
+    }
+};
+
+export const formatHistoricoParte = (parte, lang = 'pt') => {
+    const locale = normalizarIdioma(lang);
+    const raw = (parte || '').toString().replace(/\s*\(com\s+.*\)/i, '').trim();
+    if (!raw) return null;
+    const normalizedKey = normalizar(raw).replace(/\s+/g, '_');
+    const labels = HISTORICO_PARTE_LABELS[locale] || HISTORICO_PARTE_LABELS.pt;
+    return labels[normalizedKey] || labels[raw] || raw.replace(/_/g, ' ');
+};
+
 export const getCargoKey = (tipoStr, CARGOS_MAP) => {
     if (CARGOS_MAP[tipoStr]) return tipoStr;
     return Object.keys(CARGOS_MAP).find(k => CARGOS_MAP[k].pt === tipoStr || CARGOS_MAP[k].es === tipoStr) || 'irmao';
 };
 
-export const getUltimoRegistro = (aluno) => {
+export const getUltimoRegistro = (aluno, lang = 'pt') => {
     const hist = Array.isArray(aluno?.historico) ? aluno.historico : [];
     if (hist.length === 0) return { data: null, parte: null, ajudante: null };
 
@@ -38,7 +98,7 @@ export const getUltimoRegistro = (aluno) => {
         return db - da;
     });
     const last = ordenado[0] || {};
-    return { data: last.data || null, parte: (last.parte || null)?.replace(/\s*\(com\s+.*\)/i, ""), ajudante: last.ajudante || null };
+    return { data: last.data || null, parte: formatHistoricoParte(last.parte, lang), ajudante: last.ajudante || null };
 };
 
 export const calcularDias = (dataISO) => {

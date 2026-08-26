@@ -302,7 +302,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                     const id = `apoiomeio${suffix}${itemIndex}`;
                     programacaoLinhas.push({
                         id,
-                        texto: `🧰 ${textos.apoioMeioSemana}: ${titulo} - ${nome}`
+                        texto: `🧰 ${titulo} - ${nome}`
                     });
                     apoiosMeioSemana.push({ id, titulo, pessoa });
                 });
@@ -388,7 +388,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 const attendees = buildAttendees(apoio.pessoa);
                 const eventoApoio = {
                     id: `${baseIdUnico}${apoio.id}`,
-                    summary: `[RVM] ${textos.apoioMeioSemana} - ${apoio.titulo} - ${nome}`,
+                    summary: `[RVM] ${apoio.titulo} - ${nome}`,
                     description: gerarDescricaoHTML(apoio.id, textos.descApoioReuniaoCompleta),
                     start: { dateTime: dataHoraInicioReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     end: { dateTime: dataHoraFimReuniao.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
@@ -434,7 +434,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                         );
                     }
 
-                    addEventoFimDeSemana('presidentefds', textos.presidenteFimDeSemana, fds.presidente);
+                    addEventoFimDeSemana('presidentefds', textos.presidente, fds.presidente);
                     addEventoFimDeSemana('dirigentesentinela', `${textos.dirigenteSentinela} - ${textos.estudoSentinela}`, fds.estudoSentinela?.dirigente);
                     addEventoFimDeSemana('leitorsentinela', `${textos.leitorSentinela} - ${textos.estudoSentinela}`, fds.estudoSentinela?.leitor);
 
@@ -447,7 +447,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                         const titulo = getResponsabilidadeLabel(def, textos, lang);
                         const suffix = RESPONSABILIDADE_ID_SUFFIX[def.storageKey] || def.storageKey.toLowerCase();
                         (fds.responsabilidades?.[def.storageKey] || []).forEach((pessoa, itemIndex) => {
-                            addEventoFimDeSemana(`apoiofds${suffix}${itemIndex}`, `${textos.apoioFimDeSemana} - ${titulo}`, pessoa, textos.descApoioReuniaoCompleta);
+                            addEventoFimDeSemana(`apoiofds${suffix}${itemIndex}`, titulo, pessoa, textos.descApoioReuniaoCompleta);
                         });
                     });
 
@@ -469,7 +469,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                         const attendees = buildAttendees(evento.pessoa);
                         const eventoAgenda = {
                             id: `${baseIdFimDeSemana}${evento.id}`,
-                            summary: `[RVM] ${textos.reuniaoFimDeSemana} - ${evento.titulo} - ${nome}`,
+                            summary: `[RVM] ${evento.titulo} - ${nome}`,
                             description: gerarDescricaoFimDeSemanaHTML(evento.id, evento.detalhesExtra),
                             start: { dateTime: inicioFimDeSemana.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                             end: { dateTime: fimFimDeSemana.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },

@@ -17,6 +17,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { toast } from './utils/toast';
 import { getMeetingDateISOFromSemana, getWeekStartISOFromSemana } from './utils/revisarEnviar/dates';
 import { getSemanaStartISO } from './utils/eventos';
+import { hasFimDeSemanaData, normalizeFimDeSemana } from './utils/fimDeSemana';
 import {
   createProgramacaoId,
   ensureUniqueProgramacaoIds,
@@ -222,29 +223,49 @@ function AdminPanel() {
   const prepararProgramacoesParaSalvar = (programacoes = [], configDestino = dadosSistema?.configuracoes, configOrigem = dadosSistema?.configuracoes) => {
     const diaOrigem = normalizeMeetingDay(configOrigem?.dia_reuniao || configOrigem?.diaReuniao || configOrigem?.diaSemana);
     const diaDestino = normalizeMeetingDay(configDestino?.dia_reuniao || configDestino?.diaReuniao || configDestino?.diaSemana);
+    const diaFimSemanaOrigem = normalizeMeetingDay(configOrigem?.dia_reuniao_fds || configOrigem?.diaReuniaoFds || configOrigem?.diaSemanaFimDeSemana || 'saturday');
+    const diaFimSemanaDestino = normalizeMeetingDay(configDestino?.dia_reuniao_fds || configDestino?.diaReuniaoFds || configDestino?.diaSemanaFimDeSemana || 'saturday');
+    const horarioFimSemanaOrigem = (configOrigem?.horario_fds || configOrigem?.horarioFimDeSemana || '18:00').toString();
+    const horarioFimSemanaDestino = (configDestino?.horario_fds || configDestino?.horarioFimDeSemana || '18:00').toString();
     const mudouDiaReuniao = diaOrigem !== diaDestino;
+    const mudouConfigFimDeSemana = diaFimSemanaOrigem !== diaFimSemanaDestino || horarioFimSemanaOrigem !== horarioFimSemanaDestino;
     const hojeISO = getTodayISO();
     const now = new Date().toISOString();
 
     return programacoes.map((programacao) => {
-      if (!mudouDiaReuniao) return normalizeProgramacaoDates(programacao, configDestino);
+      if (!mudouDiaReuniao && !mudouConfigFimDeSemana) return normalizeProgramacaoDates(programacao, configDestino);
 
       const dataAtual = getDataReuniaoDaProgramacao(programacao, configOrigem);
-      const isFutura = !dataAtual || dataAtual >= hojeISO;
       const isPublicada = programacao?.publicadaNoQuadro !== false;
-      const configParaSemana = isFutura && isPublicada ? configDestino : configOrigem;
+      const fds = normalizeFimDeSemana(programacao?.fimDeSemana);
+      const semanaAfetadaPorFimDeSemana = mudouConfigFimDeSemana && fds.ativo && hasFimDeSemanaData(programacao?.fimDeSemana);
+      const dataFimSemanaAtual = semanaAfetadaPorFimDeSemana
+        ? getMeetingDateISOFromSemana({
+          semanaStr: programacao?.semana,
+          config: configOrigem,
+          isoFallback: programacao?.fimDeSemana?.data || programacao?.dataInicio || dataAtual,
+          overrideDia: diaFimSemanaOrigem,
+          textSources: [programacao?.semana]
+        })
+        : null;
+      const isFutura = !dataAtual || dataAtual >= hojeISO || (semanaAfetadaPorFimDeSemana && (!dataFimSemanaAtual || dataFimSemanaAtual >= hojeISO));
+      const deveMarcarPendencia = mudouDiaReuniao || semanaAfetadaPorFimDeSemana;
+      const configParaSemana = isFutura && isPublicada && deveMarcarPendencia ? configDestino : configOrigem;
       const normalizada = normalizeProgramacaoDates(programacao, configParaSemana);
 
-      if (!isFutura || !isPublicada) return normalizada;
+      if (!isFutura || !isPublicada || !deveMarcarPendencia) return normalizada;
+      const motivo = mudouDiaReuniao && semanaAfetadaPorFimDeSemana
+        ? 'mudanca_datas_reunioes'
+        : (semanaAfetadaPorFimDeSemana ? 'mudanca_fim_de_semana' : 'mudanca_dia_reuniao');
 
       return {
         ...normalizada,
         agendaPendenteSync: true,
         needsCalendarSync: true,
-        agendaPendenteMotivo: 'mudanca_dia_reuniao',
+        agendaPendenteMotivo: motivo,
         agendaPendenteDesde: now,
         historicoPendenteSync: true,
-        historicoPendenteMotivo: 'mudanca_dia_reuniao',
+        historicoPendenteMotivo: motivo,
         historicoPendenteDesde: now,
         ultimaAlteracaoPublicadaEm: now
       };

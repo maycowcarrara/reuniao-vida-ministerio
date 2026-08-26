@@ -5,7 +5,7 @@ import { getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, b
 const AlunoCard = ({ aluno, cargosMap, lang, t, onEdit, onHistory, onDelete, onCopyPublicLink }) => {
     const cKey = getCargoKey(aluno.tipo, cargosMap);
     const info = cargosMap[cKey] || cargosMap.irmao;
-    const ult = getUltimoRegistro(aluno);
+    const ult = getUltimoRegistro(aluno, lang);
     const d = calcularDias(ult.data);
     const whatsappHref = buildWhatsappHref(aluno.telefone, aluno.nome);
     const podeExcluir = aluno.tipo === 'desab';

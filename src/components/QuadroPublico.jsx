@@ -23,6 +23,13 @@ import { getLanguageMeta } from '../config/appConfig';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { prependMeetingSectionIcon } from '../utils/meetingSections';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, getSemanaStartISO as getSemanaStartISOCompartilhado } from '../utils/eventos';
+import {
+    FIM_DE_SEMANA_RESPONSABILIDADES,
+    MEIO_SEMANA_RESPONSABILIDADES,
+    hasFimDeSemanaData,
+    normalizeFimDeSemana,
+    normalizeResponsabilidades
+} from '../utils/fimDeSemana';
 import PwaInstallButton from './PwaInstallButton';
 
 // ============================================================================
@@ -178,6 +185,21 @@ const getDataReuniaoISO = (sem, config) => {
     return dataCalculada;
 };
 
+const getDataFimDeSemanaISO = (sem, config) => {
+    const fallbackStr = sem?.fimDeSemana?.data || sem?.dataInicio || sem?.dataExata || sem?.dataReuniao || sem?.data || null;
+    return getMeetingDateISOFromSemana({
+        semanaStr: sem?.semana,
+        config,
+        isoFallback: fallbackStr,
+        overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+        textSources: [sem?.semana]
+    }) || fallbackStr;
+};
+
+const getNomePessoa = (pessoa) => (pessoa?.nome || pessoa?.id || '').toString().trim();
+
+const juntarNomes = (pessoas = []) => pessoas.map(getNomePessoa).filter(Boolean).join(', ');
+
 // ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
@@ -215,36 +237,107 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const semanasParaExibir = useMemo(() => {
         if (!programacoes) return [];
 
-        let filtradas = programacoes.filter(sem => {
-            if (sem.arquivada) return false;
-            if (sem.publicadaNoQuadro === false) return false;
+        let filtradas = programacoes.flatMap(sem => {
+            if (sem.arquivada) return [];
+            if (sem.publicadaNoQuadro === false) return [];
 
             const dataReuniaoISO = getDataReuniaoISO(sem, config);
-            if (!dataReuniaoISO) return false;
-
-            return dataReuniaoISO >= hojeStr;
-        });
-
-        filtradas = filtradas.map(sem => {
             const semanaStartISO = getSemanaStartISOCompartilhado(sem, config);
-            const dataCorreta = getDataReuniaoISO(sem, config);
+            const entries = [];
 
-            const partesComHorario = calcularHorarios(sem.partes, dataCorreta, config?.horario, lang);
-            const meetingStartTimeStr = partesComHorario.length > 0 ? partesComHorario[0].startTimeStr : '--:--';
-            const meetingEndTimeStr = partesComHorario.length > 0 ? partesComHorario[partesComHorario.length - 1].endTimeStr : '--:--';
+            if (dataReuniaoISO && dataReuniaoISO >= hojeStr) {
+                const partesComHorario = calcularHorarios(sem.partes, dataReuniaoISO, config?.horario, lang);
+                const meetingStartTimeStr = partesComHorario.length > 0 ? partesComHorario[0].startTimeStr : '--:--';
+                const meetingEndTimeStr = partesComHorario.length > 0 ? partesComHorario[partesComHorario.length - 1].endTimeStr : '--:--';
 
-            return { ...sem, semanaStartISO, dataCorreta, partes: partesComHorario, meetingStartTimeStr, meetingEndTimeStr };
+                entries.push({
+                    ...sem,
+                    tipoVisual: 'meioSemana',
+                    visualKey: `${sem?.id || semanaStartISO || dataReuniaoISO}-meio`,
+                    semanaStartISO,
+                    dataCorreta: dataReuniaoISO,
+                    partes: partesComHorario,
+                    meetingStartTimeStr,
+                    meetingEndTimeStr
+                });
+            }
+
+            const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+            const dataFimDeSemana = getDataFimDeSemanaISO(sem, config);
+            if (fds.ativo && hasFimDeSemanaData(sem?.fimDeSemana) && dataFimDeSemana && dataFimDeSemana >= hojeStr) {
+                entries.push({
+                    ...sem,
+                    tipoVisual: 'fimDeSemana',
+                    visualKey: `${sem?.id || semanaStartISO || dataFimDeSemana}-fds`,
+                    semanaStartISO,
+                    dataCorreta: dataFimDeSemana,
+                    partes: [],
+                    fimDeSemana: {
+                        ...fds,
+                        data: dataFimDeSemana,
+                        horario: config?.horario_fds || config?.horarioFimDeSemana || fds.horario || '',
+                    },
+                    meetingStartTimeStr: '',
+                    meetingEndTimeStr: ''
+                });
+            }
+
+            return entries;
         });
 
         if (termo) {
             filtradas = filtradas.map(sem => {
                 const dataCompleta = formatarDataCompleta(sem.dataCorreta, lang, T);
                 const matchSemanaMetadata = normalizarTexto(sem.semana || '').includes(termo) ||
-                                            normalizarTexto(dataCompleta).includes(termo);
+                    normalizarTexto(dataCompleta).includes(termo) ||
+                    (sem.tipoVisual === 'fimDeSemana' && (
+                        normalizarTexto(T.reuniaoFimDeSemana || T.fimDeSemana || '').includes(termo) ||
+                        normalizarTexto(T.fimDeSemana || '').includes(termo)
+                    ));
 
                 const isPalavraPresidente = termo.length >= 3 && 'presidente'.includes(termo);
-                const temPres = normalizarTexto(sem.presidente?.nome).includes(termo) || 
-                                (isPalavraPresidente && !!sem.presidente?.nome);
+                const temPres = sem.tipoVisual === 'fimDeSemana'
+                    ? normalizarTexto(sem.fimDeSemana?.presidente?.nome).includes(termo) || (isPalavraPresidente && !!sem.fimDeSemana?.presidente?.nome)
+                    : normalizarTexto(sem.presidente?.nome).includes(termo) || (isPalavraPresidente && !!sem.presidente?.nome);
+
+                if (sem.tipoVisual === 'fimDeSemana') {
+                    const fds = sem.fimDeSemana || {};
+                    const camposBusca = [
+                        fds.oracaoFinal?.nome,
+                        fds.estudoSentinela?.dirigente?.nome,
+                        fds.estudoSentinela?.leitor?.nome,
+                        fds.reuniaoPublica?.temaDiscurso,
+                        fds.reuniaoPublica?.oradorNomeManual,
+                        fds.reuniaoPublica?.congregacaoOrador,
+                        fds.visitaSuperintendente?.discursoFinal,
+                        T.reuniaoPublica,
+                        T.estudoSentinela,
+                        T.apoioFimDeSemana,
+                        T.oracaoFinal,
+                        ...FIM_DE_SEMANA_RESPONSABILIDADES.flatMap(({ storageKey, labels }) => [
+                            T[storageKey],
+                            labels?.[lang],
+                            labels?.pt,
+                            ...(fds.responsabilidades?.[storageKey] || []).map((pessoa) => pessoa?.nome)
+                        ])
+                    ];
+                    const matchFimDeSemana = camposBusca.some((valor) => normalizarTexto(valor || '').includes(termo));
+                    return matchSemanaMetadata || temPres || matchFimDeSemana
+                        ? { ...sem, filtrado: true, termosBuscados: true }
+                        : null;
+                }
+
+                const responsabilidadesMeioSemana = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+                const camposApoioMeioSemana = [
+                    T.apoioMeioSemana,
+                    ...MEIO_SEMANA_RESPONSABILIDADES.flatMap(({ storageKey, labels }) => [
+                        T[storageKey],
+                        labels?.[lang],
+                        labels?.pt,
+                        ...(responsabilidadesMeioSemana?.[storageKey] || []).map((pessoa) => pessoa?.nome)
+                    ])
+                ];
+                const matchApoioMeioSemana = camposApoioMeioSemana.some((valor) => normalizarTexto(valor || '').includes(termo));
 
                 let partesFiltradas = [];
                 if (matchSemanaMetadata) {
@@ -278,14 +371,18 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                     });
                 }
 
-                if (matchSemanaMetadata || temPres || partesFiltradas.length > 0) {
+                if (matchSemanaMetadata || temPres || matchApoioMeioSemana || partesFiltradas.length > 0) {
                     return { ...sem, partes: partesFiltradas, filtrado: true, termosBuscados: true };
                 }
                 return null;
             }).filter(Boolean);
         }
 
-        return filtradas.sort((a, b) => new Date(a.semanaStartISO).getTime() - new Date(b.semanaStartISO).getTime());
+        return filtradas.sort((a, b) => {
+            const diffData = new Date(a.dataCorreta || a.semanaStartISO).getTime() - new Date(b.dataCorreta || b.semanaStartISO).getTime();
+            if (diffData !== 0) return diffData;
+            return a.tipoVisual === b.tipoVisual ? 0 : a.tipoVisual === 'meioSemana' ? -1 : 1;
+        });
     }, [programacoes, config, lang, hojeStr, T, termo]);
 
     const reuniaoAoVivo = useMemo(() => {
@@ -338,6 +435,141 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
     const parteAoVivoKey = parteAoVivoAtual?.key;
 
     const toggleSemana = (idx) => setSemanaExpandida(prev => prev === idx ? null : idx);
+
+    const renderApoioMeioSemanaConteudo = (sem) => {
+        const responsabilidades = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+        const itens = MEIO_SEMANA_RESPONSABILIDADES
+            .map(({ storageKey, labels }) => {
+                const nomes = juntarNomes(responsabilidades?.[storageKey] || []);
+                return nomes ? {
+                    key: storageKey,
+                    label: T[storageKey] || labels?.[lang] || labels?.pt || storageKey,
+                    valor: nomes,
+                } : null;
+            })
+            .filter(Boolean);
+
+        if (!itens.length) return null;
+
+        return (
+            <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                <h4 className="mb-3 text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">
+                    {T.apoioMeioSemana || 'Apoio do meio de semana'}
+                </h4>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {itens.map((item) => (
+                        <div key={item.key} className="rounded-xl bg-slate-50 px-3 py-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                            <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{item.valor}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderFimDeSemanaConteudo = (sem) => {
+        const fds = sem.fimDeSemana || normalizeFimDeSemana(sem?.fimDeSemana);
+        const responsabilidades = FIM_DE_SEMANA_RESPONSABILIDADES
+            .map(({ storageKey, labels }) => {
+                const nomes = juntarNomes(fds.responsabilidades?.[storageKey] || []);
+                return nomes ? {
+                    key: storageKey,
+                    label: T[storageKey] || labels?.[lang] || labels?.pt || storageKey,
+                    valor: nomes,
+                } : null;
+            })
+            .filter(Boolean);
+
+        const oracaoFinalNome = getNomePessoa(fds.oracaoFinal);
+        if (oracaoFinalNome) {
+            responsabilidades.push({
+                key: 'oracaoFinal',
+                label: T.oracaoFinal || T.oracao,
+                valor: oracaoFinalNome,
+            });
+        }
+
+        const pessoaCard = (label, pessoa, icon = <User size={18} />) => {
+            const nome = getNomePessoa(pessoa);
+            if (!nome) return null;
+            return (
+                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
+                        {icon}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+                        <p className="truncate text-[13px] font-bold text-slate-900">{nome}</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const section = (title, children) => {
+            const content = React.Children.toArray(children).filter(Boolean);
+            if (!content.length) return null;
+            return (
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <h4 className="mb-3 text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">{title}</h4>
+                    <div className="space-y-2">{content}</div>
+                </div>
+            );
+        };
+
+        const textoLinha = (label, valor) => {
+            if (!valor) return null;
+            return (
+                <div className="rounded-xl bg-slate-50 px-3 py-2">
+                    <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+                    <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{valor}</p>
+                </div>
+            );
+        };
+
+        const orador = [
+            fds.reuniaoPublica?.oradorNomeManual,
+            fds.reuniaoPublica?.congregacaoOrador ? `(${fds.reuniaoPublica.congregacaoOrador})` : ''
+        ].filter(Boolean).join(' ');
+        const temReuniaoPublica = !!(fds.reuniaoPublica?.temaDiscurso || orador);
+        const temEstudoSentinela = !!(getNomePessoa(fds.estudoSentinela?.dirigente) || getNomePessoa(fds.estudoSentinela?.leitor));
+        const temDiscursoFinalVisita = !!fds.visitaSuperintendente?.discursoFinal;
+
+        return (
+            <div className="space-y-4">
+                {pessoaCard(T.presidente || 'Presidente', fds.presidente)}
+
+                {temReuniaoPublica && section(T.reuniaoPublica || 'Reunião pública', (
+                    <>
+                        {textoLinha(T.temaDiscurso || 'Tema do discurso', fds.reuniaoPublica?.temaDiscurso)}
+                        {textoLinha(T.oradorDiscursoPublico || 'Orador', orador)}
+                    </>
+                ))}
+
+                {temEstudoSentinela && section(T.estudoSentinela || 'Estudo de A Sentinela', (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {pessoaCard(T.dirigente || 'Dirigente', fds.estudoSentinela?.dirigente, <BookOpen size={18} />)}
+                        {pessoaCard(T.leitor || 'Leitor', fds.estudoSentinela?.leitor, <BookOpen size={18} />)}
+                    </div>
+                ))}
+
+                {temDiscursoFinalVisita && section(T.discursoFinalVisita || 'Discurso final da visita', (
+                    textoLinha(T.discursoFinalVisita || 'Discurso final da visita', fds.visitaSuperintendente?.discursoFinal)
+                ))}
+
+                {responsabilidades.length > 0 && section(T.apoioFimDeSemana || 'Apoio do fim de semana', (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {responsabilidades.map((item) => (
+                            <div key={item.key} className="rounded-xl bg-slate-50 px-3 py-2">
+                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                                <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{item.valor}</p>
+                            </div>
+                        ))}
+                    </div>
+                ))}
+            </div>
+        );
+    };
 
     useLayoutEffect(() => {
         if (!modoTempoReal || !parteAoVivoKey) return undefined;
@@ -467,11 +699,14 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                     ) : (
                         semanasParaExibir.map((sem, idx) => {
                             const dataRef = sem.dataCorreta;
+                            const isFimDeSemana = sem.tipoVisual === 'fimDeSemana';
                             const estaSemana = checkEstaSemana(sem.semanaStartISO);
                             const isHoje = dataRef === hojeStr;
                             const estaAoVivo = modoTempoReal && reuniaoAoVivo === idx;
                             const estaEmContagem = modoPreLive && reuniaoEmContagem.index === idx;
-                            const contagemSemana = estaEmContagem ? formatarContagemRegressiva(sem.partes[0].startObj.getTime() - agora.getTime()) : null;
+                            const contagemSemana = estaEmContagem && sem.partes?.[0]
+                                ? formatarContagemRegressiva(sem.partes[0].startObj.getTime() - agora.getTime())
+                                : null;
 
                             const tipoEvento = getTipoEventoSemana(sem, config);
                             const isVisita = tipoEvento === 'visita';
@@ -480,14 +715,15 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                             const isExpanded = busca ? true : estaAoVivo || estaEmContagem || semanaExpandida === idx;
 
-                            const numCantInicial = extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'oracao_inicial')?.titulo);
-                            const numCantMeio = extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'cantico')?.titulo);
-                            const numCantFinal = extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'oracao_final')?.titulo);
+                            const numCantInicial = isFimDeSemana ? '' : extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'oracao_inicial')?.titulo);
+                            const numCantMeio = isFimDeSemana ? '' : extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'cantico')?.titulo);
+                            const numCantFinal = isFimDeSemana ? '' : extrairNumeroCantico(sem.partes?.find(p => p.tipo === 'oracao_final')?.titulo);
 
                             return (
                                 <div
-                                    key={idx}
-                                    className={`bg-white rounded-3xl shadow-sm border overflow-hidden ${isVisita ? 'border-blue-500' :
+                                    key={sem.visualKey || idx}
+                                    className={`bg-white rounded-3xl shadow-sm border overflow-hidden ${isFimDeSemana ? 'border-sky-400' :
+                                        isVisita ? 'border-blue-500' :
                                         isAssembleia ? 'border-purple-500' :
                                             estaSemana ? 'border-emerald-500 ring-1 ring-emerald-200 shadow-md' :
                                                 isEspecial ? 'border-amber-500' : 'border-slate-200'
@@ -512,12 +748,15 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                                     <button
                                         onClick={() => toggleSemana(idx)}
-                                        className={`w-full px-5 py-4 flex justify-between items-center transition-colors ${estaSemana ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'bg-slate-50 hover:bg-slate-100'
+                                        className={`w-full px-5 py-4 flex justify-between items-center transition-colors ${isFimDeSemana ? 'bg-sky-50 hover:bg-sky-100/70' :
+                                            estaSemana ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'bg-slate-50 hover:bg-slate-100'
                                             }`}
                                     >
                                         <div className="text-left">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <h3 className="font-black text-slate-800 text-base">{sem.semana}</h3>
+                                                <h3 className="font-black text-slate-800 text-base">
+                                                    {isFimDeSemana ? (T.reuniaoFimDeSemana || T.fimDeSemana || 'Reunião de fim de semana') : sem.semana}
+                                                </h3>
                                                 {isHoje && (
                                                     <span className="bg-emerald-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-md shadow-sm animate-pulse">{T.hoje}</span>
                                                 )}
@@ -527,7 +766,13 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                             </div>
                                             <p className="text-blue-600 font-bold text-xs flex items-center gap-1.5 uppercase">
                                                 <Calendar size={12} /> {formatarDataCompleta(dataRef, lang, T)}
+                                                {isFimDeSemana && sem.fimDeSemana?.horario && <span>• {sem.fimDeSemana.horario}</span>}
                                             </p>
+                                            {isFimDeSemana && (
+                                                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                                                    {sem.semana}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="text-slate-400">
                                             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -537,7 +782,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                     {/* CONTEÚDO EXPANSÍVEL */}
                                     {isExpanded && (
                                         <div className="p-5 space-y-6 bg-white border-t border-slate-100">
-                                            {isAssembleia ? (
+                                            {isFimDeSemana ? (
+                                                renderFimDeSemanaConteudo(sem)
+                                            ) : isAssembleia ? (
                                                 <div className="text-center py-6 px-4 bg-purple-50 rounded-2xl border border-purple-100">
                                                     <Star size={32} className="mx-auto mb-3 text-purple-300" />
                                                     <p className="font-black text-purple-900 text-sm">
@@ -817,6 +1064,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                         )}
 
                                                     </div>
+
+                                                    {renderApoioMeioSemanaConteudo(sem)}
                                                 </>
                                             )}
                                         </div>
