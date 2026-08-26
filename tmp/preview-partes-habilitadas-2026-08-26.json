@@ -1,0 +1,4977 @@
+{
+  "geradoEm": "2026-08-26T12:54:20.331Z",
+  "projectId": "rvm-sbssc",
+  "path": "users/P8B0fY6m8JVjoLFGZEcXQ1uWsWs2/alunos",
+  "regra": "Preview read-only. Sugeridas derivadas das listas validadas de 2026-08-25; anciaos e servos recebem leitor_ebc, leitor_sentinela, indicador_entrada e indicador_auditorio; alunos ativos nao citados mantem habilitacoes atuais.",
+  "totais": {
+    "alunos": 101,
+    "citadosNaLista": 87,
+    "naoCitadosAtivos": 0,
+    "desabilitados": 14,
+    "preencher": 87,
+    "substituir": 0,
+    "limparDesabilitado": 0,
+    "semAlteracao": 14,
+    "manterSemLista": 0
+  },
+  "porAcao": {
+    "preencher": [
+      {
+        "id": "29",
+        "docId": "29",
+        "nome": "Adriano Cruz",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "104",
+        "docId": "104",
+        "nome": "Adriano Filho",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "17",
+        "docId": "17",
+        "nome": "Alessandra Miranda",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "30",
+        "docId": "30",
+        "nome": "Alexander Märtin",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia",
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "31",
+        "docId": "31",
+        "nome": "Alzira Sluminsky",
+        "tipo": "irma_lim",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "94",
+        "docId": "94",
+        "nome": "Anderson",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "3",
+        "docId": "3",
+        "nome": "Anildo Kaminski",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "32",
+        "docId": "32",
+        "nome": "Anita Martin",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "33",
+        "docId": "33",
+        "nome": "Anna Clara Gomes",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "95",
+        "docId": "95",
+        "nome": "Benjamin",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "102",
+        "docId": "102",
+        "nome": "Bianca",
+        "tipo": "irma_lim",
+        "observacoes": "estrangeira; designar com alguém do pré-grupo",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "35",
+        "docId": "35",
+        "nome": "Bruno Rosa",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia",
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "36",
+        "docId": "36",
+        "nome": "Camila Märtin",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "37",
+        "docId": "37",
+        "nome": "Caruline Ornelas",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "68",
+        "docId": "68",
+        "nome": "Celeste Lima Laurentino",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "39",
+        "docId": "39",
+        "nome": "Celso Endler",
+        "tipo": "irmao",
+        "observacoes": "nunca foi designado (conversar antes para avisar)",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "40",
+        "docId": "40",
+        "nome": "Clarice Gomes",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "42",
+        "docId": "42",
+        "nome": "Cláudia Torres",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "4",
+        "docId": "4",
+        "nome": "Cláudio Sluminsky",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Joias espirituais",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "43",
+        "docId": "43",
+        "nome": "Cleuzi Jarutais",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "69",
+        "docId": "69",
+        "nome": "Conceição Gomes",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "44",
+        "docId": "44",
+        "nome": "Cristiane Fietz",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "46",
+        "docId": "46",
+        "nome": "Daniela Wantowski",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "15",
+        "docId": "15",
+        "nome": "Félix Stuani Jarutais",
+        "tipo": "servo",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Joias espirituais",
+          "Oração"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "49",
+        "docId": "49",
+        "nome": "Fernando Ornelas",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "50",
+        "docId": "50",
+        "nome": "Francisco Veiga",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "18",
+        "docId": "18",
+        "nome": "Geci Drevek",
+        "tipo": "irma",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "51",
+        "docId": "51",
+        "nome": "Gilvane Streit",
+        "tipo": "irma",
+        "observacoes": "faz demonstração",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "52",
+        "docId": "52",
+        "nome": "Giovana Paray",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "19",
+        "docId": "19",
+        "nome": "Graziela Jesus",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "54",
+        "docId": "54",
+        "nome": "Jaci Schmidt",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "55",
+        "docId": "55",
+        "nome": "Jean Cova",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia",
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "56",
+        "docId": "56",
+        "nome": "Jeison Rosa",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia",
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "20",
+        "docId": "20",
+        "nome": "Jessyca Croelhas",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "57",
+        "docId": "57",
+        "nome": "Jesús Hernandez",
+        "tipo": "irmao_hab",
+        "observacoes": "hispano-hablante; estrangeiro",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia",
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "10",
+        "docId": "10",
+        "nome": "Jhoyner Quintero",
+        "tipo": "servo",
+        "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "58",
+        "docId": "58",
+        "nome": "Joao Dziedzic",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "103",
+        "docId": "103",
+        "nome": "Jorge",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "oracao"
+        ],
+        "adicionar": [
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "60",
+        "docId": "60",
+        "nome": "José Rodrigues",
+        "tipo": "irmao",
+        "observacoes": "nunca foi designado (conversar antes para avisar)",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "11",
+        "docId": "11",
+        "nome": "Josuel Laurentino",
+        "tipo": "servo",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "61",
+        "docId": "61",
+        "nome": "Joyce Croelhas",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "62",
+        "docId": "62",
+        "nome": "Jucélia Ópolis",
+        "tipo": "irma_exp",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "21",
+        "docId": "21",
+        "nome": "Katia Märtin",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "5",
+        "docId": "5",
+        "nome": "Laércio Custódio",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "12",
+        "docId": "12",
+        "nome": "Laudecir Aniaia",
+        "tipo": "servo",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Joias espirituais",
+          "Oração"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "65",
+        "docId": "65",
+        "nome": "Laurindo Prado",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "105",
+        "docId": "105",
+        "nome": "Leandro",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "66",
+        "docId": "66",
+        "nome": "Lidgele Faria",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "22",
+        "docId": "22",
+        "nome": "Marcelina Silva",
+        "tipo": "irma",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "6",
+        "docId": "6",
+        "nome": "Marcelo Finato",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "16",
+        "docId": "16",
+        "nome": "Marcelo Miranda",
+        "tipo": "servo",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "99",
+        "docId": "99",
+        "nome": "Márcia Salça da Cruz",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "7",
+        "docId": "7",
+        "nome": "Marco Ress",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "41",
+        "docId": "41",
+        "nome": "Marcos Ópolis",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia",
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "71",
+        "docId": "71",
+        "nome": "Maria Fernanda Curti",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "70",
+        "docId": "70",
+        "nome": "Maria Wolff",
+        "tipo": "irma",
+        "observacoes": "criança",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "72",
+        "docId": "72",
+        "nome": "Marina Dzeiczek",
+        "tipo": "irma_lim",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "73",
+        "docId": "73",
+        "nome": "Marlene Maia",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "75",
+        "docId": "75",
+        "nome": "Marli Fietz",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "1",
+        "docId": "1",
+        "nome": "Maycow Carrara",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "23",
+        "docId": "23",
+        "nome": "Melanie Palma",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "77",
+        "docId": "77",
+        "nome": "Melidys Guatarasma",
+        "tipo": "irma_lim",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "2",
+        "docId": "2",
+        "nome": "Michele Carrara",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "78",
+        "docId": "78",
+        "nome": "Moacir Silva",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "13",
+        "docId": "13",
+        "nome": "Nelson Salça",
+        "tipo": "servo",
+        "observacoes": "não faz tesouros",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Joias espirituais",
+          "Oração"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "24",
+        "docId": "24",
+        "nome": "Neusa Aniaia",
+        "tipo": "irma_lim",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "79",
+        "docId": "79",
+        "nome": "Nicolas Faria",
+        "tipo": "irmao_hab",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia",
+          "Oração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso",
+          "oracao"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "25",
+        "docId": "25",
+        "nome": "Norianni Espinoza",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular; estrangeiro; hispano-hablante",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "80",
+        "docId": "80",
+        "nome": "Noris Alfonso",
+        "tipo": "irma",
+        "observacoes": "hispano-hablante; estrangeiro",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "81",
+        "docId": "81",
+        "nome": "Olandir Fernandes",
+        "tipo": "irma_lim",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "8",
+        "docId": "8",
+        "nome": "Omar Alfonzo Espinoza",
+        "tipo": "anciao",
+        "observacoes": "Hispano-hablante",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "82",
+        "docId": "82",
+        "nome": "Omar Codallo",
+        "tipo": "irmao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia"
+        ],
+        "adicionar": [
+          "leitura_biblia"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "83",
+        "docId": "83",
+        "nome": "Patrícia Medina",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "26",
+        "docId": "26",
+        "nome": "Patrícia Ress",
+        "tipo": "irma_exp",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "14",
+        "docId": "14",
+        "nome": "Pedro Rodrigues",
+        "tipo": "servo",
+        "observacoes": "não faz tesouros",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Joias espirituais",
+          "Oração"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "joias_espirituais",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "85",
+        "docId": "85",
+        "nome": "Raquel Custódio",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "86",
+        "docId": "86",
+        "nome": "Rebeca Ress",
+        "tipo": "irma",
+        "observacoes": "criança",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "9",
+        "docId": "9",
+        "nome": "Rodolfo Curti",
+        "tipo": "anciao",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso inicial",
+          "Estudo bíblico",
+          "Joias espirituais",
+          "Nossa vida cristã",
+          "Oração",
+          "Presidente meio de semana"
+        ],
+        "extrasPorTipo": [
+          "leitor_ebc",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "atuais": [],
+        "sugeridas": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "adicionar": [
+          "presidente_rvm",
+          "discurso_inicial",
+          "joias_espirituais",
+          "vida_crista",
+          "estudo_biblico_congregacao",
+          "leitor_ebc",
+          "oracao",
+          "leitor_sentinela",
+          "indicador_entrada",
+          "indicador_auditorio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "87",
+        "docId": "87",
+        "nome": "Rubens Martin",
+        "tipo": "irmao",
+        "observacoes": "faz discursos (restrições)",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Discurso 5 min",
+          "Leitura da Bíblia"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "leitura_biblia",
+          "discurso"
+        ],
+        "adicionar": [
+          "leitura_biblia",
+          "discurso"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "88",
+        "docId": "88",
+        "nome": "Sabrina Ress",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "89",
+        "docId": "89",
+        "nome": "Salete Salça",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "90",
+        "docId": "90",
+        "nome": "Simone Finato",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "91",
+        "docId": "91",
+        "nome": "Siomara Kaminski",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "27",
+        "docId": "27",
+        "nome": "Sirlei Taborda",
+        "tipo": "irma",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "92",
+        "docId": "92",
+        "nome": "Solange Borges",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "98",
+        "docId": "98",
+        "nome": "Tatiane",
+        "tipo": "irma",
+        "observacoes": "",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      },
+      {
+        "id": "28",
+        "docId": "28",
+        "nome": "Tereza Santos",
+        "tipo": "irma",
+        "observacoes": "Pioneiro regular",
+        "citadoNaLista": true,
+        "partesNaLista": [
+          "Demonstração"
+        ],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [
+          "ministerio"
+        ],
+        "adicionar": [
+          "ministerio"
+        ],
+        "remover": [],
+        "acao": "preencher"
+      }
+    ],
+    "sem_alteracao": [
+      {
+        "id": "34",
+        "docId": "34",
+        "nome": "Bruno Silva",
+        "tipo": "desab",
+        "observacoes": "",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "38",
+        "docId": "38",
+        "nome": "Célia Kiste",
+        "tipo": "desab",
+        "observacoes": "(restrições)",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "45",
+        "docId": "45",
+        "nome": "Daniele Silva",
+        "tipo": "desab",
+        "observacoes": "",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "47",
+        "docId": "47",
+        "nome": "Dejanira Silva",
+        "tipo": "desab",
+        "observacoes": "vive no oxigênio, não pode sair de casa",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "48",
+        "docId": "48",
+        "nome": "Fernanda Wolff",
+        "tipo": "desab",
+        "observacoes": "não quer fazer parte no momento",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "53",
+        "docId": "53",
+        "nome": "Hérica Martins",
+        "tipo": "desab",
+        "observacoes": "filha da Célia e não vai reunião há muito tempo",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "59",
+        "docId": "59",
+        "nome": "João Caldas",
+        "tipo": "desab",
+        "observacoes": "",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "63",
+        "docId": "63",
+        "nome": "Karine Heinem",
+        "tipo": "desab",
+        "observacoes": "também não vai na reunião há muitos anos",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "64",
+        "docId": "64",
+        "nome": "Kauê Silva",
+        "tipo": "desab",
+        "observacoes": "",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "67",
+        "docId": "67",
+        "nome": "Luiz Dreveck",
+        "tipo": "desab",
+        "observacoes": "",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "74",
+        "docId": "74",
+        "nome": "Marli Prado",
+        "tipo": "desab",
+        "observacoes": "",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "76",
+        "docId": "76",
+        "nome": "Marly Heinen",
+        "tipo": "desab",
+        "observacoes": "mesma situação da filha Karine",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "84",
+        "docId": "84",
+        "nome": "Pedro Hernández",
+        "tipo": "desab",
+        "observacoes": "estrangeiro; venezuelano irmão do Jesus. Foi na reunião domingo agora",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      },
+      {
+        "id": "93",
+        "docId": "93",
+        "nome": "Zeni Vieira",
+        "tipo": "desab",
+        "observacoes": "",
+        "citadoNaLista": false,
+        "partesNaLista": [],
+        "extrasPorTipo": [],
+        "atuais": [],
+        "sugeridas": [],
+        "adicionar": [],
+        "remover": [],
+        "acao": "sem_alteracao"
+      }
+    ]
+  },
+  "alunos": [
+    {
+      "id": "29",
+      "docId": "29",
+      "nome": "Adriano Cruz",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "104",
+      "docId": "104",
+      "nome": "Adriano Filho",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "17",
+      "docId": "17",
+      "nome": "Alessandra Miranda",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "30",
+      "docId": "30",
+      "nome": "Alexander Märtin",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia",
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "31",
+      "docId": "31",
+      "nome": "Alzira Sluminsky",
+      "tipo": "irma_lim",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "94",
+      "docId": "94",
+      "nome": "Anderson",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "3",
+      "docId": "3",
+      "nome": "Anildo Kaminski",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "32",
+      "docId": "32",
+      "nome": "Anita Martin",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "33",
+      "docId": "33",
+      "nome": "Anna Clara Gomes",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "95",
+      "docId": "95",
+      "nome": "Benjamin",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "102",
+      "docId": "102",
+      "nome": "Bianca",
+      "tipo": "irma_lim",
+      "observacoes": "estrangeira; designar com alguém do pré-grupo",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "35",
+      "docId": "35",
+      "nome": "Bruno Rosa",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia",
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "34",
+      "docId": "34",
+      "nome": "Bruno Silva",
+      "tipo": "desab",
+      "observacoes": "",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "36",
+      "docId": "36",
+      "nome": "Camila Märtin",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "37",
+      "docId": "37",
+      "nome": "Caruline Ornelas",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "68",
+      "docId": "68",
+      "nome": "Celeste Lima Laurentino",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "38",
+      "docId": "38",
+      "nome": "Célia Kiste",
+      "tipo": "desab",
+      "observacoes": "(restrições)",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "39",
+      "docId": "39",
+      "nome": "Celso Endler",
+      "tipo": "irmao",
+      "observacoes": "nunca foi designado (conversar antes para avisar)",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "40",
+      "docId": "40",
+      "nome": "Clarice Gomes",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "42",
+      "docId": "42",
+      "nome": "Cláudia Torres",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "4",
+      "docId": "4",
+      "nome": "Cláudio Sluminsky",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Joias espirituais",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "43",
+      "docId": "43",
+      "nome": "Cleuzi Jarutais",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "69",
+      "docId": "69",
+      "nome": "Conceição Gomes",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "44",
+      "docId": "44",
+      "nome": "Cristiane Fietz",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "46",
+      "docId": "46",
+      "nome": "Daniela Wantowski",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "45",
+      "docId": "45",
+      "nome": "Daniele Silva",
+      "tipo": "desab",
+      "observacoes": "",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "47",
+      "docId": "47",
+      "nome": "Dejanira Silva",
+      "tipo": "desab",
+      "observacoes": "vive no oxigênio, não pode sair de casa",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "15",
+      "docId": "15",
+      "nome": "Félix Stuani Jarutais",
+      "tipo": "servo",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Joias espirituais",
+        "Oração"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "48",
+      "docId": "48",
+      "nome": "Fernanda Wolff",
+      "tipo": "desab",
+      "observacoes": "não quer fazer parte no momento",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "49",
+      "docId": "49",
+      "nome": "Fernando Ornelas",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "50",
+      "docId": "50",
+      "nome": "Francisco Veiga",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "18",
+      "docId": "18",
+      "nome": "Geci Drevek",
+      "tipo": "irma",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "51",
+      "docId": "51",
+      "nome": "Gilvane Streit",
+      "tipo": "irma",
+      "observacoes": "faz demonstração",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "52",
+      "docId": "52",
+      "nome": "Giovana Paray",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "19",
+      "docId": "19",
+      "nome": "Graziela Jesus",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "53",
+      "docId": "53",
+      "nome": "Hérica Martins",
+      "tipo": "desab",
+      "observacoes": "filha da Célia e não vai reunião há muito tempo",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "54",
+      "docId": "54",
+      "nome": "Jaci Schmidt",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "55",
+      "docId": "55",
+      "nome": "Jean Cova",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia",
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "56",
+      "docId": "56",
+      "nome": "Jeison Rosa",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia",
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "20",
+      "docId": "20",
+      "nome": "Jessyca Croelhas",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "57",
+      "docId": "57",
+      "nome": "Jesús Hernandez",
+      "tipo": "irmao_hab",
+      "observacoes": "hispano-hablante; estrangeiro",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia",
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "10",
+      "docId": "10",
+      "nome": "Jhoyner Quintero",
+      "tipo": "servo",
+      "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "59",
+      "docId": "59",
+      "nome": "João Caldas",
+      "tipo": "desab",
+      "observacoes": "",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "58",
+      "docId": "58",
+      "nome": "Joao Dziedzic",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "103",
+      "docId": "103",
+      "nome": "Jorge",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "oracao"
+      ],
+      "adicionar": [
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "60",
+      "docId": "60",
+      "nome": "José Rodrigues",
+      "tipo": "irmao",
+      "observacoes": "nunca foi designado (conversar antes para avisar)",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "11",
+      "docId": "11",
+      "nome": "Josuel Laurentino",
+      "tipo": "servo",
+      "observacoes": "faz estudo bíblico de congregação; nossa vida cristã",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "61",
+      "docId": "61",
+      "nome": "Joyce Croelhas",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "62",
+      "docId": "62",
+      "nome": "Jucélia Ópolis",
+      "tipo": "irma_exp",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "63",
+      "docId": "63",
+      "nome": "Karine Heinem",
+      "tipo": "desab",
+      "observacoes": "também não vai na reunião há muitos anos",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "21",
+      "docId": "21",
+      "nome": "Katia Märtin",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "64",
+      "docId": "64",
+      "nome": "Kauê Silva",
+      "tipo": "desab",
+      "observacoes": "",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "5",
+      "docId": "5",
+      "nome": "Laércio Custódio",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "12",
+      "docId": "12",
+      "nome": "Laudecir Aniaia",
+      "tipo": "servo",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Joias espirituais",
+        "Oração"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "65",
+      "docId": "65",
+      "nome": "Laurindo Prado",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "105",
+      "docId": "105",
+      "nome": "Leandro",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "66",
+      "docId": "66",
+      "nome": "Lidgele Faria",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "67",
+      "docId": "67",
+      "nome": "Luiz Dreveck",
+      "tipo": "desab",
+      "observacoes": "",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "22",
+      "docId": "22",
+      "nome": "Marcelina Silva",
+      "tipo": "irma",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "6",
+      "docId": "6",
+      "nome": "Marcelo Finato",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "16",
+      "docId": "16",
+      "nome": "Marcelo Miranda",
+      "tipo": "servo",
+      "observacoes": "faz estudo bíblico de congregação; nossa vida cristã",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "99",
+      "docId": "99",
+      "nome": "Márcia Salça da Cruz",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "7",
+      "docId": "7",
+      "nome": "Marco Ress",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "41",
+      "docId": "41",
+      "nome": "Marcos Ópolis",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia",
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "71",
+      "docId": "71",
+      "nome": "Maria Fernanda Curti",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "70",
+      "docId": "70",
+      "nome": "Maria Wolff",
+      "tipo": "irma",
+      "observacoes": "criança",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "72",
+      "docId": "72",
+      "nome": "Marina Dzeiczek",
+      "tipo": "irma_lim",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "73",
+      "docId": "73",
+      "nome": "Marlene Maia",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "75",
+      "docId": "75",
+      "nome": "Marli Fietz",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "74",
+      "docId": "74",
+      "nome": "Marli Prado",
+      "tipo": "desab",
+      "observacoes": "",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "76",
+      "docId": "76",
+      "nome": "Marly Heinen",
+      "tipo": "desab",
+      "observacoes": "mesma situação da filha Karine",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "1",
+      "docId": "1",
+      "nome": "Maycow Carrara",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "23",
+      "docId": "23",
+      "nome": "Melanie Palma",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "77",
+      "docId": "77",
+      "nome": "Melidys Guatarasma",
+      "tipo": "irma_lim",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "2",
+      "docId": "2",
+      "nome": "Michele Carrara",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "78",
+      "docId": "78",
+      "nome": "Moacir Silva",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "13",
+      "docId": "13",
+      "nome": "Nelson Salça",
+      "tipo": "servo",
+      "observacoes": "não faz tesouros",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Joias espirituais",
+        "Oração"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "24",
+      "docId": "24",
+      "nome": "Neusa Aniaia",
+      "tipo": "irma_lim",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "79",
+      "docId": "79",
+      "nome": "Nicolas Faria",
+      "tipo": "irmao_hab",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia",
+        "Oração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso",
+        "oracao"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "25",
+      "docId": "25",
+      "nome": "Norianni Espinoza",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular; estrangeiro; hispano-hablante",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "80",
+      "docId": "80",
+      "nome": "Noris Alfonso",
+      "tipo": "irma",
+      "observacoes": "hispano-hablante; estrangeiro",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "81",
+      "docId": "81",
+      "nome": "Olandir Fernandes",
+      "tipo": "irma_lim",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "8",
+      "docId": "8",
+      "nome": "Omar Alfonzo Espinoza",
+      "tipo": "anciao",
+      "observacoes": "Hispano-hablante",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "82",
+      "docId": "82",
+      "nome": "Omar Codallo",
+      "tipo": "irmao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia"
+      ],
+      "adicionar": [
+        "leitura_biblia"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "83",
+      "docId": "83",
+      "nome": "Patrícia Medina",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "26",
+      "docId": "26",
+      "nome": "Patrícia Ress",
+      "tipo": "irma_exp",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "84",
+      "docId": "84",
+      "nome": "Pedro Hernández",
+      "tipo": "desab",
+      "observacoes": "estrangeiro; venezuelano irmão do Jesus. Foi na reunião domingo agora",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    },
+    {
+      "id": "14",
+      "docId": "14",
+      "nome": "Pedro Rodrigues",
+      "tipo": "servo",
+      "observacoes": "não faz tesouros",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Joias espirituais",
+        "Oração"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "joias_espirituais",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "85",
+      "docId": "85",
+      "nome": "Raquel Custódio",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "86",
+      "docId": "86",
+      "nome": "Rebeca Ress",
+      "tipo": "irma",
+      "observacoes": "criança",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "9",
+      "docId": "9",
+      "nome": "Rodolfo Curti",
+      "tipo": "anciao",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso inicial",
+        "Estudo bíblico",
+        "Joias espirituais",
+        "Nossa vida cristã",
+        "Oração",
+        "Presidente meio de semana"
+      ],
+      "extrasPorTipo": [
+        "leitor_ebc",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "atuais": [],
+      "sugeridas": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "adicionar": [
+        "presidente_rvm",
+        "discurso_inicial",
+        "joias_espirituais",
+        "vida_crista",
+        "estudo_biblico_congregacao",
+        "leitor_ebc",
+        "oracao",
+        "leitor_sentinela",
+        "indicador_entrada",
+        "indicador_auditorio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "87",
+      "docId": "87",
+      "nome": "Rubens Martin",
+      "tipo": "irmao",
+      "observacoes": "faz discursos (restrições)",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Discurso 5 min",
+        "Leitura da Bíblia"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "leitura_biblia",
+        "discurso"
+      ],
+      "adicionar": [
+        "leitura_biblia",
+        "discurso"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "88",
+      "docId": "88",
+      "nome": "Sabrina Ress",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "89",
+      "docId": "89",
+      "nome": "Salete Salça",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "90",
+      "docId": "90",
+      "nome": "Simone Finato",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "91",
+      "docId": "91",
+      "nome": "Siomara Kaminski",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "27",
+      "docId": "27",
+      "nome": "Sirlei Taborda",
+      "tipo": "irma",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "92",
+      "docId": "92",
+      "nome": "Solange Borges",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "98",
+      "docId": "98",
+      "nome": "Tatiane",
+      "tipo": "irma",
+      "observacoes": "",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "28",
+      "docId": "28",
+      "nome": "Tereza Santos",
+      "tipo": "irma",
+      "observacoes": "Pioneiro regular",
+      "citadoNaLista": true,
+      "partesNaLista": [
+        "Demonstração"
+      ],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [
+        "ministerio"
+      ],
+      "adicionar": [
+        "ministerio"
+      ],
+      "remover": [],
+      "acao": "preencher"
+    },
+    {
+      "id": "93",
+      "docId": "93",
+      "nome": "Zeni Vieira",
+      "tipo": "desab",
+      "observacoes": "",
+      "citadoNaLista": false,
+      "partesNaLista": [],
+      "extrasPorTipo": [],
+      "atuais": [],
+      "sugeridas": [],
+      "adicionar": [],
+      "remover": [],
+      "acao": "sem_alteracao"
+    }
+  ]
+}

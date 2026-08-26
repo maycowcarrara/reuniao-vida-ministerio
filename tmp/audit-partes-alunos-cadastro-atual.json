@@ -1,17 +1,17 @@
 {
-  "geradoEm": "2026-08-26T00:34:37.092Z",
+  "geradoEm": "2026-08-26T12:47:46.562Z",
   "projectId": "rvm-sbssc",
   "path": "users/P8B0fY6m8JVjoLFGZEcXQ1uWsWs2/alunos",
   "totais": {
     "alunos": 101,
     "tipos": {
-      "irmao": 12,
+      "irmao": 11,
       "anciao": 9,
       "irma_exp": 9,
       "irmao_hab": 10,
       "irma_lim": 6,
       "irma": 35,
-      "desab": 13,
+      "desab": 14,
       "servo": 7
     },
     "duplicadosNomeCompleto": 0,
@@ -625,7 +625,7 @@
     {
       "id": "84",
       "nome": "Pedro Hernández",
-      "tipo": "irmao",
+      "tipo": "desab",
       "familia": "",
       "observacoes": "estrangeiro; venezuelano irmão do Jesus. Foi na reunião domingo agora"
     },
