@@ -6,6 +6,7 @@ import {
     getAssignmentContextForSlot,
     isAlunoEligibleForAssignment,
 } from '../../utils/assignmentEligibility';
+import { getFimDeSemanaAssignedPeople, getMeioSemanaAssignedPeople } from '../../utils/fimDeSemana';
 
 export default function ModalSugestao({
     isOpen,
@@ -47,6 +48,7 @@ export default function ModalSugestao({
             labelKey: ctx.labelKey,
             gender: ctx.gender,
             isAjudante: ctx.isAjudante,
+            slotKey: modalKey,
         };
     };
 
@@ -68,11 +70,15 @@ export default function ModalSugestao({
             if (familia) familiasOcupadasNestaSemana.add(familia);
         };
 
-        if (semanaAtual && Array.isArray(semanaAtual.partes)) {
+        if (semanaAtual) {
             addOcupado(semanaAtual.presidente);
-            semanaAtual.partes.forEach(p => {
-                addOcupado(p.estudante); addOcupado(p.ajudante); addOcupado(p.leitor); addOcupado(p.dirigente); addOcupado(p.oracao);
-            });
+            if (Array.isArray(semanaAtual.partes)) {
+                semanaAtual.partes.forEach(p => {
+                    addOcupado(p.estudante); addOcupado(p.ajudante); addOcupado(p.leitor); addOcupado(p.dirigente); addOcupado(p.oracao);
+                });
+            }
+            getMeioSemanaAssignedPeople(semanaAtual).forEach((item) => addOcupado(item.pessoa));
+            getFimDeSemanaAssignedPeople(semanaAtual).forEach((item) => addOcupado(item.pessoa));
         }
 
         // B. FILTRO DE PRIVILÉGIOS (O MOTOR DE REGRAS)
@@ -107,7 +113,23 @@ export default function ModalSugestao({
                 const semana = historico[i];
                 let fezParteEspecifica = false;
 
-                if (ctx.capabilityKey === 'presidente_rvm' && semana.presidente?.id === aluno.id) {
+                const apoioMeioSemanaMatch = getMeioSemanaAssignedPeople(semana).find((item) => {
+                    if (item?.pessoa?.id !== aluno.id) return false;
+                    return item.slotKey === ctx.capabilityKey;
+                });
+                const fimDeSemanaMatch = getFimDeSemanaAssignedPeople(semana).find((item) => {
+                    if (item?.pessoa?.id !== aluno.id) return false;
+                    if (ctx.slotKey === 'oracao_fds') return item.slotKey === 'oracao_fds';
+                    return item.slotKey === ctx.capabilityKey;
+                });
+
+                if (apoioMeioSemanaMatch) {
+                    fezParteEspecifica = true;
+                    ultimaData = apoioMeioSemanaMatch.data || semana.dataReuniao;
+                } else if (fimDeSemanaMatch) {
+                    fezParteEspecifica = true;
+                    ultimaData = fimDeSemanaMatch.data || semana.dataReuniao;
+                } else if (ctx.capabilityKey === 'presidente_rvm' && semana.presidente?.id === aluno.id) {
                     fezParteEspecifica = true;
                 } else if (Array.isArray(semana.partes)) {
                     for (const p of semana.partes) {
@@ -130,11 +152,11 @@ export default function ModalSugestao({
                 }
 
                 if (fezParteEspecifica) {
-                    ultimaData = semana.dataReuniao;
+                    ultimaData = ultimaData || semana.dataReuniao;
 
                     const hoje = new Date();
                     hoje.setHours(12, 0, 0, 0);
-                    const dataParte = new Date(semana.dataReuniao + 'T12:00:00');
+                    const dataParte = new Date(ultimaData + 'T12:00:00');
 
                     const diffTime = hoje.getTime() - dataParte.getTime();
                     diasSemFazer = Math.round(diffTime / (1000 * 60 * 60 * 24));
@@ -237,11 +259,6 @@ export default function ModalSugestao({
                                 )}
                                 <button
                                     onClick={() => {
-                                        // MÁGICA: Permite seleção mesmo ocupado, mediante confirmação
-                                        if (aluno.ocupadoAgora) {
-                                            const confirmacao = window.confirm(t.confirmarDuplicado);
-                                            if (!confirmacao) return;
-                                        }
                                         if (aluno.familiaOcupadaAgora && !aluno.ocupadoAgora) {
                                             const confirmacao = window.confirm(t.confirmarFamilia);
                                             if (!confirmacao) return;

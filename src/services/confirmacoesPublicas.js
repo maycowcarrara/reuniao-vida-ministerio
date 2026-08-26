@@ -17,6 +17,12 @@ import { createInternalNotification } from './notificacoesInternas';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../utils/eventos';
 import { isBibleStudyPart, isPrayerPart } from '../utils/meetingParts';
+import {
+    FIM_DE_SEMANA_RESPONSABILIDADES,
+    MEIO_SEMANA_RESPONSABILIDADES,
+    normalizeFimDeSemana,
+    normalizeResponsabilidades
+} from '../utils/fimDeSemana';
 import { resolveDataOwnerUid } from './adminAccess';
 
 const PRIVATE_COLLECTION = 'confirmacoes';
@@ -195,6 +201,17 @@ const getMeetingDateForWeek = (week, config) => {
     return dataCalculada;
 };
 
+const getWeekendDateForWeek = (week, config) => {
+    const fallbackStr = week?.fimDeSemana?.data || week?.dataReuniao || week?.dataExata || week?.dataInicio || week?.data || null;
+    return getMeetingDateISOFromSemana({
+        semanaStr: week?.semana,
+        config,
+        isoFallback: fallbackStr,
+        overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+        textSources: [week?.semana]
+    }) || fallbackStr || '';
+};
+
 const collectAssignmentKeysForWeek = (week, config = {}) => {
     const keys = new Set();
     const dataISO = getMeetingDateForWeek(week, config);
@@ -232,6 +249,41 @@ const collectAssignmentKeysForWeek = (week, config = {}) => {
         addAssignment(parte?.estudante, 'resp', parte?.id);
         addAssignment(parte?.ajudante, 'ajud', parte?.id);
     });
+
+    const responsabilidadesMeioSemana = normalizeResponsabilidades(week?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+    MEIO_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => {
+        (responsabilidadesMeioSemana[storageKey] || []).forEach((pessoa, itemIndex) => {
+            addAssignment(pessoa, slotKey, `meio_${storageKey}_${itemIndex}`);
+        });
+    });
+
+    const fds = normalizeFimDeSemana(week?.fimDeSemana);
+    if (fds.ativo) {
+        const dataFds = getWeekendDateForWeek(week, config) || dataISO;
+        const addWeekendAssignment = (pessoa, role, parteId) => {
+            const pessoaId = pessoa?.id || pessoa?.nome;
+            if (!pessoaId) return;
+
+            keys.add(buildAssignmentKey({
+                dataISO: dataFds,
+                semana,
+                parteId,
+                pessoaId,
+                role
+            }));
+        };
+
+        addWeekendAssignment(fds.presidente, 'presidente_fds', 'fds_presidente');
+        addWeekendAssignment(fds.oracaoFinal, 'oracao_fds', 'fds_oracao_final');
+        addWeekendAssignment(fds.estudoSentinela?.dirigente, 'dirigente_sentinela', 'fds_dirigente_sentinela');
+        addWeekendAssignment(fds.estudoSentinela?.leitor, 'leitor_sentinela', 'fds_leitor_sentinela');
+
+        FIM_DE_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => {
+            (fds.responsabilidades?.[storageKey] || []).forEach((pessoa, itemIndex) => {
+                addWeekendAssignment(pessoa, slotKey, `fds_${storageKey}_${itemIndex}`);
+            });
+        });
+    }
 
     return keys;
 };

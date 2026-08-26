@@ -1,6 +1,13 @@
 import React from 'react';
 import { getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 import { isBibleStudyPart, isPrayerPart, isSongOnlyPart } from '../../utils/meetingParts';
+import { getTipoEventoSemana } from '../../utils/eventos';
+import {
+    FIM_DE_SEMANA_RESPONSABILIDADES,
+    MEIO_SEMANA_RESPONSABILIDADES,
+    normalizeFimDeSemana,
+    normalizeResponsabilidades
+} from '../../utils/fimDeSemana';
 
 const NavegadorSemanas = ({
     listaSemanas,
@@ -10,16 +17,27 @@ const NavegadorSemanas = ({
     getSemanaKey,
     stickyOffset = 176,
     TT,
+    config = {},
     lang = 'pt' // Adicionado lang como prop (ou fallback)
 }) => {
     if (!listaSemanas || listaSemanas.length === 0) return null;
 
     const hasPessoaDesignada = (value) => !!(value?.id || value?.nome);
+    const hasTextValue = (value) => !!String(value || '').trim();
+
     const getSemanaProgress = (sem) => {
         const totals = { total: 0, preenchidas: 0 };
         const addRequiredSlot = (value) => {
             totals.total += 1;
             if (hasPessoaDesignada(value)) totals.preenchidas += 1;
+        };
+        const addRequiredText = (value) => {
+            totals.total += 1;
+            if (hasTextValue(value)) totals.preenchidas += 1;
+        };
+        const addRequiredResponsabilidade = (responsabilidades, storageKey) => {
+            totals.total += 1;
+            if ((responsabilidades[storageKey] || []).some(hasPessoaDesignada)) totals.preenchidas += 1;
         };
 
         addRequiredSlot(sem?.presidente);
@@ -41,6 +59,28 @@ const NavegadorSemanas = ({
             addRequiredSlot(parte?.estudante);
         });
 
+        const responsabilidadesMeioSemana = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+        MEIO_SEMANA_RESPONSABILIDADES.forEach(({ storageKey }) => {
+            addRequiredResponsabilidade(responsabilidadesMeioSemana, storageKey);
+        });
+
+        const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+        if (fds.ativo) {
+            const isVisita = getTipoEventoSemana(sem, config) === 'visita';
+            addRequiredSlot(fds.presidente);
+            addRequiredSlot(fds.oracaoFinal);
+            addRequiredText(fds.reuniaoPublica.temaDiscurso);
+            addRequiredText(fds.reuniaoPublica.oradorNomeManual);
+            addRequiredText(fds.reuniaoPublica.congregacaoOrador);
+            addRequiredSlot(fds.estudoSentinela.dirigente);
+            addRequiredSlot(fds.estudoSentinela.leitor);
+            if (isVisita) addRequiredText(fds.visitaSuperintendente.discursoFinal);
+
+            FIM_DE_SEMANA_RESPONSABILIDADES.forEach(({ storageKey }) => {
+                addRequiredResponsabilidade(fds.responsabilidades, storageKey);
+            });
+        }
+
         const percentual = totals.total > 0
             ? Math.round((totals.preenchidas / totals.total) * 100)
             : 0;
@@ -54,20 +94,95 @@ const NavegadorSemanas = ({
             resumo: "Resumo",
             tesouros: "Tesouros",
             oracaoInicial: "Oração Inicial",
-            oracaoFinal: "Oração Final"
+            oracaoFinal: "Oração Final",
+            apoioMeioSemana: "Apoio do meio de semana",
+            fimDeSemana: "Fim de semana",
+            discursoPublico: "Discurso público",
+            discursoFinalVisita: "Disc. visita",
+            orador: "Orador",
+            congregacao: "Congregação",
+            sentinela: "Sentinela",
+            dirigente: "Dirigente",
+            leitor: "Leitor"
         },
         es: {
             resumo: "Resumen",
             tesouros: "Tesoros",
             oracaoInicial: "Oración Inicial",
-            oracaoFinal: "Oración Final"
+            oracaoFinal: "Oración Final",
+            apoioMeioSemana: "Apoyo de entre semana",
+            fimDeSemana: "Fin de semana",
+            discursoPublico: "Discurso público",
+            discursoFinalVisita: "Disc. visita",
+            orador: "Orador",
+            congregacao: "Congregación",
+            sentinela: "Atalaya",
+            dirigente: "Conductor",
+            leitor: "Lector"
         }
     }[lang] || { 
         resumo: "Resumo", 
         tesouros: "Tesouros", 
         oracaoInicial: "Oração Inicial", 
-        oracaoFinal: "Oração Final"
+        oracaoFinal: "Oração Final",
+        apoioMeioSemana: "Apoio do meio de semana",
+        fimDeSemana: "Fim de semana",
+        discursoPublico: "Discurso público",
+        discursoFinalVisita: "Disc. visita",
+        orador: "Orador",
+        congregacao: "Congregação",
+        sentinela: "Sentinela",
+        dirigente: "Dirigente",
+        leitor: "Leitor"
     };
+
+    const responsabilidadeResumoLabels = {
+        pt: {
+            videoZoomSom: 'Áudio/vídeo',
+            indicadoresEntrada: 'Ind. entrada',
+            indicadoresAuditorio: 'Ind. auditório',
+            microfonesVolantes: 'Microfones',
+        },
+        es: {
+            videoZoomSom: 'Audio/video',
+            indicadoresEntrada: 'Acom. entrada',
+            indicadoresAuditorio: 'Acom. auditorio',
+            microfonesVolantes: 'Micrófonos',
+        },
+    }[lang] || {
+        videoZoomSom: 'Áudio/vídeo',
+        indicadoresEntrada: 'Ind. entrada',
+        indicadoresAuditorio: 'Ind. auditório',
+        microfonesVolantes: 'Microfones',
+    };
+
+    const getPessoaNome = (pessoa) => pessoa?.nome || '--';
+    const getTextoResumo = (value) => String(value || '').trim() || '--';
+    const getResponsabilidadeLabel = ({ storageKey, labels }) =>
+        responsabilidadeResumoLabels[storageKey] || TT?.[storageKey] || labels?.[lang] || labels?.pt || storageKey;
+    const getResponsabilidadeNomes = (responsabilidades, storageKey) => {
+        const nomes = (responsabilidades?.[storageKey] || [])
+            .map((pessoa) => pessoa?.nome)
+            .filter(Boolean);
+        return nomes.length ? nomes.join(', ') : '--';
+    };
+    const buildResponsabilidadesResumo = (responsabilidades, defs) => defs.map((def) => ({
+        key: def.storageKey,
+        label: getResponsabilidadeLabel(def),
+        value: getResponsabilidadeNomes(responsabilidades, def.storageKey),
+    }));
+    const renderResumoLinha = ({ key, label, value }) => (
+        <div
+            key={key}
+            className="grid grid-cols-[82px_minmax(0,1fr)] gap-1 text-[10px] leading-tight"
+            title={`${label}: ${value}`}
+        >
+            <span className="font-semibold text-gray-600 truncate">{label}:</span>
+            <span className={`${value === '--' ? 'text-gray-400' : 'text-gray-700'} min-w-0 break-words`}>
+                {value}
+            </span>
+        </div>
+    );
 
     // Mapeamos para preservar o índice original (idx) antes de ordenar
     const semanasOrdenadas = listaSemanas
@@ -102,6 +217,21 @@ const NavegadorSemanas = ({
                     const cardBaseClass = progresso.percentual >= 100
                         ? 'bg-emerald-50'
                         : 'bg-blue-50';
+                    const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+                    const isVisita = getTipoEventoSemana(sem, config) === 'visita';
+                    const responsabilidadesMeioSemana = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+                    const apoioResumo = buildResponsabilidadesResumo(responsabilidadesMeioSemana, MEIO_SEMANA_RESPONSABILIDADES);
+                    const fdsCamposResumo = fds.ativo ? [
+                        { key: 'presidente_fds', label: TT.presidente, value: getPessoaNome(fds.presidente) },
+                        { key: 'oracao_fds', label: localTx.oracaoFinal, value: getPessoaNome(fds.oracaoFinal) },
+                        { key: 'tema_discurso', label: localTx.discursoPublico, value: getTextoResumo(fds.reuniaoPublica.temaDiscurso) },
+                        { key: 'orador_manual', label: localTx.orador, value: getTextoResumo(fds.reuniaoPublica.oradorNomeManual) },
+                        { key: 'congregacao_orador', label: localTx.congregacao, value: getTextoResumo(fds.reuniaoPublica.congregacaoOrador) },
+                        { key: 'dirigente_sentinela', label: localTx.dirigente, value: getPessoaNome(fds.estudoSentinela.dirigente) },
+                        { key: 'leitor_sentinela', label: localTx.leitor, value: getPessoaNome(fds.estudoSentinela.leitor) },
+                        ...(isVisita ? [{ key: 'discurso_final_visita', label: localTx.discursoFinalVisita, value: getTextoResumo(fds.visitaSuperintendente.discursoFinal) }] : []),
+                        ...buildResponsabilidadesResumo(fds.responsabilidades, FIM_DE_SEMANA_RESPONSABILIDADES),
+                    ] : [];
 
                     return (
                         <button
@@ -169,6 +299,24 @@ const NavegadorSemanas = ({
                                                 </div>
                                             )
                                         })}
+                                        <div className="border-t border-gray-100/80 pt-1.5 mt-0.5">
+                                            <div className="text-[10px] font-black uppercase text-indigo-700 truncate">
+                                                {localTx.apoioMeioSemana}
+                                            </div>
+                                            <div className="mt-1 space-y-0.5">
+                                                {apoioResumo.map(renderResumoLinha)}
+                                            </div>
+                                        </div>
+                                        {fds.ativo && (
+                                            <div className="border-t border-gray-100/80 pt-1.5 mt-0.5">
+                                                <div className="text-[10px] font-black uppercase text-sky-700 truncate">
+                                                    {localTx.fimDeSemana}
+                                                </div>
+                                                <div className="mt-1 space-y-0.5">
+                                                    {fdsCamposResumo.map(renderResumoLinha)}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

@@ -28,6 +28,15 @@ import { toast } from '../../utils/toast';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import {
+    FIM_DE_SEMANA_RESPONSABILIDADES,
+    MEIO_SEMANA_RESPONSABILIDADES,
+    getMeioSemanaAssignedPeople,
+    hasFimDeSemanaData,
+    hasResponsabilidadesData,
+    normalizeFimDeSemana,
+    normalizeResponsabilidades
+} from '../../utils/fimDeSemana';
+import {
     getMeetingPartTypeNormalized,
     getPrayerPartPosition,
     isBibleStudyPart,
@@ -51,6 +60,7 @@ const RevisarEnviar = ({
 
     const [startIndex, setStartIndex] = useState(0);
     const [qtdSemanas, setQtdSemanas] = useState(1);
+    const [incluirFimDeSemana, setIncluirFimDeSemana] = useState(false);
     const [abaAtiva, setAbaAtiva] = useState('imprimir');
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
     const [sentMap, setSentMap] = useState({});
@@ -61,6 +71,12 @@ const RevisarEnviar = ({
             setAbaAtiva(reviewShortcutRequest.tab);
         }
     }, [reviewShortcutRequest]);
+
+    useEffect(() => {
+        if (qtdSemanas !== 1 && incluirFimDeSemana) {
+            setIncluirFimDeSemana(false);
+        }
+    }, [qtdSemanas, incluirFimDeSemana]);
 
     // --- HELPERS DE TIPO E DETECÇÃO ---
     const normalizar = (texto = '') =>
@@ -175,6 +191,36 @@ const RevisarEnviar = ({
                     dirigente: hidratar(p.dirigente),
                     leitor: hidratar(p.leitor),
                 }));
+            }
+            if (newSem.responsabilidades) {
+                newSem.responsabilidades = Object.fromEntries(
+                    Object.entries(newSem.responsabilidades || {}).map(([key, value]) => [
+                        key,
+                        Array.isArray(value) ? value.map(hidratar) : [],
+                    ])
+                );
+            }
+            if (newSem.fimDeSemana) {
+                const fds = normalizeFimDeSemana(newSem.fimDeSemana);
+                newSem.fimDeSemana = {
+                    ...fds,
+                    presidente: hidratar(fds.presidente),
+                    oracaoFinal: hidratar(fds.oracaoFinal),
+                    reuniaoPublica: {
+                        ...fds.reuniaoPublica,
+                    },
+                    estudoSentinela: {
+                        ...fds.estudoSentinela,
+                        dirigente: hidratar(fds.estudoSentinela.dirigente),
+                        leitor: hidratar(fds.estudoSentinela.leitor),
+                    },
+                    responsabilidades: Object.fromEntries(
+                        Object.entries(fds.responsabilidades || {}).map(([key, value]) => [
+                            key,
+                            Array.isArray(value) ? value.map(hidratar) : [],
+                        ])
+                    ),
+                };
             }
             return newSem;
         });
@@ -296,11 +342,183 @@ const RevisarEnviar = ({
         return dataCalculada;
     };
 
+    const getDataFimDeSemanaISO = (sem) => {
+        const fallbackStr = sem?.fimDeSemana?.data || sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
+        return getMeetingDateISOFromSemana({
+            semanaStr: sem?.semana,
+            config,
+            isoFallback: fallbackStr,
+            overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday'
+        }) || fallbackStr || '';
+    };
+
+    const getFimDeSemanaParaImpressao = (sem) => {
+        const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+        return {
+            ...fds,
+            data: getDataFimDeSemanaISO(sem) || fds.data,
+            horario: config?.horario_fds || config?.horarioFimDeSemana || fds.horario || '18:00',
+        };
+    };
+
+    const renderResponsabilidadesMeioSemanaPrint = (semana) => {
+        if (qtdSemanas !== 1 || !hasResponsabilidadesData(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES)) return null;
+        const responsabilidades = normalizeResponsabilidades(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+        const linhas = MEIO_SEMANA_RESPONSABILIDADES
+            .map(({ storageKey, labels }) => {
+                const nomes = (responsabilidades[storageKey] || []).map((pessoa) => pessoa?.nome).filter(Boolean);
+                if (nomes.length === 0) return null;
+                return {
+                    label: t[storageKey] || labels?.[lang] || labels?.pt || storageKey,
+                    nomes: nomes.join(', '),
+                };
+            })
+            .filter(Boolean);
+
+        if (linhas.length === 0) return null;
+
+        return (
+            <div className="mt-2 border-t border-gray-200 pt-2 print:mt-1.5 print:pt-1">
+                <h3 className="text-[12px] print:text-[11px] font-black uppercase tracking-wide text-gray-700">
+                    {t.apoioMeioSemana || t.responsabilidades || 'Apoio do meio de semana'}
+                </h3>
+                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] print:text-[10.5px] leading-tight">
+                    {linhas.map((item) => (
+                        <div key={item.label} className="grid grid-cols-[105px_1fr] gap-2">
+                            <span className="font-black text-gray-500 uppercase">{item.label}</span>
+                            <span className="font-semibold text-gray-900">{item.nomes}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderFimDeSemanaPrint = (semana) => {
+        const fds = getFimDeSemanaParaImpressao(semana);
+        if (!incluirFimDeSemana || qtdSemanas !== 1 || !fds.ativo || !hasFimDeSemanaData(semana?.fimDeSemana)) return null;
+        const isVisita = getTipoEventoSemana(semana, config) === 'visita';
+        const oradorNome = fds.reuniaoPublica.oradorNomeManual || '';
+        const congregacaoOrador = fds.reuniaoPublica.congregacaoOrador || '';
+        const oradorComCongregacao = [
+            oradorNome,
+            congregacaoOrador ? `(${congregacaoOrador})` : '',
+        ].filter(Boolean).join(' ');
+        const fimDeSemanaMeta = [
+            fds.data ? formatarDataFolha(fds.data, lang) : '',
+            fds.horario,
+            config?.nome_cong,
+        ].filter(Boolean).join(' | ');
+        const responsabilidadeLinhas = FIM_DE_SEMANA_RESPONSABILIDADES
+            .map(({ storageKey, labels }) => {
+                const nomes = (fds.responsabilidades[storageKey] || []).map((p) => p?.nome).filter(Boolean);
+                if (nomes.length === 0) return null;
+                return {
+                    label: t[storageKey] || labels?.[lang] || labels?.pt || storageKey,
+                    nomes: nomes.join(', '),
+                };
+            })
+            .filter(Boolean);
+        const apoioFimDeSemanaLinhas = [
+            ...responsabilidadeLinhas,
+            ...(fds.oracaoFinal?.nome ? [{ label: t.oracaoFinal || 'Oração final', nomes: fds.oracaoFinal.nome }] : []),
+        ];
+
+        const renderFdsLinha = (label, value) => (
+            <div className="grid grid-cols-[132px_1fr] gap-x-2 border-b border-gray-200 py-0.5 last:border-b-0">
+                <span className="font-black uppercase text-gray-500">{label}</span>
+                <span className="font-semibold text-gray-900">{value || '—'}</span>
+            </div>
+        );
+
+        const renderFdsSecao = (titulo, children, className = 'text-gray-800') => (
+            <div className="break-inside-avoid">
+                <h4 className={`border-b border-gray-400 pb-0.5 text-[15px] print:text-[12.5px] font-bold uppercase tracking-wide leading-tight ${className}`}>
+                    {titulo}
+                </h4>
+                <div className="mt-1 text-[13px] print:text-[11.5px] leading-tight">
+                    {children}
+                </div>
+            </div>
+        );
+
+        return (
+            <div className="mt-2.5 border-t-2 border-gray-400 pt-2 print:mt-2 print:pt-1.5">
+                <div className="border-b border-gray-300 pb-1 text-center">
+                    <h3 className="text-[19px] print:text-[15px] font-bold uppercase tracking-tighter leading-tight text-gray-900">
+                        {t.reuniaoFimDeSemana || 'Reunião de fim de semana'}
+                    </h3>
+                    {fimDeSemanaMeta && (
+                        <p className="mt-0.5 text-[12px] print:text-[10.5px] font-bold uppercase leading-tight text-gray-500">
+                            {fimDeSemanaMeta}
+                        </p>
+                    )}
+                    {fds.presidente?.nome && (
+                        <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[13px] print:text-[11.5px] font-bold uppercase leading-tight text-gray-800">
+                            <span className="rounded bg-gray-100 px-1.5">{t.presidente}:</span>
+                            <span>{fds.presidente.nome}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-1.5 grid grid-cols-1 gap-1.5">
+                    {renderFdsSecao(t.reuniaoPublica || 'Reunião pública', (
+                        <>
+                            {renderFdsLinha(t.temaDiscurso || 'Tema do discurso', fds.reuniaoPublica.temaDiscurso)}
+                            {renderFdsLinha(t.orador || 'Orador', oradorComCongregacao)}
+                        </>
+                    ), 'text-blue-800')}
+
+                    {renderFdsSecao(t.estudoSentinela || 'Estudo de A Sentinela', (
+                        <div className="grid grid-cols-[132px_1fr_132px_1fr] gap-x-2 border-b border-gray-200 py-0.5">
+                            <span className="font-black uppercase text-gray-500">{t.dirigente}</span>
+                            <span className="font-semibold text-gray-900">{fds.estudoSentinela.dirigente?.nome || '—'}</span>
+                            <span className="font-black uppercase text-gray-500">{t.leitor}</span>
+                            <span className="font-semibold text-gray-900">{fds.estudoSentinela.leitor?.nome || '—'}</span>
+                        </div>
+                    ), 'text-amber-800')}
+
+                    {isVisita && renderFdsSecao(t.discursoFinalVisita || 'Discurso final da visita', (
+                        <div className="font-semibold text-gray-900 py-0.5 border-b border-gray-200">
+                            {fds.visitaSuperintendente.discursoFinal || '—'}
+                        </div>
+                    ), 'text-blue-700')}
+
+                    {apoioFimDeSemanaLinhas.length > 0 && (
+                        <div className="mt-0.5 border-t border-gray-400 pt-1.5 break-inside-avoid">
+                            <h4 className="text-[12px] print:text-[11px] font-black uppercase tracking-wide text-gray-700 leading-tight">
+                                {t.apoioFimDeSemana || t.responsabilidades || 'Apoio do fim de semana'}
+                            </h4>
+                            <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] print:text-[10.5px] leading-tight">
+                                {apoioFimDeSemanaLinhas.map((item) => (
+                                    <div key={item.label} className="grid grid-cols-[105px_1fr] gap-2">
+                                        <span className="font-black text-gray-500 uppercase">{item.label}</span>
+                                        <span className="font-semibold text-gray-900">{item.nomes}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     // --- CONFIGURAÇÃO DE LAYOUTS ---
     const getLayoutConfig = (qtd) => {
         switch (qtd) {
             case 1:
-                return {
+                return incluirFimDeSemana ? {
+                    semanasPorPag: 1,
+                    h1: 'text-[19px] print:text-[15px]',
+                    h2: 'text-[12px] print:text-[10.5px]',
+                    sectionTitle: 'text-[15px] print:text-[12.5px] font-bold mt-2.5 mb-1.5 print:mt-0.5 print:mb-0.5 border-b border-gray-400 uppercase tracking-wide',
+                    partTitle: 'text-[13px] print:text-[11.5px] font-semibold',
+                    description: 'text-[10.5px] leading-tight text-gray-800 mt-0.5 print:text-[8.5px] print:leading-tight',
+                    names: 'text-[13px] print:text-[11.5px] font-semibold text-right',
+                    meta: 'text-[11px] print:text-[9.5px] text-gray-800',
+                    grid: 'grid-cols-[72px_1fr_205px] gap-x-4',
+                } : {
                     semanasPorPag: 1,
                     h1: 'text-2xl',
                     h2: 'text-sm',
@@ -550,6 +768,40 @@ const RevisarEnviar = ({
                     }
                 }
             });
+
+            getMeioSemanaAssignedPeople(sem).forEach((item) => {
+                if (!item?.pessoa?.id) return;
+                novosAlunos = addHistorico(novosAlunos, item.pessoa.id, {
+                    data,
+                    parte: item.slotKey,
+                    ajudante: '',
+                });
+                console.log(`[GRAVADO] ${item.pessoa.nome} -> ${item.slotKey} (${data})`);
+                gravouAlgo = true;
+            });
+
+            const fds = getFimDeSemanaParaImpressao(sem);
+            if (fds.ativo && hasFimDeSemanaData(sem?.fimDeSemana)) {
+                const dataFds = fds.data || data;
+                const gravarFds = (pessoa, parte) => {
+                    if (!pessoa?.id) return;
+                    novosAlunos = addHistorico(novosAlunos, pessoa.id, {
+                        data: dataFds,
+                        parte,
+                        ajudante: '',
+                    });
+                    console.log(`[GRAVADO] ${pessoa.nome} -> ${parte} (${dataFds})`);
+                    gravouAlgo = true;
+                };
+
+                gravarFds(fds.presidente, 'presidente_fds');
+                gravarFds(fds.estudoSentinela.dirigente, 'dirigente_sentinela');
+                gravarFds(fds.estudoSentinela.leitor, 'leitor_sentinela');
+                gravarFds(fds.oracaoFinal, 'oracao_fds');
+                FIM_DE_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => {
+                    (fds.responsabilidades[storageKey] || []).forEach((pessoa) => gravarFds(pessoa, slotKey));
+                });
+            }
         });
 
         console.log("=== SINCRONIZAÇÃO TOTAL FINALIZADA ===");
@@ -698,6 +950,8 @@ const RevisarEnviar = ({
                     setFiltroSemanas={setFiltroSemanas}
                     qtdSemanas={qtdSemanas}
                     setQtdSemanas={setQtdSemanas}
+                    incluirFimDeSemana={incluirFimDeSemana}
+                    setIncluirFimDeSemana={setIncluirFimDeSemana}
                     historicoSelect={historicoSelect}
                     showWeekTabs={true}
                     semanasDisponiveis={semanasDisponiveis}
@@ -756,6 +1010,18 @@ const RevisarEnviar = ({
                 />
             </div>
 
+            {abaAtiva === 'imprimir' && (
+                <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="no-print fixed bottom-5 right-5 z-50 h-12 w-12 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-900/20 border border-blue-500 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition"
+                    title={t.btnImprimir || 'Imprimir agora'}
+                    aria-label={t.btnImprimir || 'Imprimir agora'}
+                >
+                    <Printer size={20} />
+                </button>
+            )}
+
             {/* PRINT ROOT (somente folhas) */}
             <div id="print-root" className={abaAtiva !== 'imprimir' ? 'hidden-print-root' : 'no-scrollbar'}>
                 {paginas.map((semanasDaPagina, idxPag) => {
@@ -764,6 +1030,7 @@ const RevisarEnviar = ({
                             <div
                                 className="page-content"
                                 data-qtd={qtdSemanas}
+                                data-incluir-fds={qtdSemanas === 1 && incluirFimDeSemana ? 'true' : 'false'}
                                 style={{
                                     boxSizing: 'border-box',
                                     gap: layout.gap,
@@ -806,9 +1073,9 @@ const RevisarEnviar = ({
                                                     )}
 
                                                     {semana?.presidente && (
-                                                        <div className={`mt-1 flex justify-center items-center gap-2 font-bold text-gray-800 uppercase ${qtdSemanas === 1 ? 'text-[14px] mt-2' : 'text-[11px]'}`}>
+                                                        <div className={`flex justify-center items-center gap-2 font-bold text-gray-800 uppercase ${qtdSemanas === 1 ? (incluirFimDeSemana ? 'text-[13px] print:text-[11.5px] mt-1' : 'text-[14px] mt-2') : 'text-[11px]'}`}>
                                                             <span className="bg-gray-100 px-2 rounded">{t.presidente}:</span>
-                                                            <span className="underline decoration-2">{semana.presidente.nome}</span>
+                                                            <span>{semana.presidente.nome}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -979,6 +1246,9 @@ const RevisarEnviar = ({
                                                     })}
                                                 </div>
                                             )}
+
+                                            {renderResponsabilidadesMeioSemanaPrint(semana)}
+                                            {renderFimDeSemanaPrint(semana)}
 
                                             {/* Separador entre semanas se houver mais de uma na folha (modo normal) */}
                                             {idxSem < semanasDaPagina.length - 1 && !isListMode && qtdSemanas !== 5 && (

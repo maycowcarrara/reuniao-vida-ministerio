@@ -13,6 +13,8 @@ const RevisarEnviarHeader = ({
     setStartIndex,
     qtdSemanas,
     setQtdSemanas,
+    incluirFimDeSemana = false,
+    setIncluirFimDeSemana = () => { },
 
     historicoSelect,
 
@@ -137,6 +139,18 @@ const RevisarEnviarHeader = ({
                             <option value={5}>{t.layoutOpcoes?.[3] ?? '5 p/ pag'}</option>
                         </select>
                     </div>
+
+                    {qtdSemanas === 1 && (
+                        <label className="flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-full px-3 py-1 text-[11px] font-bold text-sky-800">
+                            <input
+                                type="checkbox"
+                                checked={!!incluirFimDeSemana}
+                                onChange={(e) => setIncluirFimDeSemana(e.target.checked)}
+                                className="h-3.5 w-3.5 rounded border-sky-300"
+                            />
+                            {L('incluirFimDeSemana', 'Incluir fim de semana')}
+                        </label>
+                    )}
 
                     <div className="w-px h-5 bg-gray-300 mx-1 hidden md:block"></div>
                 </>

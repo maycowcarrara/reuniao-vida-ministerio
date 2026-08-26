@@ -37,6 +37,10 @@
         column-count: 1;
     }
 
+    .page-content[data-qtd="1"][data-incluir-fds="true"] {
+        padding: 10mm 14mm !important;
+    }
+
     .week-divider {
         border-top: 4px solid #6b7280;
         width: 100%;
@@ -121,6 +125,10 @@
         background: white !important;
         word-break: break-word;
         overflow-wrap: break-word;
+    }
+
+    .page-content[data-qtd="1"][data-incluir-fds="true"] {
+        padding: 7mm 10mm !important;
     }
 
     /* 6. Impede quebra no meio das partes */

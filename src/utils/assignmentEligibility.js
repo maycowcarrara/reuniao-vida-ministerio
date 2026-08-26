@@ -5,6 +5,7 @@ import {
     isBibleStudyPart,
     isPrayerPart,
 } from './meetingParts.js';
+import { FIM_DE_SEMANA_SLOT_CAPABILITY } from './fimDeSemana.js';
 
 export const ASSIGNMENT_CAPABILITIES = [
     {
@@ -189,6 +190,13 @@ const CAPABILITY_TO_SUGGEST_LABEL = {
     estudo_biblico_congregacao: 'estudobiblico',
     leitor_ebc: 'leitor',
     oracao: 'oracao',
+    presidente_fds: 'presidente_fds',
+    dirigente_sentinela: 'dirigente_sentinela',
+    leitor_sentinela: 'leitor_sentinela',
+    indicador_entrada: 'indicador_entrada',
+    indicador_auditorio: 'indicador_auditorio',
+    microfones_volantes: 'microfones_volantes',
+    audio_video: 'audio_video',
 };
 
 const normalize = (value = '') =>
@@ -232,6 +240,8 @@ const hasAny = (text, terms) => terms.some((term) => text.includes(term));
 
 export const getAssignmentCapabilityForSlot = ({ parte = null, slotKey = '' } = {}) => {
     const slot = normalize(slotKey);
+    if (slot === 'oracao_fds') return 'oracao';
+    if (FIM_DE_SEMANA_SLOT_CAPABILITY[slot]) return FIM_DE_SEMANA_SLOT_CAPABILITY[slot];
     if (slot === 'presidente') return 'presidente_rvm';
     if (slot === 'oracao') return 'oracao';
 

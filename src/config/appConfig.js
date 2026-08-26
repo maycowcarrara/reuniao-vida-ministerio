@@ -1,6 +1,7 @@
 export const DEFAULT_LANGUAGE = 'pt';
 export const LANGUAGE_CHANGE_EVENT = 'app-language-change';
 export const DEFAULT_MEETING_DAY = 'monday';
+export const DEFAULT_WEEKEND_MEETING_DAY = 'saturday';
 
 export const LANGUAGE_META = {
     pt: {
@@ -82,6 +83,8 @@ export const DEFAULT_CONFIG = Object.freeze({
     nome_cong: '',
     dia_reuniao: DEFAULT_MEETING_DAY,
     horario: '19:30',
+    dia_reuniao_fds: DEFAULT_WEEKEND_MEETING_DAY,
+    horario_fds: '18:00',
     eventosAnuais: [],
 });
 
@@ -136,6 +139,8 @@ export const normalizeSystemConfig = (config = {}) => ({
     ...(config || {}),
     idioma: normalizeLanguage(config?.idioma),
     dia_reuniao: normalizeMeetingDay(config?.dia_reuniao || config?.diaReuniao || config?.diaSemana),
+    dia_reuniao_fds: normalizeMeetingDay(config?.dia_reuniao_fds || config?.diaReuniaoFds || config?.diaSemanaFimDeSemana || DEFAULT_WEEKEND_MEETING_DAY),
+    horario_fds: (config?.horario_fds || config?.horarioFimDeSemana || DEFAULT_CONFIG.horario_fds).toString(),
     eventosAnuais: Array.isArray(config?.eventosAnuais) ? config.eventosAnuais : DEFAULT_CONFIG.eventosAnuais,
 });
 

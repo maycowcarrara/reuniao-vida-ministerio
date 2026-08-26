@@ -17,6 +17,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang }) {
     const isPortugueseActive = activeLocale === 'pt';
     const isSpanishActive = activeLocale === 'es';
     const meetingDay = normalizeMeetingDay(dados?.configuracoes?.dia_reuniao);
+    const weekendMeetingDay = normalizeMeetingDay(dados?.configuracoes?.dia_reuniao_fds || 'saturday');
     const weekdayOptions = getWeekdayOptions(lang);
     const atualizarConfig = (campo, valor) => {
         salvarAlteracao({
@@ -97,6 +98,50 @@ export default function Configuracoes({ dados, salvarAlteracao, lang }) {
                                     onChange={(e) => atualizarConfig('horario', e.target.value)}
                                     className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-800 font-bold cursor-pointer text-base sm:text-sm"
                                 />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                        <div className="mb-3">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-700">{T.fimDeSemanaTitulo || 'Fim de semana'}</h4>
+                            <p className="mt-1 text-[11px] font-medium text-slate-500">{T.fimDeSemanaDescricao || 'Usado como padrão ao ativar a programação de fim de semana.'}</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 ml-1">
+                                    {T.diaFimDeSemana || 'Dia do fim de semana'}
+                                </label>
+                                <div className="relative">
+                                    <CalendarIcon size={18} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+                                    <select
+                                        value={weekendMeetingDay}
+                                        onChange={(e) => atualizarConfig('dia_reuniao_fds', e.target.value)}
+                                        className="w-full pl-11 pr-10 py-3.5 bg-white border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-800 font-bold appearance-none cursor-pointer text-base sm:text-sm"
+                                    >
+                                        {weekdayOptions.map((day) => (
+                                            <option key={day.value} value={day.value}>
+                                                {day.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={18} className="absolute right-4 top-3.5 text-slate-400 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 ml-1">
+                                    {T.horarioFimDeSemana || 'Horário do fim de semana'}
+                                </label>
+                                <div className="relative">
+                                    <Clock size={18} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+                                    <input
+                                        type="time"
+                                        value={dados?.configuracoes?.horario_fds || '18:00'}
+                                        onChange={(e) => atualizarConfig('horario_fds', e.target.value)}
+                                        className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-800 font-bold cursor-pointer text-base sm:text-sm"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

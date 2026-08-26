@@ -12,7 +12,8 @@ partes que cada aluno pode fazer.
 - Salvar as habilitacoes em cada documento de `users/{uid}/alunos`.
 - Fazer o motor de sugestao consultar essas habilitacoes, nao apenas o cargo.
 - Manter compatibilidade com alunos antigos que ainda nao tenham o novo campo.
-- Preparar a base para a futura folha da reuniao de fim de semana.
+- Preparar a base para a folha da reuniao de fim de semana, detalhada em
+  `docs/plano-programacao-fim-de-semana.md`.
 
 ## Campo novo
 
@@ -69,8 +70,8 @@ aluno ainda esta no modelo legado.
 - `dirigente_sentinela`: Dirigente do Estudo de A Sentinela.
 - `leitor_sentinela`: Leitor de A Sentinela.
 
-Essas chaves podem ser cadastradas agora mesmo que a folha de fim de semana seja
-implementada depois.
+Essas chaves alimentam a tela e a folha de fim de semana descritas em
+`docs/plano-programacao-fim-de-semana.md`.
 
 ### Apoio
 
@@ -304,12 +305,11 @@ Escopo:
   drag-and-drop.
 - Separar leitor_ebc de leitor_sentinela e usar estudo_biblico_congregacao para
   dirigente do EBC.
-- Nao implementar ainda a folha de fim de semana; apenas deixar as habilitacoes
-  presidente_fds, dirigente_sentinela e leitor_sentinela disponiveis no cadastro.
+- Implementar a folha e os slots de fim de semana seguindo
+  `docs/plano-programacao-fim-de-semana.md`.
 - Nao fazer deploy, nao migrar producao e nao aplicar escrita em massa sem nova
   autorizacao.
 
 Valide com npm.cmd run build e, se fizer sentido no estado atual do repo,
 npm.cmd run lint. Preserve arquivos nao rastreados existentes em scripts/ e tmp/.
 ```
-

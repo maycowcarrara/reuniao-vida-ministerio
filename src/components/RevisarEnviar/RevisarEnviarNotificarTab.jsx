@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle, CheckCircle2, ChevronDown, Mail, MessageCircle, Tent, UsersRound, Loader2, RefreshCw, Send, SlidersHorizontal, XCircle } from 'lucide-react';
 
-import { formatarDataFolha } from '../../utils/revisarEnviar/dates';
+import { formatarDataFolha, getMeetingDateISOFromSemana } from '../../utils/revisarEnviar/dates';
 import { montarMensagemDesignacao, montarMensagemLembreteSemana } from '../../utils/revisarEnviar/messages';
 import { enviarEmailAutomatico, getEmailJsMissingConfig } from '../../utils/revisarEnviar/enviadorEmail';
 import { buildAgendaLink } from '../../utils/revisarEnviar/links';
@@ -9,6 +9,12 @@ import { toast } from '../../utils/toast';
 import { getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import { prependMeetingSectionTag } from '../../utils/meetingSections';
+import {
+    FIM_DE_SEMANA_RESPONSABILIDADES,
+    MEIO_SEMANA_RESPONSABILIDADES,
+    normalizeFimDeSemana,
+    normalizeResponsabilidades
+} from '../../utils/fimDeSemana';
 import {
     ensurePublicConfirmation,
     registerNotificationChannelByAssignment,
@@ -62,7 +68,15 @@ const RevisarEnviarNotificarTab = ({
         dirigente: t.dirigente || 'Dirigente',
         leitor: t.leitor || 'Leitor',
         estudante: t.estudante || 'Estudante',
-        ajudante: t.ajudante || 'Ajudante'
+        ajudante: t.ajudante || 'Ajudante',
+        presidente_fds: `${t.presidente || 'Presidente'} (${t.fimDeSemana || 'fim de semana'})`,
+        oracao_fds: t.oracaoFinal || 'Oração final',
+        dirigente_sentinela: t.dirigenteSentinela || t.dirigente || 'Dirigente',
+        leitor_sentinela: t.leitorSentinela || t.leitor || 'Leitor',
+        indicador_entrada: t.indicadoresEntrada || 'Indicadores da entrada',
+        indicador_auditorio: t.indicadoresAuditorio || 'Indicadores do auditório',
+        microfones_volantes: t.microfonesVolantes || 'Microfones',
+        audio_video: t.videoZoomSom || 'Vídeo, Zoom e som'
     };
     const formatarTituloExibicao = (tituloParte = '', secao = '') =>
         prependMeetingSectionTag(tituloParte, secao, config?.idioma) || tituloParte;
@@ -223,12 +237,26 @@ const RevisarEnviarNotificarTab = ({
 
     const buildSubstitutionRequest = (confirmationData, pessoa) => {
         const [dataISO, semana, parteId, pessoaId, role] = String(confirmationData?.assignmentKey || '').split('|');
+        const parsedItemIndex = Number(String(parteId || '').split('_').pop());
+        const responsabilidadeKey = String(parteId || '')
+            .replace(/^(meio|fds)_/, '')
+            .replace(/_\d+$/, '');
+        const isResponsabilidadeMeioSemana = String(parteId || '').startsWith('meio_');
+        const isResponsabilidadeFimDeSemana = String(parteId || '').startsWith('fds_')
+            && FIM_DE_SEMANA_RESPONSABILIDADES.some((def) => responsabilidadeKey === def.storageKey);
+        const isSlotFimDeSemana = ['presidente_fds', 'oracao_fds', 'dirigente_sentinela', 'leitor_sentinela'].includes(role)
+            || isResponsabilidadeFimDeSemana;
+
         return {
             dataISO,
             semanaKey: confirmationData?.semanaKey || dataISO,
             semana: confirmationData?.semana || semana,
-            parteId: parteId === 'presidente' ? undefined : parteId,
+            parteId: parteId === 'presidente' || isSlotFimDeSemana || isResponsabilidadeMeioSemana ? undefined : parteId,
             role: confirmationData?.role || role,
+            fds: isSlotFimDeSemana,
+            meioSemana: isResponsabilidadeMeioSemana,
+            responsabilidadeKey: isResponsabilidadeMeioSemana || isResponsabilidadeFimDeSemana ? responsabilidadeKey : undefined,
+            itemIndex: Number.isFinite(parsedItemIndex) ? parsedItemIndex : undefined,
             pessoa: pessoa || {
                 id: pessoaId,
                 nome: confirmationData?.pessoaNome || pessoaId
@@ -257,9 +285,31 @@ const RevisarEnviarNotificarTab = ({
     const withNotificationMeta = (confirmationData, sem, parte = null) => ({
         ...confirmationData,
         semanaKey: sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '',
-        secao: parte?.secao || '',
+        secao: parte?.secao || confirmationData?.secao || '',
         notificacaoAlteradaEm: getNotificacaoAlteradaEm(sem, parte)
     });
+
+    const getDataFimDeSemanaISO = (sem) => {
+        const fallbackStr = sem?.fimDeSemana?.data || sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
+        return getMeetingDateISOFromSemana({
+            semanaStr: sem?.semana,
+            config,
+            isoFallback: fallbackStr,
+            overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday'
+        }) || fallbackStr || '';
+    };
+
+    const getFimDeSemanaParaNotificacao = (sem) => {
+        const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+        return {
+            ...fds,
+            data: getDataFimDeSemanaISO(sem) || fds.data,
+            horario: config?.horario_fds || config?.horarioFimDeSemana || fds.horario || '',
+        };
+    };
+
+    const getLabelResponsabilidade = ({ storageKey, labels }) =>
+        t?.[storageKey] || labels?.[lang] || labels?.pt || storageKey;
 
     const normalizarTexto = (valor = '') => valor
         .toString()
@@ -345,12 +395,13 @@ const RevisarEnviarNotificarTab = ({
             if (tipoEvento !== 'normal' && tipoEvento !== 'visita') return;
 
             const dataISO = getDataReuniaoISO(sem);
-            const dataReuniaoFormatada = formatarDataFolha(dataISO, lang);
-
-            const addToList = (pessoa, titulo, role, ajudante = null, parteId, salaOverride = null, parte = null) => {
+            const addToList = (pessoa, titulo, role, ajudante = null, parteId, salaOverride = null, parte = null, options = {}) => {
                 if (pessoa?.email) {
+                    const itemDataISO = options.dataISO || dataISO;
+                    const itemDataFormatada = formatarDataFolha(itemDataISO, lang);
+                    const itemSecao = options.secao || parte?.secao || '';
                     const msgKey = buildMsgKey({
-                        dataISO,
+                        dataISO: itemDataISO,
                         semana: sem.semana,
                         parteId: parteId || titulo,
                         pessoaId: pessoa.id || pessoa.nome,
@@ -360,9 +411,9 @@ const RevisarEnviarNotificarTab = ({
                     const agendaLink = buildAgendaLink({
                         config,
                         semana: sem.semana,
-                        dataISO,
+                        dataISO: itemDataISO,
                         tituloParte: titulo,
-                        secao: parte?.secao,
+                        secao: itemSecao,
                         responsavelNome: pessoa.nome,
                         ajudanteNome: ajudante?.nome
                     });
@@ -371,9 +422,9 @@ const RevisarEnviarNotificarTab = ({
                         assignmentKey: msgKey,
                         lang,
                         semana: sem.semana,
-                        dataISO,
+                        dataISO: itemDataISO,
                         tituloParte: titulo,
-                        tituloParteExibicao: formatarTituloExibicao(titulo, parte?.secao),
+                        tituloParteExibicao: formatarTituloExibicao(titulo, itemSecao),
                         pessoaNome: pessoa.nome,
                         role,
                         congregacaoNome: config?.nome_cong,
@@ -389,8 +440,8 @@ const RevisarEnviarNotificarTab = ({
                             payload: {
                                 Nome: pessoa.nome,
                                 Ajudante: ajudante?.nome || "—",
-                                Data: dataReuniaoFormatada,
-                                Desig: formatarTituloExibicao(titulo, parte?.secao),
+                                Data: itemDataFormatada,
+                                Desig: formatarTituloExibicao(titulo, itemSecao),
                                 Sala: salaOverride || 'Principal',
                                 Link: agendaLink,
                                 LinkAgenda: agendaLink,
@@ -495,6 +546,88 @@ const RevisarEnviarNotificarTab = ({
                     }
                 }
             });
+
+            const responsabilidadesMeioSemana = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+            MEIO_SEMANA_RESPONSABILIDADES.forEach((def) => {
+                const label = getLabelResponsabilidade(def);
+                (responsabilidadesMeioSemana[def.storageKey] || []).forEach((pessoa, itemIndex) => {
+                    addToList(
+                        pessoa,
+                        label,
+                        def.slotKey,
+                        null,
+                        `meio_${def.storageKey}_${itemIndex}`,
+                        'Principal',
+                        null,
+                        { secao: t.apoioMeioSemana || 'Apoio do meio de semana' }
+                    );
+                });
+            });
+
+            const fds = getFimDeSemanaParaNotificacao(sem);
+            if (fds.ativo) {
+                const dataFds = fds.data || dataISO;
+                const secaoFimDeSemana = t.reuniaoFimDeSemana || t.fimDeSemana || 'Reunião de fim de semana';
+                const secaoApoioFimDeSemana = t.apoioFimDeSemana || 'Apoio do fim de semana';
+                const estudoSentinelaLabel = t.estudoSentinela || 'Estudo de A Sentinela';
+
+                addToList(
+                    fds.presidente,
+                    `${t.presidente || 'Presidente'} - ${secaoFimDeSemana}`,
+                    'presidente_fds',
+                    null,
+                    'fds_presidente',
+                    'Principal',
+                    null,
+                    { dataISO: dataFds, secao: secaoFimDeSemana }
+                );
+                addToList(
+                    fds.oracaoFinal,
+                    t.oracaoFinal || 'Oração final',
+                    'oracao_fds',
+                    null,
+                    'fds_oracao_final',
+                    'Principal',
+                    null,
+                    { dataISO: dataFds, secao: secaoFimDeSemana }
+                );
+                addToList(
+                    fds.estudoSentinela?.dirigente,
+                    `${t.dirigenteSentinela || t.dirigente || 'Dirigente'} - ${estudoSentinelaLabel}`,
+                    'dirigente_sentinela',
+                    null,
+                    'fds_dirigente_sentinela',
+                    'Principal',
+                    null,
+                    { dataISO: dataFds, secao: estudoSentinelaLabel }
+                );
+                addToList(
+                    fds.estudoSentinela?.leitor,
+                    `${t.leitorSentinela || t.leitor || 'Leitor'} - ${estudoSentinelaLabel}`,
+                    'leitor_sentinela',
+                    null,
+                    'fds_leitor_sentinela',
+                    'Principal',
+                    null,
+                    { dataISO: dataFds, secao: estudoSentinelaLabel }
+                );
+
+                FIM_DE_SEMANA_RESPONSABILIDADES.forEach((def) => {
+                    const label = getLabelResponsabilidade(def);
+                    (fds.responsabilidades?.[def.storageKey] || []).forEach((pessoa, itemIndex) => {
+                        addToList(
+                            pessoa,
+                            label,
+                            def.slotKey,
+                            null,
+                            `fds_${def.storageKey}_${itemIndex}`,
+                            'Principal',
+                            null,
+                            { dataISO: dataFds, secao: secaoApoioFimDeSemana }
+                        );
+                    });
+                });
+            }
         });
         return lista;
     };
@@ -507,10 +640,10 @@ const RevisarEnviarNotificarTab = ({
             if (tipoEvento !== 'normal' && tipoEvento !== 'visita') return;
 
             const dataISO = getDataReuniaoISO(sem);
-            const addKey = (pessoa, titulo, role, parteId) => {
+            const addKey = (pessoa, titulo, role, parteId, dataISOOverride = dataISO) => {
                 if (!pessoa?.nome && !pessoa?.id) return;
                 const msgKey = buildMsgKey({
-                    dataISO,
+                    dataISO: dataISOOverride,
                     semana: sem.semana,
                     parteId: parteId || titulo,
                     pessoaId: pessoa.id || pessoa.nome,
@@ -553,6 +686,45 @@ const RevisarEnviarNotificarTab = ({
                 addKey(p.estudante, p.titulo || 'Parte', 'resp', p.id);
                 addKey(p.ajudante, `${t.ajudante} - ${p.titulo}`, 'ajud', p.id);
             });
+
+            const responsabilidadesMeioSemana = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+            MEIO_SEMANA_RESPONSABILIDADES.forEach((def) => {
+                const label = getLabelResponsabilidade(def);
+                (responsabilidadesMeioSemana[def.storageKey] || []).forEach((pessoa, itemIndex) => {
+                    addKey(pessoa, label, def.slotKey, `meio_${def.storageKey}_${itemIndex}`);
+                });
+            });
+
+            const fds = getFimDeSemanaParaNotificacao(sem);
+            if (fds.ativo) {
+                const dataFds = fds.data || dataISO;
+                const secaoFimDeSemana = t.reuniaoFimDeSemana || t.fimDeSemana || 'Reunião de fim de semana';
+                const estudoSentinelaLabel = t.estudoSentinela || 'Estudo de A Sentinela';
+
+                addKey(fds.presidente, `${t.presidente || 'Presidente'} - ${secaoFimDeSemana}`, 'presidente_fds', 'fds_presidente', dataFds);
+                addKey(fds.oracaoFinal, t.oracaoFinal || 'Oração final', 'oracao_fds', 'fds_oracao_final', dataFds);
+                addKey(
+                    fds.estudoSentinela?.dirigente,
+                    `${t.dirigenteSentinela || t.dirigente || 'Dirigente'} - ${estudoSentinelaLabel}`,
+                    'dirigente_sentinela',
+                    'fds_dirigente_sentinela',
+                    dataFds
+                );
+                addKey(
+                    fds.estudoSentinela?.leitor,
+                    `${t.leitorSentinela || t.leitor || 'Leitor'} - ${estudoSentinelaLabel}`,
+                    'leitor_sentinela',
+                    'fds_leitor_sentinela',
+                    dataFds
+                );
+
+                FIM_DE_SEMANA_RESPONSABILIDADES.forEach((def) => {
+                    const label = getLabelResponsabilidade(def);
+                    (fds.responsabilidades?.[def.storageKey] || []).forEach((pessoa, itemIndex) => {
+                        addKey(pessoa, label, def.slotKey, `fds_${def.storageKey}_${itemIndex}`, dataFds);
+                    });
+                });
+            }
         });
 
         return chaves;
@@ -617,6 +789,43 @@ const RevisarEnviarNotificarTab = ({
                     addPessoaRevisao(base, parte.ajudante, roleLabels.ajudante, `${roleLabels.ajudante} - ${titulo}`, semanaLabel);
                 }
             });
+
+            const responsabilidadesMeioSemana = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
+            MEIO_SEMANA_RESPONSABILIDADES.forEach((def) => {
+                const label = getLabelResponsabilidade(def);
+                (responsabilidadesMeioSemana[def.storageKey] || []).forEach((pessoa) => {
+                    addPessoaRevisao(base, pessoa, roleLabels[def.slotKey] || label, label, semanaLabel);
+                });
+            });
+
+            const fds = getFimDeSemanaParaNotificacao(sem);
+            if (fds.ativo) {
+                const secaoFimDeSemana = t.reuniaoFimDeSemana || t.fimDeSemana || 'Reunião de fim de semana';
+                const estudoSentinelaLabel = t.estudoSentinela || 'Estudo de A Sentinela';
+                addPessoaRevisao(base, fds.presidente, roleLabels.presidente_fds, `${roleLabels.presidente_fds} - ${secaoFimDeSemana}`, semanaLabel);
+                addPessoaRevisao(base, fds.oracaoFinal, roleLabels.oracao_fds, `${roleLabels.oracao_fds} - ${secaoFimDeSemana}`, semanaLabel);
+                addPessoaRevisao(
+                    base,
+                    fds.estudoSentinela?.dirigente,
+                    roleLabels.dirigente_sentinela,
+                    `${roleLabels.dirigente_sentinela} - ${estudoSentinelaLabel}`,
+                    semanaLabel
+                );
+                addPessoaRevisao(
+                    base,
+                    fds.estudoSentinela?.leitor,
+                    roleLabels.leitor_sentinela,
+                    `${roleLabels.leitor_sentinela} - ${estudoSentinelaLabel}`,
+                    semanaLabel
+                );
+
+                FIM_DE_SEMANA_RESPONSABILIDADES.forEach((def) => {
+                    const label = getLabelResponsabilidade(def);
+                    (fds.responsabilidades?.[def.storageKey] || []).forEach((pessoa) => {
+                        addPessoaRevisao(base, pessoa, roleLabels[def.slotKey] || label, label, semanaLabel);
+                    });
+                });
+            }
 
             Array.from(base.pessoasSemana.values()).forEach((pessoa) => {
                 if (pessoa.itens.length > 1) {
@@ -1646,6 +1855,236 @@ const RevisarEnviarNotificarTab = ({
                         return null;
                     };
 
+                    const buildPessoaNotificacao = ({
+                        pessoa,
+                        tituloTopo,
+                        tituloParte,
+                        role,
+                        parteId,
+                        dataISOOverride = dataISO,
+                        dataFormatadaOverride = dataReuniaoFormatada,
+                        secao = '',
+                        sala = 'Principal',
+                        cardKey,
+                    }) => {
+                        if (!pessoa?.nome && !pessoa?.id) return null;
+
+                        const pessoaNome = pessoa.nome || pessoa.id;
+                        const msg = montarMensagemDesignacao({
+                            t,
+                            lang,
+                            config,
+                            semana: sem.semana,
+                            dataISO: dataISOOverride,
+                            responsavelNome: pessoaNome,
+                            ajudanteNome: '',
+                            tituloParte,
+                            secao,
+                            descricaoParte: '',
+                            minutosParte: '',
+                            isVisita,
+                            incluirLinkAgenda: false
+                        });
+
+                        const msgKey = buildMsgKey({
+                            dataISO: dataISOOverride,
+                            semana: sem.semana,
+                            parteId: parteId || tituloParte,
+                            pessoaId: pessoa?.id || pessoaNome,
+                            role,
+                        });
+
+                        const agendaLink = buildAgendaLink({
+                            config,
+                            semana: sem.semana,
+                            dataISO: dataISOOverride,
+                            tituloParte,
+                            secao,
+                            responsavelNome: pessoaNome
+                        });
+
+                        const confirmationData = withNotificationMeta({
+                            assignmentKey: msgKey,
+                            lang,
+                            semana: sem.semana,
+                            dataISO: dataISOOverride,
+                            tituloParte,
+                            tituloParteExibicao: formatarTituloExibicao(tituloParte, secao),
+                            pessoaNome,
+                            role,
+                            congregacaoNome: config?.nome_cong,
+                            agendaLink,
+                            sala,
+                            isVisita
+                        }, sem);
+
+                        const emailPayload = {
+                            Nome: pessoaNome,
+                            Ajudante: "—",
+                            Data: dataFormatadaOverride,
+                            Desig: formatarTituloExibicao(tituloParte, secao),
+                            Sala: sala,
+                            Link: agendaLink,
+                            LinkAgenda: agendaLink,
+                            email_destino: pessoa.email
+                        };
+
+                        return renderCardPessoa({
+                            cardKey: cardKey || `${msgKey}-${role}`,
+                            tituloTopo,
+                            pessoa,
+                            msg,
+                            msgKey,
+                            compact: true,
+                            emailPayload,
+                            confirmationData
+                        });
+                    };
+
+                    const renderResponsabilidadesNotificacao = ({
+                        titulo,
+                        responsabilidades,
+                        defs,
+                        dataISOOverride = dataISO,
+                        dataFormatadaOverride = dataReuniaoFormatada,
+                        scopePrefix,
+                    }) => {
+                        const cards = defs.flatMap((def) => {
+                            const label = getLabelResponsabilidade(def);
+                            return (responsabilidades?.[def.storageKey] || [])
+                                .map((pessoa, itemIndex) => buildPessoaNotificacao({
+                                    pessoa,
+                                    tituloTopo: label,
+                                    tituloParte: label,
+                                    role: def.slotKey,
+                                    parteId: `${scopePrefix}_${def.storageKey}_${itemIndex}`,
+                                    dataISOOverride,
+                                    dataFormatadaOverride,
+                                    secao: titulo,
+                                    cardKey: `${scopePrefix}-${def.storageKey}-${itemIndex}-${pessoa?.id || pessoa?.nome || itemIndex}`
+                                }))
+                                .filter(Boolean);
+                        });
+
+                        if (!cards.length) return null;
+
+                        return (
+                            <div className="rounded-2xl border p-4 bg-white">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">{titulo}</span>
+                                    <span className="text-[10px] font-black text-gray-500">{cards.length}</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {cards}
+                                </div>
+                            </div>
+                        );
+                    };
+
+                    const renderFimDeSemanaNotificacao = () => {
+                        const fds = getFimDeSemanaParaNotificacao(sem);
+                        if (!fds.ativo) return null;
+
+                        const dataFds = fds.data || dataISO;
+                        const dataFdsFormatada = formatarDataFolha(dataFds, lang);
+                        const secaoFimDeSemana = t.reuniaoFimDeSemana || t.fimDeSemana || 'Reunião de fim de semana';
+                        const secaoApoioFimDeSemana = t.apoioFimDeSemana || 'Apoio do fim de semana';
+                        const estudoSentinelaLabel = t.estudoSentinela || 'Estudo de A Sentinela';
+                        const cardsPrincipais = [
+                            buildPessoaNotificacao({
+                                pessoa: fds.presidente,
+                                tituloTopo: roleLabels.presidente_fds,
+                                tituloParte: `${t.presidente || 'Presidente'} - ${secaoFimDeSemana}`,
+                                role: 'presidente_fds',
+                                parteId: 'fds_presidente',
+                                dataISOOverride: dataFds,
+                                dataFormatadaOverride: dataFdsFormatada,
+                                secao: secaoFimDeSemana,
+                                cardKey: `fds-presidente-${sIdx}`
+                            }),
+                            buildPessoaNotificacao({
+                                pessoa: fds.oracaoFinal,
+                                tituloTopo: roleLabels.oracao_fds,
+                                tituloParte: t.oracaoFinal || 'Oração final',
+                                role: 'oracao_fds',
+                                parteId: 'fds_oracao_final',
+                                dataISOOverride: dataFds,
+                                dataFormatadaOverride: dataFdsFormatada,
+                                secao: secaoFimDeSemana,
+                                cardKey: `fds-oracao-final-${sIdx}`
+                            })
+                        ].filter(Boolean);
+
+                        const cardsSentinela = [
+                            buildPessoaNotificacao({
+                                pessoa: fds.estudoSentinela?.dirigente,
+                                tituloTopo: roleLabels.dirigente_sentinela,
+                                tituloParte: `${t.dirigenteSentinela || t.dirigente || 'Dirigente'} - ${estudoSentinelaLabel}`,
+                                role: 'dirigente_sentinela',
+                                parteId: 'fds_dirigente_sentinela',
+                                dataISOOverride: dataFds,
+                                dataFormatadaOverride: dataFdsFormatada,
+                                secao: estudoSentinelaLabel,
+                                cardKey: `fds-dirigente-sentinela-${sIdx}`
+                            }),
+                            buildPessoaNotificacao({
+                                pessoa: fds.estudoSentinela?.leitor,
+                                tituloTopo: roleLabels.leitor_sentinela,
+                                tituloParte: `${t.leitorSentinela || t.leitor || 'Leitor'} - ${estudoSentinelaLabel}`,
+                                role: 'leitor_sentinela',
+                                parteId: 'fds_leitor_sentinela',
+                                dataISOOverride: dataFds,
+                                dataFormatadaOverride: dataFdsFormatada,
+                                secao: estudoSentinelaLabel,
+                                cardKey: `fds-leitor-sentinela-${sIdx}`
+                            })
+                        ].filter(Boolean);
+
+                        const apoioFimDeSemana = renderResponsabilidadesNotificacao({
+                            titulo: secaoApoioFimDeSemana,
+                            responsabilidades: fds.responsabilidades,
+                            defs: FIM_DE_SEMANA_RESPONSABILIDADES,
+                            dataISOOverride: dataFds,
+                            dataFormatadaOverride: dataFdsFormatada,
+                            scopePrefix: 'fds'
+                        });
+
+                        if (!cardsPrincipais.length && !cardsSentinela.length && !apoioFimDeSemana) return null;
+
+                        return (
+                            <div className="rounded-2xl border border-sky-100 bg-sky-50/40 p-4 mt-4">
+                                <div className="flex flex-col gap-1 border-b border-sky-100 pb-3 mb-4 md:flex-row md:items-center md:justify-between">
+                                    <span className="text-[11px] font-black uppercase tracking-widest text-sky-900">{secaoFimDeSemana}</span>
+                                    <span className="text-[11px] font-bold text-sky-700">
+                                        {config?.nome_cong} | {fds.horario || horarioExib} | {dataFdsFormatada}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {cardsPrincipais.length > 0 && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {cardsPrincipais}
+                                        </div>
+                                    )}
+
+                                    {cardsSentinela.length > 0 && (
+                                        <div className="rounded-2xl border p-4 bg-white">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">{estudoSentinelaLabel}</span>
+                                                <span className="text-[10px] font-black text-gray-500">{cardsSentinela.length}</span>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {cardsSentinela}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {apoioFimDeSemana}
+                                </div>
+                            </div>
+                        );
+                    };
+
                     const renderSecaoBox = (key) => {
                         const arr = grupos[key];
                         if (!arr || !arr.length) return null;
@@ -1788,6 +2227,17 @@ const RevisarEnviarNotificarTab = ({
                                     </div>
                                 </div>
                             )}
+
+                            <div className="mt-4 space-y-4">
+                                {renderResponsabilidadesNotificacao({
+                                    titulo: t.apoioMeioSemana || 'Apoio do meio de semana',
+                                    responsabilidades: normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES),
+                                    defs: MEIO_SEMANA_RESPONSABILIDADES,
+                                    scopePrefix: 'meio'
+                                })}
+
+                                {renderFimDeSemanaNotificacao()}
+                            </div>
                         </div>
                     );
                 })}

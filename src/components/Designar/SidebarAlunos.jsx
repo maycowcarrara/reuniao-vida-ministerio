@@ -321,10 +321,6 @@ const SidebarAlunos = ({
                                             e.stopPropagation();
                                             if (!isClickable) return;
 
-                                            if (duplicadoMesmaSemana) {
-                                                const ok = window.confirm(TT.confirmarDuplicado);
-                                                if (!ok) return;
-                                            }
                                             atribuirAluno(aluno);
                                         }}
                                         title={cardTitle || (duplicadoMesmaSemana ? localTx.duplicadoMesma : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara)}

@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Calendar, User, Search, UsersRound, UserRound, Clock,
     AlertTriangle, StickyNote, Trash2, Edit2, X, Save, UserPlus,
-    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc, Eye, EyeOff, RefreshCw, Plus, ArrowUp, ArrowDown
+    Archive, RotateCcw, Lightbulb, Briefcase, Tent, FilterX, SortAsc, SortDesc, Eye, EyeOff, RefreshCw, Plus, ArrowUp, ArrowDown, ChevronDown
 } from 'lucide-react';
 
 import ModalSugestao from './ModalSugestao';
@@ -22,6 +22,16 @@ import { calcularTotalInfo } from '../../utils/importador/parser';
 import { formatText, useSectionMessages } from '../../i18n';
 import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
+import {
+    FIM_DE_SEMANA_RESPONSABILIDADES,
+    MEIO_SEMANA_RESPONSABILIDADES,
+    getFimDeSemanaAssignedPeople,
+    getFimDeSemanaSlotLabel,
+    getMeioSemanaAssignedPeople,
+    hasFimDeSemanaData,
+    normalizeFimDeSemana,
+    normalizeResponsabilidades
+} from '../../utils/fimDeSemana';
 
 const CARGO_FALLBACK = {
     pt: { pt: "Irmão", es: "Hermano", cor: "bg-gray-100 text-gray-700", gen: "M" }
@@ -46,6 +56,7 @@ const Designar = ({
     const selectionBootstrapRef = useRef(true);
 
     const [slotAtivo, setSlotAtivo] = useState(null);
+    const [fdsAbertoPorSemana, setFdsAbertoPorSemana] = useState({});
     const [termoBusca, setTermoBusca] = useState('');
     const [filtrosTiposAtivos, setFiltrosTiposAtivos] = useState([]);
     const [filtroGenero, setFiltroGenero] = useState('todos');
@@ -90,6 +101,28 @@ const Designar = ({
         };
         return { totalMin, label: formatHm(totalMin), className: classes[faixa] };
     };
+    const getDefaultFimDeSemanaDataISO = (sem) => {
+        try {
+            return getCanonicalMeetingDateISO({
+                sem,
+                config,
+                overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+            }) || '';
+        } catch {
+            return '';
+        }
+    };
+    const getDefaultFimDeSemanaHorario = () => config?.horario_fds || config?.horarioFimDeSemana || '18:00';
+    const getFimDeSemanaParaSemana = (sem) => {
+        const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+        return {
+            ...fds,
+            data: getDefaultFimDeSemanaDataISO(sem) || fds.data,
+            horario: getDefaultFimDeSemanaHorario() || fds.horario,
+        };
+    };
+    const withFimDeSemanaDefaults = (sem) => getFimDeSemanaParaSemana(sem);
+    const getResponsabilidadesMeioSemana = (sem) => normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
     const hasPessoaDesignada = (pessoa) => !!(pessoa?.id || pessoa?.nome);
     const mesmaPessoa = (a, b) => {
         if (!a || !b) return false;
@@ -97,6 +130,24 @@ const Designar = ({
         const bKey = b.id || b.nome;
         return !!aKey && !!bKey && String(aKey) === String(bKey);
     };
+
+    const sameSlotCtx = (a, b) => {
+        if (!a || !b) return false;
+        return a.key === b.key
+            && a.parteId === b.parteId
+            && a.semanaIndex === b.semanaIndex
+            && !!a.fds === !!b.fds
+            && !!a.meioSemana === !!b.meioSemana
+            && a.responsabilidadeKey === b.responsabilidadeKey
+            && a.itemIndex === b.itemIndex;
+    };
+
+    const hasSlotPessoa = (item, aluno) => {
+        if (!item?.pessoa || !aluno) return false;
+        return mesmaPessoa(item.pessoa, aluno);
+    };
+
+    const getFimDeSemanaLabel = (slotKey) => getFimDeSemanaSlotLabel(slotKey, lang);
 
     const compactPessoa = (pessoa) => {
         if (!pessoa) return null;
@@ -108,11 +159,59 @@ const Designar = ({
 
     const getSubstituicoesSemana = (sem) => (Array.isArray(sem?.substituicoes) ? sem.substituicoes : []).filter((item) => !item?.canceladaEm);
 
+    const getPessoasDesignadasSemana = (sem) => {
+        const assigned = [];
+        const add = (pessoa, slotKey, label, extra = {}) => {
+            if (!hasPessoaDesignada(pessoa)) return;
+            assigned.push({ pessoa, slotKey, label, context: extra });
+        };
+
+        add(sem?.presidente, 'presidente', TT.presidente);
+        (sem?.partes || []).forEach((parte) => {
+            add(parte?.estudante, 'estudante', parte?.titulo || TT.estudante, { parteId: parte?.id });
+            add(parte?.ajudante, 'ajudante', TT.ajudante, { parteId: parte?.id });
+            add(parte?.oracao, 'oracao', TT.oracao, { parteId: parte?.id });
+            add(parte?.dirigente, 'dirigente', TT.dirigente, { parteId: parte?.id });
+            add(parte?.leitor, 'leitor', TT.leitor, { parteId: parte?.id });
+        });
+
+        getMeioSemanaAssignedPeople(sem).forEach((item) => assigned.push(item));
+        getFimDeSemanaAssignedPeople(sem).forEach((item) => assigned.push(item));
+        return assigned;
+    };
+
+    const getConflitoDesignacaoSemana = (sem, aluno, targetSlot) => {
+        if (!sem || !aluno || !targetSlot) return null;
+        const ocorrencias = getPessoasDesignadasSemana(sem).filter((item) => {
+            if (!hasSlotPessoa(item, aluno)) return false;
+            const ctx = item.context || {};
+            const itemSlot = {
+                key: item.slotKey,
+                semanaIndex: targetSlot.semanaIndex,
+                parteId: ctx.parteId,
+                fds: !!ctx.fds,
+                meioSemana: !!ctx.meioSemana,
+                responsabilidadeKey: ctx.responsabilidadeKey,
+                itemIndex: ctx.itemIndex,
+            };
+            return !sameSlotCtx(itemSlot, targetSlot);
+        });
+
+        if (ocorrencias.length === 0) return null;
+        const temOutroSlotPrincipalFds = !!targetSlot.fds && ocorrencias.some((item) => item.context?.fds && !item.context?.responsabilidade);
+        return {
+            severity: temOutroSlotPrincipalFds && !targetSlot.responsabilidadeKey ? 'block' : 'warning',
+            labels: ocorrencias.map((item) => item.label || item.slotKey),
+        };
+    };
+
     const getSubstituicaoAtiva = (sem, slotCtx, value) => {
         if (!slotCtx || !hasPessoaDesignada(value)) return null;
         const substituicoes = getSubstituicoesSemana(sem);
         return [...substituicoes].reverse().find((item) => {
-            const parteId = slotCtx.key === 'presidente' ? 'presidente' : slotCtx.parteId;
+            const parteId = slotCtx.key === 'presidente'
+                ? 'presidente'
+                : (slotCtx.parteId || slotCtx.responsabilidadeKey || slotCtx.key);
             return item?.role === slotCtx.key && item?.parteId === parteId && mesmaPessoa(item?.para, value);
         }) || null;
     };
@@ -243,12 +342,16 @@ const Designar = ({
     const getSemanaRealIndexFromFilteredIndex = (idxFiltrado) => getSemanaRealIndexByKey(getSemanaKeyByFilteredIndex(idxFiltrado));
     const getSemanaIndexContexto = () => Number.isInteger(slotAtivo?.semanaIndex) ? slotAtivo.semanaIndex : semanaAtivaIndexAtual;
     const isSemanaTotalmenteDesignada = useCallback((sem) => {
+        const hasTextoPreenchido = (value) => !!String(value || '').trim();
+        const hasResponsabilidadePreenchida = (responsabilidades, storageKey) =>
+            (responsabilidades?.[storageKey] || []).some(hasPessoaDesignada);
+
         if (!sem || isSemanaAssembleia(sem, config)) return true;
         if (!hasPessoaDesignada(sem?.presidente)) return false;
 
         const partes = Array.isArray(sem?.partes) ? sem.partes : [];
 
-        return partes.every((parte) => {
+        const partesCompletas = partes.every((parte) => {
             if (isCanticoIntermediario(parte)) return true;
 
             if (isLinhaInicialFinal(parte)) {
@@ -263,6 +366,29 @@ const Designar = ({
 
             return hasPessoaDesignada(parte?.estudante);
         });
+        if (!partesCompletas) return false;
+
+        const responsabilidadesMeioSemana = getResponsabilidadesMeioSemana(sem);
+        const responsabilidadesMeioSemanaCompletas = MEIO_SEMANA_RESPONSABILIDADES.every(({ storageKey }) =>
+            hasResponsabilidadePreenchida(responsabilidadesMeioSemana, storageKey)
+        );
+        if (!responsabilidadesMeioSemanaCompletas) return false;
+
+        const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+        if (!fds.ativo) return true;
+
+        if (!hasPessoaDesignada(fds.presidente)) return false;
+        if (!hasPessoaDesignada(fds.oracaoFinal)) return false;
+        if (!hasTextoPreenchido(fds.reuniaoPublica.temaDiscurso)) return false;
+        if (!hasTextoPreenchido(fds.reuniaoPublica.oradorNomeManual)) return false;
+        if (!hasTextoPreenchido(fds.reuniaoPublica.congregacaoOrador)) return false;
+        if (!hasPessoaDesignada(fds.estudoSentinela.dirigente)) return false;
+        if (!hasPessoaDesignada(fds.estudoSentinela.leitor)) return false;
+        if (getTipoEventoSemana(sem, config) === 'visita' && !hasTextoPreenchido(fds.visitaSuperintendente.discursoFinal)) return false;
+
+        return FIM_DE_SEMANA_RESPONSABILIDADES.every(({ storageKey }) =>
+            hasResponsabilidadePreenchida(fds.responsabilidades, storageKey)
+        );
     }, [config]);
 
     useEffect(() => {
@@ -339,6 +465,16 @@ const Designar = ({
         const normalizeRoleToSlot = (role) => {
             if (role === 'resp') return 'estudante';
             if (role === 'ajud') return 'ajudante';
+            if ([
+                'presidente_fds',
+                'oracao_fds',
+                'dirigente_sentinela',
+                'leitor_sentinela',
+                'indicador_entrada',
+                'indicador_auditorio',
+                'microfones_volantes',
+                'audio_video'
+            ].includes(role)) return role;
             if (['presidente', 'oracao', 'dirigente', 'leitor', 'estudante', 'ajudante'].includes(role)) return role;
             return 'estudante';
         };
@@ -366,6 +502,10 @@ const Designar = ({
             semanaIndex: targetIdx,
             key: normalizeRoleToSlot(substitutionShortcutRequest.role),
             parteId: substitutionShortcutRequest.parteId,
+            fds: !!substitutionShortcutRequest.fds,
+            meioSemana: !!substitutionShortcutRequest.meioSemana,
+            responsabilidadeKey: substitutionShortcutRequest.responsabilidadeKey,
+            itemIndex: substitutionShortcutRequest.itemIndex,
             modo: 'substituicao',
             anterior: substitutionShortcutRequest.pessoa || null
         });
@@ -510,8 +650,10 @@ const Designar = ({
     const isAlunoDuplicadoBySemanaKey = (alunoId, semanaKey) => {
         const sem = listaProgramacoes?.[getSemanaRealIndexByKey(semanaKey)];
         if (!sem) return false;
-        if (sem?.presidente?.id === alunoId) return true;
-        return (sem?.partes || []).some(p => p?.estudante?.id === alunoId || p?.ajudante?.id === alunoId || p?.oracao?.id === alunoId || p?.dirigente?.id === alunoId || p?.leitor?.id === alunoId);
+        return getPessoasDesignadasSemana(sem).some((item) => {
+            const pessoaKey = item?.pessoa?.id || item?.pessoa?.nome;
+            return pessoaKey && alunoId && String(pessoaKey) === String(alunoId);
+        });
     };
 
     const alunosFiltrados = (alunos || []).filter(aluno => {
@@ -534,7 +676,7 @@ const Designar = ({
     });
 
     const getParteFromTargetSlot = (sem, targetSlot) => {
-        if (!sem || !targetSlot || targetSlot.key === 'presidente') return null;
+        if (!sem || !targetSlot || targetSlot.key === 'presidente' || targetSlot.fds || targetSlot.meioSemana) return null;
         return (sem.partes || []).find((parte) => parte.id === targetSlot.parteId) || null;
     };
 
@@ -545,7 +687,7 @@ const Designar = ({
 
         const sem = listaProgramacoes[semanaRealIndex];
         const parte = getParteFromTargetSlot(sem, targetSlot);
-        if (targetSlot.key !== 'presidente' && !parte) {
+        if (targetSlot.key !== 'presidente' && !targetSlot.fds && !targetSlot.meioSemana && !parte) {
             return { eligible: false, reason: TT.parteNaoEncontrada || 'Parte nao encontrada.' };
         }
         return isAlunoEligibleForAssignment({
@@ -572,9 +714,28 @@ const Designar = ({
             return false;
         }
 
+        if (aluno === null) {
+            let valorAtual = null;
+            if (targetSlot.meioSemana) {
+                const responsabilidades = getResponsabilidadesMeioSemana(sem);
+                valorAtual = responsabilidades?.[targetSlot.responsabilidadeKey]?.[targetSlot.itemIndex] || null;
+            } else if (targetSlot.fds) {
+                valorAtual = getFimDeSemanaSlotValue(withFimDeSemanaDefaults(sem), targetSlot);
+            } else if (targetSlot.key === 'presidente') {
+                valorAtual = sem?.presidente || null;
+            } else {
+                valorAtual = getParteFromTargetSlot(sem, targetSlot)?.[targetSlot.key] || null;
+            }
+
+            if (!hasPessoaDesignada(valorAtual)) {
+                if (targetSlot === slotAtivo) setTimeout(() => setSlotAtivo(null), 10);
+                return false;
+            }
+        }
+
         if (aluno) {
             const parte = getParteFromTargetSlot(sem, targetSlot);
-            if (targetSlot.key !== 'presidente' && !parte) {
+            if (targetSlot.key !== 'presidente' && !targetSlot.fds && !targetSlot.meioSemana && !parte) {
                 alert(TT.parteNaoEncontrada || 'Parte nao encontrada.');
                 return false;
             }
@@ -591,6 +752,14 @@ const Designar = ({
                 alert(eligibility.reason || TT.alunoSemHabilitacao || 'Aluno sem habilitacao para esta designacao.');
                 return false;
             }
+
+            const conflito = getConflitoDesignacaoSemana(sem, aluno, targetSlot);
+            if (conflito) {
+                const msg = conflito.severity === 'block'
+                    ? (TT.bloqueioConflitoFds || 'Este irmao ja esta em outra funcao principal do fim de semana. Confirmar excecao?')
+                    : (TT.confirmarConflitoFds || TT.confirmarDuplicado || 'Este aluno ja esta designado nesta semana. Deseja continuar?');
+                if (!window.confirm(`${msg}\n\n${conflito.labels.join(', ')}`)) return false;
+            }
         }
 
         setListaProgramacoesSafe(prev => {
@@ -601,11 +770,14 @@ const Designar = ({
             const registrarSubstituicao = (anterior, parte) => {
                 const semanaPublicada = semana?.publicadaNoQuadro !== false;
                 if ((!options.registrarSubstituicao && !semanaPublicada) || !hasPessoaDesignada(anterior) || mesmaPessoa(anterior, aluno)) return;
+                const parteIdSubstituicao = targetSlot.key === 'presidente'
+                    ? 'presidente'
+                    : (targetSlot.parteId || targetSlot.responsabilidadeKey || targetSlot.key);
 
                 registroSubstituicao = {
-                    id: `${Date.now()}-${targetSlot.key}-${targetSlot.parteId || 'presidente'}`,
+                    id: `${Date.now()}-${targetSlot.key}-${parteIdSubstituicao}`,
                     role: targetSlot.key,
-                    parteId: targetSlot.key === 'presidente' ? 'presidente' : targetSlot.parteId,
+                    parteId: parteIdSubstituicao,
                     parteTitulo: targetSlot.key === 'presidente' ? TT.presidente : (parte?.titulo || 'Parte'),
                     de: compactPessoa(anterior),
                     para: compactPessoa(aluno),
@@ -614,7 +786,30 @@ const Designar = ({
                 };
             };
 
-            if (targetSlot.key === 'presidente') {
+            if (targetSlot.meioSemana) {
+                const responsabilidades = getResponsabilidadesMeioSemana(semana);
+                const anterior = responsabilidades?.[targetSlot.responsabilidadeKey]?.[targetSlot.itemIndex] || null;
+                registrarSubstituicao(anterior, { id: targetSlot.responsabilidadeKey || targetSlot.key, titulo: getFimDeSemanaLabel(targetSlot.key) });
+                const atual = [...(responsabilidades[targetSlot.responsabilidadeKey] || [])];
+                if (aluno === null) {
+                    atual.splice(targetSlot.itemIndex, 1);
+                } else {
+                    atual[targetSlot.itemIndex] = aluno;
+                }
+                semana.responsabilidades = normalizeResponsabilidades({
+                    ...responsabilidades,
+                    [targetSlot.responsabilidadeKey]: atual,
+                }, MEIO_SEMANA_RESPONSABILIDADES);
+                marcarNotificacaoSemanaPendente(semana, now);
+            }
+            else if (targetSlot.fds) {
+                const fdsAtual = withFimDeSemanaDefaults(semana);
+                const anterior = getFimDeSemanaSlotValue(fdsAtual, targetSlot);
+                registrarSubstituicao(anterior, { id: targetSlot.responsabilidadeKey || targetSlot.key, titulo: getFimDeSemanaLabel(targetSlot.key) });
+                semana.fimDeSemana = setFimDeSemanaSlotValue(fdsAtual, targetSlot, aluno);
+                marcarNotificacaoSemanaPendente(semana, now);
+            }
+            else if (targetSlot.key === 'presidente') {
                 registrarSubstituicao(semana.presidente, null);
                 semana.presidente = aluno;
                 marcarNotificacaoSemanaPendente(semana, now);
@@ -643,8 +838,8 @@ const Designar = ({
     };
 
     const aplicarSugestao = (aluno) => {
-        const { semanaIndex, key, parteId } = modalSugestao;
-        const aplicado = atribuirAluno(aluno, { key, parteId, semanaIndex }, { registrarSubstituicao: modalSugestao.modo === 'substituicao' });
+        const { semanaIndex, key, parteId, fds, meioSemana, responsabilidadeKey, itemIndex } = modalSugestao;
+        const aplicado = atribuirAluno(aluno, { key, parteId, semanaIndex, fds, meioSemana, responsabilidadeKey, itemIndex }, { registrarSubstituicao: modalSugestao.modo === 'substituicao' });
         if (aplicado) setModalSugestao({ ...modalSugestao, aberto: false });
     };
 
@@ -655,6 +850,10 @@ const Designar = ({
             semanaIndex: slotCtx.semanaIndex,
             key: slotCtx.key,
             parteId: slotCtx.parteId,
+            fds: slotCtx.fds,
+            meioSemana: slotCtx.meioSemana,
+            responsabilidadeKey: slotCtx.responsabilidadeKey,
+            itemIndex: slotCtx.itemIndex,
             modo: 'substituicao',
             anterior: compactPessoa(anterior)
         });
@@ -895,9 +1094,136 @@ const Designar = ({
         });
     };
 
-    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx, substituicao, permitirSubstituicao = false, icon: SlotIcon = null, buttonRadiusClass = 'rounded-lg', substituteTitle = TT.substituirDesignado }) => {
+    const atualizarResponsabilidadesMeioSemana = (semanaIndexFiltrado, updater) => {
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndexFiltrado);
+        if (semanaRealIndex === -1) return;
+
+        setListaProgramacoesSafe(prev => {
+            const lista = [...prev];
+            const atual = lista[semanaRealIndex];
+            if (!atual || isSemanaAssembleia(atual, config)) return lista;
+
+            const responsabilidadesAtuais = getResponsabilidadesMeioSemana(atual);
+            const proximo = typeof updater === 'function'
+                ? updater(responsabilidadesAtuais)
+                : { ...responsabilidadesAtuais, ...(updater || {}) };
+            const semana = {
+                ...atual,
+                responsabilidades: normalizeResponsabilidades(proximo, MEIO_SEMANA_RESPONSABILIDADES),
+            };
+            marcarNotificacaoSemanaPendente(semana);
+            marcarSemanaPublicadaPendente(semana, 'edicao_responsabilidades_meio_semana');
+            lista[semanaRealIndex] = semana;
+            return lista;
+        });
+    };
+
+    const removerResponsavelMeioSemana = (semanaIndexFiltrado, responsabilidadeKey, itemIndex) => {
+        atualizarResponsabilidadesMeioSemana(semanaIndexFiltrado, (atuais) => ({
+            ...atuais,
+            [responsabilidadeKey]: (atuais[responsabilidadeKey] || []).filter((_, idx) => idx !== itemIndex),
+        }));
+        if (slotAtivo?.meioSemana && slotAtivo?.responsabilidadeKey === responsabilidadeKey && slotAtivo?.itemIndex === itemIndex) {
+            setSlotAtivo(null);
+        }
+    };
+
+    const atualizarFimDeSemana = (semanaIndexFiltrado, updater) => {
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndexFiltrado);
+        if (semanaRealIndex === -1) return;
+
+        setListaProgramacoesSafe(prev => {
+            const lista = [...prev];
+            const atual = lista[semanaRealIndex];
+            if (!atual || isSemanaAssembleia(atual, config)) return lista;
+
+            const atualNormalizado = withFimDeSemanaDefaults(atual);
+            const proximo = typeof updater === 'function' ? updater(atualNormalizado) : { ...atualNormalizado, ...(updater || {}) };
+            const semana = { ...atual, fimDeSemana: normalizeFimDeSemana(proximo) };
+            marcarNotificacaoSemanaPendente(semana);
+            marcarSemanaPublicadaPendente(semana, 'edicao_fim_de_semana');
+            lista[semanaRealIndex] = semana;
+            return lista;
+        });
+    };
+
+    const setFimDeSemanaPath = (semanaIndexFiltrado, path, value) => {
+        atualizarFimDeSemana(semanaIndexFiltrado, (fds) => {
+            const next = normalizeFimDeSemana(fds);
+            if (path.length === 1) {
+                next[path[0]] = value;
+            } else if (path.length === 2) {
+                next[path[0]] = { ...(next[path[0]] || {}), [path[1]]: value };
+            } else if (path.length === 3) {
+                next[path[0]] = {
+                    ...(next[path[0]] || {}),
+                    [path[1]]: {
+                        ...((next[path[0]] || {})[path[1]] || {}),
+                        [path[2]]: value,
+                    },
+                };
+            }
+            return next;
+        });
+    };
+
+    const setFimDeSemanaAtivo = (semanaIndexFiltrado, ativo) => {
+        atualizarFimDeSemana(semanaIndexFiltrado, (fds) => ({
+            ...fds,
+            ativo,
+            data: fds.data || getDefaultFimDeSemanaDataISO(listaFiltradaPorFlag[semanaIndexFiltrado]),
+            horario: fds.horario || getDefaultFimDeSemanaHorario(),
+        }));
+    };
+
+    const removerResponsavelFimDeSemana = (semanaIndexFiltrado, responsabilidadeKey, itemIndex) => {
+        atualizarFimDeSemana(semanaIndexFiltrado, (fds) => ({
+            ...fds,
+            responsabilidades: {
+                ...(fds.responsabilidades || {}),
+                [responsabilidadeKey]: (fds.responsabilidades?.[responsabilidadeKey] || []).filter((_, idx) => idx !== itemIndex),
+            },
+        }));
+        if (slotAtivo?.fds && slotAtivo?.responsabilidadeKey === responsabilidadeKey && slotAtivo?.itemIndex === itemIndex) {
+            setSlotAtivo(null);
+        }
+    };
+
+    const getFimDeSemanaSlotValue = (fds, targetSlot) => {
+        if (!targetSlot?.fds) return null;
+        if (targetSlot.responsabilidadeKey) {
+            return fds?.responsabilidades?.[targetSlot.responsabilidadeKey]?.[targetSlot.itemIndex] || null;
+        }
+        if (targetSlot.key === 'presidente_fds') return fds?.presidente || null;
+        if (targetSlot.key === 'oracao_fds') return fds?.oracaoFinal || null;
+        if (targetSlot.key === 'dirigente_sentinela') return fds?.estudoSentinela?.dirigente || null;
+        if (targetSlot.key === 'leitor_sentinela') return fds?.estudoSentinela?.leitor || null;
+        return null;
+    };
+
+    const setFimDeSemanaSlotValue = (fds, targetSlot, aluno) => {
+        const next = normalizeFimDeSemana(fds);
+        next.ativo = true;
+        if (targetSlot.responsabilidadeKey) {
+            const atual = [...(next.responsabilidades[targetSlot.responsabilidadeKey] || [])];
+            if (aluno === null) {
+                atual.splice(targetSlot.itemIndex, 1);
+            } else {
+                atual[targetSlot.itemIndex] = aluno;
+            }
+            next.responsabilidades[targetSlot.responsabilidadeKey] = atual;
+            return next;
+        }
+        if (targetSlot.key === 'presidente_fds') next.presidente = aluno;
+        if (targetSlot.key === 'oracao_fds') next.oracaoFinal = aluno;
+        if (targetSlot.key === 'dirigente_sentinela') next.estudoSentinela.dirigente = aluno;
+        if (targetSlot.key === 'leitor_sentinela') next.estudoSentinela.leitor = aluno;
+        return next;
+    };
+
+    const renderSlotButton = ({ label, value, onClick, active, hint, emptyText, onSuggest, slotCtx, substituicao, permitirSubstituicao = false, icon: SlotIcon = null, buttonRadiusClass = 'rounded-lg', substituteTitle = TT.substituirDesignado, showLabel = true }) => {
         const isEmpty = !value;
-        const isHoveredByDrag = dragOverSlot && slotCtx && dragOverSlot.key === slotCtx.key && dragOverSlot.parteId === slotCtx.parteId && dragOverSlot.semanaIndex === slotCtx.semanaIndex;
+        const isHoveredByDrag = dragOverSlot && slotCtx && sameSlotCtx(dragOverSlot, slotCtx);
         const canSubstitute = permitirSubstituicao && !!value && !!slotCtx;
         const hasActions = !!onSuggest || canSubstitute;
 
@@ -915,7 +1241,7 @@ const Designar = ({
                 className="relative w-full min-w-0 group/slot"
                 onDragOver={(e) => {
                     e.preventDefault();
-                    if (draggedAluno && slotCtx && (!dragOverSlot || dragOverSlot.key !== slotCtx.key || dragOverSlot.parteId !== slotCtx.parteId)) {
+                    if (draggedAluno && slotCtx && (!dragOverSlot || !sameSlotCtx(dragOverSlot, slotCtx))) {
                         setDragOverSlot(slotCtx);
                     }
                 }}
@@ -933,22 +1259,22 @@ const Designar = ({
                     <button
                         type="button"
                         onClick={onClick}
-                        className={`w-full min-w-0 py-2 px-3 ${buttonRadiusClass} border-2 transition-all text-left relative focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
+                        className={`w-full min-w-0 min-h-[38px] py-2 px-3 ${buttonRadiusClass} border-2 transition-all text-left relative focus:outline-none ${isHoveredByDrag ? "ring-2 ring-blue-500 bg-blue-100 border-blue-400 scale-[1.01]" : currentColorClass}`}
                         title={value ? TT.cliquePara : (emptyText || hint || TT.cliquePara)}
                     >
                         {value ? (
                             <div className="flex items-center gap-1.5 min-w-0">
                                 {SlotIcon && <SlotIcon size={14} className={`shrink-0 ${active ? 'text-blue-500' : 'text-green-500'}`} />}
                                 <div className="flex items-baseline gap-1.5 min-w-0">
-                                    <span className={`text-[10px] leading-tight font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>
+                                    {showLabel && <span className={`text-[10px] leading-tight font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>}
                                     <p className={`font-bold text-[13px] leading-tight truncate min-w-0 ${active ? 'text-blue-900' : textColorClass}`}>{value.nome}</p>
                                 </div>
                             </div>
                         ) : (
-                            <div className={`text-[11px] italic flex items-center gap-1 min-w-0 ${active ? 'text-blue-400' : textColorClass}`}>
+                            <div className={`text-[11px] italic flex items-center gap-1.5 min-w-0 ${active ? 'text-blue-400' : textColorClass}`}>
                                 {SlotIcon && <SlotIcon size={14} className={`shrink-0 ${active ? 'text-blue-500' : 'text-red-300'}`} />}
-                                <span className={`text-[10px] leading-tight font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>
-                                <p className="flex items-center gap-1 min-w-0">
+                                {showLabel && <span className={`text-[10px] leading-tight font-black uppercase shrink-0 ${active ? 'text-blue-500' : labelColorClass}`}>{label}:</span>}
+                                <p className="flex items-center gap-1 min-w-0 leading-tight">
                                     <UserPlus size={12} className={active ? 'opacity-100' : 'opacity-60'} /> {emptyText || hint || TT.cliquePara}
                                 </p>
                             </div>
@@ -1059,6 +1385,226 @@ const Designar = ({
         );
     };
 
+    const renderResponsabilidadesMeioSemana = (sem, semanaIndexFiltrado) => {
+        const responsabilidades = getResponsabilidadesMeioSemana(sem);
+        return (
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-indigo-800">{TT.apoioMeioSemana || TT.responsabilidades}</h4>
+                        <p className="text-[10px] font-semibold text-indigo-700/70">{TT.apoioMeioSemanaDescricao || TT.meioDeSemana}</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {MEIO_SEMANA_RESPONSABILIDADES.map(({ storageKey, slotKey, labels }) => {
+                        const pessoas = responsabilidades[storageKey] || [];
+                        const label = TT[storageKey] || labels?.[lang] || labels?.pt || storageKey;
+                        const novoSlotCtx = { key: slotKey, semanaIndex: semanaIndexFiltrado, meioSemana: true, responsabilidadeKey: storageKey, itemIndex: pessoas.length };
+                        return (
+                            <div key={storageKey} className="rounded-lg border border-gray-100 bg-white p-2 space-y-2">
+                                <div className="min-h-[32px] flex items-center">
+                                    <span className="text-[10px] font-black uppercase tracking-widest leading-tight text-gray-500 break-words">{label}</span>
+                                </div>
+                                {pessoas.length > 0 && (
+                                    pessoas.map((pessoa, itemIndex) => {
+                                        const slotCtx = { key: slotKey, semanaIndex: semanaIndexFiltrado, meioSemana: true, responsabilidadeKey: storageKey, itemIndex };
+                                        return (
+                                            <div key={`${storageKey}-${itemIndex}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-1.5 items-center">
+                                                {renderSlotButton({
+                                                    label,
+                                                    value: pessoa,
+                                                    onClick: () => setSlotAtivo(slotCtx),
+                                                    active: sameSlotCtx(slotAtivo, slotCtx),
+                                                    onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: slotKey, meioSemana: true, responsabilidadeKey: storageKey, itemIndex }); },
+                                                    slotCtx,
+                                                    emptyText: TT.opcional,
+                                                    showLabel: false,
+                                                })}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removerResponsavelMeioSemana(semanaIndexFiltrado, storageKey, itemIndex)}
+                                                    className="p-2 rounded-lg border border-red-100 bg-red-50 text-red-600 hover:bg-red-100 shrink-0"
+                                                    title={TT.removerResponsavel}
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                                {renderSlotButton({
+                                    label,
+                                    value: null,
+                                    onClick: () => setSlotAtivo(novoSlotCtx),
+                                    active: sameSlotCtx(slotAtivo, novoSlotCtx),
+                                    onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: slotKey, meioSemana: true, responsabilidadeKey: storageKey, itemIndex: pessoas.length }); },
+                                    slotCtx: novoSlotCtx,
+                                    emptyText: TT.cliquePara,
+                                    showLabel: false,
+                                })}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    const renderFimDeSemana = (sem, semanaIndexFiltrado, semanaKey) => {
+        const fds = getFimDeSemanaParaSemana(sem);
+        const isVisita = getTipoEventoSemana(sem, config) === 'visita';
+        const temDadosSalvos = hasFimDeSemanaData(sem?.fimDeSemana);
+        const aberto = fdsAbertoPorSemana[semanaKey] ?? temDadosSalvos;
+        const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400";
+        const labelClass = "block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1";
+        const getSlotCtx = (key, extra = {}) => ({ key, semanaIndex: semanaIndexFiltrado, fds: true, ...extra });
+        const renderPessoaSlot = ({ key, label, value, icon = User, extra = {} }) => {
+            const slotCtx = getSlotCtx(key, extra);
+            return renderSlotButton({
+                label,
+                value,
+                onClick: () => setSlotAtivo(slotCtx),
+                active: sameSlotCtx(slotAtivo, slotCtx),
+                onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key, fds: true, ...extra }); },
+                slotCtx,
+                permitirSubstituicao: false,
+                icon,
+            });
+        };
+
+        const field = (label, value, onChange, props = {}) => (
+            <div>
+                <label className={labelClass}>{label}</label>
+                <input
+                    {...props}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className={inputClass}
+                />
+            </div>
+        );
+
+        return (
+            <div className="rounded-xl border border-sky-100 bg-sky-50/40 overflow-hidden">
+                <button
+                    type="button"
+                    onClick={() => setFdsAbertoPorSemana(prev => ({ ...prev, [semanaKey]: !aberto }))}
+                    className="w-full px-3 py-2 flex items-center justify-between gap-3 text-left hover:bg-sky-50 transition"
+                >
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-sky-600 shrink-0" />
+                            <span className="text-xs font-black uppercase tracking-widest text-sky-800">{TT.fimDeSemana}</span>
+                            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${fds.ativo ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-200'}`}>
+                                {fds.ativo ? TT.publicada : TT.rascunho}
+                            </span>
+                        </div>
+                        <p className="mt-0.5 text-[11px] font-semibold text-sky-700/70 truncate">
+                            {fds.data || TT.dataNaoDefinida} {fds.horario ? `• ${fds.horario}` : ''}
+                        </p>
+                    </div>
+                    <ChevronDown size={16} className={`text-sky-700 transition-transform ${aberto ? 'rotate-180' : ''}`} />
+                </button>
+
+                {aberto && (
+                    <div className="border-t border-sky-100 bg-white/80 p-3 space-y-4">
+                        <label className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-gray-700">
+                            <input
+                                type="checkbox"
+                                checked={!!fds.ativo}
+                                onChange={(e) => setFimDeSemanaAtivo(semanaIndexFiltrado, e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                            />
+                            {TT.ativarFimDeSemana}
+                        </label>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {renderPessoaSlot({ key: 'presidente_fds', label: TT.presidente, value: fds.presidente, icon: User })}
+                            {renderPessoaSlot({ key: 'oracao_fds', label: TT.oracaoFinal, value: fds.oracaoFinal, icon: UserRound })}
+                        </div>
+
+                        <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-3">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-700">{TT.reuniaoPublica}</h4>
+                            {field(TT.temaDiscurso, fds.reuniaoPublica.temaDiscurso, (value) => setFimDeSemanaPath(semanaIndexFiltrado, ['reuniaoPublica', 'temaDiscurso'], value), { type: 'text' })}
+                            {field(TT.oradorDiscursoPublico, fds.reuniaoPublica.oradorNomeManual, (value) => setFimDeSemanaPath(semanaIndexFiltrado, ['reuniaoPublica', 'oradorNomeManual'], value), { type: 'text' })}
+                            {field(TT.congregacaoOrador, fds.reuniaoPublica.congregacaoOrador, (value) => setFimDeSemanaPath(semanaIndexFiltrado, ['reuniaoPublica', 'congregacaoOrador'], value), { type: 'text' })}
+                        </div>
+
+                        <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-3">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-700">{TT.estudoSentinela}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {renderPessoaSlot({ key: 'dirigente_sentinela', label: TT.dirigenteSentinela, value: fds.estudoSentinela.dirigente, icon: User })}
+                                {renderPessoaSlot({ key: 'leitor_sentinela', label: TT.leitorSentinela, value: fds.estudoSentinela.leitor, icon: User })}
+                            </div>
+                        </div>
+
+                        {isVisita && (
+                            <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-3 space-y-3">
+                                <h4 className="text-[11px] font-black uppercase tracking-widest text-blue-800">{TT.discursoFinalVisita}</h4>
+                                {field(TT.temaDiscurso, fds.visitaSuperintendente.discursoFinal, (value) => setFimDeSemanaPath(semanaIndexFiltrado, ['visitaSuperintendente', 'discursoFinal'], value), { type: 'text' })}
+                            </div>
+                        )}
+
+                        <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-3">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-700">{TT.apoioFimDeSemana || TT.responsabilidades}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {FIM_DE_SEMANA_RESPONSABILIDADES.map(({ storageKey, slotKey, labels }) => {
+                                    const pessoas = fds.responsabilidades[storageKey] || [];
+                                    const label = TT[storageKey] || labels?.[lang] || labels?.pt || storageKey;
+                                    const novoSlotCtx = getSlotCtx(slotKey, { responsabilidadeKey: storageKey, itemIndex: pessoas.length });
+                                    return (
+                                        <div key={storageKey} className="rounded-lg border border-gray-100 bg-gray-50 p-2 space-y-2">
+                                            <div className="min-h-[32px] flex items-center">
+                                                <span className="text-[10px] font-black uppercase tracking-widest leading-tight text-gray-500 break-words">{label}</span>
+                                            </div>
+                                            {pessoas.length > 0 && (
+                                                pessoas.map((pessoa, itemIndex) => {
+                                                    const slotCtx = getSlotCtx(slotKey, { responsabilidadeKey: storageKey, itemIndex });
+                                                    return (
+                                                        <div key={`${storageKey}-${itemIndex}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-1.5 items-center">
+                                                            {renderSlotButton({
+                                                                label,
+                                                                value: pessoa,
+                                                                onClick: () => setSlotAtivo(slotCtx),
+                                                                active: sameSlotCtx(slotAtivo, slotCtx),
+                                                                onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: slotKey, fds: true, responsabilidadeKey: storageKey, itemIndex }); },
+                                                                slotCtx,
+                                                                emptyText: TT.opcional,
+                                                                showLabel: false,
+                                                            })}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removerResponsavelFimDeSemana(semanaIndexFiltrado, storageKey, itemIndex)}
+                                                                className="p-2 rounded-lg border border-red-100 bg-red-50 text-red-600 hover:bg-red-100 shrink-0"
+                                                                title={TT.removerResponsavel}
+                                                            >
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                            {renderSlotButton({
+                                                label,
+                                                value: null,
+                                                onClick: () => setSlotAtivo(novoSlotCtx),
+                                                active: sameSlotCtx(slotAtivo, novoSlotCtx),
+                                                onSuggest: (e) => { e.stopPropagation(); setModalSugestao({ aberto: true, semanaIndex: semanaIndexFiltrado, key: slotKey, fds: true, responsabilidadeKey: storageKey, itemIndex: pessoas.length }); },
+                                                slotCtx: novoSlotCtx,
+                                                emptyText: TT.cliquePara,
+                                                showLabel: false,
+                                            })}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="w-full min-h-screen bg-gray-50 relative font-sans text-gray-800">
 
@@ -1097,6 +1643,7 @@ const Designar = ({
                         stickyOffset={stickyOffset}
                         TT={TT}
                         lang={lang}
+                        config={config}
                     />
 
                     {/* COLUNA CENTRAL */}
@@ -1225,6 +1772,11 @@ const Designar = ({
                                                     </div>
                                                 ) : (
                                                     <>
+                                                        <div className="flex items-center gap-2 px-1 pt-1">
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{TT.meioDeSemana}</span>
+                                                            <span className="h-px flex-1 bg-gray-200" />
+                                                        </div>
+
                                                         {/* PRESIDENTE */}
                                                         {renderSlotButton({
                                                             label: TT.presidente,
@@ -1271,6 +1823,10 @@ const Designar = ({
                                                         </div>
 
                                                         <div className="space-y-2">{partesDaSemana.filter(isEncerramento).map(p => renderParteCard(p, idx))}</div>
+
+                                                        {renderResponsabilidadesMeioSemana(sem, idx)}
+
+                                                        {renderFimDeSemana(sem, idx, key)}
                                                     </>
                                                 )}
                                             </div>
@@ -1283,7 +1839,7 @@ const Designar = ({
 
                     {/* BARRA LATERAL ALUNOS COM DRAG AND DROP */}
                     <SidebarAlunos
-                        TT={TT} buildSlotLabel={() => slotAtivo ? formatText(TT.atribuindoTpl, { slot: slotAtivo.key }) : TT.alunos}
+                        TT={TT} buildSlotLabel={() => slotAtivo ? formatText(TT.atribuindoTpl, { slot: (slotAtivo.fds || slotAtivo.meioSemana) ? getFimDeSemanaLabel(slotAtivo.key) : slotAtivo.key }) : TT.alunos}
                         alunosFiltrados={alunosFiltrados} slotAtivo={slotAtivo} setSlotAtivo={setSlotAtivo}
                         termoBusca={termoBusca} setTermoBusca={setTermoBusca}
                         ordenacaoChave={ordenacaoChave} setOrdenacaoChave={setOrdenacaoChave}
