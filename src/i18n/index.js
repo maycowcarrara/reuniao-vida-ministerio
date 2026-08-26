@@ -862,14 +862,30 @@ const PT_MESSAGES = {
         nenhumCalendario: "Nenhum calendário encontrado na sua conta.",
         presidenteReuniao: "Presidente da Reunião",
         presidente: "Presidente",
+        presidenteFimDeSemana: "Presidente da reunião de fim de semana",
         oracaoInicial: "Oração Inicial",
         oracaoFinal: "Oração Final",
         com: "com",
+        dirigente: "dirigente",
         leitor: "leitor",
+        dirigenteSentinela: "Dirigente",
+        leitorSentinela: "Leitor",
+        reuniaoFimDeSemana: "Reunião de fim de semana",
+        reuniaoPublica: "Reunião pública",
+        estudoSentinela: "Estudo de A Sentinela",
+        discursoFinalVisita: "Discurso final da visita",
+        apoioMeioSemana: "Apoio do meio de semana",
+        apoioFimDeSemana: "Apoio do fim de semana",
+        videoZoomSom: "Áudio/vídeo",
+        indicadoresEntrada: "Indicadores da entrada",
+        indicadoresAuditorio: "Indicadores do auditório",
+        microfonesVolantes: "Microfones",
         progReuniao: "Programação da Reunião",
         detalhesParte: "Detalhes da sua parte",
         geradoAuto: "Gerado automaticamente pelo Gerenciador RVM",
-        descPresidente: "Você é o presidente da reunião desta semana."
+        descPresidente: "Você é o presidente da reunião desta semana.",
+        descApoioReuniaoCompleta: "Esta responsabilidade acompanha o horário completo da reunião.",
+        descFimDeSemana: "Esta designação pertence à reunião de fim de semana."
     }
 };
 
@@ -1734,14 +1750,30 @@ const ES_MESSAGES = {
         nenhumCalendario: "No se encontró ningún calendario en su cuenta.",
         presidenteReuniao: "Presidente de la Reunión",
         presidente: "Presidente",
+        presidenteFimDeSemana: "Presidente de la reunión de fin de semana",
         oracaoInicial: "Oración Inicial",
         oracaoFinal: "Oración Final",
         com: "con",
+        dirigente: "conductor",
         leitor: "lector",
+        dirigenteSentinela: "Conductor",
+        leitorSentinela: "Lector",
+        reuniaoFimDeSemana: "Reunión de fin de semana",
+        reuniaoPublica: "Reunión pública",
+        estudoSentinela: "Estudio de La Atalaya",
+        discursoFinalVisita: "Discurso final de la visita",
+        apoioMeioSemana: "Apoyo entre semana",
+        apoioFimDeSemana: "Apoyo de fin de semana",
+        videoZoomSom: "Audio/video",
+        indicadoresEntrada: "Acomodadores de entrada",
+        indicadoresAuditorio: "Acomodadores del auditorio",
+        microfonesVolantes: "Micrófonos",
         progReuniao: "Programa de la Reunión",
         detalhesParte: "Detalles de su asignación",
         geradoAuto: "Generado automáticamente por el Gestor RVM",
-        descPresidente: "Usted es el presidente de la reunión de esta semana."
+        descPresidente: "Usted es el presidente de la reunión de esta semana.",
+        descApoioReuniaoCompleta: "Esta responsabilidad acompaña el horario completo de la reunión.",
+        descFimDeSemana: "Esta asignación pertenece a la reunión de fin de semana."
     }
 };
 
