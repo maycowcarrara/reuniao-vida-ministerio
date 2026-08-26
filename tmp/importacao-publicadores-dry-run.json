@@ -1,0 +1,1846 @@
+{
+  "geradoEm": "2026-08-08T20:55:47.998Z",
+  "projectId": "rvm-sbssc",
+  "path": "users/P8B0fY6m8JVjoLFGZEcXQ1uWsWs2/alunos",
+  "modo": "dry-run, sem gravacao",
+  "regraNome": "armazenar e comparar por primeiro + ultimo nome",
+  "regraTelefone": "DD 99999-9999 para celular, DD 9999-9999 para fixo",
+  "totais": {
+    "csv": 94,
+    "bancoAtual": 16,
+    "adicionar": 77,
+    "atualizarObservacoes": 3,
+    "pularPorAncianosServosOuSC": 16,
+    "pularPorJaExistir": 1,
+    "pendentesAmbiguos": 0,
+    "bancoAposImportacaoPrevisto": 93
+  },
+  "tiposNovos": {
+    "irma": 53,
+    "irmao": 24
+  },
+  "novosPioneirosRegulares": 12,
+  "additions": [
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Alessandra Soares Miranda",
+        "Contato": "(49) 9.9944-9248",
+        "Contato de Emergência": "(44) 9.9941-7871 Fernanda (Amiga)",
+        "Endereço": "Rua Servidão Ilson Hüttel, 256 Ap 100 - Centro",
+        "NASC.": "10/14/1982",
+        "BATISMO": "9/6/2003"
+      },
+      "aluno": {
+        "id": "17",
+        "nome": "Alessandra Miranda",
+        "tipo": "irma",
+        "telefone": "49 99944-9248",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Geci S. Drevek",
+        "Contato": "(47) 9.9745-5479",
+        "Contato de Emergência": "(47) 9.9743-8945 Gabriela (filha)",
+        "Endereço": "Rua Mathias Nossol, 2270 - Serra Alta",
+        "NASC.": "12/8/1965",
+        "BATISMO": "11/22/1989"
+      },
+      "aluno": {
+        "id": "18",
+        "nome": "Geci Drevek",
+        "tipo": "irma",
+        "telefone": "47 99745-5479",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Graziela Vitória da Conceição de Jesus",
+        "Contato": "(95) 97400-8896",
+        "Contato de Emergência": "(51) 99432-8925",
+        "Endereço": "Rua Capitão Ernesto Nunes, 315 - Kitnet 3 - Centro",
+        "NASC.": "6/22/2006",
+        "BATISMO": "3/3/2018"
+      },
+      "aluno": {
+        "id": "19",
+        "nome": "Graziela Jesus",
+        "tipo": "irma",
+        "telefone": "95 97400-8896",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Jessyca Karoline Gomes Croelhas",
+        "Contato": "(47) 98418-8814",
+        "Contato de Emergência": "(91) 98477-4597 (Maria) - (91) 98199-5578 (Yan)",
+        "Endereço": "Rua José Jeslisk, 188 - Schramm",
+        "NASC.": "2/19/2005",
+        "BATISMO": "9/16/2023"
+      },
+      "aluno": {
+        "id": "20",
+        "nome": "Jessyca Croelhas",
+        "tipo": "irma",
+        "telefone": "47 98418-8814",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Katia Alessandra Märtin",
+        "Contato": "(47) 9.97697075",
+        "Contato de Emergência": "(47) 32021325 Família Ress",
+        "Endereço": "Rua José Liebl, 58 - Schramm",
+        "NASC.": "5/7/1975",
+        "BATISMO": "1/28/1989"
+      },
+      "aluno": {
+        "id": "21",
+        "nome": "Katia Märtin",
+        "tipo": "irma",
+        "telefone": "47 99769-7075",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Marcelina Rosa da Silva",
+        "Contato": "(47) 9.9760-8795",
+        "Contato de Emergência": "(47) 99241-4121 - Valnicio (marido)",
+        "Endereço": "Rua Rio Antinha, 201 - Fazenda Espanha",
+        "NASC.": "11/20/1970",
+        "BATISMO": "4/21/1996"
+      },
+      "aluno": {
+        "id": "22",
+        "nome": "Marcelina Silva",
+        "tipo": "irma",
+        "telefone": "47 99760-8795",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Melanie Tavares Palma",
+        "Contato": "(47) 99755-0177",
+        "Contato de Emergência": "(12) 98851-2354 (Leonardo)",
+        "Endereço": "Rua Barão do Rio Branco, 574 - Ap-401 - Centro",
+        "NASC.": "8/23/2004",
+        "BATISMO": "8/22/2015"
+      },
+      "aluno": {
+        "id": "23",
+        "nome": "Melanie Palma",
+        "tipo": "irma",
+        "telefone": "47 99755-0177",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Neusa Lisboa da Silva Aniaia",
+        "Contato": "(47) 9.9916-6303",
+        "Contato de Emergência": "(47) 9.9982-2784 Beto (cunhado)",
+        "Endereço": "Rua Carlos Goertler, 467 - Serra Alta",
+        "NASC.": "7/21/1972",
+        "BATISMO": "2/1/2004"
+      },
+      "aluno": {
+        "id": "24",
+        "nome": "Neusa Aniaia",
+        "tipo": "irma",
+        "telefone": "47 99916-6303",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Norianni Osmari Alfonzo Espinoza",
+        "Contato": "(95) 9.8114-4539",
+        "Contato de Emergência": "(41) 9.9137-4931 Norymar (irmão)",
+        "Endereço": "Rua João Treml, 73 - Schramm",
+        "NASC.": "10/13/1992",
+        "BATISMO": "10/7/2006"
+      },
+      "aluno": {
+        "id": "25",
+        "nome": "Norianni Espinoza",
+        "tipo": "irma",
+        "telefone": "95 98114-4539",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Patrícia Ress",
+        "Contato": "(47) 9.9679-3024",
+        "Contato de Emergência": "(41) 9.9217-1110 Wiverson",
+        "Endereço": "Rua Carlos Tascheck, 431 - Centenário",
+        "NASC.": "8/12/1978",
+        "BATISMO": "2/13/1993"
+      },
+      "aluno": {
+        "id": "26",
+        "nome": "Patrícia Ress",
+        "tipo": "irma",
+        "telefone": "47 99679-3024",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Sirlei Taborda",
+        "Contato": "(47) 9.9638-1814",
+        "Contato de Emergência": "(47) 9.9603-2998 (filha)",
+        "Endereço": "Travessa Taruma, 34 - 25 de Julho",
+        "NASC.": "5/19/1961",
+        "BATISMO": "4/3/2007"
+      },
+      "aluno": {
+        "id": "27",
+        "nome": "Sirlei Taborda",
+        "tipo": "irma",
+        "telefone": "47 99638-1814",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "PIONEIROS REGULARES",
+        "Nome": "Tereza dos Santos",
+        "Contato": "(47) 9.9960-2933 / (47) 3635-4934",
+        "Contato de Emergência": "(97) 9.9172-6676 Eduardo (filho)",
+        "Endereço": "Rua Travessa Itororó, 20 - Centenário",
+        "NASC.": "5/10/1965",
+        "BATISMO": "8/21/2004"
+      },
+      "aluno": {
+        "id": "28",
+        "nome": "Tereza Santos",
+        "tipo": "irma",
+        "telefone": "(47) 9.9960-2933 / (47) 3635-4934",
+        "email": "",
+        "familia": "",
+        "observacoes": "Pioneiro regular",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Adriano Cruz",
+        "Contato": "(47) 9.9703-7249",
+        "Contato de Emergência": "(47) 9.9938-2950 Jucélia (filha)",
+        "Endereço": "Rua Eduardo Liebl, 42 - Serra Alta",
+        "NASC.": "2/25/1955",
+        "BATISMO": "1/1/1994"
+      },
+      "aluno": {
+        "id": "29",
+        "nome": "Adriano Cruz",
+        "tipo": "irmao",
+        "telefone": "47 99703-7249",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Alexander David Märtin",
+        "Contato": "(47) 9.9111-7870",
+        "Contato de Emergência": "(12) 9.8273-7521 Eduardo Foleto",
+        "Endereço": "Rua Fernando Hubl, 435 - Casa 6 - Schramm",
+        "NASC.": "1/29/1990",
+        "BATISMO": "8/5/2006"
+      },
+      "aluno": {
+        "id": "30",
+        "nome": "Alexander Märtin",
+        "tipo": "irmao",
+        "telefone": "47 99111-7870",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Alzira Sluminsky",
+        "Contato": "(47) 9.9925-4041",
+        "Contato de Emergência": "(47) 9.8406-0676",
+        "Endereço": "Rua Ervino Bayerl, 66 - Rio Negro",
+        "NASC.": "4/21/1956",
+        "BATISMO": "8/27/1977"
+      },
+      "aluno": {
+        "id": "31",
+        "nome": "Alzira Sluminsky",
+        "tipo": "irma",
+        "telefone": "47 99925-4041",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Anita Martin",
+        "Contato": "(47) 9.8850-0909",
+        "Contato de Emergência": "(41) 9.9687-9129 Wilton",
+        "Endereço": "Rua Donaldo Tascheck, 50 - Centenário",
+        "NASC.": "12/13/1950",
+        "BATISMO": "7/31/1970"
+      },
+      "aluno": {
+        "id": "32",
+        "nome": "Anita Martin",
+        "tipo": "irma",
+        "telefone": "47 98850-0909",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Anna Clara Gomes",
+        "Contato": "(47) 98800-2758",
+        "Contato de Emergência": "(91) 98477-4597 (Maria) - (91) 98199-5578 (Yan)",
+        "Endereço": "Rua José Jeslisk, 188 - Schramm",
+        "NASC.": "11/20/2009",
+        "BATISMO": "9/16/2023"
+      },
+      "aluno": {
+        "id": "33",
+        "nome": "Anna Gomes",
+        "tipo": "irma",
+        "telefone": "47 98800-2758",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Bruno de Souza Silva",
+        "Contato": "(47) 9.9211-7418 / (47) 3635-4683",
+        "Contato de Emergência": "não informado",
+        "Endereço": "Rua das Neves, 1032 - 25 de Julho",
+        "NASC.": "9/8/1986",
+        "BATISMO": "8/9/1999"
+      },
+      "aluno": {
+        "id": "34",
+        "nome": "Bruno Silva",
+        "tipo": "irmao",
+        "telefone": "(47) 9.9211-7418 / (47) 3635-4683",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Bruno Rosa",
+        "Contato": "(47) 9.9603-5884",
+        "Contato de Emergência": "(47) 9.96035884 Neusi (mãe)",
+        "Endereço": "Rua Travessa Máximo Cristofolini - Serra Alta",
+        "NASC.": "8/23/2005",
+        "BATISMO": "11/24/2024"
+      },
+      "aluno": {
+        "id": "35",
+        "nome": "Bruno Rosa",
+        "tipo": "irmao",
+        "telefone": "47 99603-5884",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Camila Rubiana Amato Märtin",
+        "Contato": "(47) 9.9661-4108",
+        "Contato de Emergência": "(11) 9.9562-3897 William Amato",
+        "Endereço": "Rua Fernando Hubl, 435 - Casa 6 - Schramm",
+        "NASC.": "7/15/1992",
+        "BATISMO": "7/5/2008"
+      },
+      "aluno": {
+        "id": "36",
+        "nome": "Camila Märtin",
+        "tipo": "irma",
+        "telefone": "47 99661-4108",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Caruline Ornelas",
+        "Contato": "(47) 9 3383-2708",
+        "Contato de Emergência": "(41) 9 9865-4685 - Igor (Irmão)",
+        "Endereço": "Rua Gerhard Wilhelm Wedderhoff, 40 - Progresso",
+        "NASC.": "3/13/1982",
+        "BATISMO": "3/16/1996"
+      },
+      "aluno": {
+        "id": "37",
+        "nome": "Caruline Ornelas",
+        "tipo": "irma",
+        "telefone": "47 93383-2708",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Célia Patrícia Kiste",
+        "Contato": "(47) 9.9928-1760",
+        "Contato de Emergência": "(47) 9.9677-8471 Hérica (filha)",
+        "Endereço": "Rua Reinaldo Mallon, 104 - Serra Alta",
+        "NASC.": "12/20/1984",
+        "BATISMO": "12/2/2018"
+      },
+      "aluno": {
+        "id": "38",
+        "nome": "Célia Kiste",
+        "tipo": "irma",
+        "telefone": "47 99928-1760",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Celso Endler",
+        "Contato": "(47) 9 9678-6274",
+        "Contato de Emergência": "(47) 99931-3304 Lara (Filha)",
+        "Endereço": "Rua Emilio Engel, 1102 - Rio Vermelho",
+        "NASC.": "5/19/1966",
+        "BATISMO": "8/2/2025"
+      },
+      "aluno": {
+        "id": "39",
+        "nome": "Celso Endler",
+        "tipo": "irmao",
+        "telefone": "47 99678-6274",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Clarice Gomes",
+        "Contato": "(44) 9 8862-0762",
+        "Contato de Emergência": "(44) 98804-5083 - Fernando (filho)",
+        "Endereço": "Rua Carlos Tascheck, 68 - Centenário",
+        "NASC.": "7/11/1954",
+        "BATISMO": "7/17/1993"
+      },
+      "aluno": {
+        "id": "40",
+        "nome": "Clarice Gomes",
+        "tipo": "irma",
+        "telefone": "44 98862-0762",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Claudério Marcos ópolis",
+        "Contato": "(47) 9.9712-4493",
+        "Contato de Emergência": "(47) 99665-6528 Cézar Opólis",
+        "Endereço": "Rua Eduardo Liebl, 42 - Serra Alta",
+        "NASC.": "12/12/1978",
+        "BATISMO": "12/10/2005"
+      },
+      "aluno": {
+        "id": "41",
+        "nome": "Claudério ópolis",
+        "tipo": "irmao",
+        "telefone": "47 99712-4493",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Cláudia Torres",
+        "Contato": "(91) 9.8122-3075",
+        "Contato de Emergência": "",
+        "Endereço": "Rua do Expedicionário, 70 -  Schramm",
+        "NASC.": "5/6/1976",
+        "BATISMO": "12/24/1989"
+      },
+      "aluno": {
+        "id": "42",
+        "nome": "Cláudia Torres",
+        "tipo": "irma",
+        "telefone": "91 98122-3075",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Cleuzi de Siqueira Jarutais",
+        "Contato": "(47) 99102-2987",
+        "Contato de Emergência": "(51) 99679-6061 (sogra)",
+        "Endereço": "Rua Belém, 887 - Serra Alta",
+        "NASC.": "6/28/1980",
+        "BATISMO": "1/7/2012"
+      },
+      "aluno": {
+        "id": "43",
+        "nome": "Cleuzi Jarutais",
+        "tipo": "irma",
+        "telefone": "47 99102-2987",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Cristiane Fietz",
+        "Contato": "(47) 9.8906-4605",
+        "Contato de Emergência": "(47) 9.9759-2969 Jaqueline (Filha)",
+        "Endereço": "Rua Belém, 1018 - Serra Alta",
+        "NASC.": "4/30/1973",
+        "BATISMO": "8/2/2020"
+      },
+      "aluno": {
+        "id": "44",
+        "nome": "Cristiane Fietz",
+        "tipo": "irma",
+        "telefone": "47 98906-4605",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Daniele Knop da Silva",
+        "Contato": "(47) 9.9608-9829",
+        "Contato de Emergência": "não informado",
+        "Endereço": "Rua das Neves, 1032 - 25 de Julho",
+        "NASC.": "3/28/1990",
+        "BATISMO": "8/4/2012"
+      },
+      "aluno": {
+        "id": "45",
+        "nome": "Daniele Silva",
+        "tipo": "irma",
+        "telefone": "47 99608-9829",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Daniele Wantowski",
+        "Contato": "(47) 9 9785-0714",
+        "Contato de Emergência": "(47) 98896-1511 - Veridiane (irmã)",
+        "Endereço": "Rua Alexandre Buhnemann, 386",
+        "NASC.": "8/30/1992",
+        "BATISMO": "8/8/2009"
+      },
+      "aluno": {
+        "id": "46",
+        "nome": "Daniele Wantowski",
+        "tipo": "irma",
+        "telefone": "47 99785-0714",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Dejanira de Oliverira da Silva",
+        "Contato": "(47) 9.9697-6652 / 3635-3537",
+        "Contato de Emergência": "(47) 9.9653-2871",
+        "Endereço": "Rua Carlos Klinger, 55 - Serra Alta",
+        "NASC.": "4/27/1958",
+        "BATISMO": "4/14/2000"
+      },
+      "aluno": {
+        "id": "47",
+        "nome": "Dejanira Silva",
+        "tipo": "irma",
+        "telefone": "(47) 9.9697-6652 / 3635-3537",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Fernanda Cambuí Wolff",
+        "Contato": "(13) 9.5542-3812",
+        "Contato de Emergência": "Fábio (irmão) (13) 99157-4140",
+        "Endereço": "Rua das Neves, 974 - 25 de Julho",
+        "NASC.": "12/27/1978",
+        "BATISMO": "7/21/1996"
+      },
+      "aluno": {
+        "id": "48",
+        "nome": "Fernanda Wolff",
+        "tipo": "irma",
+        "telefone": "13 95542-3812",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Fernando Ornelas",
+        "Contato": "(47) 9 3383-5199",
+        "Contato de Emergência": "(41) 9 9865-4685 - Igor (Cunhado)",
+        "Endereço": "Rua Gerhard Wilhelm Wedderhoff, 40 - Progresso",
+        "NASC.": "7/5/1981",
+        "BATISMO": "11/26/1995"
+      },
+      "aluno": {
+        "id": "49",
+        "nome": "Fernando Ornelas",
+        "tipo": "irmao",
+        "telefone": "47 93383-5199",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Francisco da Veiga",
+        "Contato": "(47) 9.9651-0864",
+        "Contato de Emergência": "(47) 9.9940-1589",
+        "Endereço": "Rua Ernesto Buettelbrunn, 93 - 25 de Julho",
+        "NASC.": "10/11/1974",
+        "BATISMO": "10/15/2011"
+      },
+      "aluno": {
+        "id": "50",
+        "nome": "Francisco Veiga",
+        "tipo": "irmao",
+        "telefone": "47 99651-0864",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Gilvane Carin Stiegler Streit",
+        "Contato": "(47) 9.9652-6518",
+        "Contato de Emergência": "(47) 98427-5372 (Wellington)",
+        "Endereço": "Rua Conrado Liebel, 4180 - Serra Alta",
+        "NASC.": "12/15/1968",
+        "BATISMO": "11/16/2025"
+      },
+      "aluno": {
+        "id": "51",
+        "nome": "Gilvane Streit",
+        "tipo": "irmao",
+        "telefone": "47 99652-6518",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Giovana Paray",
+        "Contato": "(47) 9.8486-3182",
+        "Contato de Emergência": "(47) 99130-6719 (Luchiano)",
+        "Endereço": "Rua: João Quint Junior N°173, Schramm",
+        "NASC.": "7/15/1996",
+        "BATISMO": "8/11/2007"
+      },
+      "aluno": {
+        "id": "52",
+        "nome": "Giovana Paray",
+        "tipo": "irma",
+        "telefone": "47 98486-3182",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Hérica Priscila Kiste Martins",
+        "Contato": "(47) 9.9677-8471",
+        "Contato de Emergência": "(47) 9.99928-1670 Célia (mãe)",
+        "Endereço": "Rua Jocenir Ribas, 38 - Serra Alta",
+        "NASC.": "11/28/2001",
+        "BATISMO": "12/2/2018"
+      },
+      "aluno": {
+        "id": "53",
+        "nome": "Hérica Martins",
+        "tipo": "irma",
+        "telefone": "47 99677-8471",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Jaci Terezinha Schmidt",
+        "Contato": "(47) 9.9647-9428",
+        "Contato de Emergência": "(47) 9.8844-5743",
+        "Endereço": "Rua Cedro, 102 - 25 de Julho",
+        "NASC.": "9/21/1956",
+        "BATISMO": "8/20/2004"
+      },
+      "aluno": {
+        "id": "54",
+        "nome": "Jaci Schmidt",
+        "tipo": "irma",
+        "telefone": "47 99647-9428",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Jean Carlos Figueroa Cova",
+        "Contato": "(47) 99732-5886",
+        "Contato de Emergência": "",
+        "Endereço": "Rua Fernando Brand, 182 Fundos - Schramm",
+        "NASC.": "5/3/2006",
+        "BATISMO": "8/24/2019"
+      },
+      "aluno": {
+        "id": "55",
+        "nome": "Jean Cova",
+        "tipo": "irmao",
+        "telefone": "47 99732-5886",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Jeison Rosa",
+        "Contato": "(47) 9.9937-3042",
+        "Contato de Emergência": "(47) 9.9183-8923 Sabrina (irmã)",
+        "Endereço": "Rua Travessa Máximo Cristofolini - Serra Alta",
+        "NASC.": "6/21/1976",
+        "BATISMO": "11/24/2024"
+      },
+      "aluno": {
+        "id": "56",
+        "nome": "Jeison Rosa",
+        "tipo": "irmao",
+        "telefone": "47 99937-3042",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Jesús Alberto Guatarasma Hernandez",
+        "Contato": "(55)95 8402-7459",
+        "Contato de Emergência": "",
+        "Endereço": "Rua João Treml, 129 - Schramm",
+        "NASC.": "12/5/1984",
+        "BATISMO": "9/23/2005"
+      },
+      "aluno": {
+        "id": "57",
+        "nome": "Jesús Hernandez",
+        "tipo": "irmao",
+        "telefone": "95 8402-7459",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Joao Dziedzic",
+        "Contato": "(47) 9.8464-1965",
+        "Contato de Emergência": "(47) 9.9647-4326 Neli (cunhada)",
+        "Endereço": "Rua Willi Pilz, 648 - Serra Alta",
+        "NASC.": "4/13/1959",
+        "BATISMO": "29/02/2009"
+      },
+      "aluno": {
+        "id": "58",
+        "nome": "Joao Dziedzic",
+        "tipo": "irmao",
+        "telefone": "47 98464-1965",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "João Pedro Caldas",
+        "Contato": "(47) 3635-6511 / (47) 9.9118-7578",
+        "Contato de Emergência": "não informado",
+        "Endereço": "Rua João Quint Júnior, 173 - Centenário",
+        "NASC.": "8/7/1949",
+        "BATISMO": "7/16/2005"
+      },
+      "aluno": {
+        "id": "59",
+        "nome": "João Caldas",
+        "tipo": "irmao",
+        "telefone": "(47) 3635-6511 / (47) 9.9118-7578",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "José Rodrigues",
+        "Contato": "(47) 9 9936-5535",
+        "Contato de Emergência": "(41) 99958-2848 Norberto (sobrinho)",
+        "Endereço": "Rua Bernardo Mallon, 450 - Bairro Rio Negro",
+        "NASC.": "3/6/1953",
+        "BATISMO": "1/8/1994"
+      },
+      "aluno": {
+        "id": "60",
+        "nome": "José Rodrigues",
+        "tipo": "irmao",
+        "telefone": "47 99936-5535",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Joyce Cristina Gomes Croelhas",
+        "Contato": "(91) 98222-0882",
+        "Contato de Emergência": "(91) 98477-4597 (Maria) - (91) 98199-5578 (Yan)",
+        "Endereço": "Rua José Jeslisk, 188 - Schramm",
+        "NASC.": "6/15/1982",
+        "BATISMO": "5/11/2008"
+      },
+      "aluno": {
+        "id": "61",
+        "nome": "Joyce Croelhas",
+        "tipo": "irma",
+        "telefone": "91 98222-0882",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Jucélia Ópolis",
+        "Contato": "(47) 9.9938-2950",
+        "Contato de Emergência": "(47) 99665-6528 Cézar Opólis",
+        "Endereço": "Rua Eduardo Liebl, 42 - Serra Alta",
+        "NASC.": "12/22/1983",
+        "BATISMO": "8/18/2001"
+      },
+      "aluno": {
+        "id": "62",
+        "nome": "Jucélia Ópolis",
+        "tipo": "irma",
+        "telefone": "47 99938-2950",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Karine Heinem",
+        "Contato": "(47) 9.96868884",
+        "Contato de Emergência": "não informado",
+        "Endereço": "Rua Cedro, 102 Fundos - 25 de Julho",
+        "NASC.": "8/24/1995",
+        "BATISMO": "9/10/2011"
+      },
+      "aluno": {
+        "id": "63",
+        "nome": "Karine Heinem",
+        "tipo": "irma",
+        "telefone": "47 99686-8884",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Kauê Henrique Silva",
+        "Contato": "(12) 99658-0193",
+        "Contato de Emergência": "(12) 98851-2354 (Leonardo)",
+        "Endereço": "Rua Barão do Rio Branco, 574 - Ap-401 - Centro",
+        "NASC.": "10/19/2000",
+        "BATISMO": "7/12/2025"
+      },
+      "aluno": {
+        "id": "64",
+        "nome": "Kauê Silva",
+        "tipo": "irmao",
+        "telefone": "12 99658-0193",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Laurindo Leite do Prado",
+        "Contato": "(47) 99901-9031",
+        "Contato de Emergência": "(47) 99201-9765 - Junior (filho)",
+        "Endereço": "Rua Wigando Diener, 204 - 25 de Julho",
+        "NASC.": "10/6/1964",
+        "BATISMO": "5/19/2005"
+      },
+      "aluno": {
+        "id": "65",
+        "nome": "Laurindo Prado",
+        "tipo": "irmao",
+        "telefone": "47 99901-9031",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Lidgele Pereira dos Santos Faria",
+        "Contato": "(47) 9.9707-3135",
+        "Contato de Emergência": "(47) 9.9608-9679 César",
+        "Endereço": "Rua Ernesto Weiss, 87 - Schramm",
+        "NASC.": "2/23/1979",
+        "BATISMO": "8/4/2012"
+      },
+      "aluno": {
+        "id": "66",
+        "nome": "Lidgele Faria",
+        "tipo": "irma",
+        "telefone": "47 99707-3135",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Luiz Roberto Dreveck",
+        "Contato": "(47) 9.9947-9287",
+        "Contato de Emergência": "(47) 3633-5089 Célia (mãe)",
+        "Endereço": "Rua Mathias Nossol, 2270 - Serra Alta",
+        "NASC.": "1/18/1960",
+        "BATISMO": "7/30/1983"
+      },
+      "aluno": {
+        "id": "67",
+        "nome": "Luiz Dreveck",
+        "tipo": "irmao",
+        "telefone": "47 99947-9287",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Maria Celeste Lima Laurentino",
+        "Contato": "(47) 9.9900-1896",
+        "Contato de Emergência": "(47) 9. 9929-2061 Aline (filha)",
+        "Endereço": "Rua Leonidas Sérgio Hantschel, 182 - Rio Negro",
+        "NASC.": "9/23/1974",
+        "BATISMO": "9/16/2006"
+      },
+      "aluno": {
+        "id": "68",
+        "nome": "Maria Laurentino",
+        "tipo": "irma",
+        "telefone": "47 99900-1896",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Maria Conceição Gomes",
+        "Contato": "(47) 9.9722-5370",
+        "Contato de Emergência": "(47) 9.9562-3897 Willian (filho)",
+        "Endereço": "Rua: Capitão Ernesto Nunes, 341 - Centro",
+        "NASC.": "12/20/1966",
+        "BATISMO": "7/15/1995"
+      },
+      "aluno": {
+        "id": "69",
+        "nome": "Maria Gomes",
+        "tipo": "irma",
+        "telefone": "47 99722-5370",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Maria Eduarda Wolff",
+        "Contato": "(47) 99708-5868",
+        "Contato de Emergência": "Maurício (pai) (47) 99760-0970",
+        "Endereço": "Rua das Neves, 974 - 25 de Julho",
+        "NASC.": "2/4/2016",
+        "BATISMO": "PNB"
+      },
+      "aluno": {
+        "id": "70",
+        "nome": "Maria Wolff",
+        "tipo": "irma",
+        "telefone": "47 99708-5868",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Maria Fernanda Curti",
+        "Contato": "(44) 9.9941-7871",
+        "Contato de Emergência": "(47) 9. 8879-7484 Alessandra (Amiga)",
+        "Endereço": "Rua Carlos Tascheck, 68 - Centenário",
+        "NASC.": "6/26/1984",
+        "BATISMO": "9/26/1998"
+      },
+      "aluno": {
+        "id": "71",
+        "nome": "Maria Curti",
+        "tipo": "irma",
+        "telefone": "44 99941-7871",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Marina da Silva Baptista Dzeiczek",
+        "Contato": "(47) 9.9644-8829 / 3626-7416",
+        "Contato de Emergência": "(47) 9.9647-4326 Neli (irmã)",
+        "Endereço": "Rua Willi Pilz, 648 - Serra Alta",
+        "NASC.": "9/19/1967",
+        "BATISMO": "7/15/2005"
+      },
+      "aluno": {
+        "id": "72",
+        "nome": "Marina Dzeiczek",
+        "tipo": "irma",
+        "telefone": "(47) 9.9644-8829 / 3626-7416",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Marlene Denk da Maia",
+        "Contato": "(47) 9.96154741",
+        "Contato de Emergência": "(47) 9.9993-4535 Tatiane (filha)",
+        "Endereço": "Rua Frieda Tremml Gaerthr, 11 - Schramm",
+        "NASC.": "12/29/1969",
+        "BATISMO": "8/2/2020"
+      },
+      "aluno": {
+        "id": "73",
+        "nome": "Marlene Maia",
+        "tipo": "irma",
+        "telefone": "47 99615-4741",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Marli dos Santos do Prado",
+        "Contato": "(47) 99604-4005",
+        "Contato de Emergência": "(47) 99201-9765 - Junior (filho)",
+        "Endereço": "Rua Wigando Diener, 204 - 25 de Julho",
+        "NASC.": "1/27/1969",
+        "BATISMO": "5/19/2005"
+      },
+      "aluno": {
+        "id": "74",
+        "nome": "Marli Prado",
+        "tipo": "irma",
+        "telefone": "47 99604-4005",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Marli Fietz",
+        "Contato": "(47) 9.8906-2941",
+        "Contato de Emergência": "(47) 9.9759-2969 Jaqueline (neta)",
+        "Endereço": "Rua Belém, 1018 - Serra Alta",
+        "NASC.": "6/7/1950",
+        "BATISMO": "3/13/1963"
+      },
+      "aluno": {
+        "id": "75",
+        "nome": "Marli Fietz",
+        "tipo": "irma",
+        "telefone": "47 98906-2941",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Marly Teresinha Heinen",
+        "Contato": "(47) 9.9932-9567",
+        "Contato de Emergência": "não informado",
+        "Endereço": "Rua Cedro, 102 Fundos - 25 de Julho",
+        "NASC.": "2/23/1972",
+        "BATISMO": "11/10/2001"
+      },
+      "aluno": {
+        "id": "76",
+        "nome": "Marly Heinen",
+        "tipo": "irma",
+        "telefone": "47 99932-9567",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Melidys del Carmen Gonzalez de Guatarasma",
+        "Contato": "(55)95 8402-7459",
+        "Contato de Emergência": "",
+        "Endereço": "Rua João Treml, 129 - Schramm",
+        "NASC.": "8/13/1996",
+        "BATISMO": "7/29/2023"
+      },
+      "aluno": {
+        "id": "77",
+        "nome": "Melidys Guatarasma",
+        "tipo": "irma",
+        "telefone": "95 8402-7459",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Moacir Roberto Rodrigues da Silva",
+        "Contato": "(47) 9.9620-5126 / 3635-3537",
+        "Contato de Emergência": "(47) 9.9996-2551",
+        "Endereço": "Rua Carlos Klinger, 55 - Serra Alta",
+        "NASC.": "9/16/1969",
+        "BATISMO": "11/20/1999"
+      },
+      "aluno": {
+        "id": "78",
+        "nome": "Moacir Silva",
+        "tipo": "irmao",
+        "telefone": "(47) 9.9620-5126 / 3635-3537",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Nicolas  dos Santos Maia Faria",
+        "Contato": "(47) 9.9990-9336",
+        "Contato de Emergência": "(47) 9.9711-9025",
+        "Endereço": "R. Ernesto Weiss, 87 - Schramm",
+        "NASC.": "3/1/2009",
+        "BATISMO": "11/16/2025"
+      },
+      "aluno": {
+        "id": "79",
+        "nome": "Nicolas Faria",
+        "tipo": "irmao",
+        "telefone": "47 99990-9336",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Noris del Valle Espinoza de Alfonso",
+        "Contato": "(95) 9.8114-4539",
+        "Contato de Emergência": "(41) 9.9137-4931 Norymar (filho)",
+        "Endereço": "Rua João Treml, 129 - Schramm",
+        "NASC.": "9/15/1959",
+        "BATISMO": "8/5/1995"
+      },
+      "aluno": {
+        "id": "80",
+        "nome": "Noris Alfonso",
+        "tipo": "irma",
+        "telefone": "95 98114-4539",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Olandir Catarina da Silva Fernandes",
+        "Contato": "(47) 9.9975-1952",
+        "Contato de Emergência": "(47) 9.9927-3377 Marcelo (filho)",
+        "Endereço": "Rua Pará, 26 - Centenário",
+        "NASC.": "6/9/1949",
+        "BATISMO": "1/1/1988"
+      },
+      "aluno": {
+        "id": "81",
+        "nome": "Olandir Fernandes",
+        "tipo": "irmao",
+        "telefone": "47 99975-1952",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Omar  Vicente Alfonzo Codallo",
+        "Contato": "(58) 04147875703",
+        "Contato de Emergência": "(41) 9.9137-4931 Norymar (irmão)",
+        "Endereço": "Rua João Treml, 129 - Schramm",
+        "NASC.": "5/2/1953",
+        "BATISMO": "6/15/2024"
+      },
+      "aluno": {
+        "id": "82",
+        "nome": "Omar Codallo",
+        "tipo": "irmao",
+        "telefone": "(58) 04147875703",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Patrícia Medina",
+        "Contato": "(47) 9.8405-2786",
+        "Contato de Emergência": "(41) 9. 8829-9828 (irmão)",
+        "Endereço": "Rua Governador Pedro Ivo, 106 - 25 de julho",
+        "NASC.": "11/9/1983",
+        "BATISMO": "7/25/2021"
+      },
+      "aluno": {
+        "id": "83",
+        "nome": "Patrícia Medina",
+        "tipo": "irma",
+        "telefone": "47 98405-2786",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Pedro Josue Guatarasma Hernández",
+        "Contato": "(47) 9.8871-5885",
+        "Contato de Emergência": "",
+        "Endereço": "Rua João Treml, 129 - Schramm",
+        "NASC.": "10/5/1990",
+        "BATISMO": "7/12/2004"
+      },
+      "aluno": {
+        "id": "84",
+        "nome": "Pedro Hernández",
+        "tipo": "irmao",
+        "telefone": "47 98871-5885",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Raquel Custódio",
+        "Contato": "(48) 9.9656-0567",
+        "Contato de Emergência": "(43) 3342-9046 Gisele",
+        "Endereço": "Rio Represo, Dona Francisca",
+        "NASC.": "1/14/1969",
+        "BATISMO": "11/9/1985"
+      },
+      "aluno": {
+        "id": "85",
+        "nome": "Raquel Custódio",
+        "tipo": "irma",
+        "telefone": "48 99656-0567",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Rebeca Ress",
+        "Contato": "(47) 98431-3991",
+        "Contato de Emergência": "(41) 9.9217-1110 Wiverson",
+        "Endereço": "Rua Carlos Tascheck, 431 - Centenário",
+        "NASC.": "5/18/2016",
+        "BATISMO": "PNB"
+      },
+      "aluno": {
+        "id": "86",
+        "nome": "Rebeca Ress",
+        "tipo": "irma",
+        "telefone": "47 98431-3991",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Rubens Martin",
+        "Contato": "(47) 9.8888-6363",
+        "Contato de Emergência": "(41) 9.9687-9129 Wilton",
+        "Endereço": "Rua Donaldo Tascheck, 50 - Centenário",
+        "NASC.": "7/21/1949",
+        "BATISMO": "6/1/1966"
+      },
+      "aluno": {
+        "id": "87",
+        "nome": "Rubens Martin",
+        "tipo": "irmao",
+        "telefone": "47 98888-6363",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Sabrina Ress",
+        "Contato": "(47) 9.9679-3024",
+        "Contato de Emergência": "(41) 9.9217-1110 Wiverson",
+        "Endereço": "Rua Carlos Tascheck, 431 - Centenário",
+        "NASC.": "1/29/2011",
+        "BATISMO": "8/2/2025"
+      },
+      "aluno": {
+        "id": "88",
+        "nome": "Sabrina Ress",
+        "tipo": "irma",
+        "telefone": "47 99679-3024",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Salete Aising Salça",
+        "Contato": "(47) 9.9995-2947 / (47) 9.8467-7435",
+        "Contato de Emergência": "(47) 9.9761-2311",
+        "Endereço": "Rua Amando Kuster número, 57 - Serra Alta",
+        "NASC.": "1/26/1954",
+        "BATISMO": "12/24/1994"
+      },
+      "aluno": {
+        "id": "89",
+        "nome": "Salete Salça",
+        "tipo": "irma",
+        "telefone": "(47) 9.9995-2947 / (47) 9.8467-7435",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Simone Finato",
+        "Contato": "(47) 9.9651-8825",
+        "Contato de Emergência": "(47) 9.9610-2377 Sandra (irmã)",
+        "Endereço": "Rua das Neves, 780, ap. 103 - 25 de Julho",
+        "NASC.": "9/25/1988",
+        "BATISMO": "2/15/2015"
+      },
+      "aluno": {
+        "id": "90",
+        "nome": "Simone Finato",
+        "tipo": "irma",
+        "telefone": "47 99651-8825",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Siomara Kaminski",
+        "Contato": "(47) 9.9983-7407",
+        "Contato de Emergência": "(47) 9. 84052786",
+        "Endereço": "Rua Octávio Maia, 135 - 25 de Julho",
+        "NASC.": "11/26/1967",
+        "BATISMO": "9/16/1995"
+      },
+      "aluno": {
+        "id": "91",
+        "nome": "Siomara Kaminski",
+        "tipo": "irma",
+        "telefone": "47 99983-7407",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Solange Natali Borges",
+        "Contato": "(47) 9.8407-8684",
+        "Contato de Emergência": "(47) 98483-2396 (maria)",
+        "Endereço": "Rua Paulo Chapiewsky, 531 - Centenário",
+        "NASC.": "12/3/1985",
+        "BATISMO": "11/13/2004"
+      },
+      "aluno": {
+        "id": "92",
+        "nome": "Solange Borges",
+        "tipo": "irma",
+        "telefone": "47 98407-8684",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    },
+    {
+      "csv": {
+        "Tipo": "",
+        "Nome": "Zeni Aparecida da Luz Vieira",
+        "Contato": "(47) 9.84179279",
+        "Contato de Emergência": "(47) 9.9759-9442 (irmã)",
+        "Endereço": "Rua Tito Cesar Silva, 91 - 25 de Julho",
+        "NASC.": "1/15/1973",
+        "BATISMO": "1/1/1994"
+      },
+      "aluno": {
+        "id": "93",
+        "nome": "Zeni Vieira",
+        "tipo": "irma",
+        "telefone": "47 98417-9279",
+        "email": "",
+        "familia": "",
+        "observacoes": "",
+        "historico": [],
+        "datasIndisponiveis": []
+      }
+    }
+  ],
+  "updates": [
+    {
+      "id": "2",
+      "nomeAtual": "Michele Carrara",
+      "novoNomeComparacao": "Michele Carrara",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "14",
+      "nomeAtual": "Pedro Rodrigues",
+      "novoNomeComparacao": "Pedro Rodrigues",
+      "observacoes": "Rodrigues; Pioneiro regular"
+    },
+    {
+      "id": "12",
+      "nomeAtual": "Laudecir Aniaia",
+      "novoNomeComparacao": "Laudecir Aniaia",
+      "observacoes": "Pioneiro regular"
+    }
+  ],
+  "skippedRole": [
+    {
+      "nomeCsv": "Anildo Kaminski",
+      "nomeComparacao": "Anildo Kaminski",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Claudio Sluminsky",
+      "nomeComparacao": "Claudio Sluminsky",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Laércio Custódio",
+      "nomeComparacao": "Laércio Custódio",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Marcelo Finato",
+      "nomeComparacao": "Marcelo Finato",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Marco Ress",
+      "nomeComparacao": "Marco Ress",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Maycow Roberto Carrara",
+      "nomeComparacao": "Maycow Carrara",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Omar José Alfonzo Espinoza",
+      "nomeComparacao": "Omar Espinoza",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Rodolfo Curti",
+      "nomeComparacao": "Rodolfo Curti",
+      "tipoCsv": "ANCIÃOS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Félix Tatedeu Stuani Jarutais",
+      "nomeComparacao": "Félix Jarutais",
+      "tipoCsv": "SERVOS MINISTERIAIS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Jhoyner Quintero",
+      "nomeComparacao": "Jhoyner Quintero",
+      "tipoCsv": "SERVOS MINISTERIAIS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Josuel Fernandes Laurentino",
+      "nomeComparacao": "Josuel Laurentino",
+      "tipoCsv": "SERVOS MINISTERIAIS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Nelson Aparecido Salça",
+      "nomeComparacao": "Nelson Salça",
+      "tipoCsv": "SERVOS MINISTERIAIS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Marcelo Júnior Miranda",
+      "nomeComparacao": "Marcelo Miranda",
+      "tipoCsv": "SERVOS MINISTERIAIS",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Pedro Rodrigues",
+      "nomeComparacao": "Pedro Rodrigues",
+      "tipoCsv": "SERVOS MINISTERIAIS, PIONEIROS REGULARES",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Laudecir Aniaia",
+      "nomeComparacao": "Laudecir Aniaia",
+      "tipoCsv": "SERVOS MINISTERIAIS, PIONEIROS REGULARES",
+      "jaExiste": true
+    },
+    {
+      "nomeCsv": "Edenilson Mafra",
+      "nomeComparacao": "Edenilson Mafra",
+      "tipoCsv": "SUP. DE CIRCUITO",
+      "jaExiste": false
+    }
+  ],
+  "skippedExisting": [
+    {
+      "nomeCsv": "Michele Apolinário Carrara",
+      "nomeComparacao": "Michele Carrara",
+      "id": "2",
+      "nomeBanco": "Michele Carrara"
+    }
+  ],
+  "ambiguous": []
+}

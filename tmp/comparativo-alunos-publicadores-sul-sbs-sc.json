@@ -1,0 +1,947 @@
+{
+  "geradoEm": "2026-08-08T20:50:55.844Z",
+  "projectId": "rvm-sbssc",
+  "path": "users/P8B0fY6m8JVjoLFGZEcXQ1uWsWs2/alunos",
+  "criterioDeMatch": "nome normalizado sem acentos/pontuacao/caixa",
+  "observacao": "Nenhuma gravacao foi feita no Firestore.",
+  "totais": {
+    "csv": 94,
+    "banco": 16,
+    "presentes": 9,
+    "faltamNoBanco": 85,
+    "sobrandoNoBanco": 7,
+    "possiveisDiferencas": 7,
+    "duplicadosCsv": 0,
+    "duplicadosBanco": 0,
+    "csvComContatoEmergencia": 89,
+    "csvComEndereco": 94,
+    "csvComNascimento": 93,
+    "csvComBatismo": 93
+  },
+  "tiposCsv": {
+    "ANCIÃOS": 8,
+    "PIONEIROS REGULARES": 13,
+    "SERVOS MINISTERIAIS": 5,
+    "SERVOS MINISTERIAIS, PIONEIROS REGULARES": 2,
+    "SUP. DE CIRCUITO": 1,
+    "(vazio)": 65
+  },
+  "tiposBanco": {
+    "anciao": 8,
+    "servo": 7,
+    "irma_exp": 1
+  },
+  "faltamNoBanco": [
+    {
+      "tipo": "ANCIÃOS",
+      "nome": "Maycow Roberto Carrara",
+      "contato": "46 98818 - 6769",
+      "emergencia": "Rilda (mãe)",
+      "endereco": "Rua Ingo Stoeberl, 117, Rio Negro",
+      "nascimento": "1/3/1988",
+      "batismo": "4/17/2004"
+    },
+    {
+      "tipo": "ANCIÃOS",
+      "nome": "Omar José Alfonzo Espinoza",
+      "contato": "(41) 9.9886-4534",
+      "emergencia": "(41) 9.9137-4931 Norymar (irmão)",
+      "endereco": "Rua João Treml, 129 - Schramm",
+      "nascimento": "1/11/1986",
+      "batismo": "11/11/2001"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Alessandra Soares Miranda",
+      "contato": "(49) 9.9944-9248",
+      "emergencia": "(44) 9.9941-7871 Fernanda (Amiga)",
+      "endereco": "Rua Servidão Ilson Hüttel, 256 Ap 100 - Centro",
+      "nascimento": "10/14/1982",
+      "batismo": "9/6/2003"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Geci S. Drevek",
+      "contato": "(47) 9.9745-5479",
+      "emergencia": "(47) 9.9743-8945 Gabriela (filha)",
+      "endereco": "Rua Mathias Nossol, 2270 - Serra Alta",
+      "nascimento": "12/8/1965",
+      "batismo": "11/22/1989"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Graziela Vitória da Conceição de Jesus",
+      "contato": "(95) 97400-8896",
+      "emergencia": "(51) 99432-8925",
+      "endereco": "Rua Capitão Ernesto Nunes, 315 - Kitnet 3 - Centro",
+      "nascimento": "6/22/2006",
+      "batismo": "3/3/2018"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Jessyca Karoline Gomes Croelhas",
+      "contato": "(47) 98418-8814",
+      "emergencia": "(91) 98477-4597 (Maria) - (91) 98199-5578 (Yan)",
+      "endereco": "Rua José Jeslisk, 188 - Schramm",
+      "nascimento": "2/19/2005",
+      "batismo": "9/16/2023"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Katia Alessandra Märtin",
+      "contato": "(47) 9.97697075",
+      "emergencia": "(47) 32021325 Família Ress",
+      "endereco": "Rua José Liebl, 58 - Schramm",
+      "nascimento": "5/7/1975",
+      "batismo": "1/28/1989"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Marcelina Rosa da Silva",
+      "contato": "(47) 9.9760-8795",
+      "emergencia": "(47) 99241-4121 - Valnicio (marido)",
+      "endereco": "Rua Rio Antinha, 201 - Fazenda Espanha",
+      "nascimento": "11/20/1970",
+      "batismo": "4/21/1996"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Melanie Tavares Palma",
+      "contato": "(47) 99755-0177",
+      "emergencia": "(12) 98851-2354 (Leonardo)",
+      "endereco": "Rua Barão do Rio Branco, 574 - Ap-401 - Centro",
+      "nascimento": "8/23/2004",
+      "batismo": "8/22/2015"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Neusa Lisboa da Silva Aniaia",
+      "contato": "(47) 9.9916-6303",
+      "emergencia": "(47) 9.9982-2784 Beto (cunhado)",
+      "endereco": "Rua Carlos Goertler, 467 - Serra Alta",
+      "nascimento": "7/21/1972",
+      "batismo": "2/1/2004"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Norianni Osmari Alfonzo Espinoza",
+      "contato": "(95) 9.8114-4539",
+      "emergencia": "(41) 9.9137-4931 Norymar (irmão)",
+      "endereco": "Rua João Treml, 73 - Schramm",
+      "nascimento": "10/13/1992",
+      "batismo": "10/7/2006"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Patrícia Ress",
+      "contato": "(47) 9.9679-3024",
+      "emergencia": "(41) 9.9217-1110 Wiverson",
+      "endereco": "Rua Carlos Tascheck, 431 - Centenário",
+      "nascimento": "8/12/1978",
+      "batismo": "2/13/1993"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Sirlei Taborda",
+      "contato": "(47) 9.9638-1814",
+      "emergencia": "(47) 9.9603-2998 (filha)",
+      "endereco": "Travessa Taruma, 34 - 25 de Julho",
+      "nascimento": "5/19/1961",
+      "batismo": "4/3/2007"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Tereza dos Santos",
+      "contato": "(47) 9.9960-2933 / (47) 3635-4934",
+      "emergencia": "(97) 9.9172-6676 Eduardo (filho)",
+      "endereco": "Rua Travessa Itororó, 20 - Centenário",
+      "nascimento": "5/10/1965",
+      "batismo": "8/21/2004"
+    },
+    {
+      "tipo": "PIONEIROS REGULARES",
+      "nome": "Michele Apolinário Carrara",
+      "contato": "",
+      "emergencia": "Cassia (irmã)",
+      "endereco": "Rua Ingo Stoeberl, 117, Rio Negro",
+      "nascimento": "3/10/1986",
+      "batismo": "3/15/1997"
+    },
+    {
+      "tipo": "SERVOS MINISTERIAIS",
+      "nome": "Félix Tatedeu Stuani Jarutais",
+      "contato": "(47) 99250-9901",
+      "emergencia": "(51) 99679-6061 (mãe)",
+      "endereco": "Rua Belém, 887 - Serra Alta",
+      "nascimento": "2/12/1979",
+      "batismo": "12/30/2006"
+    },
+    {
+      "tipo": "SERVOS MINISTERIAIS",
+      "nome": "Josuel Fernandes Laurentino",
+      "contato": "(47) 9.9966-8694",
+      "emergencia": "(47) 9. 8859-5738 Jóse Carlos (amigo)",
+      "endereco": "Rua Leonidas Sérgio Hantschel, 182 - Rio Negro",
+      "nascimento": "5/9/1964",
+      "batismo": "12/21/1985"
+    },
+    {
+      "tipo": "SERVOS MINISTERIAIS",
+      "nome": "Nelson Aparecido Salça",
+      "contato": "(47) 9.9609-8173",
+      "emergencia": "(47) 9.9761-2311",
+      "endereco": "Rua Amando Kuster, 57 - Serra Alta",
+      "nascimento": "8/2/1951",
+      "batismo": "4/26/1997"
+    },
+    {
+      "tipo": "SERVOS MINISTERIAIS",
+      "nome": "Marcelo Júnior Miranda",
+      "contato": "(49) 9.99283212",
+      "emergencia": "(44) 9.9941-7871 Fernanda (Amiga)",
+      "endereco": "Rua Servidão Ilson Hüttel, 256 Ap 100 - Centro",
+      "nascimento": "9/7/1981",
+      "batismo": "8/4/2004"
+    },
+    {
+      "tipo": "SUP. DE CIRCUITO",
+      "nome": "Edenilson Mafra",
+      "contato": "(42) 9.98353333",
+      "emergencia": "Superintendente de Circuito (SC - 025)",
+      "endereco": "MafraE@jwpub.org",
+      "nascimento": "",
+      "batismo": ""
+    },
+    {
+      "tipo": "",
+      "nome": "Adriano Cruz",
+      "contato": "(47) 9.9703-7249",
+      "emergencia": "(47) 9.9938-2950 Jucélia (filha)",
+      "endereco": "Rua Eduardo Liebl, 42 - Serra Alta",
+      "nascimento": "2/25/1955",
+      "batismo": "1/1/1994"
+    },
+    {
+      "tipo": "",
+      "nome": "Alexander David Märtin",
+      "contato": "(47) 9.9111-7870",
+      "emergencia": "(12) 9.8273-7521 Eduardo Foleto",
+      "endereco": "Rua Fernando Hubl, 435 - Casa 6 - Schramm",
+      "nascimento": "1/29/1990",
+      "batismo": "8/5/2006"
+    },
+    {
+      "tipo": "",
+      "nome": "Alzira Sluminsky",
+      "contato": "(47) 9.9925-4041",
+      "emergencia": "(47) 9.8406-0676",
+      "endereco": "Rua Ervino Bayerl, 66 - Rio Negro",
+      "nascimento": "4/21/1956",
+      "batismo": "8/27/1977"
+    },
+    {
+      "tipo": "",
+      "nome": "Anita Martin",
+      "contato": "(47) 9.8850-0909",
+      "emergencia": "(41) 9.9687-9129 Wilton",
+      "endereco": "Rua Donaldo Tascheck, 50 - Centenário",
+      "nascimento": "12/13/1950",
+      "batismo": "7/31/1970"
+    },
+    {
+      "tipo": "",
+      "nome": "Anna Clara Gomes",
+      "contato": "(47) 98800-2758",
+      "emergencia": "(91) 98477-4597 (Maria) - (91) 98199-5578 (Yan)",
+      "endereco": "Rua José Jeslisk, 188 - Schramm",
+      "nascimento": "11/20/2009",
+      "batismo": "9/16/2023"
+    },
+    {
+      "tipo": "",
+      "nome": "Bruno de Souza Silva",
+      "contato": "(47) 9.9211-7418 / (47) 3635-4683",
+      "emergencia": "não informado",
+      "endereco": "Rua das Neves, 1032 - 25 de Julho",
+      "nascimento": "9/8/1986",
+      "batismo": "8/9/1999"
+    },
+    {
+      "tipo": "",
+      "nome": "Bruno Rosa",
+      "contato": "(47) 9.9603-5884",
+      "emergencia": "(47) 9.96035884 Neusi (mãe)",
+      "endereco": "Rua Travessa Máximo Cristofolini - Serra Alta",
+      "nascimento": "8/23/2005",
+      "batismo": "11/24/2024"
+    },
+    {
+      "tipo": "",
+      "nome": "Camila Rubiana Amato Märtin",
+      "contato": "(47) 9.9661-4108",
+      "emergencia": "(11) 9.9562-3897 William Amato",
+      "endereco": "Rua Fernando Hubl, 435 - Casa 6 - Schramm",
+      "nascimento": "7/15/1992",
+      "batismo": "7/5/2008"
+    },
+    {
+      "tipo": "",
+      "nome": "Caruline Ornelas",
+      "contato": "(47) 9 3383-2708",
+      "emergencia": "(41) 9 9865-4685 - Igor (Irmão)",
+      "endereco": "Rua Gerhard Wilhelm Wedderhoff, 40 - Progresso",
+      "nascimento": "3/13/1982",
+      "batismo": "3/16/1996"
+    },
+    {
+      "tipo": "",
+      "nome": "Célia Patrícia Kiste",
+      "contato": "(47) 9.9928-1760",
+      "emergencia": "(47) 9.9677-8471 Hérica (filha)",
+      "endereco": "Rua Reinaldo Mallon, 104 - Serra Alta",
+      "nascimento": "12/20/1984",
+      "batismo": "12/2/2018"
+    },
+    {
+      "tipo": "",
+      "nome": "Celso Endler",
+      "contato": "(47) 9 9678-6274",
+      "emergencia": "(47) 99931-3304 Lara (Filha)",
+      "endereco": "Rua Emilio Engel, 1102 - Rio Vermelho",
+      "nascimento": "5/19/1966",
+      "batismo": "8/2/2025"
+    },
+    {
+      "tipo": "",
+      "nome": "Clarice Gomes",
+      "contato": "(44) 9 8862-0762",
+      "emergencia": "(44) 98804-5083 - Fernando (filho)",
+      "endereco": "Rua Carlos Tascheck, 68 - Centenário",
+      "nascimento": "7/11/1954",
+      "batismo": "7/17/1993"
+    },
+    {
+      "tipo": "",
+      "nome": "Claudério Marcos ópolis",
+      "contato": "(47) 9.9712-4493",
+      "emergencia": "(47) 99665-6528 Cézar Opólis",
+      "endereco": "Rua Eduardo Liebl, 42 - Serra Alta",
+      "nascimento": "12/12/1978",
+      "batismo": "12/10/2005"
+    },
+    {
+      "tipo": "",
+      "nome": "Cláudia Torres",
+      "contato": "(91) 9.8122-3075",
+      "emergencia": "",
+      "endereco": "Rua do Expedicionário, 70 -  Schramm",
+      "nascimento": "5/6/1976",
+      "batismo": "12/24/1989"
+    },
+    {
+      "tipo": "",
+      "nome": "Cleuzi de Siqueira Jarutais",
+      "contato": "(47) 99102-2987",
+      "emergencia": "(51) 99679-6061 (sogra)",
+      "endereco": "Rua Belém, 887 - Serra Alta",
+      "nascimento": "6/28/1980",
+      "batismo": "1/7/2012"
+    },
+    {
+      "tipo": "",
+      "nome": "Cristiane Fietz",
+      "contato": "(47) 9.8906-4605",
+      "emergencia": "(47) 9.9759-2969 Jaqueline (Filha)",
+      "endereco": "Rua Belém, 1018 - Serra Alta",
+      "nascimento": "4/30/1973",
+      "batismo": "8/2/2020"
+    },
+    {
+      "tipo": "",
+      "nome": "Daniele Knop da Silva",
+      "contato": "(47) 9.9608-9829",
+      "emergencia": "não informado",
+      "endereco": "Rua das Neves, 1032 - 25 de Julho",
+      "nascimento": "3/28/1990",
+      "batismo": "8/4/2012"
+    },
+    {
+      "tipo": "",
+      "nome": "Daniele Wantowski",
+      "contato": "(47) 9 9785-0714",
+      "emergencia": "(47) 98896-1511 - Veridiane (irmã)",
+      "endereco": "Rua Alexandre Buhnemann, 386",
+      "nascimento": "8/30/1992",
+      "batismo": "8/8/2009"
+    },
+    {
+      "tipo": "",
+      "nome": "Dejanira de Oliverira da Silva",
+      "contato": "(47) 9.9697-6652 / 3635-3537",
+      "emergencia": "(47) 9.9653-2871",
+      "endereco": "Rua Carlos Klinger, 55 - Serra Alta",
+      "nascimento": "4/27/1958",
+      "batismo": "4/14/2000"
+    },
+    {
+      "tipo": "",
+      "nome": "Fernanda Cambuí Wolff",
+      "contato": "(13) 9.5542-3812",
+      "emergencia": "Fábio (irmão) (13) 99157-4140",
+      "endereco": "Rua das Neves, 974 - 25 de Julho",
+      "nascimento": "12/27/1978",
+      "batismo": "7/21/1996"
+    },
+    {
+      "tipo": "",
+      "nome": "Fernando Ornelas",
+      "contato": "(47) 9 3383-5199",
+      "emergencia": "(41) 9 9865-4685 - Igor (Cunhado)",
+      "endereco": "Rua Gerhard Wilhelm Wedderhoff, 40 - Progresso",
+      "nascimento": "7/5/1981",
+      "batismo": "11/26/1995"
+    },
+    {
+      "tipo": "",
+      "nome": "Francisco da Veiga",
+      "contato": "(47) 9.9651-0864",
+      "emergencia": "(47) 9.9940-1589",
+      "endereco": "Rua Ernesto Buettelbrunn, 93 - 25 de Julho",
+      "nascimento": "10/11/1974",
+      "batismo": "10/15/2011"
+    },
+    {
+      "tipo": "",
+      "nome": "Gilvane Carin Stiegler Streit",
+      "contato": "(47) 9.9652-6518",
+      "emergencia": "(47) 98427-5372 (Wellington)",
+      "endereco": "Rua Conrado Liebel, 4180 - Serra Alta",
+      "nascimento": "12/15/1968",
+      "batismo": "11/16/2025"
+    },
+    {
+      "tipo": "",
+      "nome": "Giovana Paray",
+      "contato": "(47) 9.8486-3182",
+      "emergencia": "(47) 99130-6719 (Luchiano)",
+      "endereco": "Rua: João Quint Junior N°173, Schramm",
+      "nascimento": "7/15/1996",
+      "batismo": "8/11/2007"
+    },
+    {
+      "tipo": "",
+      "nome": "Hérica Priscila Kiste Martins",
+      "contato": "(47) 9.9677-8471",
+      "emergencia": "(47) 9.99928-1670 Célia (mãe)",
+      "endereco": "Rua Jocenir Ribas, 38 - Serra Alta",
+      "nascimento": "11/28/2001",
+      "batismo": "12/2/2018"
+    },
+    {
+      "tipo": "",
+      "nome": "Jaci Terezinha Schmidt",
+      "contato": "(47) 9.9647-9428",
+      "emergencia": "(47) 9.8844-5743",
+      "endereco": "Rua Cedro, 102 - 25 de Julho",
+      "nascimento": "9/21/1956",
+      "batismo": "8/20/2004"
+    },
+    {
+      "tipo": "",
+      "nome": "Jean Carlos Figueroa Cova",
+      "contato": "(47) 99732-5886",
+      "emergencia": "",
+      "endereco": "Rua Fernando Brand, 182 Fundos - Schramm",
+      "nascimento": "5/3/2006",
+      "batismo": "8/24/2019"
+    },
+    {
+      "tipo": "",
+      "nome": "Jeison Rosa",
+      "contato": "(47) 9.9937-3042",
+      "emergencia": "(47) 9.9183-8923 Sabrina (irmã)",
+      "endereco": "Rua Travessa Máximo Cristofolini - Serra Alta",
+      "nascimento": "6/21/1976",
+      "batismo": "11/24/2024"
+    },
+    {
+      "tipo": "",
+      "nome": "Jesús Alberto Guatarasma Hernandez",
+      "contato": "(55)95 8402-7459",
+      "emergencia": "",
+      "endereco": "Rua João Treml, 129 - Schramm",
+      "nascimento": "12/5/1984",
+      "batismo": "9/23/2005"
+    },
+    {
+      "tipo": "",
+      "nome": "Joao Dziedzic",
+      "contato": "(47) 9.8464-1965",
+      "emergencia": "(47) 9.9647-4326 Neli (cunhada)",
+      "endereco": "Rua Willi Pilz, 648 - Serra Alta",
+      "nascimento": "4/13/1959",
+      "batismo": "29/02/2009"
+    },
+    {
+      "tipo": "",
+      "nome": "João Pedro Caldas",
+      "contato": "(47) 3635-6511 / (47) 9.9118-7578",
+      "emergencia": "não informado",
+      "endereco": "Rua João Quint Júnior, 173 - Centenário",
+      "nascimento": "8/7/1949",
+      "batismo": "7/16/2005"
+    },
+    {
+      "tipo": "",
+      "nome": "José Rodrigues",
+      "contato": "(47) 9 9936-5535",
+      "emergencia": "(41) 99958-2848 Norberto (sobrinho)",
+      "endereco": "Rua Bernardo Mallon, 450 - Bairro Rio Negro",
+      "nascimento": "3/6/1953",
+      "batismo": "1/8/1994"
+    },
+    {
+      "tipo": "",
+      "nome": "Joyce Cristina Gomes Croelhas",
+      "contato": "(91) 98222-0882",
+      "emergencia": "(91) 98477-4597 (Maria) - (91) 98199-5578 (Yan)",
+      "endereco": "Rua José Jeslisk, 188 - Schramm",
+      "nascimento": "6/15/1982",
+      "batismo": "5/11/2008"
+    },
+    {
+      "tipo": "",
+      "nome": "Jucélia Ópolis",
+      "contato": "(47) 9.9938-2950",
+      "emergencia": "(47) 99665-6528 Cézar Opólis",
+      "endereco": "Rua Eduardo Liebl, 42 - Serra Alta",
+      "nascimento": "12/22/1983",
+      "batismo": "8/18/2001"
+    },
+    {
+      "tipo": "",
+      "nome": "Karine Heinem",
+      "contato": "(47) 9.96868884",
+      "emergencia": "não informado",
+      "endereco": "Rua Cedro, 102 Fundos - 25 de Julho",
+      "nascimento": "8/24/1995",
+      "batismo": "9/10/2011"
+    },
+    {
+      "tipo": "",
+      "nome": "Kauê Henrique Silva",
+      "contato": "(12) 99658-0193",
+      "emergencia": "(12) 98851-2354 (Leonardo)",
+      "endereco": "Rua Barão do Rio Branco, 574 - Ap-401 - Centro",
+      "nascimento": "10/19/2000",
+      "batismo": "7/12/2025"
+    },
+    {
+      "tipo": "",
+      "nome": "Laurindo Leite do Prado",
+      "contato": "(47) 99901-9031",
+      "emergencia": "(47) 99201-9765 - Junior (filho)",
+      "endereco": "Rua Wigando Diener, 204 - 25 de Julho",
+      "nascimento": "10/6/1964",
+      "batismo": "5/19/2005"
+    },
+    {
+      "tipo": "",
+      "nome": "Lidgele Pereira dos Santos Faria",
+      "contato": "(47) 9.9707-3135",
+      "emergencia": "(47) 9.9608-9679 César",
+      "endereco": "Rua Ernesto Weiss, 87 - Schramm",
+      "nascimento": "2/23/1979",
+      "batismo": "8/4/2012"
+    },
+    {
+      "tipo": "",
+      "nome": "Luiz Roberto Dreveck",
+      "contato": "(47) 9.9947-9287",
+      "emergencia": "(47) 3633-5089 Célia (mãe)",
+      "endereco": "Rua Mathias Nossol, 2270 - Serra Alta",
+      "nascimento": "1/18/1960",
+      "batismo": "7/30/1983"
+    },
+    {
+      "tipo": "",
+      "nome": "Maria Celeste Lima Laurentino",
+      "contato": "(47) 9.9900-1896",
+      "emergencia": "(47) 9. 9929-2061 Aline (filha)",
+      "endereco": "Rua Leonidas Sérgio Hantschel, 182 - Rio Negro",
+      "nascimento": "9/23/1974",
+      "batismo": "9/16/2006"
+    },
+    {
+      "tipo": "",
+      "nome": "Maria Conceição Gomes",
+      "contato": "(47) 9.9722-5370",
+      "emergencia": "(47) 9.9562-3897 Willian (filho)",
+      "endereco": "Rua: Capitão Ernesto Nunes, 341 - Centro",
+      "nascimento": "12/20/1966",
+      "batismo": "7/15/1995"
+    },
+    {
+      "tipo": "",
+      "nome": "Maria Eduarda Wolff",
+      "contato": "(47) 99708-5868",
+      "emergencia": "Maurício (pai) (47) 99760-0970",
+      "endereco": "Rua das Neves, 974 - 25 de Julho",
+      "nascimento": "2/4/2016",
+      "batismo": "PNB"
+    },
+    {
+      "tipo": "",
+      "nome": "Maria Fernanda Curti",
+      "contato": "(44) 9.9941-7871",
+      "emergencia": "(47) 9. 8879-7484 Alessandra (Amiga)",
+      "endereco": "Rua Carlos Tascheck, 68 - Centenário",
+      "nascimento": "6/26/1984",
+      "batismo": "9/26/1998"
+    },
+    {
+      "tipo": "",
+      "nome": "Marina da Silva Baptista Dzeiczek",
+      "contato": "(47) 9.9644-8829 / 3626-7416",
+      "emergencia": "(47) 9.9647-4326 Neli (irmã)",
+      "endereco": "Rua Willi Pilz, 648 - Serra Alta",
+      "nascimento": "9/19/1967",
+      "batismo": "7/15/2005"
+    },
+    {
+      "tipo": "",
+      "nome": "Marlene Denk da Maia",
+      "contato": "(47) 9.96154741",
+      "emergencia": "(47) 9.9993-4535 Tatiane (filha)",
+      "endereco": "Rua Frieda Tremml Gaerthr, 11 - Schramm",
+      "nascimento": "12/29/1969",
+      "batismo": "8/2/2020"
+    },
+    {
+      "tipo": "",
+      "nome": "Marli dos Santos do Prado",
+      "contato": "(47) 99604-4005",
+      "emergencia": "(47) 99201-9765 - Junior (filho)",
+      "endereco": "Rua Wigando Diener, 204 - 25 de Julho",
+      "nascimento": "1/27/1969",
+      "batismo": "5/19/2005"
+    },
+    {
+      "tipo": "",
+      "nome": "Marli Fietz",
+      "contato": "(47) 9.8906-2941",
+      "emergencia": "(47) 9.9759-2969 Jaqueline (neta)",
+      "endereco": "Rua Belém, 1018 - Serra Alta",
+      "nascimento": "6/7/1950",
+      "batismo": "3/13/1963"
+    },
+    {
+      "tipo": "",
+      "nome": "Marly Teresinha Heinen",
+      "contato": "(47) 9.9932-9567",
+      "emergencia": "não informado",
+      "endereco": "Rua Cedro, 102 Fundos - 25 de Julho",
+      "nascimento": "2/23/1972",
+      "batismo": "11/10/2001"
+    },
+    {
+      "tipo": "",
+      "nome": "Melidys del Carmen Gonzalez de Guatarasma",
+      "contato": "(55)95 8402-7459",
+      "emergencia": "",
+      "endereco": "Rua João Treml, 129 - Schramm",
+      "nascimento": "8/13/1996",
+      "batismo": "7/29/2023"
+    },
+    {
+      "tipo": "",
+      "nome": "Moacir Roberto Rodrigues da Silva",
+      "contato": "(47) 9.9620-5126 / 3635-3537",
+      "emergencia": "(47) 9.9996-2551",
+      "endereco": "Rua Carlos Klinger, 55 - Serra Alta",
+      "nascimento": "9/16/1969",
+      "batismo": "11/20/1999"
+    },
+    {
+      "tipo": "",
+      "nome": "Nicolas  dos Santos Maia Faria",
+      "contato": "(47) 9.9990-9336",
+      "emergencia": "(47) 9.9711-9025",
+      "endereco": "R. Ernesto Weiss, 87 - Schramm",
+      "nascimento": "3/1/2009",
+      "batismo": "11/16/2025"
+    },
+    {
+      "tipo": "",
+      "nome": "Noris del Valle Espinoza de Alfonso",
+      "contato": "(95) 9.8114-4539",
+      "emergencia": "(41) 9.9137-4931 Norymar (filho)",
+      "endereco": "Rua João Treml, 129 - Schramm",
+      "nascimento": "9/15/1959",
+      "batismo": "8/5/1995"
+    },
+    {
+      "tipo": "",
+      "nome": "Olandir Catarina da Silva Fernandes",
+      "contato": "(47) 9.9975-1952",
+      "emergencia": "(47) 9.9927-3377 Marcelo (filho)",
+      "endereco": "Rua Pará, 26 - Centenário",
+      "nascimento": "6/9/1949",
+      "batismo": "1/1/1988"
+    },
+    {
+      "tipo": "",
+      "nome": "Omar  Vicente Alfonzo Codallo",
+      "contato": "(58) 04147875703",
+      "emergencia": "(41) 9.9137-4931 Norymar (irmão)",
+      "endereco": "Rua João Treml, 129 - Schramm",
+      "nascimento": "5/2/1953",
+      "batismo": "6/15/2024"
+    },
+    {
+      "tipo": "",
+      "nome": "Patrícia Medina",
+      "contato": "(47) 9.8405-2786",
+      "emergencia": "(41) 9. 8829-9828 (irmão)",
+      "endereco": "Rua Governador Pedro Ivo, 106 - 25 de julho",
+      "nascimento": "11/9/1983",
+      "batismo": "7/25/2021"
+    },
+    {
+      "tipo": "",
+      "nome": "Pedro Josue Guatarasma Hernández",
+      "contato": "(47) 9.8871-5885",
+      "emergencia": "",
+      "endereco": "Rua João Treml, 129 - Schramm",
+      "nascimento": "10/5/1990",
+      "batismo": "7/12/2004"
+    },
+    {
+      "tipo": "",
+      "nome": "Raquel Custódio",
+      "contato": "(48) 9.9656-0567",
+      "emergencia": "(43) 3342-9046 Gisele",
+      "endereco": "Rio Represo, Dona Francisca",
+      "nascimento": "1/14/1969",
+      "batismo": "11/9/1985"
+    },
+    {
+      "tipo": "",
+      "nome": "Rebeca Ress",
+      "contato": "(47) 98431-3991",
+      "emergencia": "(41) 9.9217-1110 Wiverson",
+      "endereco": "Rua Carlos Tascheck, 431 - Centenário",
+      "nascimento": "5/18/2016",
+      "batismo": "PNB"
+    },
+    {
+      "tipo": "",
+      "nome": "Rubens Martin",
+      "contato": "(47) 9.8888-6363",
+      "emergencia": "(41) 9.9687-9129 Wilton",
+      "endereco": "Rua Donaldo Tascheck, 50 - Centenário",
+      "nascimento": "7/21/1949",
+      "batismo": "6/1/1966"
+    },
+    {
+      "tipo": "",
+      "nome": "Sabrina Ress",
+      "contato": "(47) 9.9679-3024",
+      "emergencia": "(41) 9.9217-1110 Wiverson",
+      "endereco": "Rua Carlos Tascheck, 431 - Centenário",
+      "nascimento": "1/29/2011",
+      "batismo": "8/2/2025"
+    },
+    {
+      "tipo": "",
+      "nome": "Salete Aising Salça",
+      "contato": "(47) 9.9995-2947 / (47) 9.8467-7435",
+      "emergencia": "(47) 9.9761-2311",
+      "endereco": "Rua Amando Kuster número, 57 - Serra Alta",
+      "nascimento": "1/26/1954",
+      "batismo": "12/24/1994"
+    },
+    {
+      "tipo": "",
+      "nome": "Simone Finato",
+      "contato": "(47) 9.9651-8825",
+      "emergencia": "(47) 9.9610-2377 Sandra (irmã)",
+      "endereco": "Rua das Neves, 780, ap. 103 - 25 de Julho",
+      "nascimento": "9/25/1988",
+      "batismo": "2/15/2015"
+    },
+    {
+      "tipo": "",
+      "nome": "Siomara Kaminski",
+      "contato": "(47) 9.9983-7407",
+      "emergencia": "(47) 9. 84052786",
+      "endereco": "Rua Octávio Maia, 135 - 25 de Julho",
+      "nascimento": "11/26/1967",
+      "batismo": "9/16/1995"
+    },
+    {
+      "tipo": "",
+      "nome": "Solange Natali Borges",
+      "contato": "(47) 9.8407-8684",
+      "emergencia": "(47) 98483-2396 (maria)",
+      "endereco": "Rua Paulo Chapiewsky, 531 - Centenário",
+      "nascimento": "12/3/1985",
+      "batismo": "11/13/2004"
+    },
+    {
+      "tipo": "",
+      "nome": "Zeni Aparecida da Luz Vieira",
+      "contato": "(47) 9.84179279",
+      "emergencia": "(47) 9.9759-9442 (irmã)",
+      "endereco": "Rua Tito Cesar Silva, 91 - 25 de Julho",
+      "nascimento": "1/15/1973",
+      "batismo": "1/1/1994"
+    }
+  ],
+  "sobrandoNoBanco": [
+    {
+      "id": "15",
+      "nome": "Félix Stuani Jarutais",
+      "tipo": "servo",
+      "telefone": "47 9250-9901",
+      "email": "",
+      "familia": "Jarutais",
+      "observacoes": ""
+    },
+    {
+      "id": "11",
+      "nome": "Josuel Laurentino",
+      "tipo": "servo",
+      "telefone": "47 9966-8694",
+      "email": "",
+      "familia": "Laurentino",
+      "observacoes": ""
+    },
+    {
+      "id": "16",
+      "nome": "Marcelo Miranda",
+      "tipo": "servo",
+      "telefone": "47 9785-6516",
+      "email": "",
+      "familia": "Miranda",
+      "observacoes": ""
+    },
+    {
+      "id": "1",
+      "nome": "Maycow Carrara",
+      "tipo": "anciao",
+      "telefone": "46988186769",
+      "email": "maycowcarrara@gmail.com",
+      "familia": "Carrara",
+      "observacoes": ""
+    },
+    {
+      "id": "2",
+      "nome": "Michele Carrara",
+      "tipo": "irma_exp",
+      "telefone": "46 8824-2252",
+      "email": "micamicheleapol@gmail.com",
+      "familia": "Carrara",
+      "observacoes": ""
+    },
+    {
+      "id": "13",
+      "nome": "Nelson Salça",
+      "tipo": "servo",
+      "telefone": "47 9609-8173",
+      "email": "",
+      "familia": "Salça",
+      "observacoes": ""
+    },
+    {
+      "id": "8",
+      "nome": "Omar Alfonzo Espinoza",
+      "tipo": "anciao",
+      "telefone": "41 9886-4534",
+      "email": "",
+      "familia": "",
+      "observacoes": "Hispano-hablante"
+    }
+  ],
+  "possiveisDiferencas": [
+    {
+      "nome": "Claudio Sluminsky",
+      "id": "4",
+      "diffs": [
+        {
+          "campo": "telefone",
+          "csv": "(47) 9.9957-4464",
+          "banco": "47 9957-4464"
+        }
+      ]
+    },
+    {
+      "nome": "Laércio Custódio",
+      "id": "5",
+      "diffs": [
+        {
+          "campo": "telefone",
+          "csv": "(47) 9.9241-0567",
+          "banco": "47 9241-0567"
+        }
+      ]
+    },
+    {
+      "nome": "Marcelo Finato",
+      "id": "6",
+      "diffs": [
+        {
+          "campo": "telefone",
+          "csv": "(47) 9.9918-0198",
+          "banco": "47 9918-0198"
+        }
+      ]
+    },
+    {
+      "nome": "Marco Ress",
+      "id": "7",
+      "diffs": [
+        {
+          "campo": "telefone",
+          "csv": "(47) 9.9611-0115",
+          "banco": "47 9611-0115"
+        }
+      ]
+    },
+    {
+      "nome": "Rodolfo Curti",
+      "id": "9",
+      "diffs": [
+        {
+          "campo": "telefone",
+          "csv": "(44) 9.2001-8290",
+          "banco": "47 92001-8290"
+        }
+      ]
+    },
+    {
+      "nome": "Pedro Rodrigues",
+      "id": "14",
+      "diffs": [
+        {
+          "campo": "telefone",
+          "csv": "(47) 9.9728-4870",
+          "banco": "47 9728-4870"
+        }
+      ]
+    },
+    {
+      "nome": "Laudecir Aniaia",
+      "id": "12",
+      "diffs": [
+        {
+          "campo": "telefone",
+          "csv": "(47) 9.9761-2311",
+          "banco": "47 9761-2311"
+        }
+      ]
+    }
+  ],
+  "duplicadosCsv": [],
+  "duplicadosBanco": []
+}

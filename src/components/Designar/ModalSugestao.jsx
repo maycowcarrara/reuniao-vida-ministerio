@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, AlertCircle, Filter, Info } from 'lucide-react';
 import { formatText, useSectionMessages } from '../../i18n';
-
-// Função auxiliar para normalizar texto (tirar acentos, minúsculas)
-const norm = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+import {
+    getAssignmentCapabilityForSlot,
+    getAssignmentContextForSlot,
+    isAlunoEligibleForAssignment,
+} from '../../utils/assignmentEligibility';
 
 export default function ModalSugestao({
     isOpen,
@@ -32,54 +34,20 @@ export default function ModalSugestao({
 
     // --- 1. DETECTAR O CONTEXTO EXATO DA PARTE CLICADA ---
     const detectarContexto = () => {
-        let ctx = { tipo: 'qualquer', labelKey: 'qualquer', gender: 'todos', isAjudante: false };
+        const ctx = getAssignmentContextForSlot({
+            parte: parteAtual,
+            slotKey: modalKey,
+            cargosMap,
+            assignedStudent: parteAtual?.estudante,
+        });
 
-        const tituloNorm = norm(parteAtual?.titulo);
-        const secaoNorm = norm(parteAtual?.secao);
-
-        const hasLeitura = tituloNorm.includes('leitura') || tituloNorm.includes('lectura');
-        const hasJoias = tituloNorm.includes('joias') || tituloNorm.includes('perlas');
-        const hasEstudo = tituloNorm.includes('estudo') || tituloNorm.includes('estudio');
-        const hasDiscurso = tituloNorm.includes('discurso');
-
-        // MÁGICA 1: Forçar gênero do ajudante para ser igual ao do estudante
-        let forceGender = null;
-        if (modalKey === 'ajudante') {
-            ctx.isAjudante = true;
-            ctx.labelKey = 'ajudante';
-            if (parteAtual?.estudante) {
-                const tipoEstudante = parteAtual.estudante.tipo;
-                forceGender = cargosMap?.[tipoEstudante]?.gen || null;
-            }
-        }
-
-        // Casos de chaves diretas (Slots fixos)
-        if (modalKey === 'presidente') { ctx.tipo = 'presidente'; ctx.labelKey = 'presidente'; ctx.gender = 'M'; }
-        else if (modalKey === 'oracao') { ctx.tipo = 'oracao'; ctx.labelKey = 'oracao'; ctx.gender = 'M'; }
-        else if (modalKey === 'dirigente') { ctx.tipo = 'dirigente'; ctx.labelKey = 'dirigente'; ctx.gender = 'M'; }
-        else if (modalKey === 'leitor') { ctx.tipo = 'leitor'; ctx.labelKey = 'leitor'; ctx.gender = 'M'; }
-
-        // Casos de Estudante/Ajudante dependendo da seção
-        else if (secaoNorm.includes('tesouros')) {
-            if (hasLeitura && !hasEstudo) { ctx.tipo = 'leitura'; ctx.labelKey = 'leitura'; ctx.gender = 'M'; }
-            else if (hasJoias) { ctx.tipo = 'joias'; ctx.labelKey = 'joias'; ctx.gender = 'M'; }
-            else { ctx.tipo = 'tesouros'; ctx.labelKey = 'tesouros'; ctx.gender = 'M'; }
-        }
-        else if (secaoNorm.includes('ministerio')) {
-            if (hasDiscurso) { ctx.tipo = 'discurso'; ctx.labelKey = 'discurso'; ctx.gender = 'M'; }
-            else { ctx.tipo = 'ministerio'; ctx.labelKey = 'ministerio'; ctx.gender = 'todos'; }
-        }
-        else if (secaoNorm.includes('vida')) {
-            if (hasEstudo) { ctx.tipo = 'estudobiblico'; ctx.labelKey = 'estudobiblico'; ctx.gender = 'M'; }
-            else { ctx.tipo = 'vida'; ctx.labelKey = 'vida'; ctx.gender = 'todos'; }
-        }
-
-        // Se for ajudante, aplicamos o gênero forçado do estudante
-        if (forceGender) {
-            ctx.gender = forceGender;
-        }
-
-        return ctx;
+        return {
+            tipo: ctx.capabilityKey || 'qualquer',
+            capabilityKey: ctx.capabilityKey,
+            labelKey: ctx.labelKey,
+            gender: ctx.gender,
+            isAjudante: ctx.isAjudante,
+        };
     };
 
     // --- 2. CALCULAR O HISTÓRICO ISOLADO COM BLINDAGEM DE PRIVILÉGIOS ---
@@ -117,50 +85,15 @@ export default function ModalSugestao({
 
             if (aluno.tipo === 'desab') return false; // Desabilitados nunca entram
 
-            const cargoInfo = cargosMap?.[aluno.tipo];
-            const generoAluno = cargoInfo?.gen || 'M';
-
-            if (ctx.gender !== 'todos' && generoAluno !== ctx.gender) return false;
-
-            // REGRAS RIGOROSAS
-            let allowedRoles = [];
-
-            if (ctx.isAjudante) {
-                // Ajudantes: Todos, inclui irmãs limitadas
-                allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao', 'irma_exp', 'irma', 'irma_lim'];
-            } else {
-                switch (ctx.tipo) {
-                    case 'presidente':
-                    case 'tesouros':
-                    case 'joias':
-                    case 'estudobiblico':
-                    case 'dirigente':
-                    case 'vida':
-                        // Vida Cristã, Tesouros, Joias, Dirigente e Presidente: Somente Anciãos e Servos
-                        allowedRoles = ['anciao', 'servo'];
-                        break;
-                    case 'oracao':
-                    case 'leitor':
-                    case 'discurso':
-                        // Oração, Leitor e Discurso(Ministério): Varão Hab, Ancião e Servo
-                        allowedRoles = ['anciao', 'servo', 'irmao_hab'];
-                        break;
-                    case 'leitura':
-                        // Leitura: Todos os varões, mesmo não batizados (irmao)
-                        allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao'];
-                        break;
-                    case 'ministerio':
-                        // Ministério principal: Todos, menos irmãs limitadas
-                        allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao', 'irma_exp', 'irma'];
-                        break;
-                    default:
-                        allowedRoles = ['anciao', 'servo', 'irmao_hab', 'irmao', 'irma_exp', 'irma', 'irma_lim'];
-                        break;
-                }
-            }
-
-            // Se o cargo atual do irmão não estiver na lista permitida, ele é desclassificado.
-            if (!allowedRoles.includes(aluno.tipo)) return false;
+            const eligibility = isAlunoEligibleForAssignment({
+                aluno,
+                parte: parteAtual,
+                slotKey: modalKey,
+                cargosMap,
+                assignedStudent: parteAtual?.estudante,
+                lang,
+            });
+            if (!eligibility.eligible) return false;
 
             return true;
         });
@@ -174,7 +107,7 @@ export default function ModalSugestao({
                 const semana = historico[i];
                 let fezParteEspecifica = false;
 
-                if (ctx.tipo === 'presidente' && semana.presidente?.id === aluno.id) {
+                if (ctx.capabilityKey === 'presidente_rvm' && semana.presidente?.id === aluno.id) {
                     fezParteEspecifica = true;
                 } else if (Array.isArray(semana.partes)) {
                     for (const p of semana.partes) {
@@ -186,26 +119,11 @@ export default function ModalSugestao({
 
                         if (!isEstud && !isAjud && !isOrac && !isDirig && !isLeit) continue;
 
-                        const sNorm = norm(p.secao);
-                        const tNorm = norm(p.titulo);
-                        const hasLeitura = tNorm.includes('leitura') || tNorm.includes('lectura');
-                        const hasJoias = tNorm.includes('joias') || tNorm.includes('perlas');
-                        const hasEstudo = tNorm.includes('estudo') || tNorm.includes('estudio');
-                        const hasDiscurso = tNorm.includes('discurso');
-
-                        if (ctx.tipo === 'oracao' && isOrac) fezParteEspecifica = true;
-                        if (ctx.tipo === 'dirigente' && isDirig) fezParteEspecifica = true;
-                        if (ctx.tipo === 'leitor' && isLeit) fezParteEspecifica = true;
-
-                        if (ctx.tipo === 'leitura' && isEstud && sNorm.includes('tesouros') && hasLeitura && !hasEstudo) fezParteEspecifica = true;
-                        if (ctx.tipo === 'joias' && isEstud && sNorm.includes('tesouros') && hasJoias) fezParteEspecifica = true;
-                        if (ctx.tipo === 'tesouros' && isEstud && sNorm.includes('tesouros') && !hasLeitura && !hasJoias) fezParteEspecifica = true;
-
-                        if (ctx.tipo === 'discurso' && isEstud && sNorm.includes('ministerio') && hasDiscurso) fezParteEspecifica = true;
-                        if (ctx.tipo === 'ministerio' && (isEstud || isAjud) && sNorm.includes('ministerio') && !hasDiscurso) fezParteEspecifica = true;
-
-                        if (ctx.tipo === 'estudobiblico' && isDirig) fezParteEspecifica = true;
-                        if (ctx.tipo === 'vida' && (isEstud || isAjud) && sNorm.includes('vida') && !hasEstudo) fezParteEspecifica = true;
+                        if (isOrac && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'oracao' }) === ctx.capabilityKey) fezParteEspecifica = true;
+                        if (isDirig && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'dirigente' }) === ctx.capabilityKey) fezParteEspecifica = true;
+                        if (isLeit && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'leitor' }) === ctx.capabilityKey) fezParteEspecifica = true;
+                        if (isEstud && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'estudante' }) === ctx.capabilityKey) fezParteEspecifica = true;
+                        if (isAjud && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'ajudante' }) === ctx.capabilityKey) fezParteEspecifica = true;
 
                         if (fezParteEspecifica) break;
                     }

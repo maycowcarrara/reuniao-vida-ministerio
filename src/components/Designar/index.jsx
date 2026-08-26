@@ -21,6 +21,7 @@ import { formatHm } from '../../utils/importador/helpers';
 import { calcularTotalInfo } from '../../utils/importador/parser';
 import { formatText, useSectionMessages } from '../../i18n';
 import { getLanguageMeta } from '../../config/appConfig';
+import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
 
 const CARGO_FALLBACK = {
     pt: { pt: "Irmão", es: "Hermano", cor: "bg-gray-100 text-gray-700", gen: "M" }
@@ -532,10 +533,35 @@ const Designar = ({
         return ordemCrescente ? res : -res;
     });
 
-    const atribuirAluno = (aluno, targetSlot = slotAtivo, options = {}) => {
-        if (!targetSlot) return;
+    const getParteFromTargetSlot = (sem, targetSlot) => {
+        if (!sem || !targetSlot || targetSlot.key === 'presidente') return null;
+        return (sem.partes || []).find((parte) => parte.id === targetSlot.parteId) || null;
+    };
+
+    const getAlunoEligibilityForSlot = (aluno, targetSlot = slotAtivo) => {
+        if (!targetSlot || !aluno) return { eligible: true, reason: '' };
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(targetSlot.semanaIndex) ? targetSlot.semanaIndex : semanaAtivaIndexAtual);
-        if (semanaRealIndex === -1) return;
+        if (semanaRealIndex === -1) return { eligible: false, reason: TT.semanaNaoEncontrada || 'Semana nao encontrada.' };
+
+        const sem = listaProgramacoes[semanaRealIndex];
+        const parte = getParteFromTargetSlot(sem, targetSlot);
+        if (targetSlot.key !== 'presidente' && !parte) {
+            return { eligible: false, reason: TT.parteNaoEncontrada || 'Parte nao encontrada.' };
+        }
+        return isAlunoEligibleForAssignment({
+            aluno,
+            parte,
+            slotKey: targetSlot.key,
+            cargosMap,
+            assignedStudent: parte?.estudante,
+            lang,
+        });
+    };
+
+    const atribuirAluno = (aluno, targetSlot = slotAtivo, options = {}) => {
+        if (!targetSlot) return false;
+        const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(targetSlot.semanaIndex) ? targetSlot.semanaIndex : semanaAtivaIndexAtual);
+        if (semanaRealIndex === -1) return false;
 
         const sem = listaProgramacoes[semanaRealIndex];
 
@@ -543,7 +569,28 @@ const Designar = ({
         if (isSemanaAssembleia(sem, config)) {
             alert(formatText(TT.bloqueioSemanaEventoTpl, { semana: sem.semana }));
             if (targetSlot === slotAtivo) setSlotAtivo(null);
-            return;
+            return false;
+        }
+
+        if (aluno) {
+            const parte = getParteFromTargetSlot(sem, targetSlot);
+            if (targetSlot.key !== 'presidente' && !parte) {
+                alert(TT.parteNaoEncontrada || 'Parte nao encontrada.');
+                return false;
+            }
+            const eligibility = isAlunoEligibleForAssignment({
+                aluno,
+                parte,
+                slotKey: targetSlot.key,
+                cargosMap,
+                assignedStudent: parte?.estudante,
+                lang,
+            });
+
+            if (!eligibility.eligible) {
+                alert(eligibility.reason || TT.alunoSemHabilitacao || 'Aluno sem habilitacao para esta designacao.');
+                return false;
+            }
         }
 
         setListaProgramacoesSafe(prev => {
@@ -592,12 +639,13 @@ const Designar = ({
         });
 
         if (targetSlot === slotAtivo) { setTimeout(() => setSlotAtivo(null), 10); }
+        return true;
     };
 
     const aplicarSugestao = (aluno) => {
         const { semanaIndex, key, parteId } = modalSugestao;
-        atribuirAluno(aluno, { key, parteId, semanaIndex }, { registrarSubstituicao: modalSugestao.modo === 'substituicao' });
-        setModalSugestao({ ...modalSugestao, aberto: false });
+        const aplicado = atribuirAluno(aluno, { key, parteId, semanaIndex }, { registrarSubstituicao: modalSugestao.modo === 'substituicao' });
+        if (aplicado) setModalSugestao({ ...modalSugestao, aberto: false });
     };
 
     const abrirSubstituicao = (slotCtx, anterior) => {
@@ -1246,6 +1294,7 @@ const Designar = ({
                         getHistoricoRecente={getHistoricoRecente} isAlunoDuplicadoBySemanaKey={isAlunoDuplicadoBySemanaKey}
                         getSemanaKeyByFilteredIndex={getSemanaKeyByFilteredIndex} getSemanaIndexContexto={getSemanaIndexContexto}
                         getCargoInfo={getCargoInfo}
+                        getAlunoEligibilityForSlot={getAlunoEligibilityForSlot}
                         setDraggedAluno={setDraggedAluno}
                         semanasSelecionadas={semanasSelecionadas}
                         dragOverSlot={dragOverSlot}

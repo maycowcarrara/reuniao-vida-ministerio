@@ -21,7 +21,7 @@ const SidebarAlunos = ({
     cargosMap, filtrosTiposAtivos, toggleFiltroTipo, setFiltrosTiposAtivos, lang, // <-- Adicionado setFiltrosTiposAtivos aqui
     atribuirAluno, calcularDiasDesdeUltimaParte, getHistoricoRecente,
     isAlunoDuplicadoBySemanaKey, getSemanaKeyByFilteredIndex, getSemanaIndexContexto, getCargoInfo,
-    setDraggedAluno, semanasSelecionadas, stickyOffset = 176
+    getAlunoEligibilityForSlot, setDraggedAluno, semanasSelecionadas, stickyOffset = 176
 }) => {
 
     const localTx = useSectionMessages('designarSidebar');
@@ -93,12 +93,16 @@ const SidebarAlunos = ({
     const currentSemanaKey = typeof getSemanaKeyByFilteredIndex === 'function' ? getSemanaKeyByFilteredIndex(semanaIdxCtx) : null;
 
     const alunosProcessados = useMemo(() => {
-        return [...alunosFiltrados].sort((a, b) => {
+        const lista = slotAtivo && typeof getAlunoEligibilityForSlot === 'function'
+            ? alunosFiltrados.filter((aluno) => getAlunoEligibilityForSlot(aluno, slotAtivo).eligible)
+            : alunosFiltrados;
+
+        return [...lista].sort((a, b) => {
             const indA = (slotAtivo && verificarIndisponibilidade(a, currentSemanaKey)) ? 1 : 0;
             const indB = (slotAtivo && verificarIndisponibilidade(b, currentSemanaKey)) ? 1 : 0;
             return indA - indB;
         });
-    }, [alunosFiltrados, currentSemanaKey, slotAtivo]);
+    }, [alunosFiltrados, currentSemanaKey, getAlunoEligibilityForSlot, slotAtivo]);
 
     // LÓGICA CONSOLIDADA PARA LIMPAR TODOS OS FILTROS
     const handleLimparFiltros = () => {
@@ -242,8 +246,12 @@ const SidebarAlunos = ({
                             let duplicadoOutraSemana = false;
 
                             const indisponivel = slotAtivo ? verificarIndisponibilidade(aluno, currentSemanaKey) : null;
+                            const elegibilidade = slotAtivo && typeof getAlunoEligibilityForSlot === 'function'
+                                ? getAlunoEligibilityForSlot(aluno, slotAtivo)
+                                : { eligible: true, reason: '' };
+                            const bloqueadoPorHabilitacao = slotAtivo && !elegibilidade.eligible;
 
-                            if (!indisponivel) {
+                            if (!indisponivel && !bloqueadoPorHabilitacao) {
                                 if (currentSemanaKey && isAlunoDuplicadoBySemanaKey(aluno?.id, currentSemanaKey)) {
                                     duplicadoMesmaSemana = true;
                                 }
@@ -264,25 +272,31 @@ const SidebarAlunos = ({
                             const cargoKey = aluno?.tipo;
                             const cargoInfo = getCargoInfo(cargoKey);
 
-                            const isClickable = !!slotAtivo && !indisponivel;
+                            const isClickable = !!slotAtivo && !indisponivel && !bloqueadoPorHabilitacao;
 
                             let borderColor = "border-gray-200";
                             if (indisponivel) borderColor = "border-gray-200";
+                            else if (bloqueadoPorHabilitacao) borderColor = "border-gray-200";
                             else if (duplicadoMesmaSemana) borderColor = "border-red-300";
                             else if (duplicadoOutraSemana) borderColor = "border-orange-300";
+                            const cardTitle = indisponivel
+                                ? localTx.indisponivel
+                                : bloqueadoPorHabilitacao
+                                    ? (elegibilidade.reason || localTx.semHabilitacao || 'Sem habilitacao para esta parte')
+                                    : '';
 
                             return (
                                 <div
                                     key={aluno?.id || aluno?.nome}
                                     className={[
                                         "w-full text-left rounded-xl border transition relative group shadow-sm flex",
-                                        indisponivel ? "bg-gray-100/60 opacity-60 grayscale-[30%]" : "bg-white hover:shadow-md hover:border-blue-300",
+                                        (indisponivel || bloqueadoPorHabilitacao) ? "bg-gray-100/60 opacity-60 grayscale-[30%]" : "bg-white hover:shadow-md hover:border-blue-300",
                                         borderColor
                                     ].join(" ")}
-                                    title={indisponivel ? localTx.indisponivel : ''}
+                                    title={cardTitle}
                                 >
                                     {/* ALÇA DE ARRASTAR */}
-                                    {!indisponivel ? (
+                                    {!indisponivel && !bloqueadoPorHabilitacao ? (
                                         <div
                                             className="w-8 flex items-center justify-center bg-gray-50 border-r border-gray-100 rounded-l-xl cursor-grab active:cursor-grabbing hover:bg-gray-100 shrink-0"
                                             draggable={true}
@@ -294,7 +308,7 @@ const SidebarAlunos = ({
                                         </div>
                                     ) : (
                                         <div className="w-8 flex items-center justify-center bg-gray-100 border-r border-gray-200 rounded-l-xl cursor-not-allowed shrink-0">
-                                            <CalendarX size={16} className="text-gray-300" />
+                                            {indisponivel ? <CalendarX size={16} className="text-gray-300" /> : <AlertTriangle size={16} className="text-gray-300" />}
                                         </div>
                                     )}
 
@@ -313,7 +327,7 @@ const SidebarAlunos = ({
                                             }
                                             atribuirAluno(aluno);
                                         }}
-                                        title={indisponivel ? localTx.indisponivel : duplicadoMesmaSemana ? localTx.duplicadoMesma : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara}
+                                        title={cardTitle || (duplicadoMesmaSemana ? localTx.duplicadoMesma : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara)}
                                     >
 
                                         {/* CONTAINER PRINCIPAL DO NOME + AVATAR */}
@@ -371,6 +385,14 @@ const SidebarAlunos = ({
                                             </div>
                                         )}
 
+                                        {!indisponivel && bloqueadoPorHabilitacao && (
+                                            <div className="mt-0.5 w-full">
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600 border border-gray-300 inline-flex items-center gap-0.5">
+                                                    <AlertTriangle size={10} /> {elegibilidade.reason || localTx.semHabilitacao || 'Sem habilitacao para esta parte'}
+                                                </span>
+                                            </div>
+                                        )}
+
                                         {/* OBSERVAÇÕES */}
                                         {!!aluno?.observacoes && (
                                             <div className="bg-yellow-50 border border-yellow-100 rounded px-1.5 py-1 text-[10px] text-yellow-800 leading-tight italic w-full mt-0.5">
@@ -379,7 +401,7 @@ const SidebarAlunos = ({
                                         )}
 
                                         {/* HISTÓRICO RECENTE */}
-                                        {!indisponivel && historicoRecente.length > 0 && (
+                                        {!indisponivel && !bloqueadoPorHabilitacao && historicoRecente.length > 0 && (
                                             <div className="mt-1 border-t border-gray-100 pt-1 w-full space-y-0.5">
                                                 {historicoRecente.map((hist, i) => (
                                                     <div key={i} className="flex justify-between items-center text-[9px] text-gray-400">
@@ -399,7 +421,7 @@ const SidebarAlunos = ({
                                             </div>
                                         )}
 
-                                        {!indisponivel && (
+                                        {!indisponivel && !bloqueadoPorHabilitacao && (
                                             <div className="absolute inset-y-0 right-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-xl" />
                                         )}
                                     </button>

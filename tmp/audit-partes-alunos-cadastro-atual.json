@@ -1,0 +1,731 @@
+{
+  "geradoEm": "2026-08-26T00:34:37.092Z",
+  "projectId": "rvm-sbssc",
+  "path": "users/P8B0fY6m8JVjoLFGZEcXQ1uWsWs2/alunos",
+  "totais": {
+    "alunos": 101,
+    "tipos": {
+      "irmao": 12,
+      "anciao": 9,
+      "irma_exp": 9,
+      "irmao_hab": 10,
+      "irma_lim": 6,
+      "irma": 35,
+      "desab": 13,
+      "servo": 7
+    },
+    "duplicadosNomeCompleto": 0,
+    "duplicadosPrimeiroUltimo": 0
+  },
+  "duplicadosNomeCompleto": [],
+  "duplicadosPrimeiroUltimo": [],
+  "alunos": [
+    {
+      "id": "29",
+      "nome": "Adriano Cruz",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "104",
+      "nome": "Adriano Filho",
+      "tipo": "anciao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "17",
+      "nome": "Alessandra Miranda",
+      "tipo": "irma_exp",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "30",
+      "nome": "Alexander Märtin",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "31",
+      "nome": "Alzira Sluminsky",
+      "tipo": "irma_lim",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "94",
+      "nome": "Anderson",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "3",
+      "nome": "Anildo Kaminski",
+      "tipo": "anciao",
+      "familia": "Kaminski",
+      "observacoes": ""
+    },
+    {
+      "id": "32",
+      "nome": "Anita Martin",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "33",
+      "nome": "Anna Clara Gomes",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "95",
+      "nome": "Benjamin",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "102",
+      "nome": "Bianca",
+      "tipo": "irma_lim",
+      "familia": "",
+      "observacoes": "estrangeira; designar com alguém do pré-grupo"
+    },
+    {
+      "id": "35",
+      "nome": "Bruno Rosa",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "34",
+      "nome": "Bruno Silva",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "36",
+      "nome": "Camila Märtin",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "37",
+      "nome": "Caruline Ornelas",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "68",
+      "nome": "Celeste Lima Laurentino",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "38",
+      "nome": "Célia Kiste",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": "(restrições)"
+    },
+    {
+      "id": "39",
+      "nome": "Celso Endler",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": "nunca foi designado (conversar antes para avisar)"
+    },
+    {
+      "id": "40",
+      "nome": "Clarice Gomes",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "42",
+      "nome": "Cláudia Torres",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "4",
+      "nome": "Cláudio Sluminsky",
+      "tipo": "anciao",
+      "familia": "Sluminsky",
+      "observacoes": ""
+    },
+    {
+      "id": "43",
+      "nome": "Cleuzi Jarutais",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "69",
+      "nome": "Conceição Gomes",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "44",
+      "nome": "Cristiane Fietz",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "46",
+      "nome": "Daniela Wantowski",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "45",
+      "nome": "Daniele Silva",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "47",
+      "nome": "Dejanira Silva",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": "vive no oxigênio, não pode sair de casa"
+    },
+    {
+      "id": "15",
+      "nome": "Félix Stuani Jarutais",
+      "tipo": "servo",
+      "familia": "Jarutais",
+      "observacoes": ""
+    },
+    {
+      "id": "48",
+      "nome": "Fernanda Wolff",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": "não quer fazer parte no momento"
+    },
+    {
+      "id": "49",
+      "nome": "Fernando Ornelas",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "50",
+      "nome": "Francisco Veiga",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "18",
+      "nome": "Geci Drevek",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "51",
+      "nome": "Gilvane Streit",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "faz demonstração"
+    },
+    {
+      "id": "52",
+      "nome": "Giovana Paray",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "19",
+      "nome": "Graziela Jesus",
+      "tipo": "irma_exp",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "53",
+      "nome": "Hérica Martins",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": "filha da Célia e não vai reunião há muito tempo"
+    },
+    {
+      "id": "54",
+      "nome": "Jaci Schmidt",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "55",
+      "nome": "Jean Cova",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "56",
+      "nome": "Jeison Rosa",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "20",
+      "nome": "Jessyca Croelhas",
+      "tipo": "irma_exp",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "57",
+      "nome": "Jesús Hernandez",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": "hispano-hablante; estrangeiro"
+    },
+    {
+      "id": "10",
+      "nome": "Jhoyner Quintero",
+      "tipo": "servo",
+      "familia": "Quintero",
+      "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã"
+    },
+    {
+      "id": "59",
+      "nome": "João Caldas",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "58",
+      "nome": "Joao Dziedzic",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "103",
+      "nome": "Jorge",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "60",
+      "nome": "José Rodrigues",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": "nunca foi designado (conversar antes para avisar)"
+    },
+    {
+      "id": "11",
+      "nome": "Josuel Laurentino",
+      "tipo": "servo",
+      "familia": "Laurentino",
+      "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+    },
+    {
+      "id": "61",
+      "nome": "Joyce Croelhas",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "62",
+      "nome": "Jucélia Ópolis",
+      "tipo": "irma_exp",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "63",
+      "nome": "Karine Heinem",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": "também não vai na reunião há muitos anos"
+    },
+    {
+      "id": "21",
+      "nome": "Katia Märtin",
+      "tipo": "irma_exp",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "64",
+      "nome": "Kauê Silva",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "5",
+      "nome": "Laércio Custódio",
+      "tipo": "anciao",
+      "familia": "Custódio",
+      "observacoes": ""
+    },
+    {
+      "id": "12",
+      "nome": "Laudecir Aniaia",
+      "tipo": "servo",
+      "familia": "Aniaia",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "65",
+      "nome": "Laurindo Prado",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "105",
+      "nome": "Leandro",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "66",
+      "nome": "Lidgele Faria",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "67",
+      "nome": "Luiz Dreveck",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "22",
+      "nome": "Marcelina Silva",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "6",
+      "nome": "Marcelo Finato",
+      "tipo": "anciao",
+      "familia": "Finato",
+      "observacoes": ""
+    },
+    {
+      "id": "16",
+      "nome": "Marcelo Miranda",
+      "tipo": "servo",
+      "familia": "Miranda",
+      "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+    },
+    {
+      "id": "99",
+      "nome": "Márcia Salça da Cruz",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "7",
+      "nome": "Marco Ress",
+      "tipo": "anciao",
+      "familia": "Ress",
+      "observacoes": ""
+    },
+    {
+      "id": "41",
+      "nome": "Marcos Ópolis",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "71",
+      "nome": "Maria Fernanda Curti",
+      "tipo": "irma",
+      "familia": "Curti",
+      "observacoes": ""
+    },
+    {
+      "id": "70",
+      "nome": "Maria Wolff",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "criança"
+    },
+    {
+      "id": "72",
+      "nome": "Marina Dzeiczek",
+      "tipo": "irma_lim",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "73",
+      "nome": "Marlene Maia",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "75",
+      "nome": "Marli Fietz",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "74",
+      "nome": "Marli Prado",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "76",
+      "nome": "Marly Heinen",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": "mesma situação da filha Karine"
+    },
+    {
+      "id": "1",
+      "nome": "Maycow Carrara",
+      "tipo": "anciao",
+      "familia": "Carrara",
+      "observacoes": ""
+    },
+    {
+      "id": "23",
+      "nome": "Melanie Palma",
+      "tipo": "irma_exp",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "77",
+      "nome": "Melidys Guatarasma",
+      "tipo": "irma_lim",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "2",
+      "nome": "Michele Carrara",
+      "tipo": "irma_exp",
+      "familia": "Carrara",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "78",
+      "nome": "Moacir Silva",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "13",
+      "nome": "Nelson Salça",
+      "tipo": "servo",
+      "familia": "Salça",
+      "observacoes": "não faz tesouros"
+    },
+    {
+      "id": "24",
+      "nome": "Neusa Aniaia",
+      "tipo": "irma_lim",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "79",
+      "nome": "Nicolas Faria",
+      "tipo": "irmao_hab",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "25",
+      "nome": "Norianni Espinoza",
+      "tipo": "irma_exp",
+      "familia": "Espinoza",
+      "observacoes": "Pioneiro regular; estrangeiro; hispano-hablante"
+    },
+    {
+      "id": "80",
+      "nome": "Noris Alfonso",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "hispano-hablante; estrangeiro"
+    },
+    {
+      "id": "81",
+      "nome": "Olandir Fernandes",
+      "tipo": "irma_lim",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "8",
+      "nome": "Omar Alfonzo Espinoza",
+      "tipo": "anciao",
+      "familia": "",
+      "observacoes": "Hispano-hablante"
+    },
+    {
+      "id": "82",
+      "nome": "Omar Codallo",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "83",
+      "nome": "Patrícia Medina",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "26",
+      "nome": "Patrícia Ress",
+      "tipo": "irma_exp",
+      "familia": "Ress",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "84",
+      "nome": "Pedro Hernández",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": "estrangeiro; venezuelano irmão do Jesus. Foi na reunião domingo agora"
+    },
+    {
+      "id": "14",
+      "nome": "Pedro Rodrigues",
+      "tipo": "servo",
+      "familia": "",
+      "observacoes": "não faz tesouros"
+    },
+    {
+      "id": "85",
+      "nome": "Raquel Custódio",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "86",
+      "nome": "Rebeca Ress",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "criança"
+    },
+    {
+      "id": "9",
+      "nome": "Rodolfo Curti",
+      "tipo": "anciao",
+      "familia": "Curti",
+      "observacoes": ""
+    },
+    {
+      "id": "87",
+      "nome": "Rubens Martin",
+      "tipo": "irmao",
+      "familia": "",
+      "observacoes": "faz discursos (restrições)"
+    },
+    {
+      "id": "88",
+      "nome": "Sabrina Ress",
+      "tipo": "irma",
+      "familia": "Ress",
+      "observacoes": ""
+    },
+    {
+      "id": "89",
+      "nome": "Salete Salça",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "90",
+      "nome": "Simone Finato",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "91",
+      "nome": "Siomara Kaminski",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "27",
+      "nome": "Sirlei Taborda",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "92",
+      "nome": "Solange Borges",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "98",
+      "nome": "Tatiane",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": ""
+    },
+    {
+      "id": "28",
+      "nome": "Tereza Santos",
+      "tipo": "irma",
+      "familia": "",
+      "observacoes": "Pioneiro regular"
+    },
+    {
+      "id": "93",
+      "nome": "Zeni Vieira",
+      "tipo": "desab",
+      "familia": "",
+      "observacoes": ""
+    }
+  ]
+}

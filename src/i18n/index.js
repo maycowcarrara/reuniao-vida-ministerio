@@ -312,7 +312,8 @@ const PT_MESSAGES = {
             foto: "Foto do Aluno",
             fotoInstrucao: "Clique em qualquer lugar desta tela e pressione {TECLA} para colar uma imagem.",
             removerFoto: "Remover foto",
-            avatarAlt: "Avatar do aluno"
+            avatarAlt: "Avatar do aluno",
+            partesHabilitadas: "Partes que pode fazer"
         },
         card: { nunca: "Estreia", diasAtras: "dias atrás", com: "Com", semObs: "Sem observações", ausente: "Ausência Programada", ausenteBadge: "Ausente", indisponivel: "Indisponível:" },
         modal: { editar: "Editar Aluno", novo: "Novo Cadastro", salvar: "Salvar", salvando: "Salvando...", cancelar: "Cancelar", historico: "Histórico Completo", excluir: "Excluir" },
@@ -759,6 +760,7 @@ const PT_MESSAGES = {
         outraSemana: "Outra Semana",
         ausente: "Ausente",
         indisponivel: "Indisponível nesta data",
+        semHabilitacao: "Sem habilitação para esta parte",
         limparTodos: "Limpar Todos os Filtros"
     },
     designarSuggest: {
@@ -1126,7 +1128,8 @@ const ES_MESSAGES = {
             foto: "Foto del Estudiante",
             fotoInstrucao: "Haga clic en cualquier lugar de esta pantalla y presione {TECLA} para pegar una imagen.",
             removerFoto: "Eliminar foto",
-            avatarAlt: "Avatar del estudiante"
+            avatarAlt: "Avatar del estudiante",
+            partesHabilitadas: "Partes que puede hacer"
         },
         card: { nunca: "Estreno", diasAtras: "días atrás", com: "Con", semObs: "Sin observaciones", ausente: "Ausencia Programada", ausenteBadge: "Ausente", indisponivel: "No disponible:" },
         modal: { editar: "Editar Estudiante", novo: "Nuevo Registro", salvar: "Guardar", salvando: "Guardando...", cancelar: "Cancelar", historico: "Historial Completo", excluir: "Eliminar" },
@@ -1573,6 +1576,7 @@ const ES_MESSAGES = {
         outraSemana: "Otra Semana",
         ausente: "Ausente",
         indisponivel: "No disponible en esta fecha",
+        semHabilitacao: "Sin habilitación para esta parte",
         limparTodos: "Limpiar Todos los Filtros"
     },
     designarSuggest: {

@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
+import { Calendar, CheckSquare, X, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
 import { getIniciais, getUnavailableDateStatus } from './utils';
+import {
+    getAssignmentCapabilitiesByGroup,
+    getAssignmentCapabilityLabel,
+    getLegacyCapabilitiesForTipo,
+    normalizeAssignmentCapabilities,
+} from '../../utils/assignmentEligibility';
 
 const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false }) => {
     const firstInputRef = useRef(null);
@@ -79,6 +85,31 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
         .slice(0, 6);
     const familiaExataExiste = familiasOptions.some((familia) => familia.toLowerCase() === familiaBusca);
     const showFamiliaDropdown = familiaDropdownOpen && familiasOptions.length > 0;
+    const capabilityGroups = getAssignmentCapabilitiesByGroup();
+    const partesSelecionadas = Array.isArray(alunoEmEdicao.partesHabilitadas)
+        ? normalizeAssignmentCapabilities(alunoEmEdicao.partesHabilitadas)
+        : getLegacyCapabilitiesForTipo(alunoEmEdicao.tipo);
+
+    const handleTipoChange = (tipo) => {
+        const next = { ...alunoEmEdicao, tipo };
+        if (alunoEmEdicao._partesHabilitadasAuto !== false) {
+            next.partesHabilitadas = getLegacyCapabilitiesForTipo(tipo);
+            next._partesHabilitadasAuto = true;
+        }
+        setAlunoEmEdicao(next);
+    };
+
+    const toggleParteHabilitada = (key) => {
+        const nextPartes = partesSelecionadas.includes(key)
+            ? partesSelecionadas.filter((item) => item !== key)
+            : [...partesSelecionadas, key];
+
+        setAlunoEmEdicao({
+            ...alunoEmEdicao,
+            partesHabilitadas: normalizeAssignmentCapabilities(nextPartes),
+            _partesHabilitadasAuto: false,
+        });
+    };
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 p-2 sm:p-4 backdrop-blur-sm no-print" onMouseDown={(e) => { if (!isSaving && e.target === e.currentTarget) onClose(); }}>
@@ -131,7 +162,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                     <form id="form-aluno" onSubmit={onSave} className="min-w-0 space-y-4">
                         <fieldset disabled={isSaving} className="min-w-0 space-y-4 disabled:opacity-70">
                         <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
-                        <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, tipo: e.target.value })}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>
+                        <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => handleTipoChange(e.target.value)}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>
                         
                         <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                             <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tel}</label><input type="text" className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.telefone || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, telefone: e.target.value })} placeholder={t.campos.telefonePlaceholder} /></div>
@@ -212,6 +243,40 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                             )}
                         </div>
                         <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.obs}</label><textarea rows={2} className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-semibold border border-gray-100 outline-none focus:border-blue-600 resize-none" value={alunoEmEdicao.observacoes || ""} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, observacoes: e.target.value })} placeholder={t.campos.obsPlaceholder} /></div>
+
+                        <div className="min-w-0 space-y-3 pt-4 border-t border-gray-100 mt-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1.5">
+                                <CheckSquare size={12} /> {t.campos.partesHabilitadas || 'Partes que pode fazer'}
+                            </label>
+                            <div className="space-y-3">
+                                {capabilityGroups.map((group) => (
+                                    <div key={group.key} className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
+                                        <div className="mb-2 text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+                                            {group.labels?.[lang] || group.labels?.pt}
+                                        </div>
+                                        <div className="grid min-w-0 grid-cols-1 gap-1.5">
+                                            {group.capabilities.map((capability) => {
+                                                const checked = partesSelecionadas.includes(capability.key);
+                                                return (
+                                                    <label
+                                                        key={capability.key}
+                                                        className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${checked ? 'border-blue-200 bg-white text-blue-800 shadow-sm' : 'border-transparent bg-white/60 text-gray-500 hover:border-gray-200 hover:bg-white'}`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            className="h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            checked={checked}
+                                                            onChange={() => toggleParteHabilitada(capability.key)}
+                                                        />
+                                                        <span className="min-w-0 leading-tight">{getAssignmentCapabilityLabel(capability.key, lang)}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
 
                         <div className="min-w-0 space-y-2 pt-4 border-t border-gray-100 mt-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1.5"><Calendar size={12} /> {t.campos.datasIndisponiveis}</label>

@@ -6,6 +6,7 @@ import ModalHistorico from './ModalHistorico';
 import ModalFormulario from './ModalFormulario';
 import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, normalizeUnavailableDatesForAluno, pruneExpiredUnavailableDates } from './utils';
 import { toast } from '../../utils/toast';
+import { getLegacyCapabilitiesForTipo, normalizeAssignmentCapabilities } from '../../utils/assignmentEligibility';
 
 // Subcomponente para os Cards Estatísticos
 const StatCard = ({ icon, label, value, isActive, onClick, colorClass, activeClass, customClass = "" }) => (
@@ -243,20 +244,57 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     };
 
     const openNovo = () => {
-        setAlunoEmEdicao({ id: null, nome: '', tipo: 'irma', telefone: '', email: '', familia: '', observacoes: '', historico: [], datasIndisponiveis: [] });
+        setAlunoEmEdicao({ id: null, nome: '', tipo: 'irma', telefone: '', email: '', familia: '', observacoes: '', historico: [], datasIndisponiveis: [], partesHabilitadas: getLegacyCapabilitiesForTipo('irma'), _partesHabilitadasAuto: true });
         setModalFormOpen(true);
     };
 
     const openEditar = (aluno) => {
-        setAlunoEmEdicao({ ...aluno, tipo: getCargoKey(aluno.tipo, CARGOS_MAP), telefone: aluno.telefone || '', email: aluno.email || '', familia: aluno.familia || '', observacoes: aluno.observacoes || '', historico: Array.isArray(aluno.historico) ? aluno.historico : [], datasIndisponiveis: pruneExpiredUnavailableDates(aluno.datasIndisponiveis) });
+        const tipo = getCargoKey(aluno.tipo, CARGOS_MAP);
+        const temHabilitacoesExplicitas = Array.isArray(aluno.partesHabilitadas);
+        setAlunoEmEdicao({
+            ...aluno,
+            tipo,
+            telefone: aluno.telefone || '',
+            email: aluno.email || '',
+            familia: aluno.familia || '',
+            observacoes: aluno.observacoes || '',
+            historico: Array.isArray(aluno.historico) ? aluno.historico : [],
+            datasIndisponiveis: pruneExpiredUnavailableDates(aluno.datasIndisponiveis),
+            partesHabilitadas: temHabilitacoesExplicitas
+                ? normalizeAssignmentCapabilities(aluno.partesHabilitadas)
+                : getLegacyCapabilitiesForTipo(tipo),
+            _partesHabilitadasAuto: !temHabilitacoesExplicitas
+        });
         setModalFormOpen(true);
     };
 
     const handleSalvar = async (e) => {
         e.preventDefault();
-        const clean = { ...alunoEmEdicao, nome: (alunoEmEdicao.nome || '').trim(), telefone: (alunoEmEdicao.telefone || '').trim(), email: (alunoEmEdicao.email || '').trim(), familia: (alunoEmEdicao.familia || '').trim(), observacoes: (alunoEmEdicao.observacoes || '').trim(), tipo: alunoEmEdicao.tipo || 'irma', datasIndisponiveis: pruneExpiredUnavailableDates(alunoEmEdicao.datasIndisponiveis) };
+        const isNovoAluno = !alunoEmEdicao?.id;
+        const materializarHabilitacoes = isNovoAluno || alunoEmEdicao?._partesHabilitadasAuto === false;
+        const alunoForm = { ...alunoEmEdicao };
+        delete alunoForm._partesHabilitadasAuto;
+        const tipo = alunoForm.tipo || 'irma';
+        const clean = {
+            ...alunoForm,
+            nome: (alunoForm.nome || '').trim(),
+            telefone: (alunoForm.telefone || '').trim(),
+            email: (alunoForm.email || '').trim(),
+            familia: (alunoForm.familia || '').trim(),
+            observacoes: (alunoForm.observacoes || '').trim(),
+            tipo,
+            datasIndisponiveis: pruneExpiredUnavailableDates(alunoForm.datasIndisponiveis)
+        };
+        if (materializarHabilitacoes) {
+            clean.partesHabilitadas = normalizeAssignmentCapabilities(
+                Array.isArray(alunoForm.partesHabilitadas)
+                    ? alunoForm.partesHabilitadas
+                    : getLegacyCapabilitiesForTipo(tipo)
+            );
+        } else {
+            delete clean.partesHabilitadas;
+        }
         if (!clean.nome) return;
-        const isNovoAluno = !clean.id;
 
         try {
             setSalvandoAluno(true);

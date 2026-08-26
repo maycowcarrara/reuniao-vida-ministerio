@@ -1,0 +1,2940 @@
+{
+  "geradoEm": "2026-08-26T00:34:48.045Z",
+  "projectId": "rvm-sbssc",
+  "path": "users/P8B0fY6m8JVjoLFGZEcXQ1uWsWs2/alunos",
+  "totais": {
+    "entradasLista": 166,
+    "pessoasUnicasConfirmadas": 88,
+    "cadastradosConfirmados": 166,
+    "naoCadastrados": 0,
+    "ambiguosOuConfirmar": 0,
+    "ajustesDeRegra": 1,
+    "observacoesDaLista": 10
+  },
+  "porParte": [
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "total": 9,
+      "ok": 9,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "total": 13,
+      "ok": 13,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "total": 16,
+      "ok": 16,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "total": 21,
+      "ok": 21,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "total": 11,
+      "ok": 11,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "total": 11,
+      "ok": 11,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "total": 51,
+      "ok": 50,
+      "revisar": 1,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "total": 24,
+      "ok": 24,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "total": 10,
+      "ok": 10,
+      "revisar": 0,
+      "naoCadastrados": 0,
+      "ambiguosOuConfirmar": 0
+    }
+  ],
+  "revisar": [
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Fernanda Wolf",
+      "notaLista": "Lista com um f; cadastro com dois f; nao quer fazer no momento",
+      "statusCadastro": "cadastrado",
+      "regraOk": false,
+      "motivo": "Cadastro está desabilitado",
+      "aluno": {
+        "id": "48",
+        "nome": "Fernanda Wolff",
+        "tipo": "desab",
+        "familia": "",
+        "observacoes": "não quer fazer parte no momento"
+      },
+      "candidatos": []
+    }
+  ],
+  "resultados": [
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Marco",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "7",
+        "nome": "Marco Ress",
+        "tipo": "anciao",
+        "familia": "Ress",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Finato",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "6",
+        "nome": "Marcelo Finato",
+        "tipo": "anciao",
+        "familia": "Finato",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Claudio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "4",
+        "nome": "Cláudio Sluminsky",
+        "tipo": "anciao",
+        "familia": "Sluminsky",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Omar",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "8",
+        "nome": "Omar Alfonzo Espinoza",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": "Hispano-hablante"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Rodolfo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "9",
+        "nome": "Rodolfo Curti",
+        "tipo": "anciao",
+        "familia": "Curti",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Laércio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "5",
+        "nome": "Laércio Custódio",
+        "tipo": "anciao",
+        "familia": "Custódio",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Anildo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "3",
+        "nome": "Anildo Kaminski",
+        "tipo": "anciao",
+        "familia": "Kaminski",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Maycow",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "1",
+        "nome": "Maycow Carrara",
+        "tipo": "anciao",
+        "familia": "Carrara",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "presidente_meio_semana",
+      "parteLabel": "Presidente meio de semana",
+      "nomeLista": "Adriano",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado para presidir",
+      "aluno": {
+        "id": "104",
+        "nome": "Adriano Filho",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Félix",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "15",
+        "nome": "Félix Stuani Jarutais",
+        "tipo": "servo",
+        "familia": "Jarutais",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Anildo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "3",
+        "nome": "Anildo Kaminski",
+        "tipo": "anciao",
+        "familia": "Kaminski",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Rodolfo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "9",
+        "nome": "Rodolfo Curti",
+        "tipo": "anciao",
+        "familia": "Curti",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Josuel",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "11",
+        "nome": "Josuel Laurentino",
+        "tipo": "servo",
+        "familia": "Laurentino",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Laércio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "5",
+        "nome": "Laércio Custódio",
+        "tipo": "anciao",
+        "familia": "Custódio",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Jhoyner",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "10",
+        "nome": "Jhoyner Quintero",
+        "tipo": "servo",
+        "familia": "Quintero",
+        "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Omar",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "8",
+        "nome": "Omar Alfonzo Espinoza",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": "Hispano-hablante"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Marco",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "7",
+        "nome": "Marco Ress",
+        "tipo": "anciao",
+        "familia": "Ress",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Miranda",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "16",
+        "nome": "Marcelo Miranda",
+        "tipo": "servo",
+        "familia": "Miranda",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Finato",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "6",
+        "nome": "Marcelo Finato",
+        "tipo": "anciao",
+        "familia": "Finato",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Laudecir",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "12",
+        "nome": "Laudecir Aniaia",
+        "tipo": "servo",
+        "familia": "Aniaia",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Maycow",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "1",
+        "nome": "Maycow Carrara",
+        "tipo": "anciao",
+        "familia": "Carrara",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_inicial",
+      "parteLabel": "Discurso inicial",
+      "nomeLista": "Adriano",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "104",
+        "nome": "Adriano Filho",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Félix",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "15",
+        "nome": "Félix Stuani Jarutais",
+        "tipo": "servo",
+        "familia": "Jarutais",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Pedro",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "14",
+        "nome": "Pedro Rodrigues",
+        "tipo": "servo",
+        "familia": "",
+        "observacoes": "não faz tesouros"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Nelson",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "13",
+        "nome": "Nelson Salça",
+        "tipo": "servo",
+        "familia": "Salça",
+        "observacoes": "não faz tesouros"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Anildo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "3",
+        "nome": "Anildo Kaminski",
+        "tipo": "anciao",
+        "familia": "Kaminski",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Rodolfo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "9",
+        "nome": "Rodolfo Curti",
+        "tipo": "anciao",
+        "familia": "Curti",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Marco",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "7",
+        "nome": "Marco Ress",
+        "tipo": "anciao",
+        "familia": "Ress",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Laudecir",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "12",
+        "nome": "Laudecir Aniaia",
+        "tipo": "servo",
+        "familia": "Aniaia",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Finato",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "6",
+        "nome": "Marcelo Finato",
+        "tipo": "anciao",
+        "familia": "Finato",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Miranda",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "16",
+        "nome": "Marcelo Miranda",
+        "tipo": "servo",
+        "familia": "Miranda",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Claudio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "4",
+        "nome": "Cláudio Sluminsky",
+        "tipo": "anciao",
+        "familia": "Sluminsky",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Jhoyner",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "10",
+        "nome": "Jhoyner Quintero",
+        "tipo": "servo",
+        "familia": "Quintero",
+        "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Omar",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "8",
+        "nome": "Omar Alfonzo Espinoza",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": "Hispano-hablante"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Josuel",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "11",
+        "nome": "Josuel Laurentino",
+        "tipo": "servo",
+        "familia": "Laurentino",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Laércio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "5",
+        "nome": "Laércio Custódio",
+        "tipo": "anciao",
+        "familia": "Custódio",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Maycow",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "1",
+        "nome": "Maycow Carrara",
+        "tipo": "anciao",
+        "familia": "Carrara",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "joias_espirituais",
+      "parteLabel": "Joias espirituais",
+      "nomeLista": "Adriano",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião/servo habilitado",
+      "aluno": {
+        "id": "104",
+        "nome": "Adriano Filho",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Alexander",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "30",
+        "nome": "Alexander Märtin",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Jean",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "55",
+        "nome": "Jean Cova",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Anderson",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "94",
+        "nome": "Anderson",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Benjamin",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "95",
+        "nome": "Benjamin",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Marcos",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "41",
+        "nome": "Marcos Ópolis",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Nicolas",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "79",
+        "nome": "Nicolas Faria",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Leandro",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "105",
+        "nome": "Leandro",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "João",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "58",
+        "nome": "Joao Dziedzic",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Adriano Pai",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "29",
+        "nome": "Adriano Cruz",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Bruno",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "35",
+        "nome": "Bruno Rosa",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Francisco",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "50",
+        "nome": "Francisco Veiga",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Laurindo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "65",
+        "nome": "Laurindo Prado",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Fernando",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "49",
+        "nome": "Fernando Ornelas",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Rubens",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "87",
+        "nome": "Rubens Martin",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": "faz discursos (restrições)"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Jesus",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "57",
+        "nome": "Jesús Hernandez",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": "hispano-hablante; estrangeiro"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Omar Vicente",
+      "notaLista": "Nome da lista difere do cadastro",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "82",
+        "nome": "Omar Codallo",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Jeison",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "56",
+        "nome": "Jeison Rosa",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Marcos",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "41",
+        "nome": "Marcos Ópolis",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Moacir",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "78",
+        "nome": "Moacir Silva",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "José",
+      "notaLista": "Nunca foi designado; conversar antes",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "60",
+        "nome": "José Rodrigues",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": "nunca foi designado (conversar antes para avisar)"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "leitura_biblia",
+      "parteLabel": "Leitura da Bíblia",
+      "nomeLista": "Celso",
+      "notaLista": "Nunca foi designado; conversar antes",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado/irmão habilitado para leitura",
+      "aluno": {
+        "id": "39",
+        "nome": "Celso Endler",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": "nunca foi designado (conversar antes para avisar)"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Omar",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "8",
+        "nome": "Omar Alfonzo Espinoza",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": "Hispano-hablante"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Marco",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "7",
+        "nome": "Marco Ress",
+        "tipo": "anciao",
+        "familia": "Ress",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Rodolfo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "9",
+        "nome": "Rodolfo Curti",
+        "tipo": "anciao",
+        "familia": "Curti",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Finato",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "6",
+        "nome": "Marcelo Finato",
+        "tipo": "anciao",
+        "familia": "Finato",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Josuel",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Servo na lista permitida para esta parte",
+      "aluno": {
+        "id": "11",
+        "nome": "Josuel Laurentino",
+        "tipo": "servo",
+        "familia": "Laurentino",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Laércio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "5",
+        "nome": "Laércio Custódio",
+        "tipo": "anciao",
+        "familia": "Custódio",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Jhoyner",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Servo na lista permitida para esta parte",
+      "aluno": {
+        "id": "10",
+        "nome": "Jhoyner Quintero",
+        "tipo": "servo",
+        "familia": "Quintero",
+        "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Anildo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "3",
+        "nome": "Anildo Kaminski",
+        "tipo": "anciao",
+        "familia": "Kaminski",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Maycow",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "1",
+        "nome": "Maycow Carrara",
+        "tipo": "anciao",
+        "familia": "Carrara",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Adriano",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "104",
+        "nome": "Adriano Filho",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "nossa_vida_crista",
+      "parteLabel": "Nossa vida cristã",
+      "nomeLista": "Miranda",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Servo na lista permitida para esta parte",
+      "aluno": {
+        "id": "16",
+        "nome": "Marcelo Miranda",
+        "tipo": "servo",
+        "familia": "Miranda",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Marco",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "7",
+        "nome": "Marco Ress",
+        "tipo": "anciao",
+        "familia": "Ress",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Finato",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "6",
+        "nome": "Marcelo Finato",
+        "tipo": "anciao",
+        "familia": "Finato",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Omar",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "8",
+        "nome": "Omar Alfonzo Espinoza",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": "Hispano-hablante"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Rodolfo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "9",
+        "nome": "Rodolfo Curti",
+        "tipo": "anciao",
+        "familia": "Curti",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Anildo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "3",
+        "nome": "Anildo Kaminski",
+        "tipo": "anciao",
+        "familia": "Kaminski",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Laércio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "5",
+        "nome": "Laércio Custódio",
+        "tipo": "anciao",
+        "familia": "Custódio",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Josuel",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Servo na lista permitida para esta parte",
+      "aluno": {
+        "id": "11",
+        "nome": "Josuel Laurentino",
+        "tipo": "servo",
+        "familia": "Laurentino",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Jhoyner",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Servo na lista permitida para esta parte",
+      "aluno": {
+        "id": "10",
+        "nome": "Jhoyner Quintero",
+        "tipo": "servo",
+        "familia": "Quintero",
+        "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Maycow",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "1",
+        "nome": "Maycow Carrara",
+        "tipo": "anciao",
+        "familia": "Carrara",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Adriano",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Ancião habilitado",
+      "aluno": {
+        "id": "104",
+        "nome": "Adriano Filho",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "estudo_biblico",
+      "parteLabel": "Estudo bíblico",
+      "nomeLista": "Miranda",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Servo na lista permitida para esta parte",
+      "aluno": {
+        "id": "16",
+        "nome": "Marcelo Miranda",
+        "tipo": "servo",
+        "familia": "Miranda",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Claudia",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "42",
+        "nome": "Cláudia Torres",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Tereza",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "28",
+        "nome": "Tereza Santos",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Patrícia M",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "83",
+        "nome": "Patrícia Medina",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Raquel",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "85",
+        "nome": "Raquel Custódio",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Conceição",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "69",
+        "nome": "Conceição Gomes",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Jucelia",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "62",
+        "nome": "Jucélia Ópolis",
+        "tipo": "irma_exp",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Siomara",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "91",
+        "nome": "Siomara Kaminski",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Noris",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "80",
+        "nome": "Noris Alfonso",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "hispano-hablante; estrangeiro"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Melanie",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "23",
+        "nome": "Melanie Palma",
+        "tipo": "irma_exp",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Neuza",
+      "notaLista": "Grafia na lista: Neuza; cadastro: Neusa",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "24",
+        "nome": "Neusa Aniaia",
+        "tipo": "irma_lim",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Graziela",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "19",
+        "nome": "Graziela Jesus",
+        "tipo": "irma_exp",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Norianni",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "25",
+        "nome": "Norianni Espinoza",
+        "tipo": "irma_exp",
+        "familia": "Espinoza",
+        "observacoes": "Pioneiro regular; estrangeiro; hispano-hablante"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Alessandra",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "17",
+        "nome": "Alessandra Miranda",
+        "tipo": "irma_exp",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Celeste",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "68",
+        "nome": "Celeste Lima Laurentino",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Fernanda C",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "71",
+        "nome": "Maria Fernanda Curti",
+        "tipo": "irma",
+        "familia": "Curti",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Anita",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "32",
+        "nome": "Anita Martin",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Katia",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "21",
+        "nome": "Katia Märtin",
+        "tipo": "irma_exp",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Tatiane",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "98",
+        "nome": "Tatiane",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Michele",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "2",
+        "nome": "Michele Carrara",
+        "tipo": "irma_exp",
+        "familia": "Carrara",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Marcia",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "99",
+        "nome": "Márcia Salça da Cruz",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Jaci",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "54",
+        "nome": "Jaci Schmidt",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Sirlei",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "27",
+        "nome": "Sirlei Taborda",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Jessyca",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "20",
+        "nome": "Jessyca Croelhas",
+        "tipo": "irma_exp",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Sabrina",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "88",
+        "nome": "Sabrina Ress",
+        "tipo": "irma",
+        "familia": "Ress",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Marlene",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "73",
+        "nome": "Marlene Maia",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Gilvane",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "51",
+        "nome": "Gilvane Streit",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "faz demonstração"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Geci",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "18",
+        "nome": "Geci Drevek",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Simone",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "90",
+        "nome": "Simone Finato",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Joyce",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "61",
+        "nome": "Joyce Croelhas",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Daniela",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "46",
+        "nome": "Daniela Wantowski",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Carulini",
+      "notaLista": "Provavel grafia diferente",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "37",
+        "nome": "Caruline Ornelas",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Ana Clara",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "33",
+        "nome": "Anna Clara Gomes",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Lidgele",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "66",
+        "nome": "Lidgele Faria",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Salete",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "89",
+        "nome": "Salete Salça",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Patrícia R",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "26",
+        "nome": "Patrícia Ress",
+        "tipo": "irma_exp",
+        "familia": "Ress",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Marli",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "75",
+        "nome": "Marli Fietz",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Cristiane",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "44",
+        "nome": "Cristiane Fietz",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Cleuzi",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "43",
+        "nome": "Cleuzi Jarutais",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Marina",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "72",
+        "nome": "Marina Dzeiczek",
+        "tipo": "irma_lim",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Marcelina",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "22",
+        "nome": "Marcelina Silva",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Camila",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "36",
+        "nome": "Camila Märtin",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Clarice",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "40",
+        "nome": "Clarice Gomes",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Giovana",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "52",
+        "nome": "Giovana Paray",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Alzira",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "31",
+        "nome": "Alzira Sluminsky",
+        "tipo": "irma_lim",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Fernanda Wolf",
+      "notaLista": "Lista com um f; cadastro com dois f; nao quer fazer no momento",
+      "statusCadastro": "cadastrado",
+      "regraOk": false,
+      "motivo": "Cadastro está desabilitado",
+      "aluno": {
+        "id": "48",
+        "nome": "Fernanda Wolff",
+        "tipo": "desab",
+        "familia": "",
+        "observacoes": "não quer fazer parte no momento"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Rebeca",
+      "notaLista": "Crianca",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "86",
+        "nome": "Rebeca Ress",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "criança"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Maria",
+      "notaLista": "Crianca",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "70",
+        "nome": "Maria Wolff",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": "criança"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Olandir",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "81",
+        "nome": "Olandir Fernandes",
+        "tipo": "irma_lim",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Solange",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "92",
+        "nome": "Solange Borges",
+        "tipo": "irma",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Melidys",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "77",
+        "nome": "Melidys Guatarasma",
+        "tipo": "irma_lim",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "demonstracao",
+      "parteLabel": "Demonstração",
+      "nomeLista": "Bianca",
+      "notaLista": "Muita dificuldade com o idioma; designar com irma do pre-grupo",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmã cadastrada para demonstração",
+      "aluno": {
+        "id": "102",
+        "nome": "Bianca",
+        "tipo": "irma_lim",
+        "familia": "",
+        "observacoes": "estrangeira; designar com alguém do pré-grupo"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Anildo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "3",
+        "nome": "Anildo Kaminski",
+        "tipo": "anciao",
+        "familia": "Kaminski",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Laudecir",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "12",
+        "nome": "Laudecir Aniaia",
+        "tipo": "servo",
+        "familia": "Aniaia",
+        "observacoes": "Pioneiro regular"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Bruno",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "35",
+        "nome": "Bruno Rosa",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Finato",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "6",
+        "nome": "Marcelo Finato",
+        "tipo": "anciao",
+        "familia": "Finato",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Jesus",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "57",
+        "nome": "Jesús Hernandez",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": "hispano-hablante; estrangeiro"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Alexander",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "30",
+        "nome": "Alexander Märtin",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Jean",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "55",
+        "nome": "Jean Cova",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Nicolas",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "79",
+        "nome": "Nicolas Faria",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Jeison",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "56",
+        "nome": "Jeison Rosa",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Marcos",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "41",
+        "nome": "Marcos Ópolis",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Félix",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "15",
+        "nome": "Félix Stuani Jarutais",
+        "tipo": "servo",
+        "familia": "Jarutais",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Pedro",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "14",
+        "nome": "Pedro Rodrigues",
+        "tipo": "servo",
+        "familia": "",
+        "observacoes": "não faz tesouros"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Nelson",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "13",
+        "nome": "Nelson Salça",
+        "tipo": "servo",
+        "familia": "Salça",
+        "observacoes": "não faz tesouros"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Rodolfo",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "9",
+        "nome": "Rodolfo Curti",
+        "tipo": "anciao",
+        "familia": "Curti",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Marco",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "7",
+        "nome": "Marco Ress",
+        "tipo": "anciao",
+        "familia": "Ress",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Miranda",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "16",
+        "nome": "Marcelo Miranda",
+        "tipo": "servo",
+        "familia": "Miranda",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Claudio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "4",
+        "nome": "Cláudio Sluminsky",
+        "tipo": "anciao",
+        "familia": "Sluminsky",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Jhoyner",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "10",
+        "nome": "Jhoyner Quintero",
+        "tipo": "servo",
+        "familia": "Quintero",
+        "observacoes": "Hispano-hablante; faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Omar",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "8",
+        "nome": "Omar Alfonzo Espinoza",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": "Hispano-hablante"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Josuel",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "11",
+        "nome": "Josuel Laurentino",
+        "tipo": "servo",
+        "familia": "Laurentino",
+        "observacoes": "faz estudo bíblico de congregação; nossa vida cristã"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Laércio",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "5",
+        "nome": "Laércio Custódio",
+        "tipo": "anciao",
+        "familia": "Custódio",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Maycow",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "1",
+        "nome": "Maycow Carrara",
+        "tipo": "anciao",
+        "familia": "Carrara",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Adriano",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "104",
+        "nome": "Adriano Filho",
+        "tipo": "anciao",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "oracao",
+      "parteLabel": "Oração",
+      "nomeLista": "Jorge",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Irmão habilitado para oração",
+      "aluno": {
+        "id": "103",
+        "nome": "Jorge",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Jesus",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "57",
+        "nome": "Jesús Hernandez",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": "hispano-hablante; estrangeiro"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Alexander",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "30",
+        "nome": "Alexander Märtin",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Nicolas",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "79",
+        "nome": "Nicolas Faria",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Bruno",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "35",
+        "nome": "Bruno Rosa",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Fernando",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "49",
+        "nome": "Fernando Ornelas",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Rubens",
+      "notaLista": "Marcado com asterisco na lista",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Exceção marcada na lista/cadastro",
+      "aluno": {
+        "id": "87",
+        "nome": "Rubens Martin",
+        "tipo": "irmao",
+        "familia": "",
+        "observacoes": "faz discursos (restrições)"
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Jeison",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "56",
+        "nome": "Jeison Rosa",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Marcos Opolis",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "41",
+        "nome": "Marcos Ópolis",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Moacir",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "78",
+        "nome": "Moacir Silva",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    },
+    {
+      "parte": "discurso_5_min",
+      "parteLabel": "Discurso 5 min",
+      "nomeLista": "Jean",
+      "notaLista": "",
+      "statusCadastro": "cadastrado",
+      "regraOk": true,
+      "motivo": "Varão habilitado",
+      "aluno": {
+        "id": "55",
+        "nome": "Jean Cova",
+        "tipo": "irmao_hab",
+        "familia": "",
+        "observacoes": ""
+      },
+      "candidatos": []
+    }
+  ]
+}
