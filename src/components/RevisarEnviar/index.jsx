@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Printer,
     MessageCircle,
-    BookOpen,
     Archive,
     Mail,
     CheckCircle,
@@ -404,6 +403,10 @@ const RevisarEnviar = ({
             oradorNome,
             congregacaoOrador ? `(${congregacaoOrador})` : '',
         ].filter(Boolean).join(' ');
+        const temaDiscurso = (fds.reuniaoPublica.temaDiscurso || '').trim();
+        const temReuniaoPublica = !!(temaDiscurso || oradorNome.trim());
+        const temEstudoSentinela = !!(fds.estudoSentinela.dirigente?.nome || fds.estudoSentinela.leitor?.nome);
+        const discursoFinalVisita = (fds.visitaSuperintendente.discursoFinal || '').trim();
         const fimDeSemanaMeta = [
             fds.data ? formatarDataFolha(fds.data, lang) : '',
             fds.horario,
@@ -424,10 +427,12 @@ const RevisarEnviar = ({
             ...(fds.oracaoFinal?.nome ? [{ label: t.oracaoFinal || 'Oração final', nomes: fds.oracaoFinal.nome }] : []),
         ];
 
-        const renderFdsLinha = (label, value) => (
-            <div className="grid grid-cols-[132px_1fr] gap-x-2 border-b border-gray-200 py-0.5 last:border-b-0">
-                <span className="font-black uppercase text-gray-500">{label}</span>
-                <span className="font-semibold text-gray-900">{value || '—'}</span>
+        const renderFdsDiscursoLinha = () => (
+            <div className="border-b border-gray-200 py-0.5 font-semibold text-gray-900">
+                <span className="font-black uppercase text-gray-500">{t.discurso || 'Discurso'}</span>
+                <span className="ml-2">{temaDiscurso || '—'}</span>
+                <span className="ml-6 font-black uppercase text-gray-500">{t.orador || 'Orador'}</span>
+                <span className="ml-2">{oradorComCongregacao || '—'}</span>
             </div>
         );
 
@@ -462,14 +467,11 @@ const RevisarEnviar = ({
                 </div>
 
                 <div className="mt-1.5 grid grid-cols-1 gap-1.5">
-                    {renderFdsSecao(t.reuniaoPublica || 'Reunião pública', (
-                        <>
-                            {renderFdsLinha(t.temaDiscurso || 'Tema do discurso', fds.reuniaoPublica.temaDiscurso)}
-                            {renderFdsLinha(t.orador || 'Orador', oradorComCongregacao)}
-                        </>
+                    {temReuniaoPublica && renderFdsSecao(t.reuniaoPublica || 'Reunião pública', (
+                        renderFdsDiscursoLinha()
                     ), 'text-blue-800')}
 
-                    {renderFdsSecao(t.estudoSentinela || 'Estudo de A Sentinela', (
+                    {temEstudoSentinela && renderFdsSecao(t.estudoSentinela || 'Estudo de A Sentinela', (
                         <div className="grid grid-cols-[132px_1fr_132px_1fr] gap-x-2 border-b border-gray-200 py-0.5">
                             <span className="font-black uppercase text-gray-500">{t.dirigente}</span>
                             <span className="font-semibold text-gray-900">{fds.estudoSentinela.dirigente?.nome || '—'}</span>
@@ -478,9 +480,9 @@ const RevisarEnviar = ({
                         </div>
                     ), 'text-amber-800')}
 
-                    {isVisita && renderFdsSecao(t.discursoFinalVisita || 'Discurso final da visita', (
+                    {isVisita && discursoFinalVisita && renderFdsSecao(t.discursoFinalVisita || 'Discurso final da visita', (
                         <div className="font-semibold text-gray-900 py-0.5 border-b border-gray-200">
-                            {fds.visitaSuperintendente.discursoFinal || '—'}
+                            {discursoFinalVisita}
                         </div>
                     ), 'text-blue-700')}
 
@@ -1206,8 +1208,7 @@ const RevisarEnviar = ({
 
                                                                             {/* LEITOR NO ESTUDO BÍBLICO */}
                                                                             {isEbc && leitorEbc && (
-                                                                                <div className={`re-assignee-secondary re-reader-line flex items-center gap-1 mt-0.5 ${layout.meta} text-gray-600 leading-tight`}>
-                                                                                    <BookOpen size={12} className="text-gray-500" />
+                                                                                <div className={`re-assignee-secondary re-reader-line mt-0.5 ${layout.meta} text-gray-600 leading-tight`}>
                                                                                     <span>{t.leitor}: {leitorEbc.nome}</span>
                                                                                 </div>
                                                                             )}

@@ -156,6 +156,7 @@ const PT_MESSAGES = {
         presidente: "Presidente da Reunião",
         inicioReuniao: "Início da Reunião",
         fimReuniao: "Fim da Reunião",
+        reuniaoMeioSemana: "Reunião de meio de semana",
         reuniaoFimDeSemana: "Reunião de fim de semana",
         fimDeSemana: "Fim de semana",
         comecaEm: "Começa em",
@@ -336,7 +337,7 @@ const PT_MESSAGES = {
         },
         card: { nunca: "Estreia", diasAtras: "dias atrás", com: "Com", semObs: "Sem observações", ausente: "Ausência Programada", ausenteBadge: "Ausente", indisponivel: "Indisponível:" },
         modal: { editar: "Editar Aluno", novo: "Novo Cadastro", salvar: "Salvar", salvando: "Salvando...", cancelar: "Cancelar", historico: "Histórico Completo", excluir: "Excluir", alteracoesPendentesTitulo: "Salvar alterações?", alteracoesPendentesDescricao: "Você fez alterações neste cadastro. Salve antes de sair ou descarte o que foi alterado.", continuarEditando: "Continuar", descartar: "Descartar" },
-        filtros: { todos: "Todos", ativos: "Somente Ativos" },
+        filtros: { todos: "Todos", ativos: "Somente Ativos", partes: "Partes", partesSelecionadas: "partes", limparPartes: "Limpar" },
         msg: {
             confirmarExclusao: "Tem certeza que deseja excluir este aluno permanentemente?",
             confirmarRemoverHistorico: "Tem certeza que deseja remover este registro do histórico?",
@@ -381,7 +382,8 @@ const PT_MESSAGES = {
         },
         acessibilidade: {
             mostrarTodos: "Mostrar todos",
-            apenasAtivos: "Apenas ativos"
+            apenasAtivos: "Apenas ativos",
+            filtrarPorPartes: "Filtrar por partes que o aluno pode fazer"
         }
     },
     importador: {
@@ -1059,6 +1061,7 @@ const ES_MESSAGES = {
         presidente: "Presidente de la Reunión",
         inicioReuniao: "Inicio de la Reunión",
         fimReuniao: "Fin de la Reunión",
+        reuniaoMeioSemana: "Reunión de entre semana",
         reuniaoFimDeSemana: "Reunión de fin de semana",
         fimDeSemana: "Fin de semana",
         comecaEm: "Empieza en",
@@ -1239,7 +1242,7 @@ const ES_MESSAGES = {
         },
         card: { nunca: "Estreno", diasAtras: "días atrás", com: "Con", semObs: "Sin observaciones", ausente: "Ausencia Programada", ausenteBadge: "Ausente", indisponivel: "No disponible:" },
         modal: { editar: "Editar Estudiante", novo: "Nuevo Registro", salvar: "Guardar", salvando: "Guardando...", cancelar: "Cancelar", historico: "Historial Completo", excluir: "Eliminar", alteracoesPendentesTitulo: "¿Guardar cambios?", alteracoesPendentesDescricao: "Hiciste cambios en este registro. Guárdalos antes de salir o descarta lo modificado.", continuarEditando: "Continuar", descartar: "Descartar" },
-        filtros: { todos: "Todos", ativos: "Solo Activos" },
+        filtros: { todos: "Todos", ativos: "Solo Activos", partes: "Partes", partesSelecionadas: "partes", limparPartes: "Limpiar" },
         msg: {
             confirmarExclusao: "¿Está seguro de que desea eliminar a este estudiante permanentemente?",
             confirmarRemoverHistorico: "¿Desea eliminar este registro del historial?",
@@ -1284,7 +1287,8 @@ const ES_MESSAGES = {
         },
         acessibilidade: {
             mostrarTodos: "Mostrar todos",
-            apenasAtivos: "Solo activos"
+            apenasAtivos: "Solo activos",
+            filtrarPorPartes: "Filtrar por partes que el estudiante puede hacer"
         }
     },
     importador: {

@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, UsersRound, User, UserRound, FilterX, FileJson, Download, FileText, FileSpreadsheet, Printer, ChevronDown, LayoutGrid, List, SortAsc, SortDesc, Calendar, AlertCircle, Plus, SlidersHorizontal, X } from 'lucide-react';
+import { Search, UsersRound, User, UserRound, FilterX, FileJson, Download, FileText, FileSpreadsheet, Printer, ChevronDown, LayoutGrid, List, SortAsc, SortDesc, Calendar, AlertCircle, Plus, SlidersHorizontal, X, Check } from 'lucide-react';
 import AlunoCard from './AlunoCard';
 import AlunoListItem from './AlunoListItem';
 import ModalHistorico from './ModalHistorico';
 import ModalFormulario from './ModalFormulario';
 import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, normalizeUnavailableDatesForAluno, pruneExpiredUnavailableDates } from './utils';
 import { toast } from '../../utils/toast';
-import { getLegacyCapabilitiesForTipo, normalizeAssignmentCapabilities } from '../../utils/assignmentEligibility';
+import { getAlunoCapabilities, getAssignmentCapabilitiesByGroup, getLegacyCapabilitiesForTipo, normalizeAssignmentCapabilities } from '../../utils/assignmentEligibility';
 
 // Subcomponente para os Cards Estatísticos
 const StatCard = ({ icon, label, value, isActive, onClick, colorClass, activeClass, customClass = "" }) => (
@@ -30,6 +30,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     // Estados de Filtro
     const [termo, setTermo] = useState('');
     const [filtrosTiposAtivos, setFiltrosTiposAtivos] = useState([]);
+    const [filtrosPartesAtivas, setFiltrosPartesAtivas] = useState([]);
     const [filtroGenero, setFiltroGenero] = useState('todos');
     const [filtroEspecial, setFiltroEspecial] = useState('todos');
     const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -42,12 +43,14 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     const [modalFormOpen, setModalFormOpen] = useState(false);
     const [modalHistoryOpen, setModalHistoryOpen] = useState(false);
     const [menuExportOpen, setMenuExportOpen] = useState(false);
+    const [menuPartesOpen, setMenuPartesOpen] = useState(false);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const [salvandoAluno, setSalvandoAluno] = useState(false);
 
     // Dados em Edição/Visualização
     const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
     const [alunoHistorico, setAlunoHistorico] = useState(null);
+    const partesFilterRef = useRef(null);
     const cleanupUnavailableSignatureRef = useRef('');
 
     const [viewMode, setViewMode] = useState(() => {
@@ -70,12 +73,22 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         const onKey = (e) => {
             if (e.key === 'Escape') {
                 if (menuExportOpen) setMenuExportOpen(false);
+                if (menuPartesOpen) setMenuPartesOpen(false);
                 if (modalHistoryOpen) setModalHistoryOpen(false);
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [menuExportOpen, modalHistoryOpen]);
+    }, [menuExportOpen, menuPartesOpen, modalHistoryOpen]);
+
+    useEffect(() => {
+        const onPointerDown = (event) => {
+            if (!menuPartesOpen || partesFilterRef.current?.contains(event.target)) return;
+            setMenuPartesOpen(false);
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        return () => document.removeEventListener('pointerdown', onPointerDown);
+    }, [menuPartesOpen]);
 
     useEffect(() => {
         if (!onSalvarAluno || !Array.isArray(alunos) || alunos.length === 0) return;
@@ -123,14 +136,35 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     }, [alunos, CARGOS_MAP, lang]);
 
     // Lógica para saber se há NENHUM filtro ativo
-    const hasActiveFilters = termo !== '' || filtrosTiposAtivos.length > 0 || filtroGenero !== 'todos' || filtroEspecial !== 'todos' || filtroStatus !== 'todos';
+    const gruposPartes = useMemo(() => getAssignmentCapabilitiesByGroup(), []);
+
+    const partesSelecionadasLabel = useMemo(() => {
+        if (filtrosPartesAtivas.length === 0) return t.filtros.partes;
+        if (filtrosPartesAtivas.length === 1) {
+            const parte = gruposPartes
+                .flatMap((grupo) => grupo.capabilities)
+                .find((capability) => capability.key === filtrosPartesAtivas[0]);
+            return parte?.labels?.[lang] || parte?.labels?.pt || t.filtros.partes;
+        }
+        return `${filtrosPartesAtivas.length} ${t.filtros.partesSelecionadas}`;
+    }, [filtrosPartesAtivas, gruposPartes, lang, t]);
+
+    const toggleFiltroParte = (key) => {
+        setFiltrosPartesAtivas((prev) =>
+            prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
+        );
+    };
+
+    const hasActiveFilters = termo !== '' || filtrosTiposAtivos.length > 0 || filtrosPartesAtivas.length > 0 || filtroGenero !== 'todos' || filtroEspecial !== 'todos' || filtroStatus !== 'todos';
 
     const limparFiltros = () => {
         setTermo('');
         setFiltrosTiposAtivos([]);
+        setFiltrosPartesAtivas([]);
         setFiltroGenero('todos');
         setFiltroEspecial('todos');
         setFiltroStatus('todos');
+        setMenuPartesOpen(false);
     };
 
     // Processamento da Lista Final Baseada nos Filtros
@@ -154,7 +188,14 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 // 4. Filtro de Tipo (Privilégio)
                 if (filtrosTiposAtivos.length > 0 && !filtrosTiposAtivos.includes(cKey)) return false;
 
-                // 5. Filtro Especial
+                // 5. Filtro por partes habilitadas
+                if (filtrosPartesAtivas.length > 0) {
+                    if (cKey === 'desab') return false;
+                    const capacidadesAluno = getAlunoCapabilities(a);
+                    if (!filtrosPartesAtivas.every((parteKey) => capacidadesAluno.includes(parteKey))) return false;
+                }
+
+                // 6. Filtro Especial
                 if (filtroEspecial === 'ausentes' && !verificarAusenciaAtiva(a)) return false;
                 if (filtroEspecial === 'atrasados') {
                     const ult = getUltimoRegistro(a, lang);
@@ -176,7 +217,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 const res = diasA - diasB;
                 return ordemCrescente ? res : res * -1;
             });
-    }, [alunos, termo, filtroStatus, filtrosTiposAtivos, filtroGenero, filtroEspecial, ordenacao, ordemCrescente, CARGOS_MAP, lang]);
+    }, [alunos, termo, filtroStatus, filtrosTiposAtivos, filtrosPartesAtivas, filtroGenero, filtroEspecial, ordenacao, ordemCrescente, CARGOS_MAP, lang]);
 
     const familiasOptions = useMemo(() => {
         const familias = new Set();
@@ -413,7 +454,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 <div className={`${mobileFiltersOpen ? 'grid' : 'hidden'} grid-cols-2 sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-3`}>
                     <StatCard
                         icon={<UsersRound size={18} />} label={t.estatisticas.total} value={stats.total}
-                        isActive={!hasActiveFilters || (hasActiveFilters && filtroStatus === 'ativos' && termo === '' && filtrosTiposAtivos.length === 0 && filtroGenero === 'todos' && filtroEspecial === 'todos')}
+                        isActive={!hasActiveFilters || (hasActiveFilters && filtroStatus === 'ativos' && termo === '' && filtrosTiposAtivos.length === 0 && filtrosPartesAtivas.length === 0 && filtroGenero === 'todos' && filtroEspecial === 'todos')}
                         onClick={() => { limparFiltros(); setFiltroStatus('ativos'); }}
                         colorClass="text-blue-500" activeClass="bg-blue-600 border-blue-600 shadow-lg text-white"
                         customClass="col-span-2 sm:col-span-1"
@@ -457,6 +498,64 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                         <div className="flex border border-gray-200 rounded-xl overflow-hidden bg-gray-50 w-full lg:w-auto shrink-0">
                             <button onClick={() => setFiltroStatus('todos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 text-[10px] font-black uppercase transition ${filtroStatus === 'todos' ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:bg-white'}`} title={t.acessibilidade.mostrarTodos}>{t.filtros.todos}</button>
                             <button onClick={() => setFiltroStatus('ativos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 border-l border-gray-200 text-[10px] font-black uppercase transition flex items-center justify-center gap-1 ${filtroStatus === 'ativos' ? 'bg-green-500 text-white' : 'text-gray-400 hover:bg-white'}`} title={t.acessibilidade.apenasAtivos}>{t.filtros.ativos}</button>
+                        </div>
+
+                        {/* Partes habilitadas */}
+                        <div className="relative w-full lg:w-auto shrink-0" ref={partesFilterRef}>
+                            <button
+                                type="button"
+                                onClick={() => setMenuPartesOpen((prev) => !prev)}
+                                className={`w-full lg:w-[220px] py-3 lg:py-2 px-3 rounded-xl border text-[10px] font-black uppercase transition flex items-center justify-between gap-2 ${filtrosPartesAtivas.length > 0 ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-white'}`}
+                                title={t.acessibilidade.filtrarPorPartes}
+                            >
+                                <span className="truncate">{partesSelecionadasLabel}</span>
+                                <ChevronDown size={14} className={`shrink-0 transition ${menuPartesOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {menuPartesOpen && (
+                                <div className="absolute left-0 mt-2 w-full lg:w-[360px] max-h-[70vh] overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-2xl z-[150] p-3 animate-in fade-in zoom-in duration-150">
+                                    <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-2 mb-2">
+                                        <span className="text-[10px] font-black uppercase text-gray-500">{t.filtros.partes}</span>
+                                        {filtrosPartesAtivas.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setFiltrosPartesAtivas([])}
+                                                className="text-[10px] font-black uppercase text-red-500 hover:text-red-600"
+                                            >
+                                                {t.filtros.limparPartes}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {gruposPartes.map((grupo) => (
+                                            <div key={grupo.key}>
+                                                <p className="px-1 pb-1 text-[10px] font-black uppercase text-gray-400">
+                                                    {grupo.labels?.[lang] || grupo.labels?.pt}
+                                                </p>
+                                                <div className="space-y-1">
+                                                    {grupo.capabilities.map((parte) => {
+                                                        const checked = filtrosPartesAtivas.includes(parte.key);
+                                                        return (
+                                                            <button
+                                                                key={parte.key}
+                                                                type="button"
+                                                                onClick={() => toggleFiltroParte(parte.key)}
+                                                                className={`w-full min-h-10 rounded-xl border px-3 py-2 text-left text-xs font-bold transition flex items-center gap-2 ${checked ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-100 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50/60'}`}
+                                                            >
+                                                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-transparent'}`}>
+                                                                    <Check size={13} />
+                                                                </span>
+                                                                <span className="leading-snug">{parte.labels?.[lang] || parte.labels?.pt}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Ordenação */}

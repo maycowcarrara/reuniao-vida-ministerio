@@ -41,6 +41,26 @@ const normalizarTexto = (texto) => {
     return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
+const criarMapaTextoNormalizado = (texto) => {
+    const original = String(texto || '');
+    let normalizado = '';
+    const indicesOriginais = [];
+
+    for (let i = 0; i < original.length; i += 1) {
+        const caractereNormalizado = original[i]
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        for (const caractere of caractereNormalizado) {
+            normalizado += caractere;
+            indicesOriginais.push(i);
+        }
+    }
+
+    return { normalizado, indicesOriginais };
+};
+
 const extrairNumeroCantico = (texto) => {
     if (!texto) return '';
     const regex = /(c[âa]ntico|canci[oó]n)\s*(\d+)/i;
@@ -436,6 +456,49 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
     const toggleSemana = (idx) => setSemanaExpandida(prev => prev === idx ? null : idx);
 
+    const destacarTermoPesquisado = (texto) => {
+        const original = String(texto || '');
+        if (!termo || !original) return original;
+
+        const { normalizado, indicesOriginais } = criarMapaTextoNormalizado(original);
+        const trechos = [];
+        let cursorOriginal = 0;
+        let buscaInicio = 0;
+        let chave = 0;
+
+        while (buscaInicio < normalizado.length) {
+            const matchIndex = normalizado.indexOf(termo, buscaInicio);
+            if (matchIndex === -1) break;
+
+            const inicioOriginal = indicesOriginais[matchIndex];
+            const fimOriginal = indicesOriginais[matchIndex + termo.length - 1] + 1;
+
+            if (inicioOriginal > cursorOriginal) {
+                trechos.push(original.slice(cursorOriginal, inicioOriginal));
+            }
+
+            trechos.push(
+                <mark
+                    key={`busca-${chave}`}
+                    className="rounded bg-amber-200 px-0.5 font-black text-slate-950"
+                >
+                    {original.slice(inicioOriginal, fimOriginal)}
+                </mark>
+            );
+
+            cursorOriginal = fimOriginal;
+            buscaInicio = matchIndex + termo.length;
+            chave += 1;
+        }
+
+        if (!trechos.length) return original;
+        if (cursorOriginal < original.length) {
+            trechos.push(original.slice(cursorOriginal));
+        }
+
+        return trechos;
+    };
+
     const renderApoioMeioSemanaConteudo = (sem) => {
         const responsabilidades = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
         const itens = MEIO_SEMANA_RESPONSABILIDADES
@@ -460,7 +523,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                     {itens.map((item) => (
                         <div key={item.key} className="rounded-xl bg-slate-50 px-3 py-2">
                             <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
-                            <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{item.valor}</p>
+                            <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{destacarTermoPesquisado(item.valor)}</p>
                         </div>
                     ))}
                 </div>
@@ -500,7 +563,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                     </div>
                     <div className="min-w-0">
                         <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
-                        <p className="truncate text-[13px] font-bold text-slate-900">{nome}</p>
+                        <p className="truncate text-[13px] font-bold text-slate-900">{destacarTermoPesquisado(nome)}</p>
                     </div>
                 </div>
             );
@@ -522,7 +585,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             return (
                 <div className="rounded-xl bg-slate-50 px-3 py-2">
                     <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
-                    <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{valor}</p>
+                    <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{destacarTermoPesquisado(valor)}</p>
                 </div>
             );
         };
@@ -562,7 +625,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                         {responsabilidades.map((item) => (
                             <div key={item.key} className="rounded-xl bg-slate-50 px-3 py-2">
                                 <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
-                                <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{item.valor}</p>
+                                <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{destacarTermoPesquisado(item.valor)}</p>
                             </div>
                         ))}
                     </div>
@@ -755,7 +818,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                         <div className="text-left">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <h3 className="font-black text-slate-800 text-base">
-                                                    {isFimDeSemana ? (T.reuniaoFimDeSemana || T.fimDeSemana || 'Reunião de fim de semana') : sem.semana}
+                                                    {isFimDeSemana
+                                                        ? (T.reuniaoFimDeSemana || T.fimDeSemana || 'Reunião de fim de semana')
+                                                        : (T.reuniaoMeioSemana || 'Reunião de meio de semana')}
                                                 </h3>
                                                 {isHoje && (
                                                     <span className="bg-emerald-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-md shadow-sm animate-pulse">{T.hoje}</span>
@@ -768,7 +833,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                 <Calendar size={12} /> {formatarDataCompleta(dataRef, lang, T)}
                                                 {isFimDeSemana && sem.fimDeSemana?.horario && <span>• {sem.fimDeSemana.horario}</span>}
                                             </p>
-                                            {isFimDeSemana && (
+                                            {!isFimDeSemana && (
                                                 <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                                                     {sem.semana}
                                                 </p>
@@ -822,7 +887,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                             </div>
                                                             <div>
                                                                 <p className="text-[10px] font-black text-slate-400 uppercase">{T.presidente}</p>
-                                                                <p className="text-[13px] font-bold text-slate-800">{sem.presidente.nome}</p>
+                                                                <p className="text-[13px] font-bold text-slate-800">{destacarTermoPesquisado(sem.presidente.nome)}</p>
                                                             </div>
                                                         </div>
                                                     )}
@@ -976,10 +1041,10 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                                     {parte.oracao?.nome && !parte.estudante && !parte.dirigente && (
                                                                                         <span className="text-slate-500 font-bold text-[10px] mr-1.5 uppercase tracking-wider bg-slate-200/50 px-1.5 py-0.5 rounded">{T.oracao}:</span>
                                                                                     )}
-                                                                                    {principal.nome}
+                                                                                    {destacarTermoPesquisado(principal.nome)}
                                                                                 </p>
-                                                                                {parte.ajudante?.nome && <p className="text-[11px] mt-1 text-slate-500 flex items-center gap-1"><ChevronRight size={10} className="text-blue-400" /> {T.ajuda}: {parte.ajudante.nome}</p>}
-                                                                                {parte.leitor?.nome && <p className="text-[11px] mt-1 text-slate-500 flex items-center gap-1"><BookOpen size={10} className="text-blue-400" /> {T.leitor}: {parte.leitor.nome}</p>}
+                                                                                {parte.ajudante?.nome && <p className="text-[11px] mt-1 text-slate-500 flex items-center gap-1"><ChevronRight size={10} className="text-blue-400" /> {T.ajuda}: {destacarTermoPesquisado(parte.ajudante.nome)}</p>}
+                                                                                {parte.leitor?.nome && <p className="text-[11px] mt-1 text-slate-500 flex items-center gap-1"><BookOpen size={10} className="text-blue-400" /> {T.leitor}: {destacarTermoPesquisado(parte.leitor.nome)}</p>}
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -1016,18 +1081,18 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                                     {parte.oracao?.nome && !parte.estudante && !parte.dirigente && (
                                                                                         <span className="text-slate-500 font-bold text-[10px] mr-1.5 uppercase tracking-wider bg-slate-200/50 px-1.5 py-0.5 rounded">{T.oracao}:</span>
                                                                                     )}
-                                                                                    {principal.nome}
+                                                                                    {destacarTermoPesquisado(principal.nome)}
                                                                                 </p>
                                                                                 {parte.ajudante?.nome && (
                                                                                     <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-600">
                                                                                         <ChevronRight size={10} className="text-blue-400" />
-                                                                                        {T.ajudante || 'Ajudante'}: <span className="font-bold text-slate-800">{parte.ajudante.nome}</span>
+                                                                                        {T.ajudante || 'Ajudante'}: <span className="font-bold text-slate-800">{destacarTermoPesquisado(parte.ajudante.nome)}</span>
                                                                                     </p>
                                                                                 )}
                                                                                 {parte.leitor?.nome && (
                                                                                     <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-600">
                                                                                         <BookOpen size={10} className="text-blue-400" />
-                                                                                        {T.leitor}: <span className="font-bold text-slate-800">{parte.leitor.nome}</span>
+                                                                                        {T.leitor}: <span className="font-bold text-slate-800">{destacarTermoPesquisado(parte.leitor.nome)}</span>
                                                                                     </p>
                                                                                 )}
                                                                             </div>
