@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { ToastProvider } from './components/ToastProvider.jsx'
 import { ensurePwaInstallListener } from './hooks/usePwaInstall.js'
-import { registerAppUpdater, registerServiceWorkerRegistration } from './services/appUpdater.js'
+import { registerAppUpdater, registerServiceWorkerRegistration, reloadAppWithCacheBust } from './services/appUpdater.js'
 import { toast } from './utils/toast.js'
 import './index.css'
 import 'drag-drop-touch';
@@ -12,6 +12,19 @@ import 'drag-drop-touch';
 import { registerSW } from 'virtual:pwa-register'
 
 ensurePwaInstallListener()
+
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  reloadAppWithCacheBust('preload-error')
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  const message = String(event?.reason?.message || event?.reason || '')
+  if (message.includes('Failed to fetch dynamically imported module')) {
+    event.preventDefault()
+    reloadAppWithCacheBust('dynamic-import')
+  }
+})
 
 // Ativa o Service Worker imediatamente para garantir o cache offline
 const updateServiceWorker = registerSW({

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Globe, X, Minimize, WifiOff, Menu, LayoutDashboard, Send } from 'lucide-react';
 
@@ -542,7 +542,15 @@ function AdminPanel() {
     await excluirSemanaELimparHistorico(id, dataDaSemana);
   };
 
-  const handleExcluirAlunoBanco = async (id) => await excluirItem('alunos', id);
+  const handleSalvarAlunoBanco = useCallback(
+    async (aluno) => await salvarItem('alunos', aluno.id, aluno),
+    [salvarItem]
+  );
+
+  const handleExcluirAlunoBanco = useCallback(
+    async (id) => await excluirItem('alunos', id),
+    [excluirItem]
+  );
 
   if (loading) {
     return (
@@ -741,7 +749,7 @@ function AdminPanel() {
                 onSolicitarSubstituicao={handleSolicitarSubstituicao}
               />
             )}
-            {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} onSalvarAluno={(aluno) => salvarItem('alunos', aluno.id, aluno)} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
+            {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} onSalvarAluno={handleSalvarAlunoBanco} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
             {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} />}
           </Suspense>
         </div>

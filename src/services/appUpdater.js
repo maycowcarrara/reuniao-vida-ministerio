@@ -39,6 +39,30 @@ const clearAppCaches = async () => {
     }
 };
 
+let automaticReloadStarted = false;
+
+export const reloadAppWithCacheBust = async (reason = 'asset-error') => {
+    if (automaticReloadStarted || typeof window === 'undefined') return;
+    automaticReloadStarted = true;
+
+    try {
+        const key = `rvm_auto_reload_${reason}`;
+        const now = Date.now();
+        const previous = Number(window.sessionStorage?.getItem(key) || 0);
+
+        if (previous && now - previous < 10000) return;
+        window.sessionStorage?.setItem(key, String(now));
+    } catch {
+        // Continue with the reload even if sessionStorage is unavailable.
+    }
+
+    await clearAppCaches();
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('assetReload', String(Date.now()));
+    window.location.replace(url.toString());
+};
+
 const waitForControllerChange = async () => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 

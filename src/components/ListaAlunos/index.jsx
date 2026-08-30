@@ -4,7 +4,7 @@ import AlunoCard from './AlunoCard';
 import AlunoListItem from './AlunoListItem';
 import ModalHistorico from './ModalHistorico';
 import ModalFormulario from './ModalFormulario';
-import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, normalizeUnavailableDatesForAluno, pruneExpiredUnavailableDates } from './utils';
+import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, pruneExpiredUnavailableDates } from './utils';
 import { toast } from '../../utils/toast';
 import { getAlunoCapabilities, getAssignmentCapabilitiesByGroup, getLegacyCapabilitiesForTipo, normalizeAssignmentCapabilities } from '../../utils/assignmentEligibility';
 
@@ -21,6 +21,21 @@ const StatCard = ({ icon, label, value, isActive, onClick, colorClass, activeCla
         <span className={`text-[10px] font-bold uppercase tracking-tight mt-1 ${isActive ? 'text-white/90' : 'text-gray-500'}`}>{label}</span>
     </button>
 );
+
+const SAVE_TIMEOUT_MS = 15000;
+
+const withSaveTimeout = (promise, message) => {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+            reject(Object.assign(new Error(message), { code: 'deadline-exceeded' }));
+        }, SAVE_TIMEOUT_MS);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => {
+        window.clearTimeout(timeoutId);
+    });
+};
 
 const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config, cargosMap }) => {
     const CARGOS_MAP = cargosMap || CARGOS_MAP_FALLBACK;
@@ -51,7 +66,6 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
     const [alunoHistorico, setAlunoHistorico] = useState(null);
     const partesFilterRef = useRef(null);
-    const cleanupUnavailableSignatureRef = useRef('');
 
     const [viewMode, setViewMode] = useState(() => {
         try {
@@ -89,32 +103,6 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         document.addEventListener('pointerdown', onPointerDown);
         return () => document.removeEventListener('pointerdown', onPointerDown);
     }, [menuPartesOpen]);
-
-    useEffect(() => {
-        if (!onSalvarAluno || !Array.isArray(alunos) || alunos.length === 0) return;
-
-        const alunosComLimpeza = alunos
-            .map((aluno) => normalizeUnavailableDatesForAluno(aluno))
-            .filter((result) => result.removedCount > 0 && result.aluno?.id);
-
-        if (alunosComLimpeza.length === 0) {
-            cleanupUnavailableSignatureRef.current = '';
-            return;
-        }
-
-        const signature = alunosComLimpeza
-            .map((result) => `${result.aluno.id}:${(result.aluno.datasIndisponiveis || []).map((d) => `${d.inicio}-${d.fim}`).join(',')}`)
-            .join('|');
-
-        if (cleanupUnavailableSignatureRef.current === signature) return;
-        cleanupUnavailableSignatureRef.current = signature;
-
-        alunosComLimpeza.forEach((result) => {
-            Promise.resolve(onSalvarAluno(result.aluno)).catch((error) => {
-                console.error('Erro ao limpar datas indisponíveis vencidas:', error);
-            });
-        });
-    }, [alunos, onSalvarAluno]);
 
     // Calcular Estatísticas Iniciais (Ignorando Filtros)
     const stats = useMemo(() => {
@@ -342,12 +330,18 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 ? { ...clean, id: String(Math.max(0, ...(alunos || []).map(a => Number(a.id) || 0)) + 1) }
                 : clean;
 
-            if (isNovoAluno) {
-                if (onSalvarAluno) await Promise.resolve(onSalvarAluno(alunoParaSalvar));
-                else await Promise.resolve(setAlunos([...(alunos || []), alunoParaSalvar]));
+            const salvarAlunoAtual = isNovoAluno
+                ? () => (onSalvarAluno
+                    ? Promise.resolve(onSalvarAluno(alunoParaSalvar))
+                    : Promise.resolve(setAlunos([...(alunos || []), alunoParaSalvar])))
+                : () => (onSalvarAluno
+                    ? Promise.resolve(onSalvarAluno(alunoParaSalvar))
+                    : Promise.resolve(setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a))));
+
+            if (onSalvarAluno) {
+                await withSaveTimeout(salvarAlunoAtual(), t.msg.salvarDemorado);
             } else {
-                if (onSalvarAluno) await Promise.resolve(onSalvarAluno(alunoParaSalvar));
-                else await Promise.resolve(setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a)));
+                await salvarAlunoAtual();
             }
 
             setModalFormOpen(false);

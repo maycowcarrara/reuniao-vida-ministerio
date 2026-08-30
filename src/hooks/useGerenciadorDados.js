@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { db, auth } from '../services/firebase';
 import {
     collection,
@@ -134,7 +134,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
 
     // --- AÇÕES ---
 
-    const salvarItem = async (colecao, id, objeto) => {
+    const salvarItem = useCallback(async (colecao, id, objeto) => {
         if (!usuario || !dataOwnerUid) return;
         const path = `users/${dataOwnerUid}/${colecao}`;
         const idNormalizado = id != null ? String(id).trim() : '';
@@ -142,14 +142,14 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
         const objetoLimpo = JSON.parse(JSON.stringify(objeto));
         const deveMesclar = colecao !== 'programacao';
         await setDoc(docRef, { ...objetoLimpo, id: docRef.id }, { merge: deveMesclar });
-    };
+    }, [usuario, dataOwnerUid]);
 
-    const excluirItem = async (colecao, id) => {
+    const excluirItem = useCallback(async (colecao, id) => {
         if (!usuario || !dataOwnerUid) return;
         await deleteDoc(doc(db, `users/${dataOwnerUid}/${colecao}`, String(id)));
-    };
+    }, [usuario, dataOwnerUid]);
 
-    const publicarQuadroPublico = async (payload) => {
+    const publicarQuadroPublico = useCallback(async (payload) => {
         if (!usuario || !dataOwnerUid) return;
         const objetoLimpo = JSON.parse(JSON.stringify(payload || {}));
         await setDoc(doc(db, 'quadros_publicos', dataOwnerUid), {
@@ -157,7 +157,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true } = {}) {
             ownerUid: dataOwnerUid,
             updatedAtIso: new Date().toISOString()
         });
-    };
+    }, [usuario, dataOwnerUid]);
 
     // --- FUNÇÃO SIMPLIFICADA: EXCLUIR SEMANA ---
     // Mantivemos o mesmo nome para não quebrar a importação no App.jsx
