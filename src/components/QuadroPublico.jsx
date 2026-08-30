@@ -767,6 +767,9 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                             const isHoje = dataRef === hojeStr;
                             const estaAoVivo = modoTempoReal && reuniaoAoVivo === idx;
                             const estaEmContagem = modoPreLive && reuniaoEmContagem.index === idx;
+                            const horarioCabecalho = isFimDeSemana
+                                ? sem.fimDeSemana?.horario
+                                : (config?.horarioReuniao ?? config?.horario ?? '');
                             const contagemSemana = estaEmContagem && sem.partes?.[0]
                                 ? formatarContagemRegressiva(sem.partes[0].startObj.getTime() - agora.getTime())
                                 : null;
@@ -831,7 +834,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                             </div>
                                             <p className="text-blue-600 font-bold text-xs flex items-center gap-1.5 uppercase">
                                                 <Calendar size={12} /> {formatarDataCompleta(dataRef, lang, T)}
-                                                {isFimDeSemana && sem.fimDeSemana?.horario && <span>• {sem.fimDeSemana.horario}</span>}
+                                                {horarioCabecalho && <span>• {horarioCabecalho}</span>}
                                             </p>
                                             {!isFimDeSemana && (
                                                 <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
