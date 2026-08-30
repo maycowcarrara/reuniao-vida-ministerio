@@ -68,11 +68,9 @@ const NavegadorSemanas = ({
         if (fds.ativo) {
             const isVisita = getTipoEventoSemana(sem, config) === 'visita';
             addRequiredSlot(fds.presidente);
-            addRequiredSlot(fds.oracaoFinal);
             addRequiredText(fds.reuniaoPublica.temaDiscurso);
             addRequiredText(fds.reuniaoPublica.oradorNomeManual);
             addRequiredText(fds.reuniaoPublica.congregacaoOrador);
-            addRequiredSlot(fds.estudoSentinela.dirigente);
             addRequiredSlot(fds.estudoSentinela.leitor);
             if (isVisita) addRequiredText(fds.visitaSuperintendente.discursoFinal);
 

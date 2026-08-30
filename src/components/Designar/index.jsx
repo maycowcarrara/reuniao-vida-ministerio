@@ -378,11 +378,9 @@ const Designar = ({
         if (!fds.ativo) return true;
 
         if (!hasPessoaDesignada(fds.presidente)) return false;
-        if (!hasPessoaDesignada(fds.oracaoFinal)) return false;
         if (!hasTextoPreenchido(fds.reuniaoPublica.temaDiscurso)) return false;
         if (!hasTextoPreenchido(fds.reuniaoPublica.oradorNomeManual)) return false;
         if (!hasTextoPreenchido(fds.reuniaoPublica.congregacaoOrador)) return false;
-        if (!hasPessoaDesignada(fds.estudoSentinela.dirigente)) return false;
         if (!hasPessoaDesignada(fds.estudoSentinela.leitor)) return false;
         if (getTipoEventoSemana(sem, config) === 'visita' && !hasTextoPreenchido(fds.visitaSuperintendente.discursoFinal)) return false;
 

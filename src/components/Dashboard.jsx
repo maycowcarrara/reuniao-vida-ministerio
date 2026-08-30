@@ -175,8 +175,6 @@ export default function Dashboard({
             const fds = normalizeFimDeSemana(semana?.fimDeSemana);
             if (fds.ativo && hasFimDeSemanaData(semana?.fimDeSemana)) {
                 addRequiredSlot(fds.presidente, totals);
-                addRequiredSlot(fds.oracaoFinal, totals);
-                addRequiredSlot(fds.estudoSentinela?.dirigente, totals);
                 addRequiredSlot(fds.estudoSentinela?.leitor, totals);
                 if (getTipoEventoSemana(semana, config) === 'visita') {
                     addRequiredText(fds.visitaSuperintendente?.discursoFinal, totals);

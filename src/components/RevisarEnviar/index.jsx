@@ -79,6 +79,7 @@ const RevisarEnviar = ({
     const [abaAtiva, setAbaAtiva] = useState('imprimir');
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
     const [sentMap, setSentMap] = useState({});
+    const incluirFimDeSemanaManualRef = useRef(false);
 
     useEffect(() => {
         if (!reviewShortcutRequest?.token) return;
@@ -309,13 +310,28 @@ const RevisarEnviar = ({
         return marcadas.length ? marcadas : semanasDisponiveis.slice(0, qtdSemanas);
     }, [semanasDisponiveis, printSelecionadas, qtdSemanas]);
 
+    const selecaoPrintSignature = useMemo(
+        () => [
+            qtdSemanas,
+            ...semanasParaImprimir.map((sem, idx) => getSemanaKey(sem, idx)),
+        ].join('|'),
+        [qtdSemanas, semanasParaImprimir]
+    );
+    const selecaoPrintSignatureRef = useRef(selecaoPrintSignature);
+
+    useEffect(() => {
+        if (selecaoPrintSignatureRef.current === selecaoPrintSignature) return;
+        incluirFimDeSemanaManualRef.current = false;
+        selecaoPrintSignatureRef.current = selecaoPrintSignature;
+    }, [selecaoPrintSignature]);
+
     const selecaoTemFimDeSemanaDesignado = useMemo(
         () => qtdSemanas === 1 && semanasParaImprimir.some(temFimDeSemanaDesignado),
         [qtdSemanas, semanasParaImprimir]
     );
 
     useEffect(() => {
-        if (selecaoTemFimDeSemanaDesignado && !incluirFimDeSemana) {
+        if (selecaoTemFimDeSemanaDesignado && !incluirFimDeSemana && !incluirFimDeSemanaManualRef.current) {
             setIncluirFimDeSemana(true);
         }
     }, [selecaoTemFimDeSemanaDesignado, incluirFimDeSemana]);
@@ -988,6 +1004,16 @@ const RevisarEnviar = ({
         );
     };
 
+    const alterarQtdSemanas = (valor) => {
+        incluirFimDeSemanaManualRef.current = false;
+        setQtdSemanas(valor);
+    };
+
+    const alterarIncluirFimDeSemana = (valor) => {
+        incluirFimDeSemanaManualRef.current = true;
+        setIncluirFimDeSemana(valor);
+    };
+
     return (
         <div className="space-y-6 flex flex-col relative print:block print:h-auto print:overflow-visible">
 
@@ -1001,9 +1027,9 @@ const RevisarEnviar = ({
                     filtroSemanas={filtroSemanas}
                     setFiltroSemanas={setFiltroSemanas}
                     qtdSemanas={qtdSemanas}
-                    setQtdSemanas={setQtdSemanas}
+                    setQtdSemanas={alterarQtdSemanas}
                     incluirFimDeSemana={incluirFimDeSemana}
-                    setIncluirFimDeSemana={setIncluirFimDeSemana}
+                    setIncluirFimDeSemana={alterarIncluirFimDeSemana}
                     historicoSelect={historicoSelect}
                     showWeekTabs={true}
                     semanasDisponiveis={semanasDisponiveis}
