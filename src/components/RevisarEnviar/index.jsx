@@ -404,8 +404,10 @@ const RevisarEnviar = ({
             congregacaoOrador ? `(${congregacaoOrador})` : '',
         ].filter(Boolean).join(' ');
         const temaDiscurso = (fds.reuniaoPublica.temaDiscurso || '').trim();
+        const dirigenteSentinelaNome = (fds.estudoSentinela.dirigente?.nome || '').trim();
+        const leitorSentinelaNome = (fds.estudoSentinela.leitor?.nome || '').trim();
         const temReuniaoPublica = !!(temaDiscurso || oradorNome.trim());
-        const temEstudoSentinela = !!(fds.estudoSentinela.dirigente?.nome || fds.estudoSentinela.leitor?.nome);
+        const temEstudoSentinela = !!(dirigenteSentinelaNome || leitorSentinelaNome);
         const discursoFinalVisita = (fds.visitaSuperintendente.discursoFinal || '').trim();
         const fimDeSemanaMeta = [
             fds.data ? formatarDataFolha(fds.data, lang) : '',
@@ -472,11 +474,19 @@ const RevisarEnviar = ({
                     ), 'text-blue-800')}
 
                     {temEstudoSentinela && renderFdsSecao(t.estudoSentinela || 'Estudo de A Sentinela', (
-                        <div className="grid grid-cols-[132px_1fr_132px_1fr] gap-x-2 border-b border-gray-200 py-0.5">
-                            <span className="font-black uppercase text-gray-500">{t.dirigente}</span>
-                            <span className="font-semibold text-gray-900">{fds.estudoSentinela.dirigente?.nome || '—'}</span>
-                            <span className="font-black uppercase text-gray-500">{t.leitor}</span>
-                            <span className="font-semibold text-gray-900">{fds.estudoSentinela.leitor?.nome || '—'}</span>
+                        <div className={`grid gap-x-2 border-b border-gray-200 py-0.5 ${dirigenteSentinelaNome && leitorSentinelaNome ? 'grid-cols-[132px_1fr_132px_1fr]' : 'grid-cols-[132px_1fr]'}`}>
+                            {dirigenteSentinelaNome && (
+                                <>
+                                    <span className="font-black uppercase text-gray-500">{t.dirigente}</span>
+                                    <span className="font-semibold text-gray-900">{dirigenteSentinelaNome}</span>
+                                </>
+                            )}
+                            {leitorSentinelaNome && (
+                                <>
+                                    <span className="font-black uppercase text-gray-500">{t.leitor}</span>
+                                    <span className="font-semibold text-gray-900">{leitorSentinelaNome}</span>
+                                </>
+                            )}
                         </div>
                     ), 'text-amber-800')}
 
