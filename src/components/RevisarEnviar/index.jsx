@@ -43,6 +43,22 @@ import {
     isSongOnlyPart
 } from '../../utils/meetingParts';
 
+const hasPessoaDesignada = (pessoa) => !!(pessoa?.id || pessoa?.nome);
+
+const temFimDeSemanaDesignado = (sem) => {
+    const fds = normalizeFimDeSemana(sem?.fimDeSemana);
+    if (!fds.ativo) return false;
+    if (hasPessoaDesignada(fds.presidente) || hasPessoaDesignada(fds.oracaoFinal)) return true;
+    if ((fds.reuniaoPublica.temaDiscurso || '').trim()) return true;
+    if ((fds.reuniaoPublica.oradorNomeManual || '').trim()) return true;
+    if ((fds.reuniaoPublica.congregacaoOrador || '').trim()) return true;
+    if (hasPessoaDesignada(fds.estudoSentinela.dirigente) || hasPessoaDesignada(fds.estudoSentinela.leitor)) return true;
+    if ((fds.visitaSuperintendente.discursoFinal || '').trim()) return true;
+    return FIM_DE_SEMANA_RESPONSABILIDADES.some(({ storageKey }) =>
+        (fds.responsabilidades[storageKey] || []).some(hasPessoaDesignada)
+    );
+};
+
 const RevisarEnviar = ({
     historico,
     alunos,
@@ -293,6 +309,17 @@ const RevisarEnviar = ({
         return marcadas.length ? marcadas : semanasDisponiveis.slice(0, qtdSemanas);
     }, [semanasDisponiveis, printSelecionadas, qtdSemanas]);
 
+    const selecaoTemFimDeSemanaDesignado = useMemo(
+        () => qtdSemanas === 1 && semanasParaImprimir.some(temFimDeSemanaDesignado),
+        [qtdSemanas, semanasParaImprimir]
+    );
+
+    useEffect(() => {
+        if (selecaoTemFimDeSemanaDesignado && !incluirFimDeSemana) {
+            setIncluirFimDeSemana(true);
+        }
+    }, [selecaoTemFimDeSemanaDesignado, incluirFimDeSemana]);
+
     // --- CÁLCULO DE DATA ---
     const getDataReuniaoISO = (sem) => {
         const eventoEspecial = getEventoEspecialDaSemana(sem, config);
@@ -360,6 +387,18 @@ const RevisarEnviar = ({
         };
     };
 
+    const formatarDataCurtaTitulo = (dataISO) => {
+        if (!dataISO) return '';
+        const [ano, mes, dia] = dataISO.split('-').map(Number);
+        if (![ano, mes, dia].every(Number.isFinite)) return '';
+        return `${dia}/${mes}`;
+    };
+
+    const montarTituloReuniaoPrint = (titulo, dataISO) => {
+        const dataCurta = formatarDataCurtaTitulo(dataISO);
+        return dataCurta ? `${titulo} (${dataCurta})` : titulo;
+    };
+
     const renderResponsabilidadesMeioSemanaPrint = (semana) => {
         if (qtdSemanas !== 1 || !hasResponsabilidadesData(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES)) return null;
         const responsabilidades = normalizeResponsabilidades(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
@@ -409,6 +448,7 @@ const RevisarEnviar = ({
         const temReuniaoPublica = !!(temaDiscurso || oradorNome.trim());
         const temEstudoSentinela = !!(dirigenteSentinelaNome || leitorSentinelaNome);
         const discursoFinalVisita = (fds.visitaSuperintendente.discursoFinal || '').trim();
+        const tituloFimDeSemana = montarTituloReuniaoPrint(t.reuniaoFimDeSemana || 'Reunião de fim de semana', fds.data);
         const fimDeSemanaMeta = [
             fds.data ? formatarDataFolha(fds.data, lang) : '',
             fds.horario,
@@ -453,7 +493,7 @@ const RevisarEnviar = ({
             <div className="mt-2.5 border-t-2 border-gray-400 pt-2 print:mt-2 print:pt-1.5">
                 <div className="border-b border-gray-300 pb-1 text-center">
                     <h3 className="text-[19px] print:text-[15px] font-bold uppercase tracking-tighter leading-tight text-gray-900">
-                        {t.reuniaoFimDeSemana || 'Reunião de fim de semana'}
+                        {tituloFimDeSemana}
                     </h3>
                     {fimDeSemanaMeta && (
                         <p className="mt-0.5 text-[12px] print:text-[10.5px] font-bold uppercase leading-tight text-gray-500">
@@ -1051,6 +1091,7 @@ const RevisarEnviar = ({
                                 {semanasDaPagina.map((semana, idxSem) => {
                                     const dataISO = getDataReuniaoISO(semana);
                                     const horarioExib = config?.horarioReuniao ?? config?.horario ?? '19:30';
+                                    const tituloMeioSemana = montarTituloReuniaoPrint(t.reuniaoMeioSemana || 'Reunião de meio de semana', dataISO);
 
                                     const tipoEvento = getTipoEventoSemana(semana, config);
                                     const isVisita = tipoEvento === 'visita';
@@ -1067,7 +1108,7 @@ const RevisarEnviar = ({
                                                     `}
                                                 >
                                                     <h2 className={`${layout.h1} font-bold uppercase tracking-tighter flex items-center justify-center gap-2`}>
-                                                        {semana.semana}
+                                                        {tituloMeioSemana}
                                                         {isVisita && (
                                                             <span className="text-[9px] bg-white text-blue-700 px-2 py-0.5 rounded border border-blue-700 font-bold uppercase tracking-widest">
                                                                 {t.visitTag}
@@ -1093,7 +1134,7 @@ const RevisarEnviar = ({
                                                 </div>
                                             ) : (
                                                 <div className="re-week-header">
-                                                    <div className="re-week-title">{semana.semana}</div>
+                                                    <div className="re-week-title">{tituloMeioSemana}</div>
                                                     <div className="re-week-meta">
                                                         {formatarDataFolha(dataISO, lang)} • {horarioExib} • {config?.nome_cong}
                                                     </div>
