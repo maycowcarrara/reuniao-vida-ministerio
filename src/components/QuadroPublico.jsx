@@ -131,20 +131,63 @@ const calcularHorarios = (partes, dataIso, horarioBase, lang) => {
     });
 };
 
-const gerarLinkAgenda = (parte, dataSemanaISO, texts) => {
-    const dataReuniao = dataSemanaISO ? new Date(dataSemanaISO + 'T19:30:00') : new Date();
-    const start = dataReuniao.toISOString().replace(/-|:|\.\d+/g, '');
-    const dataFim = new Date(dataReuniao.getTime() + (parseInt(parte.tempo) || 10) * 60000);
-    const end = dataFim.toISOString().replace(/-|:|\.\d+/g, '');
+const gerarLinkAgenda = (parte, dataSemanaISO, texts, horarioBase = '19:30') => {
+    let start = '';
+    let end = '';
 
-    const principal = parte.estudante || parte.dirigente || parte.oracao;
+    if (parte?.startObj instanceof Date && !isNaN(parte.startObj.getTime()) && parte?.endObj instanceof Date && !isNaN(parte.endObj.getTime())) {
+        start = parte.startObj.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        end = parte.endObj.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    } else {
+        const [hora, minuto] = (horarioBase || '19:30').split(':').map((v) => parseInt(v, 10) || 0);
+        const dataReuniao = dataSemanaISO ? new Date(`${dataSemanaISO}T00:00:00`) : new Date();
+        dataReuniao.setHours(hora, minuto, 0, 0);
+        start = dataReuniao.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        const dataFim = new Date(dataReuniao.getTime() + (parseInt(parte?.tempo, 10) || 10) * 60000);
+        end = dataFim.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    }
+
+    const principal = parte?.estudante || parte?.dirigente || parte?.oracao;
     const nomePrincipal = principal?.nome ? `${texts.designado}: ${principal.nome}\n` : '';
-    const nomeAjudante = parte.ajudante?.nome ? `${texts.ajudante}: ${parte.ajudante.nome}\n` : '';
-    const nomeLeitor = parte.leitor?.nome ? `${texts.leitor}: ${parte.leitor.nome}\n` : '';
+    const nomeAjudante = parte?.ajudante?.nome ? `${texts.ajudante}: ${parte.ajudante.nome}\n` : '';
+    const nomeLeitor = parte?.leitor?.nome ? `${texts.leitor}: ${parte.leitor.nome}\n` : '';
 
-    const tituloComIcone = prependMeetingSectionIcon(parte.titulo, parte.secao);
+    const tituloComIcone = prependMeetingSectionIcon(parte?.titulo || '', parte?.secao);
     const texto = encodeURIComponent(`${texts.reuniao}: ${tituloComIcone}`);
-    const desc = encodeURIComponent(`${texts.tempo}: ${parte.tempo} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
+    const desc = encodeURIComponent(`${texts.tempo}: ${parte?.tempo || '10'} min\n\n${nomePrincipal}${nomeAjudante}${nomeLeitor}`);
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${texto}&dates=${start}/${end}&details=${desc}`;
+};
+
+const gerarLinkAgendaGenerico = ({
+    titulo,
+    dataISO,
+    horario,
+    tempoMin,
+    designado,
+    ajudante,
+    leitor,
+    texts
+}) => {
+    const [hora, minuto] = (horario || '19:30').split(':').map((v) => parseInt(v, 10) || 0);
+    const dataBase = dataISO ? new Date(`${dataISO}T00:00:00`) : new Date();
+    dataBase.setHours(hora, minuto, 0, 0);
+
+    const duracao = parseInt(tempoMin, 10) || 105;
+    const dataFim = new Date(dataBase.getTime() + duracao * 60000);
+
+    const start = dataBase.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const end = dataFim.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+    const texto = encodeURIComponent(`${texts?.reuniao || 'Reunião'}: ${titulo}`);
+
+    const detalhes = [];
+    if (tempoMin) detalhes.push(`${texts?.tempo || 'Tempo'}: ${tempoMin} min`);
+    if (designado) detalhes.push(`${texts?.designado || 'Designado'}: ${designado}`);
+    if (ajudante) detalhes.push(`${texts?.ajudante || 'Ajudante'}: ${ajudante}`);
+    if (leitor) detalhes.push(`${texts?.leitor || 'Leitor'}: ${leitor}`);
+
+    const desc = encodeURIComponent(detalhes.join('\n'));
 
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${texto}&dates=${start}/${end}&details=${desc}`;
 };
@@ -503,7 +546,17 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         const responsabilidades = normalizeResponsabilidades(sem?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES);
         const itens = MEIO_SEMANA_RESPONSABILIDADES
             .map(({ storageKey, labels }) => {
-                const nomes = juntarNomes(responsabilidades?.[storageKey] || []);
+                const listaPessoas = responsabilidades?.[storageKey] || [];
+                const matchLabel = Boolean(termo) && (
+                    normalizarTexto(T[storageKey] || '').includes(termo) ||
+                    normalizarTexto(labels?.[lang] || '').includes(termo) ||
+                    normalizarTexto(labels?.pt || '').includes(termo)
+                );
+                const pessoasFiltradas = termo
+                    ? (matchLabel ? listaPessoas : listaPessoas.filter(p => normalizarTexto(getNomePessoa(p)).includes(termo)))
+                    : listaPessoas;
+
+                const nomes = juntarNomes(pessoasFiltradas);
                 return nomes ? {
                     key: storageKey,
                     label: T[storageKey] || labels?.[lang] || labels?.pt || storageKey,
@@ -514,18 +567,44 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
         if (!itens.length) return null;
 
+        const horarioMeioSemana = config?.horarioReuniao || config?.horario || '19:30';
+
         return (
             <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                 <h4 className="mb-3 text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">
                     {T.apoioMeioSemana || 'Apoio do meio de semana'}
                 </h4>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {itens.map((item) => (
-                        <div key={item.key} className="rounded-xl bg-slate-50 px-3 py-2">
-                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
-                            <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{destacarTermoPesquisado(item.valor)}</p>
-                        </div>
-                    ))}
+                    {itens.map((item) => {
+                        const matchTermo = Boolean(termo) && normalizarTexto(item.valor).includes(termo);
+                        return (
+                            <div key={item.key} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                                    <p className="mt-0.5 text-[13px] font-semibold text-slate-900 truncate">{destacarTermoPesquisado(item.valor)}</p>
+                                </div>
+                                {matchTermo && (
+                                    <a
+                                        href={gerarLinkAgendaGenerico({
+                                            titulo: `${item.label} - ${T.reuniaoMeioSemana || 'Reunião de meio de semana'}`,
+                                            dataISO: sem.dataCorreta,
+                                            horario: horarioMeioSemana,
+                                            tempoMin: 105,
+                                            designado: item.valor,
+                                            texts: agendaTexts
+                                        })}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-white hover:bg-blue-50 px-2 py-1 text-blue-600 shadow-sm active:scale-95 transition-all font-bold shrink-0 ml-1"
+                                        title={T.salvarAgenda}
+                                    >
+                                        <CalendarPlus size={14} />
+                                        <span className="text-[10px] font-bold">{T.salvarAgenda}</span>
+                                    </a>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -535,7 +614,17 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
         const fds = sem.fimDeSemana || normalizeFimDeSemana(sem?.fimDeSemana);
         const responsabilidades = FIM_DE_SEMANA_RESPONSABILIDADES
             .map(({ storageKey, labels }) => {
-                const nomes = juntarNomes(fds.responsabilidades?.[storageKey] || []);
+                const listaPessoas = fds.responsabilidades?.[storageKey] || [];
+                const matchLabel = Boolean(termo) && (
+                    normalizarTexto(T[storageKey] || '').includes(termo) ||
+                    normalizarTexto(labels?.[lang] || '').includes(termo) ||
+                    normalizarTexto(labels?.pt || '').includes(termo)
+                );
+                const pessoasFiltradas = termo
+                    ? (matchLabel ? listaPessoas : listaPessoas.filter(p => normalizarTexto(getNomePessoa(p)).includes(termo)))
+                    : listaPessoas;
+
+                const nomes = juntarNomes(pessoasFiltradas);
                 return nomes ? {
                     key: storageKey,
                     label: T[storageKey] || labels?.[lang] || labels?.pt || storageKey,
@@ -545,7 +634,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             .filter(Boolean);
 
         const oracaoFinalNome = getNomePessoa(fds.oracaoFinal);
-        if (oracaoFinalNome) {
+        const matchOracao = !termo || normalizarTexto(oracaoFinalNome).includes(termo) || (termo.length >= 4 && 'oracao'.includes(termo));
+        if (oracaoFinalNome && matchOracao) {
             responsabilidades.push({
                 key: 'oracaoFinal',
                 label: T.oracaoFinal || T.oracao,
@@ -553,18 +643,48 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             });
         }
 
+        const horarioFds = sem.fimDeSemana?.horario || config?.horario_fds || config?.horarioFimDeSemana || '09:30';
+
         const pessoaCard = (label, pessoa, icon = <User size={18} />) => {
             const nome = getNomePessoa(pessoa);
             if (!nome) return null;
+            const matchTermo = Boolean(termo) && normalizarTexto(nome).includes(termo);
+            const matchLabel = Boolean(termo) && (
+                normalizarTexto(label).includes(termo) ||
+                (label === (T.presidente || 'Presidente') && termo.length >= 3 && 'presidente'.includes(termo))
+            );
+            if (termo && !matchTermo && !matchLabel) return null;
+
             return (
-                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
-                        {icon}
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
+                            {icon}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+                            <p className="truncate text-[13px] font-bold text-slate-900">{destacarTermoPesquisado(nome)}</p>
+                        </div>
                     </div>
-                    <div className="min-w-0">
-                        <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
-                        <p className="truncate text-[13px] font-bold text-slate-900">{destacarTermoPesquisado(nome)}</p>
-                    </div>
+                    {matchTermo && (
+                        <a
+                            href={gerarLinkAgendaGenerico({
+                                titulo: `${label} - ${T.reuniaoFimDeSemana || 'Reunião de fim de semana'}`,
+                                dataISO: sem.dataCorreta,
+                                horario: horarioFds,
+                                tempoMin: 105,
+                                designado: nome,
+                                texts: agendaTexts
+                            })}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-white hover:bg-blue-50 px-2 py-1 text-blue-600 shadow-sm active:scale-95 transition-all font-bold shrink-0 ml-1"
+                            title={T.salvarAgenda}
+                        >
+                            <CalendarPlus size={14} />
+                            <span className="text-[10px] font-bold">{T.salvarAgenda}</span>
+                        </a>
+                    )}
                 </div>
             );
         };
@@ -594,9 +714,26 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             fds.reuniaoPublica?.oradorNomeManual,
             fds.reuniaoPublica?.congregacaoOrador ? `(${fds.reuniaoPublica.congregacaoOrador})` : ''
         ].filter(Boolean).join(' ');
-        const temReuniaoPublica = !!(fds.reuniaoPublica?.temaDiscurso || orador);
-        const temEstudoSentinela = !!(getNomePessoa(fds.estudoSentinela?.dirigente) || getNomePessoa(fds.estudoSentinela?.leitor));
-        const temDiscursoFinalVisita = !!fds.visitaSuperintendente?.discursoFinal;
+        const matchOrador = Boolean(termo) && (
+            normalizarTexto(orador).includes(termo) ||
+            (termo.length >= 4 && 'orador'.includes(termo))
+        );
+        const matchTema = Boolean(termo) && (
+            normalizarTexto(fds.reuniaoPublica?.temaDiscurso).includes(termo) ||
+            (termo.length >= 4 && 'discurso'.includes(termo))
+        );
+        const temReuniaoPublica = !termo
+            ? !!(fds.reuniaoPublica?.temaDiscurso || orador)
+            : (matchOrador || matchTema);
+
+        const cardDirigente = pessoaCard(T.dirigente || 'Dirigente', fds.estudoSentinela?.dirigente, <BookOpen size={18} />);
+        const cardLeitor = pessoaCard(T.leitor || 'Leitor', fds.estudoSentinela?.leitor, <BookOpen size={18} />);
+        const temEstudoSentinela = Boolean(cardDirigente || cardLeitor);
+
+        const matchVisita = Boolean(termo) && normalizarTexto(fds.visitaSuperintendente?.discursoFinal).includes(termo);
+        const temDiscursoFinalVisita = !termo
+            ? !!fds.visitaSuperintendente?.discursoFinal
+            : matchVisita;
 
         return (
             <div className="space-y-4">
@@ -605,14 +742,38 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                 {temReuniaoPublica && section(T.reuniaoPublica || 'Reunião pública', (
                     <>
                         {textoLinha(T.temaDiscurso || 'Tema do discurso', fds.reuniaoPublica?.temaDiscurso)}
-                        {textoLinha(T.oradorDiscursoPublico || 'Orador', orador)}
+                        <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{T.oradorDiscursoPublico || 'Orador'}</p>
+                                <p className="mt-0.5 text-[13px] font-semibold text-slate-900 truncate">{destacarTermoPesquisado(orador)}</p>
+                            </div>
+                            {Boolean(termo) && matchOrador && (
+                                <a
+                                    href={gerarLinkAgendaGenerico({
+                                        titulo: `${T.reuniaoPublica || 'Discurso Público'}: ${fds.reuniaoPublica?.temaDiscurso || ''}`,
+                                        dataISO: sem.dataCorreta,
+                                        horario: horarioFds,
+                                        tempoMin: 35,
+                                        designado: orador,
+                                        texts: agendaTexts
+                                    })}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-white hover:bg-blue-50 px-2 py-1 text-blue-600 shadow-sm active:scale-95 transition-all font-bold shrink-0 ml-1"
+                                    title={T.salvarAgenda}
+                                >
+                                    <CalendarPlus size={14} />
+                                    <span className="text-[10px] font-bold">{T.salvarAgenda}</span>
+                                </a>
+                            )}
+                        </div>
                     </>
                 ))}
 
                 {temEstudoSentinela && section(T.estudoSentinela || 'Estudo de A Sentinela', (
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {pessoaCard(T.dirigente || 'Dirigente', fds.estudoSentinela?.dirigente, <BookOpen size={18} />)}
-                        {pessoaCard(T.leitor || 'Leitor', fds.estudoSentinela?.leitor, <BookOpen size={18} />)}
+                        {cardDirigente}
+                        {cardLeitor}
                     </div>
                 ))}
 
@@ -622,12 +783,36 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                 {responsabilidades.length > 0 && section(T.apoioFimDeSemana || 'Apoio do fim de semana', (
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {responsabilidades.map((item) => (
-                            <div key={item.key} className="rounded-xl bg-slate-50 px-3 py-2">
-                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
-                                <p className="mt-0.5 text-[13px] font-semibold text-slate-900">{destacarTermoPesquisado(item.valor)}</p>
-                            </div>
-                        ))}
+                        {responsabilidades.map((item) => {
+                            const matchTermo = Boolean(termo) && normalizarTexto(item.valor).includes(termo);
+                            return (
+                                <div key={item.key} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                                        <p className="mt-0.5 text-[13px] font-semibold text-slate-900 truncate">{destacarTermoPesquisado(item.valor)}</p>
+                                    </div>
+                                    {matchTermo && (
+                                        <a
+                                            href={gerarLinkAgendaGenerico({
+                                                titulo: `${item.label} - ${T.reuniaoFimDeSemana || 'Reunião de fim de semana'}`,
+                                                dataISO: sem.dataCorreta,
+                                                horario: horarioFds,
+                                                tempoMin: 105,
+                                                designado: item.valor,
+                                                texts: agendaTexts
+                                            })}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-white hover:bg-blue-50 px-2 py-1 text-blue-600 shadow-sm active:scale-95 transition-all font-bold shrink-0 ml-1"
+                                            title={T.salvarAgenda}
+                                        >
+                                            <CalendarPlus size={14} />
+                                            <span className="text-[10px] font-bold">{T.salvarAgenda}</span>
+                                        </a>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 ))}
             </div>
@@ -884,14 +1069,35 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
                                                     {/* PRESIDENTE */}
                                                      {sem.presidente && (!busca || normalizarTexto(sem.presidente.nome).includes(termo) || (termo.length >= 3 && 'presidente'.includes(termo))) && (
-                                                        <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-4">
-                                                            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                                                <User size={20} />
+                                                        <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-4">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                                                    <User size={20} />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[10px] font-black text-slate-400 uppercase">{T.presidente}</p>
+                                                                    <p className="text-[13px] font-bold text-slate-800 truncate">{destacarTermoPesquisado(sem.presidente.nome)}</p>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase">{T.presidente}</p>
-                                                                <p className="text-[13px] font-bold text-slate-800">{destacarTermoPesquisado(sem.presidente.nome)}</p>
-                                                            </div>
+                                                            {Boolean(termo) && (
+                                                                <a
+                                                                    href={gerarLinkAgendaGenerico({
+                                                                        titulo: `${T.presidente} - ${T.reuniaoMeioSemana || 'Reunião de meio de semana'}`,
+                                                                        dataISO: dataRef,
+                                                                        horario: config?.horarioReuniao || config?.horario || '19:30',
+                                                                        tempoMin: 105,
+                                                                        designado: sem.presidente.nome,
+                                                                        texts: agendaTexts
+                                                                    })}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 px-2.5 py-1.5 text-blue-600 shadow-sm active:scale-95 transition-all text-xs font-bold shrink-0 ml-2"
+                                                                    title={T.salvarAgenda}
+                                                                >
+                                                                    <CalendarPlus size={15} />
+                                                                    <span className="text-[11px] font-bold">{T.salvarAgenda}</span>
+                                                                </a>
+                                                            )}
                                                         </div>
                                                     )}
 
@@ -1099,15 +1305,18 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                                     </p>
                                                                                 )}
                                                                             </div>
-                                                                            <a
-                                                                                href={gerarLinkAgenda(parte, dataRef, agendaTexts)}
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="rounded-lg border border-slate-200 bg-white p-2 text-blue-600 shadow-[0_1px_3px_rgba(15,23,42,0.12)] active:scale-95 transition-colors"
-                                                                                title={T.salvarAgenda}
-                                                                            >
-                                                                                <CalendarPlus size={15} />
-                                                                            </a>
+                                                                            {Boolean(termo) && (
+                                                                                <a
+                                                                                    href={gerarLinkAgenda(parte, dataRef, agendaTexts, config?.horarioReuniao || config?.horario)}
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 px-2.5 py-1.5 text-blue-600 shadow-sm active:scale-95 transition-all text-xs font-bold shrink-0 ml-2"
+                                                                                    title={T.salvarAgenda}
+                                                                                >
+                                                                                    <CalendarPlus size={15} />
+                                                                                    <span className="text-[11px] font-bold">{T.salvarAgenda}</span>
+                                                                                </a>
+                                                                            )}
                                                                         </div>
                                                                     )}
                                                                 </div>
