@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { buildMailtoHref, buildWhatsappHref } from './links';
+import { toast } from '../toast';
 
 /**
  * Mantém estado em runtime do que foi "enviado" (clicado) e expõe ações de envio.
@@ -11,7 +12,7 @@ export const useNotificacoesRuntime = (t) => {
     const enviarZap = useCallback(
         (aluno, msg) => {
             const href = buildWhatsappHref(aluno?.telefone, msg);
-            if (!href) return alert(t.alunoSemTelefone);
+            if (!href) return toast.error(t.alunoSemTelefone);
             window.open(href, '_blank');
         },
         [t]
@@ -20,7 +21,7 @@ export const useNotificacoesRuntime = (t) => {
     const enviarEmail = useCallback(
         (aluno, assunto, msg) => {
             const href = buildMailtoHref(aluno?.email, assunto, msg);
-            if (!href) return alert(t.alunoSemEmail);
+            if (!href) return toast.error(t.alunoSemEmail);
             window.open(href, '_blank');
         },
         [t]

@@ -6,6 +6,7 @@ import { calcularTotalInfo } from '../../utils/importador/parser';
 import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
 import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
 import { formatText } from '../../i18n';
+import { dialog } from '../../utils/dialog';
 
 export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel, lang = 'pt' }) {
     const t = TRANSLATIONS[lang];
@@ -64,7 +65,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
     };
 
     // 🔥 REGRA DE BLOQUEIO CORRIGIDA
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         // 1. Acessa as chaves corretas do seu banco de dados
         const programacaoSalva = appDados?.historico_reunioes || []; 
 
@@ -96,12 +97,22 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
 
         // APLICA O BLOQUEIO SE ENCONTRAR NO BANCO
         if (ehAssembleiaNaProg || isTipoEventoBloqueante(temEventoNoDashboard?.tipo)) {
-            alert(formatText(t.bloqueioSegurancaDataTpl, { data: dataImportada }));
+            await dialog.alert({
+                title: 'Bloqueio de Segurança',
+                message: formatText(t.bloqueioSegurancaDataTpl, { data: dataImportada }),
+                variant: 'danger'
+            });
             return;
         }
 
         if (ehAssembleiaNoTexto) {
-            const prosseguir = window.confirm(t.avisoForcarImportacao);
+            const prosseguir = await dialog.confirm({
+                title: 'Aviso de Assembleia / Congresso',
+                message: t.avisoForcarImportacao,
+                variant: 'warning',
+                confirmText: 'Importar mesmo assim',
+                cancelText: 'Cancelar'
+            });
             if (!prosseguir) return;
         }
 

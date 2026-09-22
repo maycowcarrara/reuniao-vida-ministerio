@@ -20,6 +20,8 @@ import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/even
 import { formatHm } from '../../utils/importador/helpers';
 import { calcularTotalInfo } from '../../utils/importador/parser';
 import { formatText, useSectionMessages } from '../../i18n';
+import { toast } from '../../utils/toast';
+import { dialog } from '../../utils/dialog';
 import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
 import {
@@ -523,24 +525,46 @@ const Designar = ({
 
     const getSelectedKeys = () => Object.entries(semanasSelecionadas || {}).filter(([, v]) => !!v).map(([k]) => k);
 
-    const arquivarSelecionadas = () => {
+    const arquivarSelecionadas = async () => {
         const keys = getSelectedKeys();
         if (keys.length === 0) return;
-        if (!window.confirm(`${TT.arquivar} ${keys.length} ${TT.semana}(s)?`)) return;
+        const ok = await dialog.confirm({
+            title: `${TT.arquivar} ${TT.semana}(s)`,
+            message: `${TT.arquivar} ${keys.length} ${TT.semana}(s)?`,
+            variant: 'warning',
+            confirmText: TT.arquivar,
+            cancelText: TT.cancelar
+        });
+        if (!ok) return;
         setListaProgramacoesSafe(prev => prev.map((s, idx) => keys.includes(getSemanaKey(s, idx)) ? { ...s, arquivada: true, arquivadaEm: new Date().toISOString() } : s));
     };
 
-    const restaurarSelecionadas = () => {
+    const restaurarSelecionadas = async () => {
         const keys = getSelectedKeys();
         if (keys.length === 0) return;
-        if (!window.confirm(`${TT.restaurar} ${keys.length} ${TT.semana}(s)?`)) return;
+        const ok = await dialog.confirm({
+            title: `${TT.restaurar} ${TT.semana}(s)`,
+            message: `${TT.restaurar} ${keys.length} ${TT.semana}(s)?`,
+            variant: 'info',
+            confirmText: TT.restaurar,
+            cancelText: TT.cancelar
+        });
+        if (!ok) return;
         setListaProgramacoesSafe(prev => prev.map((s, idx) => keys.includes(getSemanaKey(s, idx)) ? { ...s, arquivada: false, arquivadaEm: null } : s));
     };
 
     // 🔥 EXCLUSÃO SUPER SEGURA DA SEMANA
     const handleExcluirSemana = async (semanaKey) => {
         const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
-        if (!atual || !window.confirm(formatText(TT.confirmarExcluirSemanaTpl, { semana: atual?.semana || semanaKey }))) return;
+        if (!atual) return;
+        const ok = await dialog.confirm({
+            title: 'Excluir Semana',
+            message: formatText(TT.confirmarExcluirSemanaTpl, { semana: atual?.semana || semanaKey }),
+            variant: 'danger',
+            confirmText: 'Excluir',
+            cancelText: TT.cancelar
+        });
+        if (!ok) return;
 
         let dataBase = atual.dataExata || atual.dataInicio || atual.dataReuniao || atual.data;
         if (!dataBase && atual.semana) {
@@ -575,8 +599,18 @@ const Designar = ({
             alvo = listaProgramacoes.filter(s => !!s?.arquivada);
         }
 
-        if (alvo.length === 0) return alert(TT.nenhumaSemanaArquivada);
-        if (!window.confirm(formatText(TT.confirmarApagarArquivadasTpl, { count: alvo.length }))) return;
+        if (alvo.length === 0) {
+            toast.info(TT.nenhumaSemanaArquivada);
+            return;
+        }
+        const ok = await dialog.confirm({
+            title: 'Apagar Arquivadas',
+            message: formatText(TT.confirmarApagarArquivadasTpl, { count: alvo.length }),
+            variant: 'danger',
+            confirmText: 'Apagar definitivamente',
+            cancelText: TT.cancelar
+        });
+        if (!ok) return;
 
         if (onExcluirSemana) {
             for (const item of alvo) {
@@ -601,11 +635,18 @@ const Designar = ({
     };
     // ------------------------------------------------------------------------------------------
 
-    const toggleArquivadaSemana = (semanaKey, arquivar) => {
+    const toggleArquivadaSemana = async (semanaKey, arquivar) => {
         const atual = listaProgramacoes.find((s, idx) => getSemanaKey(s, idx) === semanaKey);
         if (!atual) return;
         const msg = arquivar ? `${TT.arquivar} ${TT.semana} ${atual?.semana}?` : `${TT.restaurar} ${TT.semana} ${atual?.semana}?`;
-        if (!window.confirm(msg)) return;
+        const ok = await dialog.confirm({
+            title: arquivar ? `${TT.arquivar} ${TT.semana}` : `${TT.restaurar} ${TT.semana}`,
+            message: msg,
+            variant: arquivar ? 'warning' : 'info',
+            confirmText: arquivar ? TT.arquivar : TT.restaurar,
+            cancelText: TT.cancelar
+        });
+        if (!ok) return;
         setListaProgramacoesSafe(prev => prev.map((s, idx) => getSemanaKey(s, idx) === semanaKey ? { ...s, arquivada: arquivar, arquivadaEm: arquivar ? new Date().toISOString() : null } : s));
     };
 
@@ -698,7 +739,7 @@ const Designar = ({
         });
     };
 
-    const atribuirAluno = (aluno, targetSlot = slotAtivo, options = {}) => {
+    const atribuirAluno = async (aluno, targetSlot = slotAtivo, options = {}) => {
         if (!targetSlot) return false;
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(targetSlot.semanaIndex) ? targetSlot.semanaIndex : semanaAtivaIndexAtual);
         if (semanaRealIndex === -1) return false;
@@ -707,7 +748,7 @@ const Designar = ({
 
         // 🔥 TRAVA: BLOQUEIA DESIGNAÇÃO SE FOR ASSEMBLEIA
         if (isSemanaAssembleia(sem, config)) {
-            alert(formatText(TT.bloqueioSemanaEventoTpl, { semana: sem.semana }));
+            toast.error(formatText(TT.bloqueioSemanaEventoTpl, { semana: sem.semana }));
             if (targetSlot === slotAtivo) setSlotAtivo(null);
             return false;
         }
@@ -734,7 +775,7 @@ const Designar = ({
         if (aluno) {
             const parte = getParteFromTargetSlot(sem, targetSlot);
             if (targetSlot.key !== 'presidente' && !targetSlot.fds && !targetSlot.meioSemana && !parte) {
-                alert(TT.parteNaoEncontrada || 'Parte nao encontrada.');
+                toast.error(TT.parteNaoEncontrada || 'Parte nao encontrada.');
                 return false;
             }
             const eligibility = isAlunoEligibleForAssignment({
@@ -747,7 +788,7 @@ const Designar = ({
             });
 
             if (!eligibility.eligible) {
-                alert(eligibility.reason || TT.alunoSemHabilitacao || 'Aluno sem habilitacao para esta designacao.');
+                toast.error(eligibility.reason || TT.alunoSemHabilitacao || 'Aluno sem habilitacao para esta designacao.');
                 return false;
             }
 
@@ -756,7 +797,14 @@ const Designar = ({
                 const msg = conflito.severity === 'block'
                     ? (TT.bloqueioConflitoFds || 'Este irmao ja esta em outra funcao principal do fim de semana. Confirmar excecao?')
                     : (TT.confirmarConflitoFds || TT.confirmarDuplicado || 'Este aluno ja esta designado nesta semana. Deseja continuar?');
-                if (!window.confirm(`${msg}\n\n${conflito.labels.join(', ')}`)) return false;
+                const confirmado = await dialog.confirm({
+                    title: conflito.severity === 'block' ? 'Conflito de Designação' : 'Aviso de Designação Duplicada',
+                    message: `${msg}\n\n${conflito.labels.join(', ')}`,
+                    variant: conflito.severity === 'block' ? 'danger' : 'warning',
+                    confirmText: 'Continuar mesmo assim',
+                    cancelText: 'Cancelar'
+                });
+                if (!confirmado) return false;
             }
         }
 
@@ -835,9 +883,9 @@ const Designar = ({
         return true;
     };
 
-    const aplicarSugestao = (aluno) => {
+    const aplicarSugestao = async (aluno) => {
         const { semanaIndex, key, parteId, fds, meioSemana, responsabilidadeKey, itemIndex } = modalSugestao;
-        const aplicado = atribuirAluno(aluno, { key, parteId, semanaIndex, fds, meioSemana, responsabilidadeKey, itemIndex }, { registrarSubstituicao: modalSugestao.modo === 'substituicao' });
+        const aplicado = await atribuirAluno(aluno, { key, parteId, semanaIndex, fds, meioSemana, responsabilidadeKey, itemIndex }, { registrarSubstituicao: modalSugestao.modo === 'substituicao' });
         if (aplicado) setModalSugestao({ ...modalSugestao, aberto: false });
     };
 
@@ -927,7 +975,7 @@ const Designar = ({
     const abrirModalEditarParte = (parte, semanaIndexFiltrado) => {
         const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
         if (isSemanaAssembleia(sem, config)) {
-            alert(TT.acoesBloqueadasSemanaEvento);
+            toast.error(TT.acoesBloqueadasSemanaEvento);
             return;
         }
         setParteEditCtx({
@@ -954,7 +1002,7 @@ const Designar = ({
     const abrirModalNovaParte = (secao, semanaIndexFiltrado) => {
         const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
         if (isSemanaAssembleia(sem, config)) {
-            alert(TT.acoesBloqueadasSemanaEvento);
+            toast.error(TT.acoesBloqueadasSemanaEvento);
             return;
         }
         setParteEditCtx({
@@ -999,7 +1047,7 @@ const Designar = ({
 
         const proximoTituloSemana = String(semanaEditCtx?.valores?.semana || '').trim();
         if (!proximoTituloSemana) {
-            alert(TT.tituloSemanaObrigatorio);
+            toast.error(TT.tituloSemanaObrigatorio);
             return;
         }
 
@@ -1032,11 +1080,18 @@ const Designar = ({
         setSemanaEditCtx(null);
     };
 
-    const handleExcluirParte = (parteId, semanaIndexFiltrado) => {
+    const handleExcluirParte = async (parteId, semanaIndexFiltrado) => {
         const sem = listaFiltradaPorFlag[semanaIndexFiltrado];
         if (isSemanaAssembleia(sem, config)) return; // Trava
 
-        if (!window.confirm(TT.confirmarExcluirParte)) return;
+        const ok = await dialog.confirm({
+            title: 'Excluir Parte',
+            message: TT.confirmarExcluirParte,
+            variant: 'danger',
+            confirmText: 'Excluir',
+            cancelText: TT.cancelar
+        });
+        if (!ok) return;
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndexFiltrado);
         if (semanaRealIndex === -1) return;
 

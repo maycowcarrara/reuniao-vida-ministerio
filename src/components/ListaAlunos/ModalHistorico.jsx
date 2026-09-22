@@ -1,13 +1,21 @@
 import React from 'react';
 import { BarChart3, CalendarDays, History, Trash2, X } from 'lucide-react';
 import { formatHistoricoParte } from './utils';
+import { dialog } from '../../utils/dialog';
 
 const ModalHistorico = ({ aluno, isOpen, onClose, t, lang = 'pt', onUpdateAluno }) => {
     if (!isOpen || !aluno) return null;
 
     // Função que é ativada ao clicar na lixeira
-    const handleDelete = (indexOriginal) => {
-        if (window.confirm(t?.msg?.confirmarRemoverHistorico || 'Tem certeza que deseja remover este registro do histórico?')) {
+    const handleDelete = async (indexOriginal) => {
+        const ok = await dialog.confirm({
+            title: 'Remover do Histórico',
+            message: t?.msg?.confirmarRemoverHistorico || 'Tem certeza que deseja remover este registro do histórico?',
+            variant: 'danger',
+            confirmText: 'Remover',
+            cancelText: 'Cancelar'
+        });
+        if (ok) {
             // Clona o histórico atual e remove apenas o item selecionado
             const novoHistorico = [...(aluno.historico || [])];
             novoHistorico.splice(indexOriginal, 1);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, AlertCircle, Filter, Info } from 'lucide-react';
 import { formatText, useSectionMessages } from '../../i18n';
+import { dialog } from '../../utils/dialog';
 import {
     getAssignmentCapabilityForSlot,
     getAssignmentContextForSlot,
@@ -258,9 +259,15 @@ export default function ModalSugestao({
                                     </div>
                                 )}
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (aluno.familiaOcupadaAgora && !aluno.ocupadoAgora) {
-                                            const confirmacao = window.confirm(t.confirmarFamilia);
+                                            const confirmacao = await dialog.confirm({
+                                                title: 'Membro da Família Já Designado',
+                                                message: t.confirmarFamilia,
+                                                variant: 'warning',
+                                                confirmText: 'Continuar',
+                                                cancelText: 'Cancelar'
+                                            });
                                             if (!confirmacao) return;
                                         }
                                         onSelect(aluno);

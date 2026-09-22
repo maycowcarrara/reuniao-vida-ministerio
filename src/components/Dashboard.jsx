@@ -8,6 +8,8 @@ import { getWeekdayJsDay } from '../config/appConfig';
 import { getCanonicalWeekStartISO, getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
 import { formatText, useSectionMessages } from '../i18n';
+import { toast } from '../utils/toast';
+import { dialog } from '../utils/dialog';
 import { isBibleStudyPart, isPrayerPart, isSongOnlyPart } from '../utils/meetingParts';
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
@@ -1190,8 +1192,15 @@ export default function Dashboard({
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => {
-                                                    if (window.confirm(localTxt.removerEventoLista)) {
+                                                onClick={async () => {
+                                                    const ok = await dialog.confirm({
+                                                        title: localTxt.removerEvento || 'Remover Evento',
+                                                        message: localTxt.removerEventoLista,
+                                                        variant: 'danger',
+                                                        confirmText: 'Remover',
+                                                        cancelText: 'Cancelar'
+                                                    });
+                                                    if (ok) {
                                                         onDefinirEvento(ev.dataInicio, 'normal');
                                                     }
                                                 }}
@@ -1249,7 +1258,7 @@ export default function Dashboard({
 
                                 <button
                                     onClick={() => {
-                                        if (!dataEvento) return alert(localTxt.selecioneData);
+                                        if (!dataEvento) return toast.error(localTxt.selecioneData);
                                         onDefinirEvento(dataEvento, tipoEvento);
                                         setDataEvento('');
                                     }}

@@ -8,6 +8,7 @@ import packageJson from '../../package.json';
 import { formatText, useSectionMessages } from '../i18n';
 import { refreshAppVersion } from '../services/appUpdater';
 import { toast } from '../utils/toast';
+import { dialog } from '../utils/dialog';
 import PwaInstallButton from './PwaInstallButton';
 
 const DEFAULT_APP_SHARE_URL = 'https://rvm-palmas-pr.web.app';
@@ -58,7 +59,14 @@ export default function Sidebar({
 
     const handleAtualizarSistema = async () => {
         if (atualizandoVersao) return;
-        if (!window.confirm(alertaAtualizacao)) return;
+        const ok = await dialog.confirm({
+            title: SIDEBAR_TEXTS.versaoSistema || 'Atualização do Sistema',
+            message: alertaAtualizacao,
+            variant: 'info',
+            confirmText: 'Atualizar agora',
+            cancelText: 'Cancelar'
+        });
+        if (!ok) return;
 
         setAtualizandoVersao(true);
         toast.info(SIDEBAR_TEXTS.atualizacaoIniciada);

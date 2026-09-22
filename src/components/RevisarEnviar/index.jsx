@@ -24,6 +24,7 @@ import { getMeetingDateISOFromSemana, formatarDataFolha, getSemanaSortTimestamp 
 import { buildWhatsappHref, buildMailtoHref } from '../../utils/revisarEnviar/links';
 import { addHistorico } from '../../utils/revisarEnviar/historico';
 import { toast } from '../../utils/toast';
+import { dialog } from '../../utils/dialog';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import {
@@ -647,13 +648,13 @@ const RevisarEnviar = ({
 
     const enviarZap = (aluno, msg) => {
         const href = buildWhatsappHref(aluno?.telefone, msg);
-        if (!href) return alert(t.alunoSemTelefone);
+        if (!href) return toast.error(t.alunoSemTelefone);
         window.open(href, '_blank');
     };
 
     const enviarEmail = (aluno, assunto, msg) => {
         const href = buildMailtoHref(aluno?.email, assunto, msg);
-        if (!href) return alert(t.alunoSemEmail);
+        if (!href) return toast.error(t.alunoSemEmail);
         window.open(href, '_blank');
     };
 
@@ -673,8 +674,8 @@ const RevisarEnviar = ({
     const isSent = (key, channel) => Boolean(sentMap?.[key]?.[channel]);
 
     // --- SINCRONIZAR HISTÓRICO COM VARREDURA DE SEMANA COMPLETA E DEBUG ---
-    const gravarHistorico = () => {
-        if (!Array.isArray(alunos) || alunos.length === 0) return alert(t.nadaParaGravar);
+    const gravarHistorico = async () => {
+        if (!Array.isArray(alunos) || alunos.length === 0) return toast.info(t.nadaParaGravar);
 
         // 1. Filtra EXATAMENTE as semanas que estão com a pílula azul (Opção B)
         const semanasSelecionadas = semanasDisponiveis.filter((sem, i) => {
@@ -684,11 +685,18 @@ const RevisarEnviar = ({
 
         // Trava de segurança
         if (semanasSelecionadas.length === 0) {
-            alert(t.syncNoWeeks);
+            toast.info(t.syncNoWeeks);
             return;
         }
 
-        if (!window.confirm(formatText(t.syncConfirmTpl, { count: semanasSelecionadas.length }))) return;
+        const ok = await dialog.confirm({
+            title: t.syncConfirmTitle || 'Sincronizar Histórico',
+            message: formatText(t.syncConfirmTpl, { count: semanasSelecionadas.length }),
+            variant: 'info',
+            confirmText: 'Sincronizar',
+            cancelText: 'Cancelar'
+        });
+        if (!ok) return;
 
         let novosAlunos = [...alunos];
         let gravouAlgo = false;
@@ -1050,7 +1058,7 @@ const RevisarEnviar = ({
 
                         // Trava de segurança caso o usuário não tenha selecionado nenhuma
                         if (reunioesSelecionadas.length === 0) {
-                            alert(t.agendaNoWeeks);
+                            toast.info(t.agendaNoWeeks);
                             return;
                         }
 

@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
 import { toast, toastStore } from '../utils/toast';
 import { useDocumentSectionMessages } from '../i18n';
+import { DialogModal } from './DialogModal.jsx';
 
 const ToastContext = createContext(toast);
 
@@ -122,6 +123,7 @@ export function ToastProvider({ children }) {
         <ToastContext.Provider value={value}>
             {children}
             <ToastViewport />
+            <DialogModal />
         </ToastContext.Provider>
     );
 }

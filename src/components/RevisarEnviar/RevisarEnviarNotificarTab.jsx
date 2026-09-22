@@ -6,6 +6,7 @@ import { montarMensagemDesignacao, montarMensagemLembreteSemana } from '../../ut
 import { enviarEmailAutomatico, getEmailJsMissingConfig } from '../../utils/revisarEnviar/enviadorEmail';
 import { buildAgendaLink } from '../../utils/revisarEnviar/links';
 import { toast } from '../../utils/toast';
+import { dialog } from '../../utils/dialog';
 import { getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import { prependMeetingSectionTag } from '../../utils/meetingSections';
@@ -867,12 +868,26 @@ const RevisarEnviarNotificarTab = ({
             return;
         }
 
-        if (checklistRevisao.criticos > 0 && !window.confirm(`Há ${checklistRevisao.criticos} pendência(s) importante(s) na revisão final. Deseja enviar mesmo assim?`)) {
-            return;
+        if (checklistRevisao.criticos > 0) {
+            const prosseguir = await dialog.confirm({
+                title: 'Pendências na Revisão',
+                message: `Há ${checklistRevisao.criticos} pendência(s) importante(s) na revisão final. Deseja enviar mesmo assim?`,
+                variant: 'warning',
+                confirmText: 'Enviar mesmo assim',
+                cancelText: 'Cancelar'
+            });
+            if (!prosseguir) return;
         }
 
         const confirmTemplate = reenviarTodos ? t.emailBatchResendConfirmTpl : t.emailBatchConfirmTpl;
-        if (!window.confirm(formatText(confirmTemplate, { count: fila.length }))) {
+        const ok = await dialog.confirm({
+            title: reenviarTodos ? 'Reenviar Notificações' : 'Enviar Notificações em Lote',
+            message: formatText(confirmTemplate, { count: fila.length }),
+            variant: 'info',
+            confirmText: 'Confirmar e Enviar',
+            cancelText: 'Cancelar'
+        });
+        if (!ok) {
             return;
         }
 

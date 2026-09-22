@@ -6,6 +6,7 @@ import ModalHistorico from './ModalHistorico';
 import ModalFormulario from './ModalFormulario';
 import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCargoKey, getUltimoRegistro, calcularDias, verificarAusenciaAtiva, pruneExpiredUnavailableDates } from './utils';
 import { toast } from '../../utils/toast';
+import { dialog } from '../../utils/dialog';
 import { getAlunoCapabilities, getAssignmentCapabilitiesByGroup, getLegacyCapabilitiesForTipo, normalizeAssignmentCapabilities } from '../../utils/assignmentEligibility';
 
 // Subcomponente para os Cards Estatísticos
@@ -354,8 +355,15 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     };
 
     const handleExcluir = async (aluno) => {
-        if (aluno.tipo !== 'desab') return alert(t.msg.erroSoDesabilitados);
-        if (window.confirm(t.msg.confirmarExclusao)) {
+        if (aluno.tipo !== 'desab') return toast.error(t.msg.erroSoDesabilitados);
+        const ok = await dialog.confirm({
+            title: 'Excluir Aluno',
+            message: t.msg.confirmarExclusao,
+            variant: 'danger',
+            confirmText: 'Excluir permanentemente',
+            cancelText: 'Cancelar'
+        });
+        if (ok) {
             if (onExcluirAluno) await onExcluirAluno(aluno.id);
             else setAlunos(alunos.filter(a => a.id !== aluno.id));
             toast.success(t.msg.removerSucesso);
@@ -374,7 +382,14 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
             await navigator.clipboard.writeText(link);
             toast.success(`Link do quadro copiado para ${aluno.nome}.`);
         } catch {
-            window.prompt('Copie o link do quadro:', link);
+            await dialog.prompt({
+                title: 'Link do Quadro',
+                message: `Copie o link individual para ${aluno.nome}:`,
+                defaultValue: link,
+                isCopyable: true,
+                confirmText: 'Fechar',
+                cancelText: 'Cancelar'
+            });
         }
     };
 

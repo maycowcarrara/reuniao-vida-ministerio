@@ -8,6 +8,7 @@ import RevisarImportacao from './RevisarImportacao';
 import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
 import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
 import { formatText } from '../../i18n';
+import { dialog } from '../../utils/dialog';
 
 let cheerioModulePromise;
 const loadCheerio = async () => {
@@ -269,7 +270,11 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
             // 🔥 Trava de bloqueio para colar URL/Texto! Impede abrir a Revisão
             const tituloSemana = dados.semana || '';
             if (verificarBloqueioAssembleia({ titulo: tituloSemana, dataInicio: dados.dataInicio || dados.dataExata })) {
-                alert(formatText(t.bloqueioSegurancaSemanaTpl, { titulo: tituloSemana }));
+                await dialog.alert({
+                    title: 'Bloqueio de Segurança',
+                    message: formatText(t.bloqueioSegurancaSemanaTpl, { titulo: tituloSemana }),
+                    variant: 'danger'
+                });
                 setLoading(false);
                 return; 
             }

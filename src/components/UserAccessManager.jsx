@@ -10,6 +10,7 @@ import {
     normalizeAccessEmail
 } from '../services/adminAccess';
 import { toast } from '../utils/toast';
+import { dialog } from '../utils/dialog';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -23,6 +24,8 @@ const COPY = {
         placeholder: 'email@gmail.com',
         add: 'Adicionar',
         remove: 'Remover acesso',
+        promote: 'Tornar administrador',
+        demote: 'Remover administrador',
         empty: 'Nenhum usuário adicional cadastrado.',
         ownerOnly: 'Somente administradores podem adicionar ou remover usuários.',
         adminManagement: 'Administradores podem adicionar e remover usuários. Somente o proprietário define outros administradores.',
@@ -48,6 +51,8 @@ const COPY = {
         placeholder: 'correo@gmail.com',
         add: 'Agregar',
         remove: 'Quitar acceso',
+        promote: 'Hacer administrador',
+        demote: 'Quitar administrador',
         empty: 'No hay usuarios adicionales registrados.',
         ownerOnly: 'Solo los administradores pueden agregar o quitar usuarios.',
         adminManagement: 'Los administradores pueden agregar y quitar usuarios. Solo el propietario define otros administradores.',
@@ -165,7 +170,14 @@ export default function UserAccessManager({ lang = 'pt', onRoleChange }) {
             toast.info(texts.duplicateEmail);
             return;
         }
-        if (!window.confirm(texts.confirmAdd.replace('{email}', email))) return;
+        const ok = await dialog.confirm({
+            title: texts.title,
+            message: texts.confirmAdd.replace('{email}', email),
+            variant: 'info',
+            confirmText: texts.add,
+            cancelText: lang === 'es' ? 'Cancelar' : 'Cancelar'
+        });
+        if (!ok) return;
 
         await updateAccess((current) => ({
             ...current,
@@ -175,7 +187,14 @@ export default function UserAccessManager({ lang = 'pt', onRoleChange }) {
     };
 
     const handleRemove = async (email) => {
-        if (!window.confirm(texts.confirmRemove.replace('{email}', email))) return;
+        const ok = await dialog.confirm({
+            title: texts.remove,
+            message: texts.confirmRemove.replace('{email}', email),
+            variant: 'danger',
+            confirmText: texts.remove,
+            cancelText: lang === 'es' ? 'Cancelar' : 'Cancelar'
+        });
+        if (!ok) return;
 
         await updateAccess((current) => ({
             emails: current.emails.filter((item) => item !== email),
@@ -189,7 +208,14 @@ export default function UserAccessManager({ lang = 'pt', onRoleChange }) {
         if (!isOwner) return;
         const emailIsAdmin = admins.includes(email);
         const confirmationText = emailIsAdmin ? texts.confirmDemote : texts.confirmPromote;
-        if (!window.confirm(confirmationText.replace('{email}', email))) return;
+        const ok = await dialog.confirm({
+            title: emailIsAdmin ? texts.demote : texts.promote,
+            message: confirmationText.replace('{email}', email),
+            variant: emailIsAdmin ? 'warning' : 'info',
+            confirmText: 'Confirmar',
+            cancelText: lang === 'es' ? 'Cancelar' : 'Cancelar'
+        });
+        if (!ok) return;
 
         await updateAccess((current) => ({
             ...current,
