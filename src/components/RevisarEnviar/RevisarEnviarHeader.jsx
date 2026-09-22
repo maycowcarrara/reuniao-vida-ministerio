@@ -6,6 +6,7 @@ import { formatText } from '../../i18n';
 
 const RevisarEnviarHeader = ({
     t,
+    config,
     abaAtiva,
     setAbaAtiva,
 
@@ -53,7 +54,7 @@ const RevisarEnviarHeader = ({
     // Mapeamos para preservar o índice original
     const semanasOrdenadas = semanasDisponiveis
         .map((sem, originalIndex) => ({ sem, originalIndex }))
-        .sort((a, b) => getSemanaSortTimestamp(a.sem) - getSemanaSortTimestamp(b.sem));
+        .sort((a, b) => getSemanaSortTimestamp(a.sem, config) - getSemanaSortTimestamp(b.sem, config));
 
     const filtroLabel = {
         ativas: L('filtroAtivas', 'Ativas'),

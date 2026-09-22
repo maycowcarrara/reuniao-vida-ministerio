@@ -154,6 +154,7 @@ const RevisarEnviarNotificarTab = ({
             const msg = montarMensagemLembreteSemana({
                 t,
                 config,
+                semana: confirmationData?.semana,
                 dataISO: confirmationData?.dataISO,
                 responsavelNome: pessoa?.nome,
                 tituloParte: confirmationData?.tituloParte,

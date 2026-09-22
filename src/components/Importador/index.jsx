@@ -97,8 +97,8 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
 
     const parseSemanas = useCallback(async (html) => {
         if (!isLikelyHtml(html)) {
-            const reStart = /^(\d{1,2})(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2})(\s*de\s+[\p{L}]+)?/iu;
-            const reShort = /^(\d{1,2}\s*[-–]\s*\d{1,2})/;
+            const reStart = /^(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?/iu;
+            const reShort = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)/iu;
             const parsed = parseMarkdownLinks(html)
                 .filter(({ titulo, url }) => {
                     const hrefLower = url.toLowerCase();
@@ -112,8 +112,8 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
         const cheerio = await loadCheerio();
         const $ = cheerio.load(html);
         const out = [];
-        const reStart = /^(\d{1,2})(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2})(\s*de\s+[\p{L}]+)?/iu;
-        const reShort = /^(\d{1,2}\s*[-–]\s*\d{1,2})/;
+        const reStart = /^(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?/iu;
+        const reShort = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)/iu;
 
         $('a[href]').each((_, el) => {
             const href = ($(el).attr('href') || '').trim();

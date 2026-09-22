@@ -1020,6 +1020,7 @@ const RevisarEnviar = ({
             <div className="no-print">
                 <RevisarEnviarHeader
                     t={t}
+                    config={config}
                     abaAtiva={abaAtiva}
                     setAbaAtiva={setAbaAtiva}
                     startIndex={startIndex}

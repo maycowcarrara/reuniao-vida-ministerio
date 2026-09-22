@@ -90,8 +90,8 @@ const extractSemanaLeituraFromText = (rawText) => {
     const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     let semana = null;
     let leitura = null;
-    const reSemanaGeneric = /^(\d{1,2}\s*[-–]\s*\d{1,2})\s+(?:de\s+)?([\p{L}]+)(?:\s+de\s+\d{4})?$/iu;
-    const reSemanaCapsGeneric = /^(\d{1,2}\s*[-–]\s*\d{1,2})\s+DE\s+([\p{L}]+)(?:\s+\d{4})?$/iu;
+    const reSemanaGeneric = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)\s+(?:de\s+)?([\p{L}]+)(?:\s+de\s+\d{4})?$/iu;
+    const reSemanaCapsGeneric = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)\s+DE\s+([\p{L}]+)(?:\s+\d{4})?$/iu;
     const reLeitura = /^[A-ZÀ-ÜÇÃÕÑ]{2,}(\s+[A-ZÀ-ÜÇÃÕÑ]{2,})*\s+\d{1,3}(?:\s*(?:[-–]\s*\d{1,3}|,\s*\d{1,3})+)?[,]?$/;
 
     for (let i = 0; i < lines.length; i++) {
@@ -137,7 +137,7 @@ const extrairMioloTextoImportado = (rawText, termos) => {
     const isWeekHeading = (n) => {
         if (!n) return false;
         if (n.includes('programacao da reuniao vida e ministerio')) return true;
-        return /(^| )\d{1,2}\s*(?:[-–]\s*\d{1,2}).*(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/iu.test(n);
+        return /(^| )\d{1,2}(?:[.°ºª]|er|ero)?\s*(?:[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?|de\s+[\p{L}]+\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?).*(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/iu.test(n);
     };
 
     const sectionStart = normalizadas.findIndex((n) => isSectionLine(n) || n.includes('comentarios iniciais') || n.includes('comentarios iniciales'));
@@ -200,7 +200,7 @@ const extrairTextoDoHtmlJW = async (html) => {
 const extrairSemanaDeString = (s) => {
     const raw = (s || '').toString().replace(/\s+/g, ' ').trim();
     if (!raw) return null;
-    const re = /(\d{1,2}\s*[-–]\s*\d{1,2})\s+(?:de\s+)?([\p{L}]+)(?:\s+de\s+\d{4})?/iu;
+    const re = /(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)\s+(?:de\s+)?([\p{L}]+)(?:\s+de\s+\d{4})?/iu;
     const m = re.exec(raw);
     if (!m) return null;
     const end = m.index + m[0].length;

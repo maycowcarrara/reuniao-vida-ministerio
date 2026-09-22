@@ -52,29 +52,52 @@ const parseSemanaRange = (semanaStr) => {
     const raw = (semanaStr ?? '').toString().trim();
     if (!raw) return null;
 
-    // pega só antes do " - " (geralmente depois vem a leitura)
-    const onlyWeek = raw.split(' - ')[0].trim().replace(/[–—]/g, '-');
+    // Normalização inicial: remove traços longos
+    const normalized = raw.replace(/[–—]/g, '-');
 
-    // 30 de maio-5 de junho
-    let m = /^(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)\s*-\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)$/i.exec(onlyWeek);
-    if (m) {
-        return {
-            startDay: Number(m[1]),
-            startMonthName: m[2],
-            endDay: Number(m[3]),
-            endMonthName: m[4],
-        };
-    }
+    // Tenta com o split antes do " - " (leitura), com 2 blocos (se o próprio range tiver " - "), e a string inteira
+    const candidates = [
+        normalized.split(' - ')[0].trim(),
+        normalized.split(' - ').slice(0, 2).join(' - ').trim(),
+        normalized
+    ];
 
-    // 4-10 de maio
-    m = /^(\d{1,2})\s*-\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)$/i.exec(onlyWeek);
-    if (m) {
-        return {
-            startDay: Number(m[1]),
-            startMonthName: m[3],
-            endDay: Number(m[2]),
-            endMonthName: m[3],
-        };
+    for (const cand of candidates) {
+        const cleaned = cand
+            // remove ordinais como 1.°, 1.º, 1º, 1°, 1. antes de separadores ou "de"
+            .replace(/(\d{1,2})\s*\.?\s*[\u00b0\u00ba\u00aa](?!\w)/gi, '$1')
+            .replace(/(\d{1,2})\s*\.(?=\s*(?:de|del|-|a\b|al\b|\d))/gi, '$1')
+            .replace(/(\d{1,2})(?:er|ero)\b/gi, '$1')
+            .trim();
+
+        // 1. Dois meses diferentes: "26 de outubro-1 de novembro" ou "26 de outubro a 1 de novembro"
+        let m = /(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)\s*(?:-|\s+(?:a|al)\s+)\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)/i.exec(cleaned);
+        if (m) {
+            const mStart = monthIndexFromName(m[2]);
+            const mEnd = monthIndexFromName(m[4]);
+            if (mStart != null && mEnd != null) {
+                return {
+                    startDay: Number(m[1]),
+                    startMonthName: m[2],
+                    endDay: Number(m[3]),
+                    endMonthName: m[4],
+                };
+            }
+        }
+
+        // 2. Mesmo mês: "4-10 de maio" ou "4 a 10 de maio" ou "1 al 7 de noviembre"
+        m = /(\d{1,2})\s*(?:-|\s+(?:a|al)\s+)\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)/i.exec(cleaned);
+        if (m) {
+            const mEnd = monthIndexFromName(m[3]);
+            if (mEnd != null) {
+                return {
+                    startDay: Number(m[1]),
+                    startMonthName: m[3],
+                    endDay: Number(m[2]),
+                    endMonthName: m[3],
+                };
+            }
+        }
     }
 
     return null;

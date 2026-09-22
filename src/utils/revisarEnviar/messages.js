@@ -27,6 +27,9 @@ export const montarMensagemDesignacao = ({
 }) => {
     // 2. Formatar data (adicionando aviso se for visita)
     let dataFmt = formatarDataFolha(dataISO, config?.idioma);
+    if (!dataFmt && semana) {
+        dataFmt = semana.split(' - ')[0].trim();
+    }
     if (isVisita) {
         dataFmt += ` ${t.visitDateLabel}`;
     }
@@ -74,6 +77,7 @@ export const montarMensagemDesignacao = ({
 export const montarMensagemLembreteSemana = ({
     t,
     config,
+    semana,
     dataISO,
     responsavelNome,
     tituloParte,
@@ -82,6 +86,9 @@ export const montarMensagemLembreteSemana = ({
     linkConfirmacao = ''
 }) => {
     let dataFmt = formatarDataFolha(dataISO, config?.idioma);
+    if (!dataFmt && semana) {
+        dataFmt = semana.split(' - ')[0].trim();
+    }
     if (isVisita) {
         dataFmt += ` ${t.visitDateLabel}`;
     }

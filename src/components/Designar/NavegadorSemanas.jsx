@@ -185,7 +185,7 @@ const NavegadorSemanas = ({
     // Mapeamos para preservar o índice original (idx) antes de ordenar
     const semanasOrdenadas = listaSemanas
         .map((sem, idx) => ({ sem, originalIndex: idx }))
-        .sort((a, b) => getSemanaSortTimestamp(a.sem) - getSemanaSortTimestamp(b.sem));
+        .sort((a, b) => getSemanaSortTimestamp(a.sem, config) - getSemanaSortTimestamp(b.sem, config));
 
     return (
         <div
