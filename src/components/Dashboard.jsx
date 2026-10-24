@@ -417,6 +417,7 @@ export default function Dashboard({
                 'tesouros',
                 'ministerio',
                 'discurso',
+                'o_que_voce_diria',
                 'estudobiblico',
                 'vidacrista',
                 'presidente_fds',

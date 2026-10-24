@@ -1,3 +1,5 @@
+import { isWhatWouldYouSayPart } from './meetingParts.js';
+
 const SECTION_ICONS = {
     tesouros: '\u{1F48E}',
     ministerio: '\u{1F33E}',
@@ -23,6 +25,8 @@ export const normalizeMeetingSection = (secao = '') => {
 export const inferMeetingSection = ({ secao = '', text = '', type = '' } = {}) => {
     const explicitSection = normalizeMeetingSection(secao);
     if (explicitSection) return explicitSection;
+
+    if (isWhatWouldYouSayPart({ titulo: text, tipo: type })) return 'ministerio';
 
     const combined = `${normalizeMeetingText(type)} ${normalizeMeetingText(text)}`.trim();
     if (!combined) return '';

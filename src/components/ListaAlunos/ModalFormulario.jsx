@@ -6,6 +6,7 @@ import {
     getAssignmentCapabilityLabel,
     getLegacyCapabilitiesForTipo,
     normalizeAssignmentCapabilities,
+    isAssignmentCapabilityAllowedForTipo,
 } from '../../utils/assignmentEligibility';
 
 const normalizeForDirtyCheck = (value) => {
@@ -179,6 +180,7 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
     };
 
     const toggleParteHabilitada = (key) => {
+        if (!partesSelecionadas.includes(key) && !isAssignmentCapabilityAllowedForTipo(key, alunoEmEdicao.tipo)) return;
         const nextPartes = partesSelecionadas.includes(key)
             ? partesSelecionadas.filter((item) => item !== key)
             : [...partesSelecionadas, key];
@@ -336,18 +338,23 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                                         <div className="grid min-w-0 grid-cols-1 gap-1.5">
                                             {group.capabilities.map((capability) => {
                                                 const checked = partesSelecionadas.includes(capability.key);
+                                                const allowed = isAssignmentCapabilityAllowedForTipo(capability.key, alunoEmEdicao.tipo);
                                                 return (
                                                     <label
                                                         key={capability.key}
-                                                        className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${checked ? 'border-blue-200 bg-white text-blue-800 shadow-sm' : 'border-transparent bg-white/60 text-gray-500 hover:border-gray-200 hover:bg-white'}`}
+                                                        className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${allowed ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'} ${checked ? 'border-blue-200 bg-white text-blue-800 shadow-sm' : 'border-transparent bg-white/60 text-gray-500 hover:border-gray-200 hover:bg-white'}`}
                                                     >
                                                         <input
                                                             type="checkbox"
                                                             className="h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                             checked={checked}
+                                                            disabled={!allowed && !checked}
                                                             onChange={() => toggleParteHabilitada(capability.key)}
                                                         />
-                                                        <span className="min-w-0 leading-tight">{getAssignmentCapabilityLabel(capability.key, lang)}</span>
+                                                        <span className="min-w-0 leading-tight">
+                                                            {getAssignmentCapabilityLabel(capability.key, lang)}
+                                                            {capability.hints && <span className="mt-1 block text-[10px] font-medium">{capability.hints[lang] || capability.hints.pt}</span>}
+                                                        </span>
                                                     </label>
                                                 );
                                             })}

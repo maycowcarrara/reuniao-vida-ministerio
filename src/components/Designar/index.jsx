@@ -24,6 +24,7 @@ import { toast } from '../../utils/toast';
 import { dialog } from '../../utils/dialog';
 import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
+import { isWhatWouldYouSayPart } from '../../utils/meetingParts';
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
     MEIO_SEMANA_RESPONSABILIDADES,
@@ -1370,7 +1371,7 @@ const Designar = ({
         const tipoNormalizado = (parte?.tipo || '').toLowerCase();
 
         const isDiscurso = tituloNormalizado.includes('discurso') || tipoNormalizado.includes('discurso');
-        const requiresAjudante = secKey === 'ministerio' && !isDiscurso;
+        const requiresAjudante = secKey === 'ministerio' && !isDiscurso && !isWhatWouldYouSayPart(parte);
 
         return (
             <div key={parte.id} className="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all">

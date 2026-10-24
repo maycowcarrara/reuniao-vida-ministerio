@@ -12,6 +12,13 @@ export const getMeetingPartTypeNormalized = (part) =>
 export const getMeetingPartTitleNormalized = (part) =>
     normalizeMeetingPartText(part?.titulo ?? '');
 
+// Match the part's heading/type, never questions quoted in another part's description.
+export const isWhatWouldYouSayPart = (part) =>
+    [getMeetingPartTitleNormalized(part), getMeetingPartTypeNormalized(part)].some((text) =>
+        /^(?:\d+\s*[.)]\s*)?[¿“"']?(?:o\s+que\s+voce\s+diria|que\s+dirias?)\b/.test(text)
+        || text === 'o_que_voce_diria'
+    );
+
 const hasPrayerTitlePattern = (title = '') =>
     title.includes('e oracao') || title.includes('y oracion');
 

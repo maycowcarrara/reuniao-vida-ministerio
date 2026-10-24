@@ -41,6 +41,7 @@ import {
     getPrayerPartPosition,
     isBibleStudyPart,
     isPrayerPart,
+    isWhatWouldYouSayPart,
     isSongOnlyPart
 } from '../../utils/meetingParts';
 
@@ -795,7 +796,7 @@ const RevisarEnviar = ({
                     else termoGravacao = 'tesouros';
                 }
                 else if (secaoLower === 'ministerio') {
-                    termoGravacao = tituloLower.includes('discurso') ? 'discurso' : 'ministerio';
+                    termoGravacao = isWhatWouldYouSayPart(p) ? 'o_que_voce_diria' : (tituloLower.includes('discurso') ? 'discurso' : 'ministerio');
                 }
                 else if (secaoLower === 'vida' || isEstudo(p) || tituloLower.includes('estudo') || tituloLower.includes('estudio')) {
                     if (isEstudo(p) || tituloLower.includes('estudo biblico') || tituloLower.includes('estudio biblico')) {

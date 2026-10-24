@@ -4,6 +4,7 @@ import {
     getMeetingPartTypeNormalized,
     isBibleStudyPart,
     isPrayerPart,
+    isWhatWouldYouSayPart,
 } from './meetingParts.js';
 import { FIM_DE_SEMANA_SLOT_CAPABILITY } from './fimDeSemana.js';
 
@@ -43,6 +44,14 @@ export const ASSIGNMENT_CAPABILITIES = [
         group: 'rvm',
         labels: { pt: 'Discurso no Ministério', es: 'Discurso en el Ministerio' },
         requiredGender: 'M',
+    },
+    {
+        key: 'o_que_voce_diria',
+        group: 'rvm',
+        labels: { pt: 'O que você diria? (Ministério)', es: '¿Qué dirías? (Ministerio)' },
+        requiredGender: 'M',
+        allowedTipos: ['anciao', 'servo'],
+        hints: { pt: 'Somente anciãos e servos ministeriais habilitados.', es: 'Solo ancianos y siervos ministeriales capacitados.' },
     },
     {
         key: 'vida_crista',
@@ -186,6 +195,7 @@ const CAPABILITY_TO_SUGGEST_LABEL = {
     leitura_biblia: 'leitura',
     ministerio: 'ministerio',
     discurso: 'discurso',
+    o_que_voce_diria: 'o_que_voce_diria',
     vida_crista: 'vida',
     estudo_biblico_congregacao: 'estudobiblico',
     leitor_ebc: 'leitor',
@@ -208,6 +218,11 @@ const normalize = (value = '') =>
         .trim();
 
 export const getAssignmentCapability = (key) => CAPABILITY_BY_KEY[key] || null;
+
+export const isAssignmentCapabilityAllowedForTipo = (key, tipo) => {
+    const allowedTipos = getAssignmentCapability(key)?.allowedTipos;
+    return !allowedTipos || allowedTipos.includes(tipo);
+};
 
 export const getAssignmentCapabilityLabel = (key, lang = 'pt') => {
     const capability = getAssignmentCapability(key);
@@ -254,6 +269,8 @@ export const getAssignmentCapabilityForSlot = ({ parte = null, slotKey = '' } = 
     if (slot === 'leitor') return 'leitor_ebc';
 
     if (isPrayerPart(parte)) return 'oracao';
+
+    if (isWhatWouldYouSayPart(parte)) return 'o_que_voce_diria';
 
     const title = getMeetingPartTitleNormalized(parte);
     const type = getMeetingPartTypeNormalized(parte);
@@ -306,6 +323,26 @@ export const isAlunoEligibleForAssignment = ({ aluno, parte = null, slotKey = ''
     const ctx = getAssignmentContextForSlot({ parte, slotKey, cargosMap, assignedStudent });
     if (!ctx.capabilityKey) {
         return { eligible: true, reason: '', capabilityKey: null, context: ctx };
+    }
+
+    if (!isAssignmentCapabilityAllowedForTipo(ctx.capabilityKey, aluno.tipo)) {
+        return {
+            eligible: false,
+            reason: lang === 'es'
+                ? 'Esta asignación requiere un anciano o siervo ministerial capacitado.'
+                : 'Esta parte exige um ancião ou servo ministerial habilitado.',
+            capabilityKey: ctx.capabilityKey,
+            context: ctx,
+        };
+    }
+
+    if (ctx.capabilityKey === 'o_que_voce_diria' && ctx.isAjudante) {
+        return {
+            eligible: false,
+            reason: lang === 'es' ? 'Esta asignación no tiene ayudante.' : 'Esta parte não tem ajudante.',
+            capabilityKey: ctx.capabilityKey,
+            context: ctx,
+        };
     }
 
     if (ctx.capabilityKey === 'ministerio' && normalize(slotKey) !== 'ajudante' && aluno?.tipo === 'irma_lim') {

@@ -46,6 +46,7 @@ const HISTORICO_PARTE_LABELS = {
         tesouros: 'Tesouros',
         ministerio: 'Ministério',
         discurso: 'Discurso',
+        o_que_voce_diria: 'O que você diria?',
         vidacrista: 'Vida cristã'
     },
     es: {
@@ -70,6 +71,7 @@ const HISTORICO_PARTE_LABELS = {
         tesouros: 'Tesoros',
         ministerio: 'Ministerio',
         discurso: 'Discurso',
+        o_que_voce_diria: '¿Qué dirías?',
         vidacrista: 'Vida cristiana'
     }
 };

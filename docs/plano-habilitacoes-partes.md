@@ -55,9 +55,14 @@ aluno ainda esta no modelo legado.
 - `discurso_inicial`: Parte 1 de Tesouros.
 - `joias_espirituais`: Parte 2, Joias Espirituais.
 - `leitura_biblia`: Parte 3, Leitura da Biblia.
-- `ministerio`: Todas as partes da secao Faca Seu Melhor no Ministerio, exceto
-  discurso de 5 minutos.
+- `ministerio`: Partes de estudante da secao Faca Seu Melhor no Ministerio,
+  exceto discurso e "O que voce diria?".
 - `discurso`: Discurso de 5 minutos no Ministerio.
+- `o_que_voce_diria`: "O que você diria?" / "¿Qué dirías?". Exige habilitacao
+  explicita e `tipo` igual a `anciao` ou `servo`, sem ajudante. Nao e incluida
+  no fallback legado nem no padrao de novos alunos. A identificacao aceita
+  tambem "¿Qué diría?", com ou sem numeracao, acentos e pontuacao, inclusive
+  em programacoes ja importadas. O historico usa uma chave propria.
 - `vida_crista`: Todas as partes da secao Nossa Vida Crista, exceto Estudo
   Biblico de Congregacao.
 - `estudo_biblico_congregacao`: Dirigente do Estudo Biblico de Congregacao.
@@ -97,6 +102,7 @@ O sistema atual precisa mapear cada slot visivel para uma chave de
 | Ministerio, sem discurso | `estudante` | `ministerio` |
 | Ministerio, sem discurso | `ajudante` | mesma chave do estudante, com genero compativel |
 | Discurso no Ministerio | `estudante` | `discurso` |
+| O que voce diria? / Que dirias? | `estudante` | `o_que_voce_diria` (anciao/servo habilitado) |
 | Nossa Vida Crista, sem EBC | `estudante` | `vida_crista` |
 | Nossa Vida Crista, sem EBC | `ajudante` | mesma chave do estudante, com genero compativel |
 | Estudo Biblico de Congregacao | `dirigente` | `estudo_biblico_congregacao` |
@@ -268,6 +274,9 @@ Fase 3: aplicacao opcional.
   congregacao podem ser perdidas.
 
 ## Validacao
+
+Regressao da nova parte (sem acesso a Firebase):
+`node --test scripts/test-o-que-voce-diria.mjs`.
 
 Antes de concluir a implementacao:
 
