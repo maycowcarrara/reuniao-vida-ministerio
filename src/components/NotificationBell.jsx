@@ -26,7 +26,8 @@ export default function NotificationBell({
     onMarkOne,
     onMarkAll,
     onDeleteOne,
-    onDeleteRead
+    onDeleteRead,
+    onNavigate
 }) {
     const [open, setOpen] = useState(false);
     const [visibleUnreadCount, setVisibleUnreadCount] = useState(INITIAL_VISIBLE_COUNT);
@@ -148,6 +149,7 @@ export default function NotificationBell({
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-black text-slate-900">{item.title}</p>
+                                                    {onNavigate && <button type="button" className="text-blue-700 underline" onClick={() => { onNavigate(item); closeNotifications(); }}>{lang === 'es' ? 'Abrir programa' : 'Abrir programação'}</button>}
                                                     <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">{item.description}</p>
                                                 </div>
                                                 <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0" />

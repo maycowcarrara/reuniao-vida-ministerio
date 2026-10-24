@@ -1,3 +1,4 @@
+import { buildAssignmentKey } from '../assignmentIdentity.js';
 import { useCallback, useMemo, useState } from 'react';
 import { buildMailtoHref, buildWhatsappHref } from './links';
 import { toast } from '../toast';
@@ -27,9 +28,7 @@ export const useNotificacoesRuntime = (t) => {
         [t]
     );
 
-    const buildMsgKey = useCallback(({ dataISO, semana, parteId, pessoaId, role }) => {
-        return [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
-    }, []);
+    const buildMsgKey = buildAssignmentKey;
 
     const markSent = useCallback((key, channel) => {
         setSentMap((prev) => ({

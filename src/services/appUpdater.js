@@ -112,7 +112,9 @@ export const refreshAppVersion = async (versionTag) => {
     }
 
     await Promise.race([waitForControllerChange(), wait(900)]);
-    await clearAppCaches();
+    // A nova versão já preparou seu precache. Apagá-lo aqui quebra a próxima
+    // navegação offline. Workbox remove caches obsoletos na ativação; limpeza
+    // forçada permanece exclusivamente no caminho de recuperação de assets.
 
     const url = new URL(window.location.href);
     url.searchParams.set('appv', versionTag || String(Date.now()));

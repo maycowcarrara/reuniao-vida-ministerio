@@ -8,7 +8,8 @@ import {
     setDoc,
     updateDoc,
     where,
-    writeBatch
+    writeBatch,
+    runTransaction
 } from 'firebase/firestore';
 
 import { normalizeLanguage, normalizeSystemConfig } from '../config/appConfig';
@@ -24,6 +25,13 @@ import {
     normalizeResponsabilidades
 } from '../utils/fimDeSemana';
 import { resolveDataOwnerUid } from './adminAccess';
+
+import { buildAssignmentKey, assignmentIdentity } from '../utils/assignmentIdentity.js';
+import { resolverConfirmacaoGrupo } from '../utils/integracoesGrupo.js';
+import { normalizeOcorrenciaReuniao } from '../utils/ocorrenciasReuniao.js';
+import { MULTI_GRUPOS_LOCAL } from '../config/multiGruposLocal.js';
+import { garantirParConfirmacao, registrarCanalConfirmacao } from './confirmacoesGrupoFirestore.js';
+import { integracoesLocais } from './integracoesLocais.js';
 
 const PRIVATE_COLLECTION = 'confirmacoes';
 const PUBLIC_COLLECTION = 'confirmacoes_publicas';
@@ -62,11 +70,6 @@ const buildPrivateRef = (uid, assignmentKey) =>
 
 const buildPublicRef = (token) =>
     doc(db, PUBLIC_COLLECTION, String(token || '').trim());
-
-const mergeSentChannels = (currentChannels = {}, channel, changedAtIso) => ({
-    ...currentChannels,
-    [channel]: changedAtIso
-});
 
 const buildHistoryEntry = ({ previousStatus, nextStatus, responseCode = '', source = 'public_link', actorType = 'public' }) => ({
     previousStatus: previousStatus || 'pendente',
@@ -147,8 +150,7 @@ const getTodayLocalISODate = () => {
 const isPastEventDate = (dateISO) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateISO || '').trim())
     && String(dateISO).trim() < getTodayLocalISODate();
 
-const buildAssignmentKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
-    [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
+
 
 const buildNotificationId = ({ token, type, changeKey }) =>
     [token || '', type || '', changeKey || ''].map((part) => String(part).trim()).join('_');
@@ -163,6 +165,7 @@ const getPublicBoardRef = (uid) =>
     doc(db, 'quadros_publicos', String(uid || '').trim());
 
 const getMeetingDateForWeek = (week, config) => {
+    if (week.meioSemana?.data) return week.meioSemana.data;
     const eventoEspecial = getEventoEspecialDaSemana(week, config);
     const tipoEvento = getTipoEventoSemana(week, config);
     const isVisita = tipoEvento === 'visita';
@@ -202,6 +205,7 @@ const getMeetingDateForWeek = (week, config) => {
 };
 
 const getWeekendDateForWeek = (week, config) => {
+    if (week.fimDeSemana?.data) return week.fimDeSemana.data;
     const fallbackStr = week?.fimDeSemana?.data || week?.dataReuniao || week?.dataExata || week?.dataInicio || week?.data || null;
     return getMeetingDateISOFromSemana({
         semanaStr: week?.semana,
@@ -214,6 +218,7 @@ const getWeekendDateForWeek = (week, config) => {
 
 const collectAssignmentKeysForWeek = (week, config = {}) => {
     const keys = new Set();
+    if (week?.arquivada) return keys;
     const dataISO = getMeetingDateForWeek(week, config);
     const semana = String(week?.semana || '').trim();
 
@@ -230,6 +235,7 @@ const collectAssignmentKeysForWeek = (week, config = {}) => {
         }));
     };
 
+    if (normalizeOcorrenciaReuniao(week, 'meioSemana', config).operacional) {
     if (week?.presidente) {
         addAssignment(week.presidente, 'presidente', 'presidente');
     }
@@ -257,8 +263,9 @@ const collectAssignmentKeysForWeek = (week, config = {}) => {
         });
     });
 
+    }
     const fds = normalizeFimDeSemana(week?.fimDeSemana);
-    if (fds.ativo) {
+    if (normalizeOcorrenciaReuniao(week, 'fimDeSemana', config).operacional) {
         const dataFds = getWeekendDateForWeek(week, config) || dataISO;
         const addWeekendAssignment = (pessoa, role, parteId) => {
             const pessoaId = pessoa?.id || pessoa?.nome;
@@ -293,29 +300,13 @@ const validateConfirmationTarget = async (confirmationData = {}) => {
     const assignmentKey = String(confirmationData?.assignmentKey || '').trim();
     const semana = String(confirmationData?.semana || '').trim();
 
-    if (!ownerUid || !assignmentKey || !semana) {
+    if (!ownerUid || !assignmentKey || (confirmationData.identityVersion !== 2 && !semana)) {
         return { isUnavailable: true, unavailableReason: 'missing_reference' };
     }
 
-    const findAssignmentInWeeks = (weeks = [], config = {}) => {
-        const matchingWeeks = (Array.isArray(weeks) ? weeks : [])
-            .filter((week) => String(week?.semana || '').trim() === semana);
-
-        if (!matchingWeeks.length) {
-            return { isUnavailable: true, unavailableReason: 'week_removed' };
-        }
-
-        const found = matchingWeeks.some((week) => {
-            const keys = collectAssignmentKeysForWeek(week, config);
-            return keys.has(assignmentKey);
-        });
-
-        if (!found) {
-            return { isUnavailable: true, unavailableReason: 'assignment_changed' };
-        }
-
-        return { isUnavailable: false, unavailableReason: '' };
-    };
+    const findAssignmentInWeeks = (weeks = [], config = {}) => resolverConfirmacaoGrupo({
+        confirmacao: confirmationData, programacoes: Array.isArray(weeks) ? weeks : [], config, collectLegacyKeys: collectAssignmentKeysForWeek,
+    });
 
     const publicBoardSnap = await getDoc(getPublicBoardRef(ownerUid));
     if (publicBoardSnap.exists()) {
@@ -326,12 +317,12 @@ const validateConfirmationTarget = async (confirmationData = {}) => {
 
     const canReadPrivateProgram = resolveDataOwnerUid(auth.currentUser) === ownerUid;
     if (!canReadPrivateProgram) {
-        return { isUnavailable: false, unavailableReason: 'validation_unavailable' };
+        return { isUnavailable: true, unavailableReason: 'validation_unavailable' };
     }
 
     const [configSnap, weeksSnap] = await Promise.all([
         getDoc(getConfigRef(ownerUid)),
-        getDocs(query(getProgramacaoCollectionRef(ownerUid), where('semana', '==', semana)))
+        getDocs(query(getProgramacaoCollectionRef(ownerUid), where(confirmationData.identityVersion === 2 ? 'id' : 'semana', '==', confirmationData.identityVersion === 2 ? confirmationData.programacaoId : semana)))
     ]);
 
     const config = normalizeSystemConfig(configSnap.exists() ? configSnap.data() : {});
@@ -376,54 +367,24 @@ export const ensurePublicConfirmation = async ({
     congregacaoNome,
     agendaLink = '',
     sala = 'Principal',
-    secao = ''
+    secao = '',
+    ...identity
 }) => {
+    if (MULTI_GRUPOS_LOCAL) {
+        const c = integracoesLocais.ensure({ ...identity, assignmentKey });
+        return { ...c, link: buildConfirmationUrl(c.token), acceptLink: buildConfirmationUrl(c.token, 'a'), declineLink: buildConfirmationUrl(c.token, 'n'), weekLink: buildConfirmationUrl(c.token, '', 'w') };
+    }
     const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
-
-    if (!safeKey) {
-        throw new Error('Chave da designação ausente para gerar confirmação.');
-    }
-
-    const privateRef = buildPrivateRef(ownerUid, safeKey);
-    const privateSnap = await getDoc(privateRef);
-    const privateData = privateSnap.exists() ? privateSnap.data() : {};
-
-    let token = (privateData?.token || '').toString().trim();
-    if (!token) {
-        token = await ensureUniqueToken();
-    }
-
-    const publicRef = buildPublicRef(token);
-    const publicSnap = await getDoc(publicRef);
-    const publicData = publicSnap.exists() ? publicSnap.data() : {};
-    const status = publicData?.status || privateData?.status || 'pendente';
-    const weekReminderStatus = publicData?.weekReminderStatus || privateData?.weekReminderStatus || 'nao_enviado';
-    const createdAt = privateData?.createdAt || publicData?.createdAt || serverTimestamp();
-
-    const baseData = {
-        token,
-        assignmentKey: safeKey,
-        ownerUid,
-        lang: normalizeLanguage(lang),
-        semana: semana || '',
-        dataISO: dataISO || '',
-        tituloParte: tituloParte || '',
-        tituloParteExibicao: tituloParteExibicao || '',
-        pessoaNome: pessoaNome || '',
-        role: role || '',
-        congregacaoNome: congregacaoNome || '',
-        agendaLink: agendaLink || '',
-        sala: sala || 'Principal',
-        secao: secao || '',
-        status,
-        weekReminderStatus,
-        createdAt,
-        updatedAt: serverTimestamp()
-    };
-
-    await setDoc(publicRef, baseData, { merge: true });
-    await setDoc(privateRef, baseData, { merge: true });
+    if (!safeKey) throw new Error('Chave da designação ausente.');
+    const v2 = identity.identityVersion === 2 ? assignmentIdentity(identity) : null;
+    if (v2 && buildAssignmentKey(v2) !== safeKey) throw new Error('Identidade da confirmação divergente.');
+    // Candidato gerado fora da transação. Uma transação concorrente sempre
+    // reutiliza o token já persistido, sem regenerar seus vínculos.
+    const candidate = await ensureUniqueToken();
+    const result = await garantirParConfirmacao({ db, sdk: { doc, runTransaction, serverTimestamp }, ownerUid, safeKey, candidate,
+        dados: { ...identity, lang, semana, dataISO, tituloParte, tituloParteExibicao, pessoaNome, role, congregacaoNome, agendaLink, sala, secao } });
+    const { token, status } = result;
 
     return {
         token,
@@ -436,6 +397,7 @@ export const ensurePublicConfirmation = async ({
 };
 
 export const getPublicConfirmation = async (token) => {
+    if (MULTI_GRUPOS_LOCAL) return integracoesLocais.get(token);
     const safeToken = String(token || '').trim();
     if (!safeToken) return null;
 
@@ -455,6 +417,7 @@ export const getPublicConfirmation = async (token) => {
 };
 
 const updateConfirmationState = async (token, mode, status, options = {}) => {
+    if (MULTI_GRUPOS_LOCAL) return integracoesLocais.update(token, mode, status);
     const safeToken = String(token || '').trim();
     if (!safeToken) {
         throw new Error('Token de confirmação inválido.');
@@ -557,6 +520,7 @@ const updateConfirmationState = async (token, mode, status, options = {}) => {
     if (current?.ownerUid && current?.assignmentKey) {
         batch.set(buildPrivateRef(current.ownerUid, current.assignmentKey), {
             ...payload,
+            ...(current.identityVersion === 2 ? assignmentIdentity(current) : {}),
             token: safeToken,
             assignmentKey: current.assignmentKey,
             ownerUid: current.ownerUid
@@ -599,6 +563,7 @@ const updateConfirmationState = async (token, mode, status, options = {}) => {
             status: nextStatus,
             previousStatus,
             meta: {
+                ...(current.identityVersion === 2 ? assignmentIdentity(current) : {}),
                 tituloParte: current?.tituloParte || '',
                 congregacaoNome: current?.congregacaoNome || ''
             }
@@ -615,6 +580,7 @@ export const respondToPublicWeekReminder = async (token, status, options = {}) =
     updateConfirmationState(token, 'week', status, options);
 
 export const respondToConfirmationByAssignment = async (assignmentKey, status, options = {}) => {
+    if (MULTI_GRUPOS_LOCAL) { const c = integracoesLocais.snapshot().confirmacoes.find(item => item.assignmentKey === assignmentKey); return integracoesLocais.update(c?.token, 'primary', status); }
     const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
     if (!safeKey) {
@@ -635,6 +601,7 @@ export const respondToConfirmationByAssignment = async (assignmentKey, status, o
 };
 
 export const respondToWeekReminderByAssignment = async (assignmentKey, status, options = {}) => {
+    if (MULTI_GRUPOS_LOCAL) { const c = integracoesLocais.snapshot().confirmacoes.find(item => item.assignmentKey === assignmentKey); return integracoesLocais.update(c?.token, 'week', status); }
     const ownerUid = getCurrentOwnerUid();
     const safeKey = String(assignmentKey || '').trim();
     if (!safeKey) {
@@ -654,75 +621,14 @@ export const respondToWeekReminderByAssignment = async (assignmentKey, status, o
     return respondToPublicWeekReminder(token, status, options);
 };
 
-export const registerConfirmationReminder = async (assignmentKey) => {
-    const ownerUid = getCurrentOwnerUid();
-    const safeKey = String(assignmentKey || '').trim();
-    if (!safeKey) return;
-
-    const privateRef = buildPrivateRef(ownerUid, safeKey);
-    const privateSnap = await getDoc(privateRef);
-    if (!privateSnap.exists()) return;
-
-    const token = privateSnap.data()?.token;
-    const currentChannels = privateSnap.data()?.sentChannels || {};
-    const changedAtIso = new Date().toISOString();
-    const payload = {
-        weekReminderStatus: 'pendente',
-        lastReminderSentAt: serverTimestamp(),
-        lastReminderSentAtIso: changedAtIso,
-        sentChannels: mergeSentChannels(currentChannels, 'waReminder', changedAtIso),
-        updatedAt: serverTimestamp()
-    };
-
-    await updateDoc(privateRef, payload);
-
-    if (token) {
-        await setDoc(buildPublicRef(token), payload, { merge: true });
-    }
+export const registerConfirmationReminder = async assignmentKey => {
+    if (MULTI_GRUPOS_LOCAL) return integracoesLocais.channel(assignmentKey, 'waReminder');
+    return registrarCanalConfirmacao({ db, sdk: { doc, runTransaction, serverTimestamp }, ownerUid: getCurrentOwnerUid(), assignmentKey, channel: 'waReminder', lembrete: true });
 };
 
 export const registerNotificationChannelByAssignment = async (assignmentKey, channel) => {
-    const ownerUid = getCurrentOwnerUid();
-    const safeKey = String(assignmentKey || '').trim();
-    const safeChannel = String(channel || '').trim();
-    if (!safeKey || !safeChannel) return;
-
-    const privateRef = buildPrivateRef(ownerUid, safeKey);
-    const privateSnap = await getDoc(privateRef);
-    if (!privateSnap.exists()) return;
-
-    const current = privateSnap.data() || {};
-    const token = current?.token;
-    const changedAtIso = new Date().toISOString();
-    const sentChannels = mergeSentChannels(current?.sentChannels || {}, safeChannel, changedAtIso);
-    const payload = {
-        sentChannels,
-        lastNotificationChannel: safeChannel,
-        lastNotificationSentAt: serverTimestamp(),
-        lastNotificationSentAtIso: changedAtIso,
-        updatedAt: serverTimestamp()
-    };
-
-    if (safeChannel === 'wa') {
-        payload.lastWhatsappSentAt = serverTimestamp();
-        payload.lastWhatsappSentAtIso = changedAtIso;
-    }
-
-    if (safeChannel === 'mail') {
-        payload.lastEmailSentAt = serverTimestamp();
-        payload.lastEmailSentAtIso = changedAtIso;
-    }
-
-    if (safeChannel === 'waReminder') {
-        payload.lastReminderSentAt = serverTimestamp();
-        payload.lastReminderSentAtIso = changedAtIso;
-    }
-
-    await setDoc(privateRef, payload, { merge: true });
-
-    if (token) {
-        await setDoc(buildPublicRef(token), payload, { merge: true });
-    }
+    if (MULTI_GRUPOS_LOCAL) return integracoesLocais.channel(assignmentKey, channel);
+    return registrarCanalConfirmacao({ db, sdk: { doc, runTransaction, serverTimestamp }, ownerUid: getCurrentOwnerUid(), assignmentKey, channel });
 };
 
 export const markConfirmationAlertSeen = async (token) => {

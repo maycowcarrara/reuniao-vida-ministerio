@@ -1,3 +1,4 @@
+import { parseAssignmentReference } from '../../utils/assignmentIdentity.js';
 import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle, CheckCircle2, ChevronDown, Mail, MessageCircle, Tent, UsersRound, Loader2, RefreshCw, Send, SlidersHorizontal, XCircle } from 'lucide-react';
 
@@ -238,7 +239,7 @@ const RevisarEnviarNotificarTab = ({
         confirmacoesMap[String(assignmentKey || '').trim()]?.status || 'pendente';
 
     const buildSubstitutionRequest = (confirmationData, pessoa) => {
-        const [dataISO, semana, parteId, pessoaId, role] = String(confirmationData?.assignmentKey || '').split('|');
+        const { dataISO, semana, parteId, pessoaId, role } = parseAssignmentReference(confirmationData);
         const parsedItemIndex = Number(String(parteId || '').split('_').pop());
         const responsabilidadeKey = String(parteId || '')
             .replace(/^(meio|fds)_/, '')

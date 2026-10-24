@@ -1,0 +1,10 @@
+{
+  "firestore": { "rules": "firestore.rules" },
+  "emulators": {
+    "firestore": { "host": "127.0.0.1", "port": 8186 },
+    "ui": { "enabled": false },
+    "hub": { "host": "127.0.0.1", "port": 4486 },
+    "logging": { "host": "127.0.0.1", "port": 4586 },
+    "singleProjectMode": true
+  }
+}

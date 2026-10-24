@@ -26,11 +26,11 @@ import { getEventoEspecialDaSemana, getTipoEventoSemana, getSemanaStartISO as ge
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
     MEIO_SEMANA_RESPONSABILIDADES,
-    hasFimDeSemanaData,
     normalizeFimDeSemana,
     normalizeResponsabilidades
 } from '../utils/fimDeSemana';
 import PwaInstallButton from './PwaInstallButton';
+import { normalizeOcorrenciaReuniao } from '../utils/ocorrenciasReuniao.js';
 
 // ============================================================================
 // FUNÇÕES AUXILIARES (HELPERS)
@@ -220,6 +220,7 @@ const ajustarDataParaTerça = (dataISO) => {
 };
 
 const getDataReuniaoISO = (sem, config) => {
+    if (sem?.meioSemana?.data) return sem.meioSemana.data;
     const eventoEspecial = getEventoEspecialDaSemana(sem, config);
     const tipoEvento = getTipoEventoSemana(sem, config);
     const isVisita = tipoEvento === 'visita';
@@ -249,6 +250,7 @@ const getDataReuniaoISO = (sem, config) => {
 };
 
 const getDataFimDeSemanaISO = (sem, config) => {
+    if (sem?.fimDeSemana?.data) return sem.fimDeSemana.data;
     const fallbackStr = sem?.fimDeSemana?.data || sem?.dataInicio || sem?.dataExata || sem?.dataReuniao || sem?.data || null;
     return getMeetingDateISOFromSemana({
         semanaStr: sem?.semana,
@@ -267,7 +269,7 @@ const juntarNomes = (pessoas = []) => pessoas.map(getNomePessoa).filter(Boolean)
 // COMPONENTE PRINCIPAL
 // ============================================================================
 
-export default function QuadroPublico({ programacoes, config, usuario }) {
+export default function QuadroPublico({ programacoes, config, usuario, seletorGrupo = null }) {
     const [searchParams] = useSearchParams();
     const pessoaParam = searchParams.get('p') || '';
     const [busca, setBusca] = useState(() => pessoaParam);
@@ -308,8 +310,8 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             const semanaStartISO = getSemanaStartISOCompartilhado(sem, config);
             const entries = [];
 
-            if (dataReuniaoISO && dataReuniaoISO >= hojeStr) {
-                const partesComHorario = calcularHorarios(sem.partes, dataReuniaoISO, config?.horario, lang);
+            if (normalizeOcorrenciaReuniao(sem, 'meioSemana', config).publica && dataReuniaoISO && dataReuniaoISO >= hojeStr) {
+                const partesComHorario = calcularHorarios(sem.partes || [], dataReuniaoISO, sem.meioSemana?.horario || config?.horario, lang);
                 const meetingStartTimeStr = partesComHorario.length > 0 ? partesComHorario[0].startTimeStr : '--:--';
                 const meetingEndTimeStr = partesComHorario.length > 0 ? partesComHorario[partesComHorario.length - 1].endTimeStr : '--:--';
 
@@ -327,7 +329,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
             const fds = normalizeFimDeSemana(sem?.fimDeSemana);
             const dataFimDeSemana = getDataFimDeSemanaISO(sem, config);
-            if (fds.ativo && hasFimDeSemanaData(sem?.fimDeSemana) && dataFimDeSemana && dataFimDeSemana >= hojeStr) {
+            if (normalizeOcorrenciaReuniao(sem, 'fimDeSemana', config).publica && dataFimDeSemana && dataFimDeSemana >= hojeStr) {
                 entries.push({
                     ...sem,
                     tipoVisual: 'fimDeSemana',
@@ -338,7 +340,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                     fimDeSemana: {
                         ...fds,
                         data: dataFimDeSemana,
-                        horario: config?.horario_fds || config?.horarioFimDeSemana || fds.horario || '',
+                        horario: fds.horario || config?.horario_fds || config?.horarioFimDeSemana || '',
                     },
                     meetingStartTimeStr: '',
                     meetingEndTimeStr: ''
@@ -567,7 +569,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
 
         if (!itens.length) return null;
 
-        const horarioMeioSemana = config?.horarioReuniao || config?.horario || '19:30';
+        const horarioMeioSemana = sem.meioSemana?.horario || config?.horarioReuniao || config?.horario || '19:30';
 
         return (
             <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -857,6 +859,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
             `}</style>
             <header className="bg-blue-700 text-white shadow-md z-50 shrink-0">
                 <div className="px-4 py-4 max-w-2xl mx-auto space-y-4">
+                    {seletorGrupo && <div className="flex justify-end">{seletorGrupo}</div>}
 
                     <div className="flex justify-between items-start">
                         <div>
@@ -954,7 +957,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                             const estaEmContagem = modoPreLive && reuniaoEmContagem.index === idx;
                             const horarioCabecalho = isFimDeSemana
                                 ? sem.fimDeSemana?.horario
-                                : (config?.horarioReuniao ?? config?.horario ?? '');
+                                : (sem.meioSemana?.horario || config?.horarioReuniao || config?.horario || '');
                             const contagemSemana = estaEmContagem && sem.partes?.[0]
                                 ? formatarContagemRegressiva(sem.partes[0].startObj.getTime() - agora.getTime())
                                 : null;
@@ -1084,7 +1087,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                     href={gerarLinkAgendaGenerico({
                                                                         titulo: `${T.presidente} - ${T.reuniaoMeioSemana || 'Reunião de meio de semana'}`,
                                                                         dataISO: dataRef,
-                                                                        horario: config?.horarioReuniao || config?.horario || '19:30',
+                                                                        horario: sem.meioSemana?.horario || config?.horarioReuniao || config?.horario || '19:30',
                                                                         tempoMin: 105,
                                                                         designado: sem.presidente.nome,
                                                                         texts: agendaTexts
@@ -1307,7 +1310,7 @@ export default function QuadroPublico({ programacoes, config, usuario }) {
                                                                             </div>
                                                                             {Boolean(termo) && (
                                                                                 <a
-                                                                                    href={gerarLinkAgenda(parte, dataRef, agendaTexts, config?.horarioReuniao || config?.horario)}
+                                                                                    href={gerarLinkAgenda(parte, dataRef, agendaTexts, sem.meioSemana?.horario || config?.horarioReuniao || config?.horario)}
                                                                                     target="_blank"
                                                                                     rel="noreferrer"
                                                                                     className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 px-2.5 py-1.5 text-blue-600 shadow-sm active:scale-95 transition-all text-xs font-bold shrink-0 ml-2"

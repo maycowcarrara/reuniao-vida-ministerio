@@ -46,7 +46,7 @@ export default function ConfirmacaoPublica() {
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        window.localStorage.setItem('quadro_auth', 'true');
+        try { window.localStorage.setItem('quadro_auth', 'true'); } catch { /* Preferência local opcional. */ }
     }, []);
 
     const limparRespostaDaUrl = useCallback(() => {

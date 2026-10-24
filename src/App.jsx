@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Globe, X, Minimize, WifiOff, Menu, LayoutDashboard, Send } from 'lucide-react';
 
@@ -21,13 +21,30 @@ import { hasFimDeSemanaData, normalizeFimDeSemana } from './utils/fimDeSemana';
 import {
   createProgramacaoId,
   ensureUniqueProgramacaoIds,
-  getLegacyProgramacaoTitleKey,
-  getProgramacaoIdentitySignature,
-  getProgramacaoReferenceDateISO
+  findMatchingProgramacaoIndex
 } from './utils/programacoes';
-import { normalizeLanguage, normalizeMeetingDay, normalizeSystemConfig, syncDocumentLanguage } from './config/appConfig';
+import { normalizeLanguage, normalizeMeetingDay, syncDocumentLanguage } from './config/appConfig';
 import { getSectionMessages, I18nProvider } from './i18n';
 import { resolveDataOwnerUid } from './services/adminAccess';
+import { MULTI_GRUPOS_LOCAL } from './config/multiGruposLocal.js';
+import { USUARIO_ENSAIO_GRUPOS } from './data/ensaioGrupos.js';
+import { normalizeGruposProgramacao } from './utils/gruposProgramacao.js';
+import { projetarConfigGrupo } from './utils/grupoAtivo.js';
+import { createProgramacoesController, operacoesDaListaDoGrupo, patchConfiguracaoGrupo, selecionarProgramacoesGrupo } from './utils/programacoesPorGrupo.js';
+import { useGrupoAtivo } from './hooks/useGrupoAtivo.js';
+import { GRUPO_EDICAO_CONTEXT } from './hooks/useProtecaoTrocaGrupo.js';
+import SeletorGrupo from './components/SeletorGrupo.jsx';
+import ConfiguracoesGrupos from './components/ConfiguracoesGrupos.jsx';
+import ReunioesIndependentes from './components/ReunioesIndependentes.jsx';
+import DesignacoesGrupo from './components/Designar/DesignacoesGrupo.jsx';
+import PainelGrupo from './components/PainelGrupo.jsx';
+import RevisaoGrupo from './components/RevisaoGrupo.jsx';
+import QuadroPorGrupo from './components/QuadroPorGrupo.jsx';
+import { projetarQuadroPublico } from './utils/quadroPublico.js';
+import { gruposRemotosAtivos } from './utils/compatibilidadeGrupos.js';
+import { prepararImportacaoMeioSemana } from './utils/agendamentoReunioes.js';
+import { destinoNotificacao } from './utils/integracoesGrupo.js';
+import { prepararEventoGrupo, reconstruirHistoricoGrupo } from './utils/designacoesPorGrupo.js';
 
 const LOCAL_ADMIN_UID_KEY = 'quadro_admin_uid';
 
@@ -64,6 +81,8 @@ function AdminPanel() {
     loading,
     usuario,
     salvarItem,
+    salvarLoteProgramacoes,
+    salvarHistoricosLocais,
     excluirItem,
     publicarQuadroPublico,
     excluirSemanaELimparHistorico,
@@ -71,8 +90,39 @@ function AdminPanel() {
     marcarTodasNotificacoesComoLidas,
     excluirNotificacao,
     excluirNotificacoesLidas
-  } = useGerenciadorDados({ syncConfirmacoes });
+  } = useGerenciadorDados({ syncConfirmacoes, localOnly: MULTI_GRUPOS_LOCAL });
   const dadosSistema = dadosNuvem;
+  const modoGrupos = MULTI_GRUPOS_LOCAL || gruposRemotosAtivos(dadosSistema.configuracoes);
+  const adaptadoresRef = useRef({ salvarLoteProgramacoes, publicarQuadroPublico });
+  useEffect(() => { adaptadoresRef.current = { salvarLoteProgramacoes, publicarQuadroPublico }; }, [salvarLoteProgramacoes, publicarQuadroPublico]);
+  const dadosAtuaisRef = useRef(dadosSistema);
+  useEffect(() => { dadosAtuaisRef.current = dadosSistema; }, [dadosSistema]);
+  const [busy, setBusy] = useState(false);
+  const pendingRef = useRef(false);
+  const guardsRef = useRef(new Set());
+  const registrarGuard = useCallback(guard => { guardsRef.current.add(guard); return () => guardsRef.current.delete(guard); }, []);
+  const configGrupos = useMemo(() => modoGrupos ? normalizeGruposProgramacao(dadosSistema.configuracoes) : {}, [dadosSistema.configuracoes, modoGrupos]);
+  const { grupoId, selecionarGrupo } = useGrupoAtivo({ ownerUid: MULTI_GRUPOS_LOCAL ? usuario?.uid : resolveDataOwnerUid(usuario), config: configGrupos, enabled: modoGrupos });
+  const configEmFoco = useMemo(() => modoGrupos && grupoId
+    ? projetarConfigGrupo(configGrupos, grupoId) : dadosSistema.configuracoes, [configGrupos, grupoId, dadosSistema.configuracoes, modoGrupos]);
+  const [controller] = useState(() => createProgramacoesController({
+    getEstado: () => dadosAtuaisRef.current,
+    salvarLote: async lote => {
+      await adaptadoresRef.current.salvarLoteProgramacoes(lote);
+      const anterior = dadosAtuaisRef.current;
+      dadosAtuaisRef.current = { ...anterior, historico_reunioes: [
+        ...anterior.historico_reunioes.filter(item => !lote.excluirIds.includes(item.id) && !lote.upserts.some(next => next.id === item.id)), ...lote.upserts,
+      ] };
+    },
+    publicar: payload => adaptadoresRef.current.publicarQuadroPublico(payload),
+  }));
+  const executarLocal = async operacao => {
+    if (pendingRef.current) throw new Error('Uma operação já está em andamento.');
+    pendingRef.current = true;
+    setBusy(true);
+    try { return await operacao(); }
+    finally { pendingRef.current = false; setBusy(false); }
+  };
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [sharedWeekSelection, setSharedWeekSelection] = useState({});
   const [reviewShortcutRequest, setReviewShortcutRequest] = useState(null);
@@ -100,15 +150,32 @@ function AdminPanel() {
     }
   };
 
-  const lang = normalizeLanguage(dadosSistema?.configuracoes?.idioma);
+  const lang = normalizeLanguage(configEmFoco?.idioma);
   const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
   const APP_TEXTS = getSectionMessages('adminPanel', lang);
+  const G = getSectionMessages('gruposProgramacao', lang);
+  const trocarContexto = async acao => {
+    if (pendingRef.current || dupModal.open) return;
+    pendingRef.current = true;
+    setBusy(true);
+    try {
+      for (const guard of [...guardsRef.current]) if (!await guard()) return;
+      setSharedWeekSelection({});
+      setReviewShortcutRequest(null);
+      setSubstitutionShortcutRequest(null);
+      acao();
+    } finally { pendingRef.current = false; setBusy(false); }
+  };
+  const navegarAba = proxima => modoGrupos
+    ? trocarContexto(() => setAbaAtiva(proxima)) : setAbaAtiva(proxima);
 
   useEffect(() => {
     syncDocumentLanguage(lang);
   }, [lang]);
 
-  const listaProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
+  const todasProgramacoes = Array.isArray(dadosSistema?.historico_reunioes) ? dadosSistema.historico_reunioes : [];
+  const listaProgramacoes = modoGrupos
+    ? selecionarProgramacoesGrupo(todasProgramacoes, grupoId, dadosSistema.configuracoes) : todasProgramacoes;
   const unreadNotificationsCount = (notificacoes || []).filter((item) => !item?.readAt && !item?.readAtIso).length;
 
   const getTodayISO = () => {
@@ -291,14 +358,16 @@ function AdminPanel() {
 
   const hasMeaningfulChange = (next, current) => stableStringify(next || {}) !== stableStringify(current || {});
 
-  const buildQuadroPublicoPayload = (configuracoes, programacoes = []) => ({
-    configuracoes: normalizeSystemConfig(configuracoes || {}),
-    historico_reunioes: (programacoes || [])
-      .filter((semana) => semana && !semana.arquivada && semana.publicadaNoQuadro !== false)
-      .map((semana) => JSON.parse(JSON.stringify(semana)))
+  const buildQuadroPublicoPayload = (configuracoes, programacoes = []) => projetarQuadroPublico({
+    configuracoes, historico_reunioes: programacoes, ownerUid: resolveDataOwnerUid(usuario),
   });
 
   const republicarQuadroPublicoAtual = async (programacoesOverride = listaProgramacoes) => {
+    if (modoGrupos) {
+      const resultado = await executarLocal(() => controller.executar({ grupoId, operacoes: [], republicar: true }));
+      if (resultado.erroPublicacao) toast.error(resultado.erroPublicacao, G.parcial);
+      return resultado;
+    }
     const programacoesPreparadas = ensureUniqueProgramacaoIds(
       prepararProgramacoesParaSalvar(
         Array.isArray(programacoesOverride) ? programacoesOverride : listaProgramacoes,
@@ -312,6 +381,17 @@ function AdminPanel() {
   };
 
   const salvarAlteracao = async (novosDados) => {
+    if (modoGrupos) {
+      // Configuração e programas têm operações próprias, nunca gravar props de tela.
+      if (novosDados.configuracoes && novosDados.configuracoes !== dadosSistema.configuracoes) throw new Error('Use a edição explícita de configuração por grupo.');
+      return executarLocal(async () => {
+        if (novosDados.alunos) {
+          for (const aluno of novosDados.alunos) await salvarItem('alunos', aluno.id, aluno);
+        }
+        if (novosDados.historico_reunioes) return controller.executar({ grupoId,
+          operacoes: operacoesDaListaDoGrupo({ lista: novosDados.historico_reunioes, grupoId, config: dadosAtuaisRef.current.configuracoes }) });
+      });
+    }
     const operacoes = [];
     const configDestino = novosDados.configuracoes || dadosSistema?.configuracoes;
     let configAlterada = false;
@@ -390,12 +470,21 @@ function AdminPanel() {
   };
 
   const setListaProgramacoes = (updater) => {
+    if (modoGrupos) {
+      const grupoDestino = grupoId;
+      return executarLocal(() => {
+        const config = dadosAtuaisRef.current.configuracoes;
+        const atual = selecionarProgramacoesGrupo(dadosAtuaisRef.current.historico_reunioes, grupoDestino, config);
+        const next = typeof updater === 'function' ? updater(atual) : updater;
+        return controller.executar({ grupoId: grupoDestino, operacoes: operacoesDaListaDoGrupo({ lista: next, grupoId: grupoDestino, config }) });
+      }).catch(error => { toast.error(error, G.erroSalvar); return { salvo: false, error }; });
+    }
     const current = listaProgramacoes;
     const nextRaw = typeof updater === 'function' ? updater(current) : (Array.isArray(updater) ? updater : []);
     const next = ensureUniqueProgramacaoIds(
       nextRaw.filter(Boolean).map(p => normalizeProgramacaoDates(p, dadosSistema?.configuracoes))
     );
-    salvarAlteracao({ ...dadosSistema, historico_reunioes: next });
+    return salvarAlteracao({ ...dadosSistema, historico_reunioes: next });
   };
 
   const getWeekSelectionKey = (sem, idx = 0) =>
@@ -461,22 +550,7 @@ function AdminPanel() {
 
     nextProg.id = createProgramacaoId(nextProg);
 
-    const dataRefNova = getProgramacaoReferenceDateISO(nextProg);
-    const signatureNova = getProgramacaoIdentitySignature(nextProg);
-    const legacyTitleKeyNovo = getLegacyProgramacaoTitleKey(nextProg);
-    const idxAtual = listaProgramacoes.findIndex((p) => {
-      const idAtual = String(p?.id || '').trim();
-      if (idAtual && idAtual === nextProg.id) return true;
-
-      const dataRefAtual = getProgramacaoReferenceDateISO(p);
-      if (dataRefNova && dataRefNova === dataRefAtual) return true;
-
-      const signatureAtual = getProgramacaoIdentitySignature(p);
-      if (signatureNova && signatureNova === signatureAtual) return true;
-
-      const legacyTitleKeyAtual = getLegacyProgramacaoTitleKey(p);
-      return !!legacyTitleKeyNovo && legacyTitleKeyNovo === legacyTitleKeyAtual;
-    });
+    const idxAtual = findMatchingProgramacaoIndex(nextProg, listaProgramacoes, dadosSistema?.configuracoes);
 
     if (idxAtual === -1) { setListaProgramacoes(prev => [...prev, nextProg]); return; }
 
@@ -499,6 +573,7 @@ function AdminPanel() {
   };
 
   const handleDefinirEvento = (dataInput, tipoEvento) => {
+    if (modoGrupos) { toast.info(G.pendente); return; }
     if (!dataInput) return;
     const dataAlvo = new Date(dataInput + 'T12:00:00');
     const diaSemana = dataAlvo.getDay();
@@ -535,6 +610,7 @@ function AdminPanel() {
 
   // 🔥 HANDLER ATUALIZADO: Agora recebe a data da semana e repassa para a função de limpar o histórico
   const handleExcluirSemanaBanco = async (id, dataDaSemana) => {
+    if (modoGrupos) return executarLocal(() => controller.excluirProgramacoes({ grupoId, ids: [id] }));
     const { alunos: alunosLimpos, alterou } = limparHistoricoAlunosPorDatas(dadosSistema?.alunos || [], [dataDaSemana]);
     if (alterou) {
       await salvarAlteracao({ ...dadosSistema, alunos: alunosLimpos });
@@ -542,15 +618,32 @@ function AdminPanel() {
     await excluirSemanaELimparHistorico(id, dataDaSemana);
   };
 
-  const handleSalvarAlunoBanco = useCallback(
-    async (aluno) => await salvarItem('alunos', aluno.id, aluno),
-    [salvarItem]
-  );
+  const handleSalvarAlunoBanco = async aluno => modoGrupos
+    ? executarLocal(() => salvarItem('alunos', aluno.id, aluno)) : salvarItem('alunos', aluno.id, aluno);
 
   const handleExcluirAlunoBanco = useCallback(
     async (id) => await excluirItem('alunos', id),
     [excluirItem]
   );
+
+  const salvarConfigGrupoLocal = pedido => executarLocal(async () => {
+    const config = patchConfiguracaoGrupo(dadosAtuaisRef.current.configuracoes, pedido);
+    await salvarItem('configuracoes', 'geral', config);
+    dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config };
+  });
+
+  const salvarEventoGrupoLocal = pedido => executarLocal(async () => {
+    const config = prepararEventoGrupo({ config: dadosAtuaisRef.current.configuracoes, ...pedido });
+    await salvarItem('configuracoes', 'geral', config);
+    dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config };
+  });
+  const sincronizarHistoricoGrupoLocal = pedido => executarLocal(async () => {
+    const estado = dadosAtuaisRef.current;
+    const alunos = reconstruirHistoricoGrupo({ ...pedido, config: estado.configuracoes,
+      alunos: estado.alunos, programacoes: estado.historico_reunioes });
+    await salvarHistoricosLocais(alunos, pedido);
+    dadosAtuaisRef.current = { ...estado, alunos };
+  });
 
   if (loading) {
     return (
@@ -571,6 +664,7 @@ function AdminPanel() {
 
   return (
     <I18nProvider lang={lang}>
+      <GRUPO_EDICAO_CONTEXT.Provider value={modoGrupos ? registrarGuard : null}>
       {/* AS CLASSES DE IMPRESSÃO FORAM ADICIONADAS NESTA DIV (print:block print:h-auto print:overflow-visible) */}
       <div id="app-root" className="flex h-screen w-full bg-gray-100 font-sans text-gray-900 overflow-hidden relative print:block print:h-auto print:overflow-visible">
         {dupModal.open && (
@@ -595,10 +689,11 @@ function AdminPanel() {
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           abaAtiva={abaAtiva}
-          setAbaAtiva={setAbaAtiva}
+          setAbaAtiva={navegarAba}
           usuario={usuario}
-          logout={() => auth.signOut()}
+          logout={() => MULTI_GRUPOS_LOCAL ? window.location.reload() : auth.signOut()}
           listaProgramacoes={listaProgramacoes}
+          permitirImportacao={!modoGrupos || configGrupos.grupos[grupoId]?.meioSemana.habilitada}
           alunos={dadosSistema?.alunos || []}
           t={t}
           lang={lang}
@@ -622,7 +717,7 @@ function AdminPanel() {
 
             <div className="flex items-center justify-between gap-3 md:gap-4">
               <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                <h2 className="text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none">
+                <h2 className={`${modoGrupos ? 'hidden sm:block' : ''} text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none`}>
                   {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
                 </h2>
 
@@ -639,7 +734,7 @@ function AdminPanel() {
                     type="button"
                     title={t.designar}
                     aria-label={t.designar}
-                    onClick={() => setAbaAtiva('designar')}
+                    onClick={() => navegarAba('designar')}
                     className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${abaAtiva === 'designar'
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -652,7 +747,7 @@ function AdminPanel() {
                     type="button"
                     title={t.revisar}
                     aria-label={t.revisar}
-                    onClick={() => setAbaAtiva('revisar')}
+                    onClick={() => navegarAba('revisar')}
                     className={`flex items-center justify-center p-2 rounded-xl border transition-colors ${abaAtiva === 'revisar'
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -673,6 +768,9 @@ function AdminPanel() {
 
                 <div className="md:hidden h-7 w-px bg-slate-200 mx-0.5" />
 
+                {modoGrupos && <SeletorGrupo grupos={configGrupos.grupos} grupoId={grupoId} disabled={busy || dupModal.open}
+                  onChange={id => id !== grupoId && trocarContexto(() => selecionarGrupo(id))} />}
+
                 <Link
                   to="/quadro"
                   title={APP_TEXTS.verQuadro}
@@ -683,7 +781,7 @@ function AdminPanel() {
                 </Link>
 
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:block">
-                  {dadosSistema?.configuracoes?.nome_cong || APP_TEXTS.minhaCong}
+                  {configEmFoco?.nome_cong || APP_TEXTS.minhaCong}
                 </div>
 
                 <NotificationBell
@@ -693,6 +791,12 @@ function AdminPanel() {
                   onMarkAll={marcarTodasNotificacoesComoLidas}
                   onDeleteOne={excluirNotificacao}
                   onDeleteRead={excluirNotificacoesLidas}
+                  onNavigate={modoGrupos ? alerta => {
+                    const destino = destinoNotificacao(alerta, configGrupos);
+                    if (!configGrupos.grupos[destino.grupoId]?.ativo) { toast.info('Programação indisponível.'); return; }
+                    trocarContexto(() => { selecionarGrupo(destino.grupoId); setAbaAtiva('revisar');
+                      setReviewShortcutRequest({ token: Date.now(), ...destino }); });
+                  } : null}
                 />
 
                 <button
@@ -713,12 +817,32 @@ function AdminPanel() {
         )}
 
         {/* PRINT:OVERFLOW-VISIBLE AQUI PARA DEIXAR O CONTEÚDO ROLAR LIVREMENTE */}
-        <div className="flex-1 overflow-y-auto scroll-smooth print:overflow-visible">
+        <div key={modoGrupos ? grupoId : 'legado'} className="flex-1 overflow-y-auto scroll-smooth print:overflow-visible">
+          {MULTI_GRUPOS_LOCAL && <p role="status" className="no-print m-3 p-3 rounded-xl border border-amber-300 bg-amber-50 text-sm">{G.ensaio}</p>}
+          {!modoGrupos && dadosSistema.configuracoes?.versaoProgramacao >= 2 && <p role="alert" className="m-3 p-3 border border-amber-300 bg-amber-50">
+            {lang === 'es' ? 'Programa v2 protegido. Actualiza en Versión del Sistema; las escrituras remotas requieren activación autorizada.' : 'Programação v2 protegida. Atualize em Versão do Sistema; escritas remotas exigem ativação autorizada.'}
+          </p>}
+          <fieldset disabled={modoGrupos && busy} className="min-w-0 border-0 p-0 m-0">
           <Suspense fallback={<RouteLoading text={APP_TEXTS.carregando} />}>
-            {abaAtiva === 'dashboard' && <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={dadosSistema?.configuracoes} setAbaAtiva={setAbaAtiva} onDefinirEvento={handleDefinirEvento} t={t} confirmacoes={confirmacoes} onAbrirNotificacoesSemana={handleAbrirNotificacoesSemana} />}
-            {abaAtiva === 'importar' && <Importador onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />}
+            {abaAtiva === 'dashboard' && (modoGrupos
+              ? <PainelGrupo config={configGrupos} grupoId={grupoId} alunos={dadosSistema.alunos} programacoes={todasProgramacoes}
+                  busy={busy} onEvento={salvarEventoGrupoLocal} onHistorico={sincronizarHistoricoGrupoLocal} onDesignar={() => navegarAba('designar')} />
+              : <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={configEmFoco} setAbaAtiva={navegarAba} onDefinirEvento={handleDefinirEvento} t={t} confirmacoes={confirmacoes} onAbrirNotificacoesSemana={handleAbrirNotificacoesSemana} />)}
+            {abaAtiva === 'importar' && (modoGrupos
+              ? (!MULTI_GRUPOS_LOCAL && configEmFoco.dia_reuniao && configEmFoco.horario
+                ? <Importador config={configEmFoco} programacoes={listaProgramacoes} idioma={lang} onImportComplete={async d => {
+                    const conteudo = { ...d }; delete conteudo.id;
+                    const data = d.meioSemana?.data || d.dataReuniao || d.dataExata || getMeetingDateISOFromSemana({ semanaStr: d.semana, config: configEmFoco, isoFallback: d.dataInicio });
+                    await executarLocal(() => controller.executar({ grupoId, preparar: estado => prepararImportacaoMeioSemana({ ...estado, dados: conteudo, data, horario: configEmFoco.horario }) }));
+                    setAbaAtiva('designar');
+                  }} />
+                : <ReunioesIndependentes key={`${grupoId}-importar`} importar config={configGrupos} grupoId={grupoId} programacoes={listaProgramacoes} busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} />)
+              : <Importador config={dadosSistema.configuracoes} programacoes={listaProgramacoes} onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />)}
 
-            {abaAtiva === 'designar' && (
+            {abaAtiva === 'designar' && (modoGrupos
+              ? <><ReunioesIndependentes key={`${grupoId}-agendar`} config={configGrupos} grupoId={grupoId} programacoes={listaProgramacoes} busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} />
+                  <DesignacoesGrupo config={configGrupos} grupoId={grupoId} programacoes={todasProgramacoes} alunos={dadosSistema.alunos} cargosMap={CARGOS_MAP}
+                    busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} onCadastro={() => navegarAba('alunos')} /></> :
               <Designar
                 listaProgramacoes={listaProgramacoes}
                 setListaProgramacoes={setListaProgramacoes}
@@ -726,7 +850,7 @@ function AdminPanel() {
                 cargosMap={CARGOS_MAP}
                 lang={lang}
                 t={t}
-                config={dadosSistema?.configuracoes}
+                config={configEmFoco}
                 onExcluirSemana={handleExcluirSemanaBanco}
                 sharedWeekSelection={sharedWeekSelection}
                 setSharedWeekSelection={setSharedWeekSelection}
@@ -735,7 +859,8 @@ function AdminPanel() {
               />
             )}
 
-            {abaAtiva === 'revisar' && (
+            {abaAtiva === 'revisar' && (modoGrupos ? <RevisaoGrupo alunos={dadosSistema.alunos} localOnly={MULTI_GRUPOS_LOCAL} ownerUid={resolveDataOwnerUid(usuario)} config={configGrupos} grupoId={grupoId} programacoes={todasProgramacoes} confirmacoes={confirmacoes} programacaoFoco={reviewShortcutRequest?.programacaoId}
+              onExecutar={pedido => executarLocal(() => controller.executar(pedido))} /> :
               <RevisarEnviar
                 historico={listaProgramacoes}
                 alunos={dadosSistema?.alunos || []}
@@ -749,12 +874,16 @@ function AdminPanel() {
                 onSolicitarSubstituicao={handleSolicitarSubstituicao}
               />
             )}
-            {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} onSalvarAluno={handleSalvarAlunoBanco} config={dadosSistema?.configuracoes} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} />}
-            {abaAtiva === 'configuracoes' && <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} />}
+            {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} onSalvarAluno={handleSalvarAlunoBanco} config={configEmFoco} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} multiGrupos={modoGrupos} />}
+            {abaAtiva === 'configuracoes' && (modoGrupos
+              ? <ConfiguracoesGrupos config={configGrupos} grupoId={grupoId} onSalvar={salvarConfigGrupoLocal} busy={busy} lang={lang} />
+              : <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} />)}
           </Suspense>
+          </fieldset>
         </div>
       </main>
       </div>
+      </GRUPO_EDICAO_CONTEXT.Provider>
     </I18nProvider>
   );
 }
@@ -789,7 +918,7 @@ function QuadroPublicoWrapper({ usuario }) {
           <p className="font-bold text-sm tracking-wider uppercase">{loadingText}</p>
         </div>
       }>
-        <QuadroPublico programacoes={programacoes} config={config} usuario={usuario} />
+        {config.versaoProgramacao >= 2 ? <QuadroPorGrupo dados={{ ...dados, historico_reunioes: programacoes }} usuario={usuario} /> : <QuadroPublico programacoes={programacoes} config={config} usuario={usuario} />}
       </Suspense>
     </I18nProvider>
   );
@@ -799,9 +928,10 @@ function QuadroPublicoWrapper({ usuario }) {
 // 3. APLICATIVO PRINCIPAL (ROTEADOR INTELIGENTE)
 // ============================================================================
 function App() {
-  const [usuarioVerificado, setUsuarioVerificado] = useState(undefined);
+  const [usuarioVerificado, setUsuarioVerificado] = useState(MULTI_GRUPOS_LOCAL ? USUARIO_ENSAIO_GRUPOS : undefined);
 
   useEffect(() => {
+    if (MULTI_GRUPOS_LOCAL) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (typeof window !== 'undefined') {
         try {

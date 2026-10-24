@@ -1,5 +1,5 @@
 // src/utils/revisarEnviar/dates.js
-import { getLanguageMeta, getWeekdayJsDay } from '../../config/appConfig';
+import { getLanguageMeta, getWeekdayJsDay } from '../../config/appConfig.js';
 
 const normalizarTxt = (s) =>
     (s ?? '')

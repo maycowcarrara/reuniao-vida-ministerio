@@ -1,3 +1,5 @@
+import { getGrupoEfetivoId, isProgramacaoV2 } from './gruposProgramacao.js';
+
 const ID_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MANUAL_PART_ID_RE = /^manual-\d+-/;
 
@@ -18,6 +20,26 @@ export const getProgramacaoReferenceDateISO = (programacao) => {
     }
 
     return '';
+};
+
+// Calendário puro em UTC evita diferenças de fuso/DST na identidade da semana.
+export const getProgramacaoWeekStartISO = (programacao) => {
+    const iso = getProgramacaoReferenceDateISO(programacao) || String(programacao?.fimDeSemana?.data || '');
+    if (!ID_DATE_RE.test(iso)) throw new Error('Programação v2 exige data ISO válida.');
+    const date = new Date(`${iso}T12:00:00Z`);
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== iso) {
+        throw new Error('Programação v2 exige data ISO válida.');
+    }
+    date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+    return date.toISOString().slice(0, 10);
+};
+
+const assertGrupoDoId = (programacao, existingProgramacoes, config) => {
+    const id = String(programacao?.id || '').trim();
+    const existente = id && existingProgramacoes.find(item => String(item?.id || '').trim() === id);
+    if (existente && getGrupoEfetivoId(existente, config) !== getGrupoEfetivoId(programacao, config)) {
+        throw new Error('ID de programação já pertence a outro grupo.');
+    }
 };
 
 const normalizeTitle = (value = '') => value
@@ -53,8 +75,9 @@ const hashString = (value = '') => {
 
 export const getLegacyProgramacaoTitleKey = (programacao) => normalizeTitle(programacao?.semana);
 
-export const getProgramacaoIdentitySignature = (programacao) => {
+export const getProgramacaoIdentitySignature = (programacao, config = {}) => {
     const signaturePayload = {
+        ...(isProgramacaoV2(programacao) ? { grupoId: getGrupoEfetivoId(programacao, config) } : {}),
         data: getProgramacaoReferenceDateISO(programacao),
         evento: String(programacao?.evento || programacao?.tipo || '').trim(),
         dataEventoEspecial: String(programacao?.dataEventoEspecial || '').trim(),
@@ -72,11 +95,14 @@ export const getProgramacaoIdentitySignature = (programacao) => {
     return hashString(stableStringify(signaturePayload));
 };
 
-export const createProgramacaoId = (programacao, { forceRandom = false } = {}) => {
+export const createProgramacaoId = (programacao, { forceRandom = false, config = {} } = {}) => {
     const explicitId = String(programacao?.id || '').trim();
     if (explicitId && !forceRandom) return explicitId;
 
     if (!forceRandom) {
+        if (isProgramacaoV2(programacao)) {
+            return `prog-${encodeURIComponent(getGrupoEfetivoId(programacao, config))}-${getProgramacaoWeekStartISO(programacao)}`;
+        }
         const referenceDate = getProgramacaoReferenceDateISO(programacao);
         if (referenceDate) return `semana-${referenceDate}`;
 
@@ -87,38 +113,51 @@ export const createProgramacaoId = (programacao, { forceRandom = false } = {}) =
     return `semana-${randomSuffix()}`;
 };
 
-export const findMatchingProgramacaoId = (programacao, existingProgramacoes = []) => {
+// Único comparador para importação/reconciliação. Nunca compara datas, assinaturas
+// ou títulos fora do grupo efetivo, mesmo quando o principal muda.
+export const findMatchingProgramacaoIndex = (programacao, existingProgramacoes = [], config = {}) => {
+    assertGrupoDoId(programacao, existingProgramacoes, config);
+    const grupoId = getGrupoEfetivoId(programacao, config);
     const explicitId = String(programacao?.id || '').trim();
-    if (explicitId) return explicitId;
-
+    const byId = explicitId ? existingProgramacoes.findIndex(item => String(item?.id || '').trim() === explicitId) : -1;
+    if (byId !== -1) return byId;
+    const candidatos = existingProgramacoes
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item && getGrupoEfetivoId(item, config) === grupoId);
+    if (isProgramacaoV2(programacao)) {
+        const semana = getProgramacaoWeekStartISO(programacao);
+        return candidatos.find(({ item }) => {
+            try { return getProgramacaoWeekStartISO(item) === semana; }
+            catch { return false; }
+        })?.index ?? -1;
+    }
     const referenceDate = getProgramacaoReferenceDateISO(programacao);
-    if (referenceDate) {
-        const byDate = (existingProgramacoes || []).find((item) => getProgramacaoReferenceDateISO(item) === referenceDate);
-        if (byDate) return createProgramacaoId(byDate);
-    }
-
-    const signature = getProgramacaoIdentitySignature(programacao);
-    if (signature) {
-        const bySignature = (existingProgramacoes || []).find((item) => getProgramacaoIdentitySignature(item) === signature);
-        if (bySignature) return createProgramacaoId(bySignature);
-    }
-
-    const legacyTitleKey = getLegacyProgramacaoTitleKey(programacao);
-    if (legacyTitleKey) {
-        const byTitle = (existingProgramacoes || []).find((item) => getLegacyProgramacaoTitleKey(item) === legacyTitleKey);
-        if (byTitle) return createProgramacaoId(byTitle);
-    }
-
-    return createProgramacaoId(programacao);
+    const signature = getProgramacaoIdentitySignature(programacao, config);
+    const titleKey = getLegacyProgramacaoTitleKey(programacao);
+    return candidatos.find(({ item }) => referenceDate && getProgramacaoReferenceDateISO(item) === referenceDate)?.index
+        ?? candidatos.find(({ item }) => getProgramacaoIdentitySignature(item, config) === signature)?.index
+        ?? candidatos.find(({ item }) => titleKey && getLegacyProgramacaoTitleKey(item) === titleKey)?.index
+        ?? -1;
 };
 
-export const ensureUniqueProgramacaoIds = (programacoes = []) => {
+export const findMatchingProgramacaoId = (programacao, existingProgramacoes = [], config = {}) => {
+    assertGrupoDoId(programacao, existingProgramacoes, config);
+    const explicitId = String(programacao?.id || '').trim();
+    if (explicitId) return explicitId;
+    const index = findMatchingProgramacaoIndex(programacao, existingProgramacoes, config);
+    return createProgramacaoId(index === -1 ? programacao : existingProgramacoes[index], { config });
+};
+
+export const ensureUniqueProgramacaoIds = (programacoes = [], config = {}) => {
     const usedIds = new Set();
 
     return (programacoes || []).map((programacao) => {
         if (!programacao) return programacao;
 
-        let id = createProgramacaoId(programacao);
+        let id = createProgramacaoId(programacao, { config });
+        if (usedIds.has(id) && (programacao.id || isProgramacaoV2(programacao))) {
+            throw new Error('ID de programação duplicado; resolver conflito sem renomear vínculos.');
+        }
         while (!id || usedIds.has(id)) {
             id = createProgramacaoId(programacao, { forceRandom: true });
         }
@@ -128,13 +167,16 @@ export const ensureUniqueProgramacaoIds = (programacoes = []) => {
     });
 };
 
-export const reconcileProgramacaoIds = (programacoes = [], existingProgramacoes = []) => {
+export const reconcileProgramacaoIds = (programacoes = [], existingProgramacoes = [], config = {}) => {
     const usedIds = new Set();
 
     return (programacoes || []).map((programacao) => {
         if (!programacao) return programacao;
 
-        let id = findMatchingProgramacaoId(programacao, existingProgramacoes);
+        let id = findMatchingProgramacaoId(programacao, existingProgramacoes, config);
+        if (usedIds.has(id) && (programacao.id || isProgramacaoV2(programacao))) {
+            throw new Error('ID de programação duplicado; resolver conflito sem renomear vínculos.');
+        }
         while (!id || usedIds.has(id)) {
             id = createProgramacaoId(programacao, { forceRandom: true });
         }

@@ -110,6 +110,7 @@ service cloud.firestore {
 
     function confirmationBaseKeys() {
       return [
+        "identityVersion", "grupoId", "programacaoId", "tipoReuniao", "slotId", "pessoaId", "papel",
         "token",
         "assignmentKey",
         "ownerUid",
@@ -168,8 +169,89 @@ service cloud.firestore {
       ];
     }
 
+    function identityFieldsEqual(a, b) {
+      return a.get('identityVersion', 1) == b.get('identityVersion', 1)
+        && a.get('grupoId', '') == b.get('grupoId', '')
+        && a.get('programacaoId', '') == b.get('programacaoId', '')
+        && a.get('tipoReuniao', '') == b.get('tipoReuniao', '')
+        && a.get('slotId', '') == b.get('slotId', '')
+        && a.get('pessoaId', '') == b.get('pessoaId', '')
+        && a.get('papel', '') == b.get('papel', '');
+    }
+    function immutableConfirmation() {
+      return request.resource.data.token == resource.data.token
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.assignmentKey == resource.data.assignmentKey
+        && identityFieldsEqual(request.resource.data, resource.data)
+        && (resource.data.get('identityVersion', 1) != 2 || (
+          request.resource.data.diff(resource.data).removedKeys().size() == 0
+          && request.resource.data.get('sentChannels', {}).diff(resource.data.get('sentChannels', {})).removedKeys().size() == 0
+          && request.resource.data.get('responseHistory', []).size() >= resource.data.get('responseHistory', []).size()
+          && request.resource.data.get('weekReminderHistory', []).size() >= resource.data.get('weekReminderHistory', []).size()
+        ));
+    }
+    function validIdentity(data) {
+      return (data.get('identityVersion', 1) == 1 && !data.assignmentKey.matches('v2-.*')) || (
+        data.identityVersion == 2 && data.grupoId is string && data.grupoId.size() > 0
+        && data.programacaoId is string && data.programacaoId.size() > 0
+        && data.tipoReuniao in ['meioSemana', 'fimDeSemana']
+        && data.slotId is string && data.slotId.size() > 0
+        && data.pessoaId is string && data.pessoaId.size() > 0
+        && data.papel is string && data.papel.size() > 0
+        && data.assignmentKey.matches('v2-[0-9a-f]+')
+      );
+    }
+    function contractConfig(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)/configuracoes/geral).data;
+    }
+    function revisionAdvanced(userId) {
+      let before = contractConfig(userId);
+      let after = getAfter(/databases/$(database)/documents/users/$(userId)/configuracoes/geral).data;
+      return before.get('ativacaoMultiGrupos', {}).get('contrato', 0) == 2
+        && before.ativacaoMultiGrupos.status == 'ativa'
+        && after.ativacaoMultiGrupos == before.ativacaoMultiGrupos
+        && after.revisionProgramacoes == before.revisionProgramacoes + 1;
+    }
+    function programProtocol(userId) {
+      return contractConfig(userId).get('ativacaoMultiGrupos', {}).get('contrato', 0) != 2 || revisionAdvanced(userId);
+    }
+    function scopedDeletion(userId, docId) {
+      let operation = getAfter(/databases/$(database)/documents/users/$(userId)/operacoes_programacao/$(docId)).data;
+      return revisionAdvanced(userId) && operation.tipo == 'excluir'
+        && operation.programacaoId == docId && operation.ownerUid == userId
+        && operation.grupoId == resource.data.grupoId && operation.at == request.time;
+    }
+    function preservesV2Program() {
+      return (resource.data.get('versaoProgramacao', 1) < 2 && !('grupoId' in resource.data)) || (
+        request.resource.data.versaoProgramacao == 2
+        && request.resource.data.grupoId == resource.data.grupoId
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.get('identidadeLegada', {}) == resource.data.get('identidadeLegada', {})
+        && request.resource.data.diff(resource.data).removedKeys().size() == 0
+        && request.resource.data.meioSemana.diff(resource.data.meioSemana).removedKeys().size() == 0
+        && request.resource.data.get('fimDeSemana', {}).diff(resource.data.get('fimDeSemana', {})).removedKeys().size() == 0
+      );
+    }
+    function validProgram(docId) {
+      return (request.resource.data.get('versaoProgramacao', 1) < 2 && !('grupoId' in request.resource.data)) || (
+        request.resource.data.versaoProgramacao == 2 && request.resource.data.id == docId
+        && request.resource.data.grupoId is string && request.resource.data.grupoId.size() > 0
+        && request.resource.data.meioSemana.ativo is bool
+        && request.resource.data.get('fimDeSemana', {'ativo': false}).ativo is bool
+        && request.resource.data.publicadaNoQuadro is bool
+      );
+    }
+
     function publicConfirmationDoc(token) {
       return get(/databases/$(database)/documents/confirmacoes_publicas/$(token));
+    }
+
+    function publishedConfirmationTarget() {
+      return resource.data.get('identityVersion', 1) != 2 || (
+        exists(/databases/$(database)/documents/quadros_publicos/$(resource.data.ownerUid))
+        && identityFieldsEqual(resource.data,
+          get(/databases/$(database)/documents/quadros_publicos/$(resource.data.ownerUid)).data.configuracoes.destinosConfirmacao[resource.data.assignmentKey])
+      );
     }
 
     function matchesPublicConfirmation(userId, assignmentKey) {
@@ -177,11 +259,12 @@ service cloud.firestore {
         && request.resource.data.token.size() > 0
         && exists(/databases/$(database)/documents/confirmacoes_publicas/$(request.resource.data.token))
         && publicConfirmationDoc(request.resource.data.token).data.ownerUid == userId
-        && publicConfirmationDoc(request.resource.data.token).data.assignmentKey == assignmentKey;
+        && publicConfirmationDoc(request.resource.data.token).data.assignmentKey == assignmentKey
+        && identityFieldsEqual(request.resource.data, publicConfirmationDoc(request.resource.data.token).data);
     }
 
     function isValidPublicConfirmationMirrorUpdate(userId, assignmentKey) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(confirmationMutableKeys())
+      return immutableConfirmation() && publishedConfirmationTarget() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(confirmationMutableKeys())
         && request.resource.data.token == resource.data.token
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.assignmentKey == resource.data.assignmentKey
@@ -191,7 +274,7 @@ service cloud.firestore {
     }
 
     function isValidPublicConfirmationUpdate() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(confirmationMutableKeys())
+      return immutableConfirmation() && publishedConfirmationTarget() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(confirmationMutableKeys())
         && request.resource.data.token == resource.data.token
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.assignmentKey == resource.data.assignmentKey
@@ -235,9 +318,10 @@ service cloud.firestore {
       && request.resource.data.readAt == null
       && request.resource.data.readAtIso == null
       && request.resource.data.meta is map
+      && identityFieldsEqual(request.resource.data.meta, publicConfirmationDoc(request.resource.data.token).data)
       && request.resource.data.meta.keys().hasOnly([
         "tituloParte",
-        "congregacaoNome"
+        "congregacaoNome", "identityVersion", "grupoId", "programacaoId", "tipoReuniao", "slotId", "pessoaId", "papel"
       ])
       && exists(/databases/$(database)/documents/confirmacoes_publicas/$(request.resource.data.token))
       && publicConfirmationDoc(request.resource.data.token).data.ownerUid == request.resource.data.ownerUid
@@ -267,7 +351,7 @@ service cloud.firestore {
     }
 
     match /users/{userId}/configuracoes/{docId} {
-      allow get: if docId != "acessos" || canManageOwner(userId);
+      allow get: if canManageOwner(userId);
       allow list: if false;
       allow write: if (
           docId == "acessos"
@@ -281,27 +365,52 @@ service cloud.firestore {
         ) || (
           docId != "acessos"
           && isAdminUser(userId)
+          && (resource == null || resource.data.get('versaoProgramacao', 1) < 2 || (
+            request.resource.data.versaoProgramacao == resource.data.versaoProgramacao
+            && request.resource.data.grupoLegadoId == resource.data.grupoLegadoId
+            && request.resource.data.diff(resource.data).removedKeys().size() == 0
+            && request.resource.data.grupos.diff(resource.data.grupos).removedKeys().size() == 0
+            && (resource.data.get('ativacaoMultiGrupos', {}).get('contrato', 0) != 2 || (
+              request.resource.data.ativacaoMultiGrupos == resource.data.ativacaoMultiGrupos
+              && resource.data.ativacaoMultiGrupos.status == 'ativa'
+              && request.resource.data.revisionProgramacoes == resource.data.revisionProgramacoes + 1
+            ))
+          ))
         );
     }
 
     match /users/{userId}/programacao/{docId} {
-      allow get: if true;
-      allow list: if isAdminUser(userId);
-      allow write: if isAdminUser(userId);
+      allow read: if isAdminUser(userId);
+      allow create: if isAdminUser(userId) && validProgram(docId) && programProtocol(userId);
+      allow update: if isAdminUser(userId) && validProgram(docId) && preservesV2Program() && programProtocol(userId);
+      allow delete: if isAdminUser(userId) && (
+        (resource.data.get('versaoProgramacao', 1) < 2 && !('grupoId' in resource.data))
+        || scopedDeletion(userId, docId));
+    }
+    match /users/{userId}/operacoes_programacao/{docId} {
+      allow read: if isAdminUser(userId);
+      allow create, update: if isAdminUser(userId) && revisionAdvanced(userId)
+        && request.resource.data.keys().hasOnly(['versaoProgramacao', 'ownerUid', 'grupoId', 'programacaoId', 'tipo', 'at'])
+        && request.resource.data.ownerUid == userId && request.resource.data.programacaoId == docId
+        && request.resource.data.tipo == 'excluir' && request.resource.data.at == request.time;
     }
 
     match /users/{userId}/alunos/{docId} {
-      allow read, write: if isAdminUser(userId);
+      allow read, create, delete: if isAdminUser(userId);
+      allow update: if isAdminUser(userId) && (!('gruposParticipantes' in resource.data)
+        || (request.resource.data.gruposParticipantes is list && request.resource.data.diff(resource.data).removedKeys().size() == 0));
     }
 
     match /users/{userId}/confirmacoes/{assignmentKey} {
       allow read: if isAdminUser(userId);
       allow create: if isAdminUser(userId)
+        && validIdentity(request.resource.data)
         && request.resource.data.keys().hasOnly(confirmationBaseKeys())
         && request.resource.data.ownerUid == userId
+        && request.resource.data.assignmentKey == assignmentKey
         && isConfirmationStatus(request.resource.data.status)
         && isWeekReminderStatus(request.resource.data.weekReminderStatus);
-      allow update: if isAdminUser(userId)
+      allow update: if (isAdminUser(userId) && immutableConfirmation() && validIdentity(request.resource.data))
         || isValidPublicConfirmationMirrorUpdate(userId, assignmentKey);
       allow delete: if isAdminUser(userId);
     }
@@ -311,11 +420,13 @@ service cloud.firestore {
       allow list: if false;
       allow create: if isSignedIn()
         && canManageOwner(request.resource.data.ownerUid)
+        && validIdentity(request.resource.data)
+        && request.resource.data.token == token
         && request.resource.data.keys().hasOnly(confirmationBaseKeys())
         && isConfirmationStatus(request.resource.data.status)
         && isWeekReminderStatus(request.resource.data.weekReminderStatus);
       allow update: if (
-          canManageOwner(resource.data.ownerUid)
+          canManageOwner(resource.data.ownerUid) && immutableConfirmation() && validIdentity(request.resource.data)
         ) || isValidPublicConfirmationUpdate();
       allow delete: if canManageOwner(resource.data.ownerUid);
     }
@@ -325,6 +436,11 @@ service cloud.firestore {
       allow list: if false;
       allow write: if isAdminUser(userId)
         && request.resource.data.ownerUid == userId
+        && (contractConfig(userId).get('ativacaoMultiGrupos', {}).get('contrato', 0) != 2 || (
+          request.resource.data.configuracoes.publicacaoContrato == 2
+          && request.resource.data.configuracoes.revisionProgramacoes == contractConfig(userId).revisionProgramacoes
+          && request.resource.data.configuracoes.keys().hasOnly(['nome_cong', 'idioma', 'dia_reuniao', 'horario', 'dia_reuniao_fds', 'horario_fds', 'grupoLegadoId', 'grupoPrincipalId', 'versaoProgramacao', 'publicacaoContrato', 'revisionProgramacoes', 'grupos', 'destinosConfirmacao'])
+        ))
         && request.resource.data.keys().hasOnly([
           "ownerUid",
           "updatedAtIso",

@@ -8,6 +8,8 @@ import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCar
 import { toast } from '../../utils/toast';
 import { dialog } from '../../utils/dialog';
 import { getAlunoCapabilities, getAssignmentCapabilitiesByGroup, getLegacyCapabilitiesForTipo, normalizeAssignmentCapabilities } from '../../utils/assignmentEligibility';
+import { createParticipacaoAlunoDefault, getGruposParticipantes, participaDoGrupo } from '../../utils/gruposProgramacao.js';
+import { useSectionMessages } from '../../i18n';
 
 // Subcomponente para os Cards Estatísticos
 const StatCard = ({ icon, label, value, isActive, onClick, colorClass, activeClass, customClass = "" }) => (
@@ -38,7 +40,10 @@ const withSaveTimeout = (promise, message) => {
     });
 };
 
-const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config, cargosMap }) => {
+const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config, cargosMap, multiGrupos = false }) => {
+    const G = useSectionMessages('gruposProgramacao');
+    const [filtroGrupo, setFiltroGrupo] = useState('todos');
+    const savingRef = useRef(false);
     const CARGOS_MAP = cargosMap || CARGOS_MAP_FALLBACK;
     const lang = normalizarIdioma(config?.idioma);
     const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
@@ -161,6 +166,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         const buscaNorm = normalizar(termo);
         return (alunos || [])
             .filter(a => {
+                if (multiGrupos && filtroGrupo !== 'todos' && !participaDoGrupo(a, filtroGrupo, config)) return false;
                 const cKey = getCargoKey(a.tipo, CARGOS_MAP);
                 const info = CARGOS_MAP[cKey] || CARGOS_MAP.irmao;
 
@@ -206,7 +212,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 const res = diasA - diasB;
                 return ordemCrescente ? res : res * -1;
             });
-    }, [alunos, termo, filtroStatus, filtrosTiposAtivos, filtrosPartesAtivas, filtroGenero, filtroEspecial, ordenacao, ordemCrescente, CARGOS_MAP, lang]);
+    }, [alunos, termo, filtroStatus, filtrosTiposAtivos, filtrosPartesAtivas, filtroGenero, filtroEspecial, ordenacao, ordemCrescente, CARGOS_MAP, lang, multiGrupos, filtroGrupo, config]);
 
     const familiasOptions = useMemo(() => {
         const familias = new Set();
@@ -273,7 +279,8 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     };
 
     const openNovo = () => {
-        setAlunoEmEdicao({ id: null, nome: '', tipo: 'irma', telefone: '', email: '', familia: '', observacoes: '', historico: [], datasIndisponiveis: [], partesHabilitadas: getLegacyCapabilitiesForTipo('irma'), _partesHabilitadasAuto: true });
+        setAlunoEmEdicao({ id: null, nome: '', tipo: 'irma', telefone: '', email: '', familia: '', observacoes: '', historico: [], datasIndisponiveis: [], partesHabilitadas: getLegacyCapabilitiesForTipo('irma'), _partesHabilitadasAuto: true,
+            ...(multiGrupos ? { gruposParticipantes: createParticipacaoAlunoDefault() } : {}) });
         setModalFormOpen(true);
     };
 
@@ -282,6 +289,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         const temHabilitacoesExplicitas = Array.isArray(aluno.partesHabilitadas);
         setAlunoEmEdicao({
             ...aluno,
+            ...(multiGrupos ? { gruposParticipantes: getGruposParticipantes(aluno, config) } : {}),
             tipo,
             telefone: aluno.telefone || '',
             email: aluno.email || '',
@@ -299,6 +307,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
 
     const handleSalvar = async (e) => {
         e.preventDefault();
+        if (savingRef.current) return;
         const isNovoAluno = !alunoEmEdicao?.id;
         const materializarHabilitacoes = isNovoAluno || alunoEmEdicao?._partesHabilitadasAuto === false;
         const alunoForm = { ...alunoEmEdicao };
@@ -325,6 +334,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         }
         if (!clean.nome) return;
 
+        savingRef.current = true;
         try {
             setSalvandoAluno(true);
             const alunoParaSalvar = isNovoAluno
@@ -350,6 +360,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         } catch (error) {
             toast.error(error, isNovoAluno ? t.msg.erroCadastrar : t.msg.erroAtualizar);
         } finally {
+            savingRef.current = false;
             setSalvandoAluno(false);
         }
     };
@@ -395,6 +406,12 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
 
     return (
         <div className="space-y-4 px-2 py-3 pb-8 sm:p-4 md:p-6">
+            {multiGrupos && <label className="block p-3 bg-white rounded-xl border text-sm font-bold">{G.participa}
+                <select className="block border rounded-lg p-2 mt-2" value={filtroGrupo} onChange={e => setFiltroGrupo(e.target.value)}>
+                    <option value="todos">{lang === 'es' ? 'Todos los registros' : 'Todos os cadastros'}</option>
+                    {Object.values(config.grupos).map(grupo => <option key={grupo.id} value={grupo.id}>{G[grupo.idioma]}</option>)}
+                </select>
+            </label>}
             <style>{`
             @media print {
                 html, body, #root { height: auto !important; overflow: visible !important; }
@@ -641,7 +658,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 }}
             />
             {modalFormOpen && alunoEmEdicao && (
-                <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} familiasOptions={familiasOptions} isSaving={salvandoAluno} />
+                <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} familiasOptions={familiasOptions} isSaving={salvandoAluno} multiGrupos={multiGrupos} config={config} />
             )}
         </div>
     );

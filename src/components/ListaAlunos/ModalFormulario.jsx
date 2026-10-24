@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, CheckSquare, X, Image as ImageIcon, Loader2, Save, Trash2, Undo2 } from 'lucide-react';
 import { getIniciais, getUnavailableDateStatus } from './utils';
+import { getGruposParticipantes } from '../../utils/gruposProgramacao.js';
+import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
+import { useSectionMessages } from '../../i18n';
 import {
     getAssignmentCapabilitiesByGroup,
     getAssignmentCapabilityLabel,
@@ -24,7 +27,8 @@ const normalizeForDirtyCheck = (value) => {
 
 const getAlunoSignature = (aluno) => JSON.stringify(normalizeForDirtyCheck(aluno || {}));
 
-const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false }) => {
+const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false, multiGrupos = false, config = {} }) => {
+    const G = useSectionMessages('gruposProgramacao');
     const firstInputRef = useRef(null);
     const formRef = useRef(null);
     const [initialAlunoSignature] = useState(() => getAlunoSignature(alunoEmEdicao));
@@ -38,6 +42,11 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
         novaDataIndisponivel.motivo.trim()
     );
     const hasUnsavedChanges = getAlunoSignature(alunoEmEdicao) !== initialAlunoSignature || hasPendingUnavailableDate;
+    useProtecaoTrocaGrupo(() => {
+        if (isSaving) return false;
+        if (isOpen && hasUnsavedChanges) { setConfirmarSaidaOpen(true); return false; }
+        return true;
+    });
 
     const solicitarFechamento = () => {
         if (isSaving) return;
@@ -241,6 +250,18 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                     </div>
 
                     <form ref={formRef} id="form-aluno" onSubmit={onSave} className="min-w-0 space-y-4">
+                        {multiGrupos && <fieldset disabled={isSaving} className="rounded-xl border p-3 space-y-2">
+                            <legend className="text-xs font-bold px-1">{G.participa}</legend>
+                            {Object.values(config.grupos || {}).map(grupo => {
+                                const participantes = getGruposParticipantes(alunoEmEdicao, config);
+                                return <label key={grupo.id} className="flex gap-2 text-sm">
+                                    <input type="checkbox" checked={participantes.includes(grupo.id)} onChange={e => setAlunoEmEdicao(prev => ({
+                                        ...prev, gruposParticipantes: e.target.checked ? [...new Set([...getGruposParticipantes(prev, config), grupo.id])]
+                                            : getGruposParticipantes(prev, config).filter(id => id !== grupo.id),
+                                    }))} />{G[grupo.idioma]}
+                                </label>;
+                            })}
+                        </fieldset>}
                         <fieldset disabled={isSaving} className="min-w-0 space-y-4 disabled:opacity-70">
                         <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.nome}</label><input ref={firstInputRef} required type="text" className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold border border-gray-100 focus:border-blue-600 outline-none" value={alunoEmEdicao.nome} onChange={e => setAlunoEmEdicao({ ...alunoEmEdicao, nome: e.target.value })} /></div>
                         <div className="min-w-0 space-y-1"><label className="text-[10px] font-black uppercase text-gray-400 ml-1">{t.campos.tipo}</label><select className="block w-full min-w-0 px-4 py-3 bg-gray-50 rounded-2xl text-sm font-black text-blue-700 border border-gray-100 outline-none focus:border-blue-600" value={alunoEmEdicao.tipo} onChange={e => handleTipoChange(e.target.value)}>{Object.keys(cargosMap).map(key => (<option key={key} value={key}>{cargosMap[key][lang]}</option>))}</select></div>

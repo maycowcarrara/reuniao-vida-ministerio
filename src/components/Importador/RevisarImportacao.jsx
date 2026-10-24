@@ -3,14 +3,12 @@ import { Edit, Plus, Info, CheckCircle, AlertTriangle, ArrowUp, ArrowDown, Trash
 import { TRANSLATIONS, SECAO_UI } from '../../utils/importador/constants';
 import { formatHm } from '../../utils/importador/helpers';
 import { calcularTotalInfo } from '../../utils/importador/parser';
-import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
 import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import { dialog } from '../../utils/dialog';
 
-export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel, lang = 'pt' }) {
+export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel, lang = 'pt', config, programacoes = [] }) {
     const t = TRANSLATIONS[lang];
-    const { dados: appDados } = useGerenciadorDados();
     const [secaoNovaParte, setSecaoNovaParte] = useState('tesouros');
 
     const totalInfo = useMemo(() => calcularTotalInfo(dados?.partes || [], lang), [dados, lang]);
@@ -67,7 +65,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
     // 🔥 REGRA DE BLOQUEIO CORRIGIDA
     const handleConfirm = async () => {
         // 1. Acessa as chaves corretas do seu banco de dados
-        const programacaoSalva = appDados?.historico_reunioes || []; 
+        const programacaoSalva = programacoes;
 
         const dataImportada = dados.dataInicio || dados.dataExata; 
 
@@ -85,7 +83,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
         // 3. Cruza a data da importação com a data dos eventos do Dashboard
         const temEventoNoDashboard = getEventoEspecialPorSemana({
             semanaStr: dados.semana,
-            config: appDados?.configuracoes,
+            config,
             isoFallback: dataImportada || null,
             textSources: [dados.semana]
         });

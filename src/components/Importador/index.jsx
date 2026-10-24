@@ -4,8 +4,6 @@ import { TRANSLATIONS, getImportadorCatalogConfig } from '../../utils/importador
 import { isLikelyHtml, isLikelyUrl, fetchHtmlViaProxy } from '../../utils/importador/helpers';
 import { extrairDados } from '../../utils/importador/parser';
 import RevisarImportacao from './RevisarImportacao';
-// 🔥 IMPORTANDO O HOOK PARA VERIFICAR EVENTOS DO DASHBOARD
-import { useGerenciadorDados } from '../../hooks/useGerenciadorDados';
 import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import { dialog } from '../../utils/dialog';
@@ -52,14 +50,11 @@ const parseMarkdownLinks = (text) => {
     return matches;
 };
 
-export default function Importador({ onImportComplete, idioma = 'pt' }) {
+export default function Importador({ onImportComplete, idioma = 'pt', config, programacoes = [] }) {
     const lang = (idioma || 'pt').toLowerCase().startsWith('es') ? 'es' : 'pt';
     const t = TRANSLATIONS[lang];
     const catalogConfig = getImportadorCatalogConfig(lang);
     const fallbackText = FALLBACK_MESSAGES[lang] || FALLBACK_MESSAGES.pt;
-
-    // Puxando os eventos salvos no Dashboard
-    const { dados: appDados } = useGerenciadorDados();
 
     const [input, setInput] = useState('');
     const [url, setUrl] = useState('');
@@ -86,7 +81,7 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
     const verificarBloqueioAssembleia = ({ titulo, dataInicio } = {}) => {
         const evento = getEventoEspecialPorSemana({
             semanaStr: titulo,
-            config: appDados?.configuracoes,
+            config,
             isoFallback: dataInicio || null,
             textSources: [titulo]
         });
@@ -309,7 +304,9 @@ export default function Importador({ onImportComplete, idioma = 'pt' }) {
             <RevisarImportacao 
                 dados={dadosParaEdicao} 
                 setDados={setDadosParaEdicao} 
-                onConfirm={(d) => { onImportComplete(d); setDadosParaEdicao(null); }} 
+                onConfirm={async (d) => { await onImportComplete(d); setDadosParaEdicao(null); }}
+                config={config}
+                programacoes={programacoes}
                 onCancel={() => setDadosParaEdicao(null)} 
                 lang={lang}
             />

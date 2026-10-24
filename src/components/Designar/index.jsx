@@ -25,6 +25,7 @@ import { dialog } from '../../utils/dialog';
 import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
 import { isWhatWouldYouSayPart } from '../../utils/meetingParts';
+import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
     MEIO_SEMANA_RESPONSABILIDADES,
@@ -84,6 +85,11 @@ const Designar = ({
     const setSemanasSelecionadas = setSharedWeekSelection;
 
     const TT = useSectionMessages('designar');
+    const G = useSectionMessages('gruposProgramacao');
+    useProtecaoTrocaGrupo(async () => {
+        if (!modalEditarOpen && !modalEditarSemanaOpen) return true;
+        return dialog.confirm({ title: G.sairTitulo, message: G.sairMensagem, confirmText: G.sairConfirmar, cancelText: TT.cancelar });
+    });
 
     const getSemanaKey = (sem, idx) =>
         (sem?.id ?? sem?.dataReuniao ?? sem?.dataInicio ?? sem?.dataExata ?? sem?.data ?? String(idx)).toString();
@@ -309,19 +315,20 @@ const Designar = ({
 
     const getNextProgramacoes = (prev, updater) => normalizeAndSortProgramacoes(typeof updater === 'function' ? updater(prev) : updater);
 
-    const setListaProgramacoesSafe = (updater, options = {}) => {
-        if (options.republicarQuadro) {
-            const next = getNextProgramacoes(listaProgramacoes, updater);
-            setListaProgramacoes(next);
-            if (onRepublicarQuadroPublico) {
-                onRepublicarQuadroPublico(next).catch((error) => {
-                    console.error('Erro ao republicar quadro publico:', error);
-                });
+    const setListaProgramacoesSafe = async (updater, options = {}) => {
+        try {
+            const next = options.republicarQuadro ? getNextProgramacoes(listaProgramacoes, updater) : null;
+            const resultado = await setListaProgramacoes(next || (prev => getNextProgramacoes(prev, updater)));
+            if (resultado?.salvo === false) return false;
+            if (options.republicarQuadro && onRepublicarQuadroPublico) {
+                const publicacao = await onRepublicarQuadroPublico(next);
+                if (publicacao?.erroPublicacao) return false;
             }
-            return;
+            return true;
+        } catch (error) {
+            toast.error(error, options.republicarQuadro ? G.parcial : G.erroSalvar);
+            return false;
         }
-
-        setListaProgramacoes(prev => getNextProgramacoes(prev, updater));
     };
 
     const listaFiltradaPorFlag = useMemo(() => {
@@ -907,7 +914,7 @@ const Designar = ({
     };
 
     const atualizarParteNaSemanaRealIndex = (semanaRealIndex, parteId, patch) => {
-        setListaProgramacoesSafe(prev => {
+        return setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const atual = lista[semanaRealIndex];
             if (!atual || isSemanaAssembleia(atual, config)) return lista; // Trava
@@ -947,7 +954,7 @@ const Designar = ({
     };
 
     const adicionarParteNaSemanaRealIndex = (semanaRealIndex, valores) => {
-        setListaProgramacoesSafe(prev => {
+        return setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const atual = lista[semanaRealIndex];
             if (!atual || isSemanaAssembleia(atual, config)) return lista;
@@ -1014,12 +1021,12 @@ const Designar = ({
         setModalEditarOpen(true);
     };
 
-    const salvarEdicaoParte = () => {
+    const salvarEdicaoParte = async () => {
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(parteEditCtx.semanaIndex) ? parteEditCtx.semanaIndex : semanaAtivaIndexAtual);
         if (semanaRealIndex === -1) return;
 
         if (parteEditCtx?.modo === 'novo') {
-            adicionarParteNaSemanaRealIndex(semanaRealIndex, parteEditCtx.valores || {});
+            if (!await adicionarParteNaSemanaRealIndex(semanaRealIndex, parteEditCtx.valores || {})) return;
             setModalEditarOpen(false);
             setParteEditCtx(null);
             return;
@@ -1032,17 +1039,18 @@ const Designar = ({
 
         const travarTempo = isLinhaInicialFinal(parte);
         const travarSecao = isLinhaInicialFinal(parte);
-        atualizarParteNaSemanaRealIndex(semanaRealIndex, parteEditCtx.parteId, {
+        const salvo = await atualizarParteNaSemanaRealIndex(semanaRealIndex, parteEditCtx.parteId, {
             titulo: parteEditCtx.valores.titulo,
             descricao: parteEditCtx.valores.descricao,
             ...(travarTempo ? {} : { tempo: parteEditCtx.valores.tempo }),
             ...(travarSecao ? {} : { secao: parteEditCtx.valores.secao || 'tesouros' })
         });
+        if (!salvo) return;
         setModalEditarOpen(false);
         setParteEditCtx(null);
     };
 
-    const salvarEdicaoSemana = () => {
+    const salvarEdicaoSemana = async () => {
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(Number.isInteger(semanaEditCtx?.semanaIndex) ? semanaEditCtx.semanaIndex : semanaAtivaIndexAtual);
         if (semanaRealIndex === -1) return;
 
@@ -1055,7 +1063,7 @@ const Designar = ({
         const semanaAtual = listaProgramacoes?.[semanaRealIndex];
         const proximaKey = getSemanaKey({ ...semanaAtual, semana: proximoTituloSemana }, semanaRealIndex);
 
-        setListaProgramacoesSafe(prev => {
+        const salvo = await setListaProgramacoesSafe(prev => {
             const lista = [...prev];
             const atual = lista[semanaRealIndex];
             if (!atual) return lista;
@@ -1068,6 +1076,7 @@ const Designar = ({
             return lista;
         });
 
+        if (!salvo) return;
         setSemanasSelecionadas((prev) => {
             if (!semanaEditCtx?.semanaKey || semanaEditCtx.semanaKey === proximaKey) return prev;
             const next = { ...(prev || {}) };

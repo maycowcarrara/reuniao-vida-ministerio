@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { MULTI_GRUPOS_LOCAL } from '../config/multiGruposLocal.js';
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import {
     initializeFirestore,
@@ -18,7 +19,7 @@ const missingFirebaseEnv = Object.entries(firebaseEnv)
     .filter(([, value]) => !String(value || "").trim())
     .map(([key]) => key);
 
-if (missingFirebaseEnv.length > 0) {
+if (!MULTI_GRUPOS_LOCAL && missingFirebaseEnv.length > 0) {
     throw new Error(
         [
             "Configuracao do Firebase incompleta.",
@@ -36,7 +37,10 @@ const firebaseConfig = {
     appId: firebaseEnv.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
+// O ensaio não recupera sessões/filas do projeto real nem requer credenciais.
+const app = MULTI_GRUPOS_LOCAL ? initializeApp({ apiKey: 'fake-api-key-ensaio-local',
+    projectId: 'demo-rvm-ensaio-e2', authDomain: 'ensaio.invalid', appId: 'ensaio-local-e2' }, 'rvm-ensaio-local-e2')
+    : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 

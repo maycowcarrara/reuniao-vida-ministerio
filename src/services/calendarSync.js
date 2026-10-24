@@ -1,3 +1,8 @@
+import { gruposRemotosAtivos } from '../utils/compatibilidadeGrupos.js';
+import { sincronizarAgendaGrupo } from './agendaGrupos.js';
+import { isProgramacaoV2 } from '../utils/gruposProgramacao.js';
+import { normalizeOcorrenciaReuniao } from '../utils/ocorrenciasReuniao.js';
+import { resolveDataOwnerUid } from './adminAccess';
 // 1. Função para Autenticar e pegar os Calendários do utilizador
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { normalizeLanguage, normalizeSystemConfig } from '../config/appConfig';
@@ -68,6 +73,7 @@ const buildLocalDateTime = (dateISO, timeValue, fallback) => {
 };
 
 const getWeekendDateForWeek = (reuniao, config) => {
+    if (reuniao.fimDeSemana?.data) return reuniao.fimDeSemana.data;
     const fallbackStr = reuniao?.fimDeSemana?.data || reuniao?.dataInicio || reuniao?.dataExata || reuniao?.dataReuniao || reuniao?.data || '';
     return getMeetingDateISOFromSemana({
         semanaStr: reuniao?.semana,
@@ -154,6 +160,7 @@ export const iniciarSincronizacao = async () => {
 
         return {
             sucesso: true,
+            ownerUid: resolveDataOwnerUid(auth.currentUser),
             token,
             calendarios: data.items.map(cal => ({
                 id: cal.id,
@@ -171,6 +178,12 @@ export const iniciarSincronizacao = async () => {
 // 2. Função que recebe a escolha do utilizador e envia/atualiza os eventos
 export const enviarEventosParaAgenda = async (token, calendarId, reunioes, configuracoes) => {
     try {
+        if (reunioes.some(isProgramacaoV2)) {
+            const grupoId = configuracoes?.grupoSelecionadoId;
+            if (!gruposRemotosAtivos(configuracoes) || !grupoId || reunioes.some(p => p.grupoId !== grupoId)) throw new Error('Escolha um grupo ativo antes de sincronizar.');
+            const result = await sincronizarAgendaGrupo({ token, calendarId, programacoes: reunioes, config: configuracoes, grupoId });
+            return { ...result, quantidade: result.resultados.filter(r => r.ok).length, erro: result.resultados.filter(r => !r.ok).map(r => r.erro).join('; ') };
+        }
         let eventosProcessados = 0;
         const config = normalizeSystemConfig(configuracoes || {});
         const horarioPadrao = config?.horario || "19:30";
@@ -197,16 +210,21 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 });
             }
 
-            if (res.ok) eventosProcessados++;
+            if (!res.ok) throw new Error(getGoogleCalendarErrorMessage(res, await readGoogleJson(res)));
+            eventosProcessados++;
         };
 
         for (const reuniao of reunioes) {
-            if (!reuniao.dataExata || !reuniao.partes) continue;
+            if (reuniao.arquivada) continue;
+            const requestsParaEnviar = [];
+            if (normalizeOcorrenciaReuniao(reuniao, 'meioSemana', config).operacional) {
+            const dataMeio = reuniao.meioSemana?.data || reuniao.dataExata || reuniao.dataReuniao;
+            if (!dataMeio) throw new Error('Data de meio de semana ausente.');
 
             // Cria uma base para o ID Único (Google exige letras minúsculas a-v e números)
-            const baseIdUnico = `rvm${reuniao.dataExata.replace(/-/g, '')}`;
+            const baseIdUnico = `rvm${dataMeio.replace(/-/g, '')}`;
 
-            let dataHoraAtual = buildLocalDateTime(reuniao.dataExata, horarioPadrao, '19:30');
+            let dataHoraAtual = buildLocalDateTime(dataMeio, reuniao.meioSemana?.horario || horarioPadrao, '19:30');
             const dataHoraInicioReuniao = new Date(dataHoraAtual);
 
             const partesProcessadas = [];
@@ -223,7 +241,7 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
             }
 
             // 2. Processar todas as partes
-            reuniao.partes.forEach((parte, index) => {
+            (reuniao.partes || []).forEach((parte, index) => {
                 let duracao = parseInt(parte.tempo || "5", 10);
 
                 const tituloLower = (parte.titulo || '').toLowerCase();
@@ -319,8 +337,6 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 return html;
             };
 
-            const requestsParaEnviar = [];
-
             // 3. Criar evento do PRESIDENTE
             if (presidente?.nome) {
                 const convidadosPres = [];
@@ -399,11 +415,12 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 requestsParaEnviar.push(eventoApoio);
             }
 
+            }
             const fds = normalizeFimDeSemana(reuniao?.fimDeSemana);
-            if (fds.ativo && hasFimDeSemanaData(reuniao?.fimDeSemana)) {
+            if (normalizeOcorrenciaReuniao(reuniao, 'fimDeSemana', config).operacional && hasFimDeSemanaData(reuniao?.fimDeSemana)) {
                 const dataFimDeSemana = getWeekendDateForWeek(reuniao, config);
                 if (dataFimDeSemana) {
-                    const horarioFimDeSemana = horarioFimDeSemanaPadrao || fds.horario || "18:00";
+                    const horarioFimDeSemana = fds.horario || horarioFimDeSemanaPadrao || "18:00";
                     const inicioFimDeSemana = buildLocalDateTime(dataFimDeSemana, horarioFimDeSemana, '18:00');
                     const fimFimDeSemana = new Date(inicioFimDeSemana.getTime() + (DEFAULT_WEEKEND_MEETING_DURATION_MINUTES * 60000));
                     const baseIdFimDeSemana = `rvmfds${dataFimDeSemana.replace(/-/g, '')}`;

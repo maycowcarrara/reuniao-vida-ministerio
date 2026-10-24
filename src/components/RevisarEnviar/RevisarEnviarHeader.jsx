@@ -1,3 +1,5 @@
+import { lerAgendaGrupo, salvarAgendaGrupo } from '../../utils/integracoesGrupo.js';
+import { getGrupoLegadoId } from '../../utils/gruposProgramacao.js';
 import React, { useState } from 'react';
 import { CalendarDays, Loader2, Calendar, X, Printer, Save, SlidersHorizontal, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from '../../utils/toast';
@@ -48,6 +50,9 @@ const RevisarEnviarHeader = ({
     const [calendarios, setCalendarios] = useState([]);
     const [calendarioSelecionado, setCalendarioSelecionado] = useState('');
     const [tokenGoogle, setTokenGoogle] = useState(null);
+    const [calendarOwner, setCalendarOwner] = useState('');
+    const grupoAgenda = config?.grupoSelecionadoId || getGrupoLegadoId(config);
+    const storage = () => { try { return window.localStorage; } catch { return null; } };
     const [enviando, setEnviando] = useState(false);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -237,10 +242,11 @@ const RevisarEnviarHeader = ({
             const res = await iniciarSincronizacao();
             if (res.sucesso) {
                 setTokenGoogle(res.token);
+                setCalendarOwner(res.ownerUid);
                 setCalendarios(res.calendarios);
 
                 // Verifica se tem uma agenda salva na memória do navegador
-                const agendaSalva = localStorage.getItem('rvm_saved_calendar_id');
+                const agendaSalva = lerAgendaGrupo(storage(), res.ownerUid, grupoAgenda, config);
                 const agendaSalvaExiste = res.calendarios.find(c => c.id === agendaSalva);
 
                 if (agendaSalvaExiste) {
@@ -267,7 +273,7 @@ const RevisarEnviarHeader = ({
         setEnviando(true);
         try {
             // Salva a escolha do usuário na memória para a próxima vez
-            localStorage.setItem('rvm_saved_calendar_id', calendarioSelecionado);
+            salvarAgendaGrupo(storage(), calendarOwner, grupoAgenda, calendarioSelecionado);
             await onConfirmSync(tokenGoogle, calendarioSelecionado);
             setModalCalendario(false);
         } finally {

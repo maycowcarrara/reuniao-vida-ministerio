@@ -1,3 +1,4 @@
+import { buildAssignmentKey } from '../../utils/assignmentIdentity.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Printer,
@@ -25,6 +26,7 @@ import { buildWhatsappHref, buildMailtoHref } from '../../utils/revisarEnviar/li
 import { addHistorico } from '../../utils/revisarEnviar/historico';
 import { toast } from '../../utils/toast';
 import { dialog } from '../../utils/dialog';
+import { paginarImpressao, somenteFimDeSemana } from '../../utils/impressaoGrupo.js';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
 import {
@@ -71,7 +73,8 @@ const RevisarEnviar = ({
     sharedWeekSelection = {},
     setSharedWeekSelection = () => { },
     reviewShortcutRequest = null,
-    onSolicitarSubstituicao = null
+    onSolicitarSubstituicao = null,
+    somenteImpressao = false
 }) => {
     const { lang, t } = getI18n(config);
 
@@ -278,7 +281,11 @@ const RevisarEnviar = ({
         base.forEach((s, i) => {
             next[getSemanaKey(s, i)] = true;
         });
-        setPrintSelecionadas(next);
+        const atuais = Object.keys(printSelecionadas);
+        const proximas = Object.keys(next);
+        // Estado vazio também é estável: recriar {} a cada efeito impede
+        // navegação quando o último encontro do grupo é cancelado/removido.
+        if (atuais.length !== proximas.length || proximas.some(key => printSelecionadas[key] !== next[key])) setPrintSelecionadas(next);
 
         prevStartSeguroRef.current = startSeguro;
     }, [startSeguro, semanasDisponiveis, qtdSemanas, printSelecionadas, setPrintSelecionadas]);
@@ -340,6 +347,7 @@ const RevisarEnviar = ({
 
     // --- CÁLCULO DE DATA ---
     const getDataReuniaoISO = (sem) => {
+        if (sem?.meioSemana?.data) return sem.meioSemana.data;
         const eventoEspecial = getEventoEspecialDaSemana(sem, config);
         const tipoEvento = getTipoEventoSemana(sem, config);
         const isVisita = tipoEvento === 'visita';
@@ -387,6 +395,7 @@ const RevisarEnviar = ({
     };
 
     const getDataFimDeSemanaISO = (sem) => {
+        if (sem?.fimDeSemana?.data) return sem.fimDeSemana.data;
         const fallbackStr = sem?.fimDeSemana?.data || sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
         return getMeetingDateISOFromSemana({
             semanaStr: sem?.semana,
@@ -401,7 +410,7 @@ const RevisarEnviar = ({
         return {
             ...fds,
             data: getDataFimDeSemanaISO(sem) || fds.data,
-            horario: config?.horario_fds || config?.horarioFimDeSemana || fds.horario || '18:00',
+            horario: fds.horario || config?.horario_fds || config?.horarioFimDeSemana || '',
         };
     };
 
@@ -450,9 +459,9 @@ const RevisarEnviar = ({
         );
     };
 
-    const renderFimDeSemanaPrint = (semana) => {
+    const renderFimDeSemanaPrint = (semana, isolado = false) => {
         const fds = getFimDeSemanaParaImpressao(semana);
-        if (!incluirFimDeSemana || qtdSemanas !== 1 || !fds.ativo || !hasFimDeSemanaData(semana?.fimDeSemana)) return null;
+        if ((!isolado && (!incluirFimDeSemana || qtdSemanas !== 1)) || !fds.ativo) return null;
         const isVisita = getTipoEventoSemana(semana, config) === 'visita';
         const oradorNome = fds.reuniaoPublica.oradorNomeManual || '';
         const congregacaoOrador = fds.reuniaoPublica.congregacaoOrador || '';
@@ -642,10 +651,7 @@ const RevisarEnviar = ({
     const layout = getLayoutConfig(qtdSemanas);
     const isListMode = layout.mode === 'list';
 
-    const paginas = [];
-    for (let i = 0; i < semanasParaImprimir.length; i += layout.semanasPorPag) {
-        paginas.push(semanasParaImprimir.slice(i, i + layout.semanasPorPag));
-    }
+    const paginas = paginarImpressao(semanasParaImprimir, layout.semanasPorPag, config);
 
     const enviarZap = (aluno, msg) => {
         const href = buildWhatsappHref(aluno?.telefone, msg);
@@ -659,8 +665,7 @@ const RevisarEnviar = ({
         window.open(href, '_blank');
     };
 
-    const buildMsgKey = ({ dataISO, semana, parteId, pessoaId, role }) =>
-        [dataISO || '', semana || '', parteId || '', pessoaId || '', role || ''].join('|');
+    const buildMsgKey = buildAssignmentKey;
 
     const markSent = (key, channel) => {
         setSentMap((prev) => ({
@@ -911,6 +916,7 @@ const RevisarEnviar = ({
     };
 
     const handlePrint = () => {
+        if (!paginas.length) { toast.info(t.agendaNoWeeks); return; }
         try {
             window.print();
         } catch (e) {
@@ -1027,7 +1033,15 @@ const RevisarEnviar = ({
         <div className="space-y-6 flex flex-col relative print:block print:h-auto print:overflow-visible">
 
             <div className="no-print">
-                <RevisarEnviarHeader
+                {somenteImpressao ? <div className="p-4 flex flex-wrap gap-3 items-center">
+                    <label>{lang === 'es' ? 'Semanas por página (entre semana)' : 'Semanas por página (meio de semana)'} <select aria-label="Layout" value={qtdSemanas} onChange={e => alterarQtdSemanas(Number(e.target.value))}>
+                        {[1, 2, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select></label>
+                    <label><input type="checkbox" checked={incluirFimDeSemana} disabled={qtdSemanas !== 1} onChange={e => alterarIncluirFimDeSemana(e.target.checked)} /> {lang === 'es' ? 'Incluir fin de semana en hoja combinada' : 'Incluir fim de semana na folha combinada'}</label>
+                    <p>{lang === 'es' ? 'Fin de semana aislado: una reunión por página.' : 'Fim de semana isolado: uma reunião por página.'}</p>
+                    {historicoSelect.map((sem, i) => <label key={getSemanaKey(sem, i)}><input type="checkbox" checked={!!printSelecionadas[getSemanaKey(sem, i)]} onChange={() => toggleSemanaPrint(getSemanaKey(sem, i))} />{sem.semana}</label>)}
+                    <button type="button" onClick={handlePrint}>{t.btnImprimir}</button>
+                </div> : <RevisarEnviarHeader
                     t={t}
                     config={config}
                     abaAtiva={abaAtiva}
@@ -1095,7 +1109,7 @@ const RevisarEnviar = ({
                             toast.error(resultado.erro, t.agendaError);
                         }
                     }}
-                />
+                />}
             </div>
 
             {abaAtiva === 'imprimir' && (
@@ -1117,7 +1131,7 @@ const RevisarEnviar = ({
                         <div key={idxPag} className="page-break bg-white">
                             <div
                                 className="page-content"
-                                data-qtd={qtdSemanas}
+                                data-qtd={somenteFimDeSemana(semanasDaPagina[0], config) ? 1 : qtdSemanas}
                                 data-incluir-fds={qtdSemanas === 1 && incluirFimDeSemana ? 'true' : 'false'}
                                 style={{
                                     boxSizing: 'border-box',
@@ -1125,8 +1139,9 @@ const RevisarEnviar = ({
                                 }}
                             >
                                 {semanasDaPagina.map((semana, idxSem) => {
+                                    if (somenteFimDeSemana(semana, config)) return <div key={semana.id} data-fim-isolado="true">{renderFimDeSemanaPrint(semana, true)}</div>;
                                     const dataISO = getDataReuniaoISO(semana);
-                                    const horarioExib = config?.horarioReuniao ?? config?.horario ?? '19:30';
+                                    const horarioExib = semana.meioSemana?.horario || config?.horarioReuniao || config?.horario || '';
                                     const tituloMeioSemana = montarTituloReuniaoPrint(t.reuniaoMeioSemana || 'Reunião de meio de semana', dataISO);
 
                                     const tipoEvento = getTipoEventoSemana(semana, config);

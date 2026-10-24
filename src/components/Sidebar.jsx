@@ -47,7 +47,8 @@ export default function Sidebar({
     listaProgramacoes,
     alunos = [],
     t,
-    toggleFullscreen
+    toggleFullscreen,
+    permitirImportacao = true
 }) {
     const versaoSistema = packageJson.version;
     const [atualizandoVersao, setAtualizandoVersao] = useState(false);
@@ -191,7 +192,7 @@ export default function Sidebar({
                 {/* Navegação Principal */}
                 <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden">
                     <SidebarButton active={abaAtiva === 'dashboard'} onClick={() => handleTabClick('dashboard')} icon={Home} label={t.inicio || "Início"} sidebarOpen={sidebarOpen} />
-                    <SidebarButton active={abaAtiva === 'importar'} onClick={() => handleTabClick('importar')} icon={Calendar} label={t.importar} sidebarOpen={sidebarOpen} />
+                    {permitirImportacao && <SidebarButton active={abaAtiva === 'importar'} onClick={() => handleTabClick('importar')} icon={Calendar} label={t.importar} sidebarOpen={sidebarOpen} />}
                     <SidebarButton active={abaAtiva === 'designar'} onClick={() => handleTabClick('designar')} icon={LayoutDashboard} label={t.designar} badge={totalSemanasAtivas} sidebarOpen={sidebarOpen} />
                     <SidebarButton active={abaAtiva === 'revisar'} onClick={() => handleTabClick('revisar')} icon={Send} label={t.revisar} sidebarOpen={sidebarOpen} />
                     <SidebarButton active={abaAtiva === 'alunos'} onClick={() => handleTabClick('alunos')} icon={Users} label={t.alunos} badge={totalAlunosAtivos} sidebarOpen={sidebarOpen} />
