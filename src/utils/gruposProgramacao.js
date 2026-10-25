@@ -73,7 +73,20 @@ export const normalizeParticipacaoAluno = (aluno = {}, config = {}) => ({
     ...aluno, gruposParticipantes: getGruposParticipantes(aluno, config),
 });
 
-// Novo cadastro começa em português mesmo se a interface/principal for espanhol.
-export const createParticipacaoAlunoDefault = () => [GRUPO_PORTUGUES_ID];
+// A preferência de navegação não determina a participação de uma pessoa nova.
+export const createParticipacaoAlunoDefault = (config = {}) => {
+    const ativos = Object.values(normalizeGruposProgramacao(config).grupos).filter(g => g.ativo);
+    if (!ativos.length) throw new Error('Mantenha pelo menos um grupo ativo.');
+    return [ativos.find(g => g.id === GRUPO_PORTUGUES_ID)?.id || ativos[0].id];
+};
+
+export const validarParticipacaoAluno = (aluno, config, original = null) => {
+    const anteriores = original ? getGruposParticipantes(original, config) : [];
+    for (const id of getGruposParticipantes(aluno, config)) {
+        if (!config.grupos?.[id]?.ativo && !anteriores.includes(id)) {
+            throw new Error('participacaoInativa');
+        }
+    }
+};
 export const participaDoGrupo = (aluno, grupoId, config = {}) =>
     getGruposParticipantes(aluno, config).includes(grupoId);

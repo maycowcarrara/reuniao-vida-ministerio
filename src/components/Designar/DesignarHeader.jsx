@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Archive, RotateCcw, Trash2, Briefcase, Tent, SlidersHorizontal, X, RefreshCw } from 'lucide-react';
+import { Archive, RotateCcw, Trash2, Briefcase, Tent, SlidersHorizontal, X, RefreshCw, CalendarPlus } from 'lucide-react';
 import { isSemanaAssembleia } from './helpers';
 import { getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
@@ -7,7 +7,7 @@ import { getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 
 const DesignarHeader = ({
     headerRef,
-    TT, config,
+    TT, config, lang = 'pt', onAbrirAgendamento,
     filtroSemanas, mudarFiltro,
     totalSelecionadas,
     arquivarSelecionadas, restaurarSelecionadas, apagarArquivadas,
@@ -19,6 +19,8 @@ const DesignarHeader = ({
     onRepublicarQuadroPublico
 }) => {
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+    const agendarButton = onAbrirAgendamento && <button type="button" onClick={onAbrirAgendamento} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:bg-blue-100 sm:rounded-full sm:py-1.5"><CalendarPlus size={14} />{lang === 'es' ? 'Programar reunión' : 'Agendar reunião'}</button>;
 
     // Mapeamos para preservar o índice original (idx) antes de ordenar
     const semanasOrdenadas = listaFiltradaPorFlag
@@ -135,6 +137,7 @@ const DesignarHeader = ({
                                 {semanaEmFoco?.semana?.split(' -')[0] || TT.selecioneSemana}
                             </div>
                         </div>
+                        {agendarButton}
                         <button
                             type="button"
                             onClick={() => setMobileFiltersOpen(true)}
@@ -149,6 +152,7 @@ const DesignarHeader = ({
                     <div className="hidden sm:flex sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
                         {renderFiltroStatus()}
                         {renderAcoesArquivo()}
+                        {agendarButton}
                     </div>
 
                     <div className="hidden sm:block">

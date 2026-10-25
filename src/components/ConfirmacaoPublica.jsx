@@ -33,6 +33,7 @@ export default function ConfirmacaoPublica() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [registro, setRegistro] = useState(null);
+    const [erroCarregamento, setErroCarregamento] = useState(false);
 
     const lang = normalizeLanguage(registro?.lang);
     const t = useMemo(() => getSectionMessages('confirmacaoPublica', lang), [lang]);
@@ -45,9 +46,9 @@ export default function ConfirmacaoPublica() {
     }, [lang]);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || !registro || registro.isUnavailable) return;
         try { window.localStorage.setItem('quadro_auth', 'true'); } catch { /* Preferência local opcional. */ }
-    }, []);
+    }, [registro]);
 
     const limparRespostaDaUrl = useCallback(() => {
         if (!searchParams.get('r')) return;
@@ -77,9 +78,13 @@ export default function ConfirmacaoPublica() {
         }
 
         try {
+            setErroCarregamento(false);
             const data = await getPublicConfirmation(token);
             setRegistro(data);
             return data;
+        } catch {
+            setErroCarregamento(true);
+            return null;
         } finally {
             if (!silent) {
                 setLoading(false);
@@ -203,6 +208,14 @@ export default function ConfirmacaoPublica() {
             </div>
         );
     }
+
+    if (erroCarregamento && !registro) return <div className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
+        <div role="alert" className="w-full max-w-md space-y-4 rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+            <h1 className="text-xl font-black text-slate-800">{lang === 'es' ? 'No fue posible cargar la confirmación' : 'Não foi possível carregar a confirmação'}</h1>
+            <p className="text-sm text-slate-500">{lang === 'es' ? 'Comprueba la conexión e inténtalo de nuevo.' : 'Confira sua conexão e tente novamente.'}</p>
+            <button type="button" onClick={() => carregarRegistro()} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">{lang === 'es' ? 'Intentar de nuevo' : 'Tentar novamente'}</button>
+        </div>
+    </div>;
 
     if (!registro) {
         return (

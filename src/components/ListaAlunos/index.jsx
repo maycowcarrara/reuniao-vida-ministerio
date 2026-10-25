@@ -8,7 +8,7 @@ import { CARGOS_MAP_FALLBACK, TRANSLATIONS, normalizarIdioma, normalizar, getCar
 import { toast } from '../../utils/toast';
 import { dialog } from '../../utils/dialog';
 import { getAlunoCapabilities, getAssignmentCapabilitiesByGroup, getLegacyCapabilitiesForTipo, normalizeAssignmentCapabilities } from '../../utils/assignmentEligibility';
-import { createParticipacaoAlunoDefault, getGruposParticipantes, participaDoGrupo } from '../../utils/gruposProgramacao.js';
+import { createParticipacaoAlunoDefault, getGruposParticipantes, participaDoGrupo, validarParticipacaoAluno } from '../../utils/gruposProgramacao.js';
 import { useSectionMessages } from '../../i18n';
 
 // Subcomponente para os Cards Estatísticos
@@ -44,6 +44,8 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     const G = useSectionMessages('gruposProgramacao');
     const [filtroGrupo, setFiltroGrupo] = useState('todos');
     const savingRef = useRef(false);
+    const originalFormRef = useRef(null);
+    const [novoCadastro, setNovoCadastro] = useState(false);
     const CARGOS_MAP = cargosMap || CARGOS_MAP_FALLBACK;
     const lang = normalizarIdioma(config?.idioma);
     const t = TRANSLATIONS[lang] || TRANSLATIONS.pt;
@@ -279,12 +281,17 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     };
 
     const openNovo = () => {
-        setAlunoEmEdicao({ id: null, nome: '', tipo: 'irma', telefone: '', email: '', familia: '', observacoes: '', historico: [], datasIndisponiveis: [], partesHabilitadas: getLegacyCapabilitiesForTipo('irma'), _partesHabilitadasAuto: true,
-            ...(multiGrupos ? { gruposParticipantes: createParticipacaoAlunoDefault() } : {}) });
+        setNovoCadastro(true);
+        originalFormRef.current = null;
+        const id = globalThis.crypto?.randomUUID?.() || `pessoa-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        setAlunoEmEdicao({ id, nome: '', tipo: 'irma', telefone: '', email: '', familia: '', observacoes: '', historico: [], datasIndisponiveis: [], partesHabilitadas: getLegacyCapabilitiesForTipo('irma'), _partesHabilitadasAuto: true,
+            ...(multiGrupos ? { gruposParticipantes: createParticipacaoAlunoDefault(config) } : {}) });
         setModalFormOpen(true);
     };
 
     const openEditar = (aluno) => {
+        setNovoCadastro(false);
+        originalFormRef.current = aluno;
         const tipo = getCargoKey(aluno.tipo, CARGOS_MAP);
         const temHabilitacoesExplicitas = Array.isArray(aluno.partesHabilitadas);
         setAlunoEmEdicao({
@@ -308,7 +315,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
     const handleSalvar = async (e) => {
         e.preventDefault();
         if (savingRef.current) return;
-        const isNovoAluno = !alunoEmEdicao?.id;
+        const isNovoAluno = novoCadastro;
         const materializarHabilitacoes = isNovoAluno || alunoEmEdicao?._partesHabilitadasAuto === false;
         const alunoForm = { ...alunoEmEdicao };
         delete alunoForm._partesHabilitadasAuto;
@@ -337,16 +344,15 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         savingRef.current = true;
         try {
             setSalvandoAluno(true);
-            const alunoParaSalvar = isNovoAluno
-                ? { ...clean, id: String(Math.max(0, ...(alunos || []).map(a => Number(a.id) || 0)) + 1) }
-                : clean;
+            if (multiGrupos) validarParticipacaoAluno(clean, config, originalFormRef.current);
+            const alunoParaSalvar = clean;
 
             const salvarAlunoAtual = isNovoAluno
                 ? () => (onSalvarAluno
-                    ? Promise.resolve(onSalvarAluno(alunoParaSalvar))
+                    ? Promise.resolve(onSalvarAluno(alunoParaSalvar, { original: originalFormRef.current }))
                     : Promise.resolve(setAlunos([...(alunos || []), alunoParaSalvar])))
                 : () => (onSalvarAluno
-                    ? Promise.resolve(onSalvarAluno(alunoParaSalvar))
+                    ? Promise.resolve(onSalvarAluno(alunoParaSalvar, { original: originalFormRef.current }))
                     : Promise.resolve(setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a))));
 
             if (onSalvarAluno) {
@@ -358,7 +364,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
             setModalFormOpen(false);
             toast.success(isNovoAluno ? t.msg.cadastradoSucesso : t.msg.atualizadoSucesso);
         } catch (error) {
-            toast.error(error, isNovoAluno ? t.msg.erroCadastrar : t.msg.erroAtualizar);
+            toast.error(error.message === "participacaoInativa" ? G.participacaoInativa : error, isNovoAluno ? t.msg.erroCadastrar : t.msg.erroAtualizar);
         } finally {
             savingRef.current = false;
             setSalvandoAluno(false);
@@ -375,9 +381,11 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
             cancelText: 'Cancelar'
         });
         if (ok) {
-            if (onExcluirAluno) await onExcluirAluno(aluno.id);
-            else setAlunos(alunos.filter(a => a.id !== aluno.id));
-            toast.success(t.msg.removerSucesso);
+            try {
+                if (onExcluirAluno) await onExcluirAluno(aluno.id);
+                else await setAlunos(alunos.filter(a => a.id !== aluno.id));
+                toast.success(t.msg.removerSucesso);
+            } catch (error) { toast.error(error, lang === 'es' ? 'No fue posible eliminar a la persona.' : 'Não foi possível excluir a pessoa.'); }
         }
     };
 
@@ -640,25 +648,21 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                 onClose={() => { setModalHistoryOpen(false); setAlunoHistorico(null); }}
                 t={t}
                 lang={lang}
+                isSaving={salvandoAluno}
                 onUpdateAluno={async (alunoAtualizado) => {
-                    // Mantem a visualizacao do modal atualizada instantaneamente.
-                    setAlunoHistorico(alunoAtualizado);
-
+                    if (savingRef.current) return;
+                    savingRef.current = true; setSalvandoAluno(true);
                     try {
-                        if (onSalvarAluno) {
-                            await Promise.resolve(onSalvarAluno(alunoAtualizado));
-                            return;
-                        }
+                        if (onSalvarAluno) await onSalvarAluno(alunoAtualizado, { original: alunoHistorico, historico: true });
+                        else await Promise.resolve(setAlunos(alunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a)));
+                        setAlunoHistorico(alunoAtualizado);
+                    } catch (error) { toast.error(error, t.msg.erroAtualizar); }
+                    finally { savingRef.current = false; setSalvandoAluno(false); }
 
-                        const novaLista = alunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a);
-                        await Promise.resolve(setAlunos(novaLista));
-                    } catch (error) {
-                        toast.error(error, t.msg.erroAtualizar);
-                    }
                 }}
             />
             {modalFormOpen && alunoEmEdicao && (
-                <ModalFormulario alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} familiasOptions={familiasOptions} isSaving={salvandoAluno} multiGrupos={multiGrupos} config={config} />
+                <ModalFormulario novoCadastro={novoCadastro} alunoEmEdicao={alunoEmEdicao} setAlunoEmEdicao={setAlunoEmEdicao} isOpen={modalFormOpen} onClose={() => setModalFormOpen(false)} onSave={handleSalvar} cargosMap={CARGOS_MAP} lang={lang} t={t} familiasOptions={familiasOptions} isSaving={salvandoAluno} multiGrupos={multiGrupos} config={config} />
             )}
         </div>
     );

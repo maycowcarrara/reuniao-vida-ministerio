@@ -1,3 +1,4 @@
+import { criarReferenciasInterfaceClassica } from '../../utils/interfaceClassicaGrupos.js';
 import { buildAssignmentKey } from '../../utils/assignmentIdentity.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -74,7 +75,8 @@ const RevisarEnviar = ({
     setSharedWeekSelection = () => { },
     reviewShortcutRequest = null,
     onSolicitarSubstituicao = null,
-    somenteImpressao = false
+    somenteImpressao = false,
+    onSincronizarHistoricoGrupo = null
 }) => {
     const { lang, t } = getI18n(config);
 
@@ -347,6 +349,7 @@ const RevisarEnviar = ({
 
     // --- CÁLCULO DE DATA ---
     const getDataReuniaoISO = (sem) => {
+        if (config?.grupoSelecionadoId && sem?.meioSemana?.ativo === false) return sem?.fimDeSemana?.data || '';
         if (sem?.meioSemana?.data) return sem.meioSemana.data;
         const eventoEspecial = getEventoEspecialDaSemana(sem, config);
         const tipoEvento = getTipoEventoSemana(sem, config);
@@ -665,7 +668,10 @@ const RevisarEnviar = ({
         window.open(href, '_blank');
     };
 
-    const buildMsgKey = buildAssignmentKey;
+    const referenciasGrupo = useMemo(() => config?.grupoSelecionadoId
+        ? criarReferenciasInterfaceClassica({ programacoes: historico || [], config, grupoId: config.grupoSelecionadoId, confirmacoes }) : null,
+        [historico, config, confirmacoes]);
+    const buildMsgKey = referenciasGrupo?.buildKey || buildAssignmentKey;
 
     const markSent = (key, channel) => {
         setSentMap((prev) => ({
@@ -703,6 +709,14 @@ const RevisarEnviar = ({
             cancelText: 'Cancelar'
         });
         if (!ok) return;
+        if (onSincronizarHistoricoGrupo && config?.grupoSelecionadoId) {
+            try {
+                await onSincronizarHistoricoGrupo({ grupoId: config.grupoSelecionadoId,
+                    programacaoIds: semanasSelecionadas.map(s => s.id), tipos: ['meioSemana', 'fimDeSemana'] });
+                toast.success(t.syncOk);
+            } catch (error) { toast.error(error); }
+            return;
+        }
 
         let novosAlunos = [...alunos];
         let gravouAlgo = false;
@@ -1089,14 +1103,16 @@ const RevisarEnviar = ({
                             if (onProgramacoesChange) {
                                 const sincronizadas = new Set(
                                     reunioesSelecionadas
+                                        .filter(sem => !config?.grupoSelecionadoId || resultado.programacaoIdsSincronizadas?.includes(String(sem.id)))
                                         .map((sem) => (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString())
                                         .filter(Boolean)
                                 );
                                 const syncedAt = new Date().toISOString();
-                                onProgramacoesChange((prev) => (prev || []).map((sem) => {
+                                await onProgramacoesChange((prev) => (prev || []).map((sem) => {
                                     const key = (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString();
                                     if (!sincronizadas.has(key)) return sem;
                                     const proximaSemana = { ...(sem || {}), agendaSincronizadaEm: syncedAt };
+                                    if (config?.grupoSelecionadoId) return { ...proximaSemana, agendaPendenteSync: false, needsCalendarSync: false, agendaPendenteMotivo: '', agendaPendenteDesde: null };
                                     delete proximaSemana.agendaPendenteSync;
                                     delete proximaSemana.needsCalendarSync;
                                     delete proximaSemana.agendaPendenteMotivo;
@@ -1373,7 +1389,7 @@ const RevisarEnviar = ({
 
             {/* ABA NOTIFICAR */}
             {abaAtiva === 'notificar' && (
-                <RevisarEnviarNotificarTab
+                <RevisarEnviarNotificarTab referenciasGrupo={referenciasGrupo} alunosCadastrados={alunos}
                     semanasParaNotificar={semanasParaImprimir}
                     config={config}
                     confirmacoes={confirmacoes}

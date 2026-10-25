@@ -42,5 +42,7 @@ export async function sincronizarAgendaGrupo({ token, calendarId, programacoes, 
             resultados.push({id:evento.id,ok:true});
         } catch(error) {resultados.push({id:evento.id,ok:false,erro:error.message});}
     }
-    return {sucesso:resultados.every(r=>r.ok),resultados};
+    const programacaoIdsSincronizadas = [...new Set(eventos.map(e => e.identity.programacaoId))].filter(id =>
+        eventos.filter(e => e.identity.programacaoId === id).every(e => resultados.some(r => r.id === e.id && r.ok)));
+    return {sucesso:resultados.every(r=>r.ok),resultados,programacaoIdsSincronizadas};
 }

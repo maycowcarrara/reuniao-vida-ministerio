@@ -21,7 +21,8 @@ export default function ModalSugestao({
     cargosMap,
     lang = 'pt',
     modo = 'sugestao',
-    pessoaAtual = null
+    pessoaAtual = null,
+    avaliarCandidato = null
 }) {
     const [sugestoes, setSugestoes] = useState([]);
     const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer', isAjudante: false });
@@ -100,7 +101,7 @@ export default function ModalSugestao({
                 assignedStudent: parteAtual?.estudante,
                 lang,
             });
-            if (!eligibility.eligible) return false;
+            if (!eligibility.eligible || (avaliarCandidato && !avaliarCandidato(aluno).eligible)) return false;
 
             return true;
         });

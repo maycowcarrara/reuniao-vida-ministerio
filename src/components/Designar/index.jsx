@@ -25,6 +25,8 @@ import { dialog } from '../../utils/dialog';
 import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
 import { isWhatWouldYouSayPart } from '../../utils/meetingParts';
+import { avaliarSlotClassico } from '../../utils/interfaceClassicaGrupos.js';
+import { normalizeOcorrenciaReuniao } from '../../utils/ocorrenciasReuniao.js';
 import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
@@ -52,8 +54,10 @@ const Designar = ({
     sharedWeekSelection = {},
     setSharedWeekSelection = () => { },
     substitutionShortcutRequest = null,
-    onRepublicarQuadroPublico = null
+    onRepublicarQuadroPublico = null,
+    agendamentoGrupo = null
 }) => {
+    const [agendamentoAberto, setAgendamentoAberto] = useState(false);
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
     const [filtroSemanas, setFiltroSemanas] = useState('ativas');
     const userClearedWeeksRef = useRef(false);
@@ -111,6 +115,7 @@ const Designar = ({
         return { totalMin, label: formatHm(totalMin), className: classes[faixa] };
     };
     const getDefaultFimDeSemanaDataISO = (sem) => {
+        if (config.grupoSelecionadoId) return sem?.fimDeSemana?.data || '';
         try {
             return getCanonicalMeetingDateISO({
                 sem,
@@ -121,13 +126,13 @@ const Designar = ({
             return '';
         }
     };
-    const getDefaultFimDeSemanaHorario = () => config?.horario_fds || config?.horarioFimDeSemana || '18:00';
+    const getDefaultFimDeSemanaHorario = () => config.grupoSelecionadoId ? config.grupos?.[config.grupoSelecionadoId]?.fimDeSemana.horario || '' : config?.horario_fds || config?.horarioFimDeSemana || '18:00';
     const getFimDeSemanaParaSemana = (sem) => {
         const fds = normalizeFimDeSemana(sem?.fimDeSemana);
         return {
             ...fds,
-            data: getDefaultFimDeSemanaDataISO(sem) || fds.data,
-            horario: getDefaultFimDeSemanaHorario() || fds.horario,
+            data: fds.data || getDefaultFimDeSemanaDataISO(sem),
+            horario: fds.horario || getDefaultFimDeSemanaHorario(),
         };
     };
     const withFimDeSemanaDefaults = (sem) => getFimDeSemanaParaSemana(sem);
@@ -250,6 +255,12 @@ const Designar = ({
     // FUNÇÃO ROBUSTA DE ORDENAÇÃO E EXTRAÇÃO DE DATAS
     const getSortTime = useCallback((sem) => getSemanaSortTimestamp(sem, config), [config]);
 
+    const formatarDataFds = data => {
+        if (!data) return TT.dataNaoDefinida;
+        const value = new Date(`${data}T12:00:00`);
+        return Number.isNaN(value.getTime()) ? data : value.toLocaleDateString(getLanguageMeta(lang).locale, { weekday: 'long', day: 'numeric', month: 'long' });
+    };
+
     // 🔥 FORMATADOR DE DATA USANDO A SUA LÓGICA OFICIAL
     const formatarDataPorExtenso = (sem) => {
         let dataBaseStr = null;
@@ -258,7 +269,9 @@ const Designar = ({
         const tipoEvento = getTipoEventoSemana(sem, config);
         const isVisita = tipoEvento === 'visita';
 
-        if (eventoConfig?.dataInput && !isVisita) {
+        if (sem?.meioSemana?.data) {
+            dataBaseStr = sem.meioSemana.data;
+        } else if (eventoConfig?.dataInput && !isVisita) {
             dataBaseStr = eventoConfig.dataInput;
         } else {
             try {
@@ -282,7 +295,7 @@ const Designar = ({
 
         if (!dataBaseStr) return null;
 
-        if (isVisita) {
+        if (isVisita && !sem?.meioSemana?.data) {
             const [ano, mes, dia] = dataBaseStr.split('-').map(Number);
             const d = new Date(ano, mes - 1, dia, 12, 0, 0);
             if (d.getDay() !== 2) {
@@ -737,6 +750,7 @@ const Designar = ({
         if (targetSlot.key !== 'presidente' && !targetSlot.fds && !targetSlot.meioSemana && !parte) {
             return { eligible: false, reason: TT.parteNaoEncontrada || 'Parte nao encontrada.' };
         }
+        if (config.grupoSelecionadoId) return avaliarSlotClassico({ aluno, alunos, programacao: sem, targetSlot, config, cargosMap });
         return isAlunoEligibleForAssignment({
             aluno,
             parte,
@@ -786,14 +800,7 @@ const Designar = ({
                 toast.error(TT.parteNaoEncontrada || 'Parte nao encontrada.');
                 return false;
             }
-            const eligibility = isAlunoEligibleForAssignment({
-                aluno,
-                parte,
-                slotKey: targetSlot.key,
-                cargosMap,
-                assignedStudent: parte?.estudante,
-                lang,
-            });
+            const eligibility = getAlunoEligibilityForSlot(aluno, targetSlot);
 
             if (!eligibility.eligible) {
                 toast.error(eligibility.reason || TT.alunoSemHabilitacao || 'Aluno sem habilitacao para esta designacao.');
@@ -1514,8 +1521,12 @@ const Designar = ({
     };
 
     const renderFimDeSemana = (sem, semanaIndexFiltrado, semanaKey) => {
+        if (config.grupoSelecionadoId && !config.grupos?.[config.grupoSelecionadoId]?.fimDeSemana.habilitada) return null;
         const fds = getFimDeSemanaParaSemana(sem);
         const isVisita = getTipoEventoSemana(sem, config) === 'visita';
+        const ocorrenciaFds = normalizeOcorrenciaReuniao(sem, 'fimDeSemana', config);
+        const fdsBloqueado = !!config.grupoSelecionadoId && (ocorrenciaFds.cancelada || !config.grupos?.[config.grupoSelecionadoId]?.ativo || !config.grupos?.[config.grupoSelecionadoId]?.fimDeSemana.habilitada || !!sem.arquivada);
+        const statusFds = config.grupoSelecionadoId ? (ocorrenciaFds.cancelada ? (lang === 'es' ? 'Cancelada' : 'Cancelada') : ocorrenciaFds.publica ? TT.publicada : TT.rascunho) : (fds.ativo ? TT.publicada : TT.rascunho);
         const temDadosSalvos = hasFimDeSemanaData(sem?.fimDeSemana);
         const aberto = fdsAbertoPorSemana[semanaKey] ?? temDadosSalvos;
         const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400";
@@ -1559,18 +1570,18 @@ const Designar = ({
                             <Calendar size={14} className="text-sky-600 shrink-0" />
                             <span className="text-xs font-black uppercase tracking-widest text-sky-800">{TT.fimDeSemana}</span>
                             <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${fds.ativo ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-200'}`}>
-                                {fds.ativo ? TT.publicada : TT.rascunho}
+                                {statusFds}
                             </span>
                         </div>
                         <p className="mt-0.5 text-[11px] font-semibold text-sky-700/70 truncate">
-                            {fds.data || TT.dataNaoDefinida} {fds.horario ? `• ${fds.horario}` : ''}
+                            {formatarDataFds(fds.data)} {fds.horario ? `• ${fds.horario}` : ''}
                         </p>
                     </div>
                     <ChevronDown size={16} className={`text-sky-700 transition-transform ${aberto ? 'rotate-180' : ''}`} />
                 </button>
 
                 {aberto && (
-                    <div className="border-t border-sky-100 bg-white/80 p-3 space-y-4">
+                    <fieldset disabled={fdsBloqueado} className="min-w-0 border-0 border-t border-sky-100 bg-white/80 p-3 space-y-4 disabled:opacity-70">
                         <label className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-gray-700">
                             <input
                                 type="checkbox"
@@ -1662,7 +1673,7 @@ const Designar = ({
                                 })}
                             </div>
                         </div>
-                    </div>
+                    </fieldset>
                 )}
             </div>
         );
@@ -1672,6 +1683,7 @@ const Designar = ({
         <div className="w-full min-h-screen bg-gray-50 relative font-sans text-gray-800">
 
             <DesignarHeader
+                onAbrirAgendamento={agendamentoGrupo ? () => setAgendamentoAberto(true) : null}
                 headerRef={stickyHeaderRef}
                 TT={TT}
                 lang={lang}
@@ -1694,6 +1706,7 @@ const Designar = ({
                 onRepublicarQuadroPublico={republicarQuadroPublico}
             />
 
+            {agendamentoAberto && agendamentoGrupo && React.cloneElement(agendamentoGrupo, { modal: true, onClose: () => setAgendamentoAberto(false) })}
             <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-4">
                 <div className="flex flex-col lg:flex-row gap-6 pb-20 items-stretch lg:items-start">
 
@@ -1733,6 +1746,7 @@ const Designar = ({
                                     semanasParaExibir.map(({ sem, idx, key }) => {
                                         const partesDaSemana = Array.isArray(sem?.partes) ? sem.partes : [];
                                         const tempoTotalMeta = getTempoTotalMeta(partesDaSemana);
+                                        const meioAtivo = !config.grupoSelecionadoId || normalizeOcorrenciaReuniao(sem, 'meioSemana', config).operacional;
                                         const isArq = !!sem?.arquivada;
                                         const publicadaNoQuadro = sem?.publicadaNoQuadro !== false;
                                         const substituicoesSemana = getSubstituicoesSemana(sem);
@@ -1747,7 +1761,7 @@ const Designar = ({
                                         const isAssembly = isSemanaAssembleia(sem, config);
 
                                         // 🔥 FORMATADOR INTELIGENTE (Mesma técnica do RevisarEnviar)
-                                        const displayDateExtenso = formatarDataPorExtenso(sem);
+                                        const displayDateExtenso = meioAtivo ? formatarDataPorExtenso(sem) : formatarDataFds(sem.fimDeSemana?.data);
 
                                         const cardBgClass = isVisita ? 'bg-blue-50 border-blue-200'
                                             : isAssembly ? 'bg-yellow-50 border-yellow-200'
@@ -1769,7 +1783,7 @@ const Designar = ({
                                                                  {publicadaNoQuadro ? <Eye size={10} /> : <EyeOff size={10} />}
                                                                  {publicadaNoQuadro ? TT.publicada : TT.rascunho}
                                                              </span>
-                                                            {!isAssembly && (
+                                                            {!isAssembly && meioAtivo && (
                                                                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase tracking-wider ${tempoTotalMeta.className}`} title={formatText(TT.tempoTotalTooltipTpl, { tempo: tempoTotalMeta.label })}>
                                                                     <Clock size={10} /> {tempoTotalMeta.label}
                                                                 </span>
@@ -1805,7 +1819,7 @@ const Designar = ({
                                                         <button onClick={() => abrirModalEditarSemana(idx)} className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 transition" title={TT.editarSemana}>
                                                             <Edit2 size={14} />
                                                         </button>
-                                                        <button onClick={() => togglePublicacaoSemana(key)} className={`p-1.5 rounded-lg border bg-white transition ${publicadaNoQuadro ? 'text-emerald-600 hover:bg-emerald-50 border-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`} title={publicadaNoQuadro ? 'Ocultar do quadro público' : 'Publicar no quadro público'}>
+                                                        <button onClick={() => togglePublicacaoSemana(key)} className={`p-1.5 rounded-lg border bg-white transition ${publicadaNoQuadro ? 'text-emerald-600 hover:bg-emerald-50 border-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`} title={publicadaNoQuadro ? (lang === 'es' ? 'Ocultar del tablero público' : 'Ocultar do quadro público') : (lang === 'es' ? 'Publicar en el tablero público' : 'Publicar no quadro público')}>
                                                             {publicadaNoQuadro ? <Eye size={14} /> : <EyeOff size={14} />}
                                                         </button>
                                                         <button onClick={() => toggleArquivadaSemana(key, !isArq)} className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 transition" title={isArq ? TT.restaurar : TT.arquivar}>
@@ -1835,6 +1849,7 @@ const Designar = ({
                                                     </div>
                                                 ) : (
                                                     <>
+                                                        {meioAtivo && <>
                                                         <div className="flex items-center gap-2 px-1 pt-1">
                                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{TT.meioDeSemana}</span>
                                                             <span className="h-px flex-1 bg-gray-200" />
@@ -1888,7 +1903,7 @@ const Designar = ({
                                                         <div className="space-y-2">{partesDaSemana.filter(isEncerramento).map(p => renderParteCard(p, idx))}</div>
 
                                                         {renderResponsabilidadesMeioSemana(sem, idx)}
-
+                                                        </>}
                                                         {renderFimDeSemana(sem, idx, key)}
                                                     </>
                                                 )}
@@ -2009,7 +2024,7 @@ const Designar = ({
             )}
 
             {/* MODAL SUGESTÃO */}
-            <ModalSugestao isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={listaFiltradaPorFlag?.[modalSugestao.semanaIndex]} modalKey={modalSugestao.key} cargosMap={cargosMap} lang={lang} modo={modalSugestao.modo} pessoaAtual={modalSugestao.anterior} />
+            <ModalSugestao avaliarCandidato={config.grupoSelecionadoId ? aluno => getAlunoEligibilityForSlot(aluno, { ...modalSugestao, semanaIndex: modalSugestao.semanaIndex }) : null} isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={listaFiltradaPorFlag?.[modalSugestao.semanaIndex]} modalKey={modalSugestao.key} cargosMap={cargosMap} lang={lang} modo={modalSugestao.modo} pessoaAtual={modalSugestao.anterior} />
         </div>
     );
 };

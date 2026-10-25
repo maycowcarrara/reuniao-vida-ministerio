@@ -81,30 +81,41 @@ export const operacoesDaListaDoGrupo = ({ lista, grupoId }) => lista.map(program
     return { tipo: 'upsert', programacao };
 });
 
-export const patchConfiguracaoGrupo = (config, { grupoId, alteracoes = {}, grupoPrincipalId }) => {
+export const patchConfiguracoesGrupos = (config, { alteracoesPorGrupo = {}, grupoPrincipalId, configOriginal }) => {
     const normalized = normalizeGruposProgramacao(config);
-    if (!normalized.grupos[grupoId]) throw new Error('Grupo inválido.');
-    if (alteracoes.id !== undefined && alteracoes.id !== grupoId) throw new Error('ID do grupo é imutável.');
-    const grupo = mergeCamposPreservados(normalized.grupos[grupoId], alteracoes);
-    const next = { ...normalized, grupos: { ...normalized.grupos, [grupoId]: grupo },
+    if (configOriginal) {
+        const conteudo = c => JSON.stringify([c.grupos, c.grupoPrincipalId, c.grupoLegadoId], (_, value) =>
+            isObject(value) ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))) : value);
+        if (conteudo(normalized) !== conteudo(normalizeGruposProgramacao(configOriginal))) throw new Error('configuracaoConflito');
+    }
+    const next = { ...normalized, grupos: { ...normalized.grupos },
         grupoPrincipalId: grupoPrincipalId || normalized.grupoPrincipalId };
-    if (!Object.values(next.grupos).some(item => item.ativo)) throw new Error('Mantenha pelo menos um grupo ativo.');
-    if (!next.grupos[next.grupoPrincipalId]?.ativo) throw new Error('O grupo principal precisa estar ativo.');
-    for (const tipo of ['meioSemana', 'fimDeSemana']) {
-        const reuniao = grupo[tipo];
-        if (!['semanal', 'datas'].includes(reuniao.frequencia)) throw new Error('Frequência inválida.');
-        if (reuniao.habilitada && reuniao.frequencia === 'semanal' && (!reuniao.dia || !reuniao.horario)) {
-            throw new Error('Informe dia e horário da reunião semanal.');
+    for (const [grupoId, alteracoes] of Object.entries(alteracoesPorGrupo)) {
+        if (!normalized.grupos[grupoId]) throw new Error('Grupo inválido.');
+        if (alteracoes.id !== undefined && alteracoes.id !== grupoId) throw new Error('ID do grupo é imutável.');
+        const grupo = mergeCamposPreservados(normalized.grupos[grupoId], alteracoes);
+        next.grupos[grupoId] = grupo;
+        for (const tipo of ['meioSemana', 'fimDeSemana']) {
+            const reuniao = grupo[tipo];
+            if (!['semanal', 'datas'].includes(reuniao.frequencia)) throw new Error('Frequência inválida.');
+            if (reuniao.habilitada && reuniao.frequencia === 'semanal' && (!reuniao.dia || !reuniao.horario)) {
+                throw new Error('Informe dia e horário da reunião semanal.');
+            }
+        }
+        if (grupoId === getGrupoLegadoId(next)) {
+            Object.assign(next, { nome_cong: grupo.nome, idioma: grupo.idioma,
+                dia_reuniao: grupo.meioSemana.dia, horario: grupo.meioSemana.horario,
+                dia_reuniao_fds: grupo.fimDeSemana.dia, horario_fds: grupo.fimDeSemana.horario,
+                eventosAnuais: grupo.eventosAnuais });
         }
     }
-    if (grupoId === getGrupoLegadoId(next)) {
-        Object.assign(next, { nome_cong: grupo.nome, idioma: grupo.idioma,
-            dia_reuniao: grupo.meioSemana.dia, horario: grupo.meioSemana.horario,
-            dia_reuniao_fds: grupo.fimDeSemana.dia, horario_fds: grupo.fimDeSemana.horario,
-            eventosAnuais: grupo.eventosAnuais });
-    }
+    if (!Object.values(next.grupos).some(item => item.ativo)) throw new Error('Mantenha pelo menos um grupo ativo.');
+    if (!next.grupos[next.grupoPrincipalId]?.ativo) throw new Error('O grupo principal precisa estar ativo.');
     return next;
 };
+
+export const patchConfiguracaoGrupo = (config, { grupoId, alteracoes = {}, grupoPrincipalId }) =>
+    patchConfiguracoesGrupos(config, { alteracoesPorGrupo: { [grupoId]: alteracoes }, grupoPrincipalId });
 
 // Uma operação captura seu grupo/IDs no início. Adaptadores de teste/local são
 // injetados; publicação usa sempre a fonte completa resultante da gravação.

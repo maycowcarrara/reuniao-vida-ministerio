@@ -1,3 +1,4 @@
+import { prepararRespostaConfirmacao } from '../utils/respostasConfirmacao.js';
 import { assignmentIdentity, buildAssignmentKey } from '../utils/assignmentIdentity.js';
 import { resolverConfirmacaoGrupo } from '../utils/integracoesGrupo.js';
 import { gruposRemotosAtivos } from '../utils/compatibilidadeGrupos.js';
@@ -63,5 +64,36 @@ export async function registrarCanalConfirmacao({ db, sdk, ownerUid, assignmentK
         }
         tx.update(privateRef, payload); tx.update(publicRef, payload);
         return { registrado: true };
+    });
+}
+
+export async function responderParConfirmacao({ db, sdk, token, mode, status, options = {}, validarDestino, criarTexto }) {
+    if (!/^[A-Za-z0-9_-]{1,200}$/.test(token || '')) throw new Error('Token de confirmação inválido.');
+    const publicRef = sdk.doc(db, 'confirmacoes_publicas', token);
+    const nowISO = new Date().toISOString(), requestId = crypto.randomUUID();
+    return sdk.runTransaction(db, async tx => {
+        const snap = await tx.get(publicRef);
+        if (!snap.exists()) throw new Error('Confirmação pública não encontrada.');
+        const current = snap.data();
+        if (!current.ownerUid || !current.assignmentKey) throw new Error('Vínculo de confirmação ausente.');
+        const board = await tx.get(sdk.doc(db, 'quadros_publicos', current.ownerUid));
+        if (!board.exists()) throw new Error('Quadro indisponível para conferir a designação.');
+        const availability = validarDestino(current, board.data());
+        if (availability.isUnavailable) { const error = new Error('A designação vinculada a este link não está disponível.'); error.code = availability.unavailableReason; throw error; }
+        const payload = prepararRespostaConfirmacao(current, { ...options, mode, status, nowISO, requestId, timestamp: sdk.serverTimestamp });
+        if (!payload) return { changed: false };
+        const week = mode === 'week', previousStatus = week ? payload.weekReminderPreviousStatus : payload.previousStatus;
+        const type = week ? 'lembrete_semana_status' : 'confirmacao_status';
+        const changeKey = week ? payload.lastWeekReminderChangeKey : payload.lastStatusChangeKey;
+        const id = `${token}_${type}_${changeKey}`;
+        const copy = criarTexto({ current, mode, previousStatus, nextStatus: status });
+        tx.update(publicRef, payload);
+        tx.set(sdk.doc(db, `users/${current.ownerUid}/confirmacoes/${current.assignmentKey}`), { ...payload,
+            ...(current.identityVersion === 2 ? assignmentIdentity(current) : {}), token, assignmentKey: current.assignmentKey, ownerUid: current.ownerUid }, { merge: true });
+        tx.set(sdk.doc(db, 'notificacoes', id), { id, ownerUid: current.ownerUid, type, title: String(copy.title || '').slice(0, 120), description: String(copy.description || '').slice(0, 500),
+            token, assignmentKey: current.assignmentKey, dataISO: current.dataISO || '', semana: current.semana || '', pessoaNome: current.pessoaNome || '',
+            status, previousStatus, meta: { ...(current.identityVersion === 2 ? assignmentIdentity(current) : {}), tituloParte: current.tituloParte || '', congregacaoNome: current.congregacaoNome || '' },
+            readAt: null, readAtIso: null, createdAt: sdk.serverTimestamp(), createdAtIso: nowISO });
+        return { changed: true };
     });
 }

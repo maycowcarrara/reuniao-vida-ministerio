@@ -1,6 +1,6 @@
 import * as firestore from 'firebase/firestore';
 import { gruposRemotosAtivos } from '../utils/compatibilidadeGrupos.js';
-import { getGrupoEfetivoId } from '../utils/gruposProgramacao.js';
+import { getGrupoEfetivoId, validarParticipacaoAluno } from '../utils/gruposProgramacao.js';
 import { hashEnsaio } from '../utils/ensaioMigracaoGrupos.js';
 import { projetarQuadroPublico } from '../utils/quadroPublico.js';
 
@@ -23,7 +23,6 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
     };
     const requireActive = config => { if (!gruposRemotosAtivos(config)) throw new Error('Ativação multi-grupos remota não está habilitada.'); };
     const salvarLote = async ({ grupoId, upserts, excluirIds, anteriores = [] }) => {
-        if (excluirIds.length > 8) throw new Error("Exclua no máximo oito programações por operação.");
         if (excluirIds.length > 8) throw new Error("Exclua no máximo oito programações por operação.");
         if (upserts.length + excluirIds.length > 400) throw new Error('Divida a operação em até 400 programações.');
         const r = refs();
@@ -79,6 +78,41 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
             for (const aluno of alterados) tx.update(doc(db, `${r.base}/alunos/${aluno.id}`), { historico: limparIndefinidos(aluno.historico) });
         });
     };
+    const salvarAluno = async (aluno, { original = null, historico = false } = {}) => {
+        if (!aluno?.id) throw new Error('Identificador da pessoa ausente.');
+        const r = refs(), ref = doc(db, `${r.base}/alunos/${aluno.id}`);
+        const fields = historico ? ['historico'] : ['avatar', 'nome', 'tipo', 'telefone', 'email', 'familia', 'observacoes', 'datasIndisponiveis', 'partesHabilitadas', 'gruposParticipantes'];
+        const patch = {};
+        for (const field of fields) if (aluno[field] !== undefined && (!original || !await same(aluno[field], original[field] ?? null))) patch[field] = limparIndefinidos(aluno[field]);
+        await runTransaction(db, async tx => {
+            const configAtual = (await tx.get(r.config)).data();
+            requireActive(configAtual);
+            const snap = await tx.get(ref), atual = snap.data();
+            if (!historico) validarParticipacaoAluno(aluno, configAtual, atual || null);
+            if (!original) {
+                const novo = { ...limparIndefinidos(aluno), historico: aluno.historico || [] };
+                if (snap.exists()) {
+                    if (await same(atual, novo)) return;
+                    throw new Error('Identificador já cadastrado; a pessoa existente foi preservada.');
+                }
+                tx.set(ref, novo);
+                return;
+            }
+            if (!snap.exists()) throw new Error('Pessoa removida em outra sessão.');
+            for (const field of Object.keys(patch)) if (!await same(atual[field] ?? null, original[field] ?? null)) throw new Error('Este campo mudou em outra sessão; atualize antes de salvar.');
+            if (Object.keys(patch).length) tx.update(ref, patch);
+        });
+    };
+    const excluirAluno = async id => {
+        const r = refs(), ref = doc(db, `${r.base}/alunos/${id}`);
+        await runTransaction(db, async tx => {
+            requireActive((await tx.get(r.config)).data());
+            const snap = await tx.get(ref);
+            if (!snap.exists()) return;
+            if (snap.data().tipo !== 'desab') throw new Error('Somente pessoas desabilitadas podem ser excluídas. O cadastro atual foi preservado.');
+            tx.delete(ref);
+        });
+    };
     const publicar = async () => {
         const r = refs();
         for (let tentativa=0; tentativa<3; tentativa++) {
@@ -97,5 +131,5 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
             } catch (error) { if (error.message !== 'quadro-obsoleto' || tentativa === 2) throw error; }
         }
     };
-    return { salvarLote, salvarConfig, salvarHistoricos, publicar, atualizarEstado: estado => { estadoAtual = estado; } };
+    return { salvarLote, salvarConfig, salvarHistoricos, salvarAluno, excluirAluno, publicar, atualizarEstado: estado => { estadoAtual = estado; } };
 }

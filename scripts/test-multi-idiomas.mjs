@@ -93,13 +93,13 @@ test('instalação legada em espanhol ambígua exige definição; não reclassif
     assert.throws(() => normalizeGruposProgramacao({ grupoLegadoId: 'inexistente' }), /configuração/);
 });
 
-test('alunos antigos e padrão de novos cadastros são PT, nunca ES por idioma/principal', () => {
+test('alunos antigos e padrão simultâneo são PT, independente do idioma/principal', () => {
     const config = { grupoPrincipalId: ES, idioma: 'es', grupoLegadoId: PT };
     assert.deepEqual(getGruposParticipantes({}, config), [PT]);
-    assert.deepEqual(createParticipacaoAlunoDefault(), [PT]);
-    const first = createParticipacaoAlunoDefault();
+    assert.deepEqual(createParticipacaoAlunoDefault(config), [PT]);
+    const first = createParticipacaoAlunoDefault(config);
     first.push(ES);
-    assert.deepEqual(createParticipacaoAlunoDefault(), [PT]);
+    assert.deepEqual(createParticipacaoAlunoDefault(config), [PT]);
 });
 
 test('participação vazia e escolhas duplas sobrevivem salvar/reler sem tocar habilitações ou dados', () => {

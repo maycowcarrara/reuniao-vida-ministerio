@@ -27,7 +27,7 @@ const normalizeForDirtyCheck = (value) => {
 
 const getAlunoSignature = (aluno) => JSON.stringify(normalizeForDirtyCheck(aluno || {}));
 
-const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false, multiGrupos = false, config = {} }) => {
+const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onSave, cargosMap, lang, t, familiasOptions = [], isSaving = false, multiGrupos = false, config = {}, novoCadastro = !alunoEmEdicao?.id }) => {
     const G = useSectionMessages('gruposProgramacao');
     const firstInputRef = useRef(null);
     const formRef = useRef(null);
@@ -212,8 +212,8 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                 )}
                 <div className="bg-gradient-to-r from-blue-700 to-blue-600 p-5 flex justify-between items-center text-white">
                     <div>
-                        <h3 className="font-black text-sm leading-tight">{alunoEmEdicao.id ? t.modal.editar : t.modal.novo}</h3>
-                        <p className="text-[10px] opacity-80 mt-1">{alunoEmEdicao.id ? `ID #${alunoEmEdicao.id}` : '—'}</p>
+                        <h3 className="font-black text-sm leading-tight">{novoCadastro ? t.modal.novo : t.modal.editar}</h3>
+                        <p className="text-[10px] opacity-80 mt-1">{novoCadastro ? '—' : `ID #${alunoEmEdicao.id}`}</p>
                     </div>
                     <button disabled={isSaving} onClick={solicitarFechamento} className="p-1 hover:bg-white/10 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"><X size={20} /></button>
                 </div>
@@ -252,13 +252,13 @@ const ModalFormulario = ({ alunoEmEdicao, setAlunoEmEdicao, isOpen, onClose, onS
                     <form ref={formRef} id="form-aluno" onSubmit={onSave} className="min-w-0 space-y-4">
                         {multiGrupos && <fieldset disabled={isSaving} className="rounded-xl border p-3 space-y-2">
                             <legend className="text-xs font-bold px-1">{G.participa}</legend>
-                            {Object.values(config.grupos || {}).map(grupo => {
+                            {Object.values(config.grupos || {}).filter(grupo => grupo.ativo || getGruposParticipantes(alunoEmEdicao, config).includes(grupo.id)).map(grupo => {
                                 const participantes = getGruposParticipantes(alunoEmEdicao, config);
                                 return <label key={grupo.id} className="flex gap-2 text-sm">
-                                    <input type="checkbox" checked={participantes.includes(grupo.id)} onChange={e => setAlunoEmEdicao(prev => ({
+                                    <input type="checkbox" disabled={!grupo.ativo} checked={participantes.includes(grupo.id)} onChange={e => setAlunoEmEdicao(prev => ({
                                         ...prev, gruposParticipantes: e.target.checked ? [...new Set([...getGruposParticipantes(prev, config), grupo.id])]
                                             : getGruposParticipantes(prev, config).filter(id => id !== grupo.id),
-                                    }))} />{G[grupo.idioma]}
+                                    }))} />{G[grupo.idioma]}{!grupo.ativo && ` · ${G.inativo}`}
                                 </label>;
                             })}
                         </fieldset>}

@@ -11,7 +11,7 @@ import { toast } from '../utils/toast';
 import { dialog } from '../utils/dialog';
 import PwaInstallButton from './PwaInstallButton';
 
-const DEFAULT_APP_SHARE_URL = 'https://rvm-palmas-pr.web.app';
+const DEFAULT_APP_SHARE_URL = `https://${import.meta.env.VITE_FIREBASE_PROJECT_ID || 'rvm-sbssc'}.web.app`;
 
 function SidebarButton({ active, onClick, icon, label, badge, sidebarOpen }) {
     const iconElement = React.createElement(icon, { size: 18, className: 'shrink-0' });

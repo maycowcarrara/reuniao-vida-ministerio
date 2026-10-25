@@ -28,9 +28,11 @@ import { getSectionMessages, I18nProvider } from './i18n';
 import { resolveDataOwnerUid } from './services/adminAccess';
 import { MULTI_GRUPOS_LOCAL } from './config/multiGruposLocal.js';
 import { USUARIO_ENSAIO_GRUPOS } from './data/ensaioGrupos.js';
-import { normalizeGruposProgramacao } from './utils/gruposProgramacao.js';
+import { getReunioesAtivas } from './utils/ocorrenciasReuniao.js';
+import { prepararEdicaoClassica } from './utils/interfaceClassicaGrupos.js';
+import { normalizeGruposProgramacao, participaDoGrupo } from './utils/gruposProgramacao.js';
 import { projetarConfigGrupo } from './utils/grupoAtivo.js';
-import { createProgramacoesController, operacoesDaListaDoGrupo, patchConfiguracaoGrupo, selecionarProgramacoesGrupo } from './utils/programacoesPorGrupo.js';
+import { createProgramacoesController, operacoesDaListaDoGrupo, patchConfiguracoesGrupos, selecionarProgramacoesGrupo } from './utils/programacoesPorGrupo.js';
 import { useGrupoAtivo } from './hooks/useGrupoAtivo.js';
 import { GRUPO_EDICAO_CONTEXT } from './hooks/useProtecaoTrocaGrupo.js';
 import SeletorGrupo from './components/SeletorGrupo.jsx';
@@ -105,6 +107,9 @@ function AdminPanel() {
   const { grupoId, selecionarGrupo } = useGrupoAtivo({ ownerUid: MULTI_GRUPOS_LOCAL ? usuario?.uid : resolveDataOwnerUid(usuario), config: configGrupos, enabled: modoGrupos });
   const configEmFoco = useMemo(() => modoGrupos && grupoId
     ? projetarConfigGrupo(configGrupos, grupoId) : dadosSistema.configuracoes, [configGrupos, grupoId, dadosSistema.configuracoes, modoGrupos]);
+  // Os componentes simplificados são exclusivos do ensaio local.
+  const usarInterfaceIndependente = MULTI_GRUPOS_LOCAL;
+  const alunosEmFoco = modoGrupos ? dadosSistema.alunos.filter(a => participaDoGrupo(a, grupoId, configGrupos)) : dadosSistema.alunos;
   const [controller] = useState(() => createProgramacoesController({
     getEstado: () => dadosAtuaisRef.current,
     salvarLote: async lote => {
@@ -386,7 +391,7 @@ function AdminPanel() {
       if (novosDados.configuracoes && novosDados.configuracoes !== dadosSistema.configuracoes) throw new Error('Use a edição explícita de configuração por grupo.');
       return executarLocal(async () => {
         if (novosDados.alunos) {
-          for (const aluno of novosDados.alunos) await salvarItem('alunos', aluno.id, aluno);
+          for (const aluno of novosDados.alunos) await salvarItem('alunos', aluno.id, aluno, { original: dadosAtuaisRef.current.alunos.find(a => String(a.id) === String(aluno.id)) || null });
         }
         if (novosDados.historico_reunioes) return controller.executar({ grupoId,
           operacoes: operacoesDaListaDoGrupo({ lista: novosDados.historico_reunioes, grupoId, config: dadosAtuaisRef.current.configuracoes }) });
@@ -475,7 +480,9 @@ function AdminPanel() {
       return executarLocal(() => {
         const config = dadosAtuaisRef.current.configuracoes;
         const atual = selecionarProgramacoesGrupo(dadosAtuaisRef.current.historico_reunioes, grupoDestino, config);
-        const next = typeof updater === 'function' ? updater(atual) : updater;
+        const recebida = typeof updater === 'function' ? updater(atual) : updater;
+        const next = !MULTI_GRUPOS_LOCAL
+          ? prepararEdicaoClassica({ anteriores: atual, proximas: recebida, config, grupoId: grupoDestino, alunos: dadosAtuaisRef.current.alunos, cargosMap: CARGOS_MAP }) : recebida;
         return controller.executar({ grupoId: grupoDestino, operacoes: operacoesDaListaDoGrupo({ lista: next, grupoId: grupoDestino, config }) });
       }).catch(error => { toast.error(error, G.erroSalvar); return { salvo: false, error }; });
     }
@@ -573,7 +580,7 @@ function AdminPanel() {
   };
 
   const handleDefinirEvento = (dataInput, tipoEvento) => {
-    if (modoGrupos) { toast.info(G.pendente); return; }
+    if (modoGrupos) return salvarEventoGrupoLocal({ grupoId, data: dataInput, tipo: tipoEvento });
     if (!dataInput) return;
     const dataAlvo = new Date(dataInput + 'T12:00:00');
     const diaSemana = dataAlvo.getDay();
@@ -618,8 +625,8 @@ function AdminPanel() {
     await excluirSemanaELimparHistorico(id, dataDaSemana);
   };
 
-  const handleSalvarAlunoBanco = async aluno => modoGrupos
-    ? executarLocal(() => salvarItem('alunos', aluno.id, aluno)) : salvarItem('alunos', aluno.id, aluno);
+  const handleSalvarAlunoBanco = async (aluno, opcoes) => modoGrupos
+    ? executarLocal(() => salvarItem('alunos', aluno.id, aluno, opcoes)) : salvarItem('alunos', aluno.id, aluno);
 
   const handleExcluirAlunoBanco = useCallback(
     async (id) => await excluirItem('alunos', id),
@@ -627,15 +634,20 @@ function AdminPanel() {
   );
 
   const salvarConfigGrupoLocal = pedido => executarLocal(async () => {
-    const config = patchConfiguracaoGrupo(dadosAtuaisRef.current.configuracoes, pedido);
+    const config = patchConfiguracoesGrupos(dadosAtuaisRef.current.configuracoes, pedido);
     await salvarItem('configuracoes', 'geral', config);
     dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config };
+    if (!MULTI_GRUPOS_LOCAL) {
+      try { await publicarQuadroPublico(); } catch (erroPublicacao) { return { salvo: true, publicado: false, erroPublicacao }; }
+    }
+    return { salvo: true, publicado: true };
   });
 
   const salvarEventoGrupoLocal = pedido => executarLocal(async () => {
     const config = prepararEventoGrupo({ config: dadosAtuaisRef.current.configuracoes, ...pedido });
     await salvarItem('configuracoes', 'geral', config);
     dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config };
+    if (!MULTI_GRUPOS_LOCAL) await publicarQuadroPublico();
   });
   const sincronizarHistoricoGrupoLocal = pedido => executarLocal(async () => {
     const estado = dadosAtuaisRef.current;
@@ -643,6 +655,9 @@ function AdminPanel() {
       alunos: estado.alunos, programacoes: estado.historico_reunioes });
     await salvarHistoricosLocais(alunos, pedido);
     dadosAtuaisRef.current = { ...estado, alunos };
+    if (!MULTI_GRUPOS_LOCAL) await controller.executar({ grupoId: pedido.grupoId,
+      operacoes: pedido.programacaoIds.filter(id => { const p = estado.historico_reunioes.find(x => x.id === id); return p && !p.arquivada && getReunioesAtivas(p, estado.configuracoes).length; }).map(programacaoId => ({ tipo: 'patch', programacaoId,
+        alteracoes: { historicoGravadoEm: new Date().toISOString(), historicoPendenteSync: false, historicoPendenteMotivo: '', historicoPendenteDesde: null } })) });
   });
 
   if (loading) {
@@ -795,7 +810,8 @@ function AdminPanel() {
                     const destino = destinoNotificacao(alerta, configGrupos);
                     if (!configGrupos.grupos[destino.grupoId]?.ativo) { toast.info('Programação indisponível.'); return; }
                     trocarContexto(() => { selecionarGrupo(destino.grupoId); setAbaAtiva('revisar');
-                      setReviewShortcutRequest({ token: Date.now(), ...destino }); });
+                      if (destino.programacaoId) setSharedWeekSelection({ [destino.programacaoId]: true });
+                      setReviewShortcutRequest({ tab: 'notificar', token: Date.now(), ...destino }); });
                   } : null}
                 />
 
@@ -824,10 +840,10 @@ function AdminPanel() {
           </p>}
           <fieldset disabled={modoGrupos && busy} className="min-w-0 border-0 p-0 m-0">
           <Suspense fallback={<RouteLoading text={APP_TEXTS.carregando} />}>
-            {abaAtiva === 'dashboard' && (modoGrupos
+            {abaAtiva === 'dashboard' && (usarInterfaceIndependente
               ? <PainelGrupo config={configGrupos} grupoId={grupoId} alunos={dadosSistema.alunos} programacoes={todasProgramacoes}
                   busy={busy} onEvento={salvarEventoGrupoLocal} onHistorico={sincronizarHistoricoGrupoLocal} onDesignar={() => navegarAba('designar')} />
-              : <Dashboard listaProgramacoes={listaProgramacoes} alunos={dadosSistema?.alunos || []} config={configEmFoco} setAbaAtiva={navegarAba} onDefinirEvento={handleDefinirEvento} t={t} confirmacoes={confirmacoes} onAbrirNotificacoesSemana={handleAbrirNotificacoesSemana} />)}
+              : <Dashboard listaProgramacoes={listaProgramacoes} alunos={alunosEmFoco || []} config={configEmFoco} setAbaAtiva={navegarAba} onDefinirEvento={handleDefinirEvento} t={t} confirmacoes={confirmacoes} onAbrirNotificacoesSemana={handleAbrirNotificacoesSemana} />)}
             {abaAtiva === 'importar' && (modoGrupos
               ? (!MULTI_GRUPOS_LOCAL && configEmFoco.dia_reuniao && configEmFoco.horario
                 ? <Importador config={configEmFoco} programacoes={listaProgramacoes} idioma={lang} onImportComplete={async d => {
@@ -839,14 +855,15 @@ function AdminPanel() {
                 : <ReunioesIndependentes key={`${grupoId}-importar`} importar config={configGrupos} grupoId={grupoId} programacoes={listaProgramacoes} busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} />)
               : <Importador config={dadosSistema.configuracoes} programacoes={listaProgramacoes} onImportComplete={async (d) => { await upsertProgramacaoComConfirmacao(d); setAbaAtiva('designar'); }} idioma={lang} />)}
 
-            {abaAtiva === 'designar' && (modoGrupos
+            {abaAtiva === 'designar' && (usarInterfaceIndependente
               ? <><ReunioesIndependentes key={`${grupoId}-agendar`} config={configGrupos} grupoId={grupoId} programacoes={listaProgramacoes} busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} />
                   <DesignacoesGrupo config={configGrupos} grupoId={grupoId} programacoes={todasProgramacoes} alunos={dadosSistema.alunos} cargosMap={CARGOS_MAP}
                     busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} onCadastro={() => navegarAba('alunos')} /></> :
               <Designar
+                agendamentoGrupo={modoGrupos ? <ReunioesIndependentes config={configGrupos} grupoId={grupoId} programacoes={listaProgramacoes} busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} /> : null}
                 listaProgramacoes={listaProgramacoes}
                 setListaProgramacoes={setListaProgramacoes}
-                alunos={dadosSistema?.alunos || []}
+                alunos={alunosEmFoco || []}
                 cargosMap={CARGOS_MAP}
                 lang={lang}
                 t={t}
@@ -859,12 +876,13 @@ function AdminPanel() {
               />
             )}
 
-            {abaAtiva === 'revisar' && (modoGrupos ? <RevisaoGrupo alunos={dadosSistema.alunos} localOnly={MULTI_GRUPOS_LOCAL} ownerUid={resolveDataOwnerUid(usuario)} config={configGrupos} grupoId={grupoId} programacoes={todasProgramacoes} confirmacoes={confirmacoes} programacaoFoco={reviewShortcutRequest?.programacaoId}
+            {abaAtiva === 'revisar' && (usarInterfaceIndependente ? <RevisaoGrupo alunos={dadosSistema.alunos} localOnly={MULTI_GRUPOS_LOCAL} ownerUid={resolveDataOwnerUid(usuario)} config={configGrupos} grupoId={grupoId} programacoes={todasProgramacoes} confirmacoes={confirmacoes} programacaoFoco={reviewShortcutRequest?.programacaoId}
               onExecutar={pedido => executarLocal(() => controller.executar(pedido))} /> :
               <RevisarEnviar
                 historico={listaProgramacoes}
-                alunos={dadosSistema?.alunos || []}
-                config={dadosSistema?.configuracoes}
+                alunos={alunosEmFoco || []}
+                config={configEmFoco}
+                onSincronizarHistoricoGrupo={modoGrupos ? sincronizarHistoricoGrupoLocal : null}
                 confirmacoes={confirmacoes}
                 onAlunosChange={(novosAlunos) => salvarAlteracao({ ...dadosSistema, alunos: novosAlunos })}
                 onProgramacoesChange={setListaProgramacoes}
@@ -876,7 +894,7 @@ function AdminPanel() {
             )}
             {abaAtiva === 'alunos' && <ListaAlunos alunos={dadosSistema?.alunos || []} setAlunos={(n) => salvarAlteracao({ ...dadosSistema, alunos: n })} onSalvarAluno={handleSalvarAlunoBanco} config={configEmFoco} cargosMap={CARGOS_MAP} onExcluirAluno={handleExcluirAlunoBanco} multiGrupos={modoGrupos} />}
             {abaAtiva === 'configuracoes' && (modoGrupos
-              ? <ConfiguracoesGrupos config={configGrupos} grupoId={grupoId} onSalvar={salvarConfigGrupoLocal} busy={busy} lang={lang} />
+              ? <ConfiguracoesGrupos onDesignar={id => trocarContexto(() => { selecionarGrupo(id); setAbaAtiva('designar'); })} mostrarAcessos={!MULTI_GRUPOS_LOCAL} onRepublicar={republicarQuadroPublicoAtual} config={configGrupos} grupoId={grupoId} onSalvar={salvarConfigGrupoLocal} busy={busy} lang={lang} />
               : <Configuracoes dados={dadosSistema} salvarAlteracao={salvarAlteracao} t={t} lang={lang} />)}
           </Suspense>
           </fieldset>

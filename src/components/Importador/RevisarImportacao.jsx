@@ -1,14 +1,25 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Edit, Plus, Info, CheckCircle, AlertTriangle, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { TRANSLATIONS, SECAO_UI } from '../../utils/importador/constants';
 import { formatHm } from '../../utils/importador/helpers';
 import { calcularTotalInfo } from '../../utils/importador/parser';
 import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
-import { formatText } from '../../i18n';
+import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
+import { formatText, useSectionMessages } from '../../i18n';
 import { dialog } from '../../utils/dialog';
 
 export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel, lang = 'pt', config, programacoes = [] }) {
     const t = TRANSLATIONS[lang];
+    const G = useSectionMessages('gruposProgramacao');
+    const [salvando, setSalvando] = useState(false);
+    const [erroSalvar, setErroSalvar] = useState('');
+    const pendingRef = useRef(false);
+    useProtecaoTrocaGrupo(async () => !pendingRef.current && await dialog.confirm({ title: G.sairTitulo, message: G.sairMensagem, confirmText: G.sairConfirmar, cancelText: G.continuarEditando }));
+    useEffect(() => {
+        const proteger = event => { event.preventDefault(); event.returnValue = ''; };
+        window.addEventListener('beforeunload', proteger);
+        return () => window.removeEventListener('beforeunload', proteger);
+    }, []);
     const [secaoNovaParte, setSecaoNovaParte] = useState('tesouros');
 
     const totalInfo = useMemo(() => calcularTotalInfo(dados?.partes || [], lang), [dados, lang]);
@@ -64,6 +75,9 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
 
     // 🔥 REGRA DE BLOQUEIO CORRIGIDA
     const handleConfirm = async () => {
+        if (pendingRef.current) return;
+        pendingRef.current = true; setSalvando(true); setErroSalvar('');
+        try {
         // 1. Acessa as chaves corretas do seu banco de dados
         const programacaoSalva = programacoes;
 
@@ -114,11 +128,15 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
             if (!prosseguir) return;
         }
 
-        onConfirm(dados);
+        await onConfirm(dados);
+        } catch (error) { setErroSalvar(error.message || G.erroSalvar); }
+        finally { pendingRef.current = false; setSalvando(false); }
     };
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 bg-white p-3 sm:p-6 rounded-3xl shadow-2xl border border-blue-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {erroSalvar && <p role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{erroSalvar}</p>}
+            <fieldset disabled={salvando} className="m-0 min-w-0 space-y-6 border-0 p-0">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-2 pb-4 border-b">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -208,6 +226,7 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
                     <button onClick={handleConfirm} className="flex-1 px-4 py-3 bg-green-600 text-white rounded-2xl font-bold shadow hover:bg-green-700 transition inline-flex items-center justify-center gap-2"><CheckCircle size={18} /> {t.confirmar}</button>
                 </div>
             </div>
+            </fieldset>
         </div>
     );
 }

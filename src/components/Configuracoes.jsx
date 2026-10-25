@@ -11,7 +11,7 @@ import { useSectionMessages } from '../i18n';
 import { getWeekdayOptions, normalizeLanguage, normalizeMeetingDay } from '../config/appConfig';
 import UserAccessManager from './UserAccessManager';
 
-export default function Configuracoes({ dados, salvarAlteracao, lang }) {
+export default function Configuracoes({ dados, salvarAlteracao, lang, editorProgramacao = null, mostrarAcessos = true, onSelecionarIdioma = null }) {
     const T = useSectionMessages('configuracoes');
     const activeLocale = normalizeLanguage(lang);
     const isPortugueseActive = activeLocale === 'pt';
@@ -39,6 +39,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang }) {
                 </div>
             </div>
 
+            {editorProgramacao || (
             <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 space-y-5 sm:space-y-6 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
 
@@ -147,10 +148,11 @@ export default function Configuracoes({ dados, salvarAlteracao, lang }) {
                     </div>
                 </div>
             </div>
+            )}
 
-            <UserAccessManager lang={activeLocale} />
+            {mostrarAcessos && <UserAccessManager lang={activeLocale} />}
 
-            <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden">
+            {!editorProgramacao && <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
                 <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4 sm:mb-5">
                     <Globe size={18} className="text-indigo-500" /> {T.idioma}
@@ -158,21 +160,21 @@ export default function Configuracoes({ dados, salvarAlteracao, lang }) {
 
                 <div className="bg-slate-100 p-1.5 rounded-2xl flex flex-row gap-1">
                     <button
-                        onClick={() => atualizarConfig('idioma', 'pt')}
+                        onClick={() => onSelecionarIdioma ? onSelecionarIdioma('pt') : atualizarConfig('idioma', 'pt')}
                         className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${isPortugueseActive ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
-                        🇧🇷 Português
+                        Português
                     </button>
                     <button
-                        onClick={() => atualizarConfig('idioma', 'es')}
+                        onClick={() => onSelecionarIdioma ? onSelecionarIdioma('es') : atualizarConfig('idioma', 'es')}
                         className={`flex-1 py-3 px-2 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 ${isSpanishActive ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
-                        🇪🇸 Español
+                        Español
                     </button>
                 </div>
-            </div>
+            </div>}
         </div>
     );
 }

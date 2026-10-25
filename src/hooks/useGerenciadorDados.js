@@ -159,7 +159,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
 
     // --- AÇÕES ---
 
-    const salvarItem = useCallback(async (colecao, id, objeto) => {
+    const salvarItem = useCallback(async (colecao, id, objeto, opcoes = {}) => {
         if (modoLocal) {
             const campo = colecao === 'programacao' ? 'historico_reunioes' : colecao;
             setDados(prev => colecao === 'configuracoes'
@@ -169,6 +169,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
         }
         exigirEscritaCompativel(dados.configuracoes, objeto);
         if (modoRemoto && colecao === 'configuracoes') return remoto.salvarConfig(objeto);
+        if (modoRemoto && colecao === 'alunos') return remoto.salvarAluno(objeto, opcoes);
         if (modoRemoto && colecao === 'programacao') throw new Error('Use a operação transacional por grupo.');
         if (!usuario || !dataOwnerUid) return;
         const path = `users/${dataOwnerUid}/${colecao}`;
@@ -186,10 +187,11 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
             return;
         }
         exigirEscritaCompativel(dados.configuracoes);
+        if (modoRemoto && colecao === 'alunos') return remoto.excluirAluno(id);
         if (modoRemoto && colecao === 'programacao') throw new Error('Use a exclusão transacional por grupo.');
         if (!usuario || !dataOwnerUid) return;
         await deleteDoc(doc(db, `users/${dataOwnerUid}/${colecao}`, String(id)));
-    }, [usuario, dataOwnerUid, modoLocal, dados.configuracoes, modoRemoto]);
+    }, [usuario, dataOwnerUid, modoLocal, dados.configuracoes, modoRemoto, remoto]);
 
     const publicarQuadroPublico = useCallback(async (payload) => {
         if (modoLocal) return publicarQuadroLocal(projetarQuadroPublico({ ...payload, ownerUid: dataOwnerUid }));

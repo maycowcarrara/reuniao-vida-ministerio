@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { before, after, test } from 'node:test';
-import { garantirParConfirmacao, registrarCanalConfirmacao } from '../src/services/confirmacoesGrupoFirestore.js';
+import { prepararEdicaoClassica } from '../src/utils/interfaceClassicaGrupos.js';
+import { garantirParConfirmacao, registrarCanalConfirmacao, responderParConfirmacao } from '../src/services/confirmacoesGrupoFirestore.js';
+import { resolverConfirmacaoGrupo } from '../src/utils/integracoesGrupo.js';
+import { buildAssignmentKey } from '../src/utils/assignmentIdentity.js';
 import { criarFilaGrupo } from '../src/utils/integracoesGrupo.js';
 import { createRemoteGroupAdapter } from '../src/services/adaptadorGruposFirestore.js';
 import { normalizeGruposProgramacao } from '../src/utils/gruposProgramacao.js';
@@ -118,4 +121,97 @@ test('Ativação: canais concorrentes são atômicos e lembrete não apaga respo
     assert.equal(current.weekReminderStatus, 'confirmado');
     assert.deepEqual(Object.keys(current.sentChannels).sort(), ['mail', 'wa', 'waReminder']);
     assert.deepEqual((await getDoc(doc(db, `users/${owner}/confirmacoes`, data.assignmentKey))).data().sentChannels, current.sentChannels);
+});
+
+test('Restauração: edição da tela antiga passa pelo adaptador v2 e conserva o outro grupo', async () => {
+    await refresh();
+    const pt = { ...base, id: 'pt-preservar', presidente: null }; delete pt.identidadeLegada;
+    await adapter.salvarLote({ grupoId: pt.grupoId, upserts: [pt], excluirIds: [], anteriores: [] }); await refresh();
+    const old = (await getDoc(programRef('es-1'))).data();
+    const aluno = { id: 'novo-es', nome: 'Fictício ES', tipo: 'anciao', gruposParticipantes: ['grupo-espanhol'], partesHabilitadas: ['presidente_fds'] };
+    const [next] = prepararEdicaoClassica({ anteriores: [old], proximas: [{ ...old, fimDeSemana: { ...old.fimDeSemana, presidente: aluno } }], config: estado.configuracoes,
+        grupoId: old.grupoId, alunos: [aluno], cargosMap: { anciao: { gen: 'M' } } });
+    await adapter.salvarLote({ grupoId: old.grupoId, upserts: [next], excluirIds: [], anteriores: [old] });
+    assert.equal((await getDoc(programRef('es-1'))).data().fimDeSemana.presidente.id, aluno.id);
+    assert.deepEqual((await getDoc(programRef(pt.id))).data(), pt);
+});
+
+test('Revisão: cadastro altera campos escolhidos e conserva histórico/contato atualizado por outra sessão', async () => {
+    const original = { id: 'revisao-pessoa', nome: 'Nome antigo', telefone: 'fixture-1', tipo: 'anciao', gruposParticipantes: ['grupo-portugues'], historico: [{ parte: 'legado' }], privado: 'preservar', avatar: 'anterior' };
+    const ref = doc(db, `users/${owner}/alunos/${original.id}`);
+    await setDoc(ref, original);
+    await updateDoc(ref, { historico: [...original.historico, { parte: 'outra-sessao' }], telefone: 'fixture-2' });
+    await adapter.salvarAluno({ ...original, nome: 'Nome novo', avatar: 'novo' }, { original });
+    const atual = (await getDoc(ref)).data();
+    assert.equal(atual.nome, 'Nome novo'); assert.equal(atual.telefone, 'fixture-2'); assert.equal(atual.historico.length, 2);
+    assert.equal(atual.privado, 'preservar'); assert.equal(atual.avatar, 'novo');
+    await assert.rejects(adapter.salvarAluno({ ...original, nome: 'Nome concorrente' }, { original }), /outra sessão/);
+    await assert.rejects(adapter.salvarAluno({ ...original, historico: [] }, { original, historico: true }), /outra sessão/);
+    assert.equal((await getDoc(ref)).data().historico.length, 2);
+    await assert.rejects(adapter.excluirAluno(original.id), /desabilitadas/);
+});
+test('Revisão: novo cadastro idempotente não sobrescreve uma pessoa com o mesmo ID', async () => {
+    const novo = { id: 'novo-fixture-estavel', nome: 'Nova pessoa', tipo: 'irma', gruposParticipantes: ['grupo-portugues'], historico: [] };
+    await adapter.salvarAluno(novo); await adapter.salvarAluno(novo);
+    await assert.rejects(adapter.salvarAluno({ ...novo, nome: 'Outra pessoa' }), /já cadastrado/);
+    assert.equal((await getDoc(doc(db, `users/${owner}/alunos/${novo.id}`))).data().nome, novo.nome);
+});
+test('Revisão: duas respostas anônimas preservam o histórico e criam alertas atomicamente', async () => {
+    const es = { ...(await getDoc(programRef('es-1'))).data(), fimDeSemana: { ativo: true, data: '2099-11-08', horario: '10:45', presidente: { id: 'resposta-fixture', nome: 'Pessoa fictícia' } }, publicadaNoQuadro: true };
+    await env.withSecurityRulesDisabled(async ctx => {
+        await setDoc(doc(ctx.firestore(), programRef('es-1').path), es);
+    });
+    await refresh(); estado.historico_reunioes = [es];
+    const row = criarFilaGrupo({ programacoes: [es], config: estado.configuracoes, grupoId: es.grupoId })[0];
+    assert.equal(row.assignmentKey, buildAssignmentKey(row));
+    const record = { ...row.confirmation, ownerUid: owner, token: 'resposta-atomica-fixture', tituloParte: 'Presidente', pessoaNome: 'Pessoa fictícia' };
+    await setDoc(doc(db, 'confirmacoes_publicas', record.token), record);
+    await setDoc(doc(db, `users/${owner}/confirmacoes`, record.assignmentKey), record);
+    await adapter.publicar();
+    const sdkAnon = env.unauthenticatedContext().firestore();
+    const input = { db: sdkAnon, sdk, token: record.token, mode: 'primary',
+        validarDestino: (confirmacao, board) => resolverConfirmacaoGrupo({ confirmacao, config: board.configuracoes, programacoes: board.historico_reunioes }),
+        criarTexto: () => ({ title: 'Resposta fictícia', description: 'Alteração fictícia para o teste.' }) };
+    await Promise.all([responderParConfirmacao({ ...input, status: 'confirmado' }), responderParConfirmacao({ ...input, status: 'nao_pode' })]);
+    const atual = (await getDoc(doc(db, 'confirmacoes_publicas', record.token))).data();
+    const privado = (await getDoc(doc(db, `users/${owner}/confirmacoes`, record.assignmentKey))).data();
+    assert.equal(atual.responseHistory.length, 2); assert.deepEqual(privado.responseHistory, atual.responseHistory);
+    for (const entry of atual.responseHistory) assert.ok(entry.respondedAt);
+    const alerts = await sdk.getDocs(sdk.query(sdk.collection(db, 'notificacoes'), sdk.where('ownerUid', '==', owner)));
+    assert.equal(alerts.docs.filter(d => d.data().token === record.token).length, 2);
+    await responderParConfirmacao({ ...input, status: atual.status });
+    assert.equal((await getDoc(doc(db, 'confirmacoes_publicas', record.token))).data().responseHistory.length, 2);
+    await responderParConfirmacao({ ...input, mode: 'week', status: 'imprevisto' });
+    assert.equal((await getDoc(doc(db, `users/${owner}/confirmacoes`, record.assignmentKey))).data().weekReminderStatus, 'imprevisto');
+});
+
+
+test('Adendo A: transação usa grupos atuais, conserva vínculos e aceita pessoa nova somente ES', async () => {
+    await refresh();
+    const anterior = structuredClone(estado.configuracoes);
+    const legadoRef = doc(db, `users/${owner}/alunos/adendo-legado`);
+    const legado = { id:'adendo-legado', nome:'Pessoa PT', tipo:'anciao', partesHabilitadas:['o_que_voce_diria'], historico:[{ data:'2026-11-05', parte:'presidente', token:'preservar', calendarId:'evento-original' }] };
+    await adapter.salvarAluno(legado);
+    const programaAntes = (await getDoc(programRef(base.id))).data();
+    const somenteES = structuredClone(anterior);
+    somenteES.grupos['grupo-portugues'].ativo = false;
+    somenteES.grupoPrincipalId = 'grupo-espanhol';
+    await adapter.salvarConfig(somenteES); await refresh();
+    const pessoaRef = doc(db, `users/${owner}/alunos/adendo-nova`);
+    const nova = { id:'adendo-nova', nome:'Pessoa local ES', tipo:'anciao', gruposParticipantes:['grupo-espanhol'], partesHabilitadas:['presidente_fds'], historico:[] };
+    try {
+        await assert.rejects(adapter.salvarAluno({ ...nova, gruposParticipantes:['grupo-portugues'] }), /participacaoInativa/);
+        assert.equal((await getDoc(pessoaRef)).exists(), false);
+        await adapter.salvarAluno(nova);
+        await adapter.salvarAluno(nova); // tentativa idêntica continua idempotente
+        assert.deepEqual((await getDoc(pessoaRef)).data(), nova);
+        assert.equal(estado.configuracoes.grupoLegadoId, anterior.grupoLegadoId);
+        await adapter.salvarConfig(anterior); await refresh();
+        assert.deepEqual((await getDoc(pessoaRef)).data().gruposParticipantes, ['grupo-espanhol']);
+        assert.deepEqual((await getDoc(legadoRef)).data(), legado);
+        assert.deepEqual((await getDoc(programRef(base.id))).data(), programaAntes);
+    } finally {
+        await refresh();
+        if (!estado.configuracoes.grupos['grupo-portugues'].ativo) { await adapter.salvarConfig(anterior); await refresh(); }
+    }
 });

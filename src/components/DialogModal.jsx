@@ -51,6 +51,13 @@ export function DialogModal() {
         });
     }, []);
 
+    const handleConfirm = React.useCallback(() => {
+        dialogStore.close(current?.type === 'prompt' ? inputValue : true);
+    }, [current?.type, inputValue]);
+    const handleCancel = React.useCallback(() => {
+        dialogStore.close(current?.type === 'prompt' ? null : false);
+    }, [current?.type]);
+
     useEffect(() => {
         if (!current) return;
 
@@ -94,30 +101,12 @@ export function DialogModal() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [current, inputValue]);
+    }, [current, handleCancel, handleConfirm]);
 
     if (!current) return null;
 
     const variantConfig = DIALOG_VARIANTS[current.variant] || DIALOG_VARIANTS.warning;
     const Icon = variantConfig.icon;
-
-    const handleConfirm = () => {
-        if (current.type === 'prompt') {
-            dialogStore.close(inputValue);
-        } else if (current.type === 'alert') {
-            dialogStore.close(true);
-        } else {
-            dialogStore.close(true);
-        }
-    };
-
-    const handleCancel = () => {
-        if (current.type === 'prompt') {
-            dialogStore.close(null);
-        } else {
-            dialogStore.close(false);
-        }
-    };
 
     const handleCopy = async () => {
         try {

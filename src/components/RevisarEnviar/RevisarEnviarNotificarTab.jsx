@@ -1,9 +1,10 @@
+import { projetarProgramaOperacionalInterface } from '../../utils/interfaceClassicaGrupos.js';
 import { parseAssignmentReference } from '../../utils/assignmentIdentity.js';
 import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle, CheckCircle2, ChevronDown, Mail, MessageCircle, Tent, UsersRound, Loader2, RefreshCw, Send, SlidersHorizontal, XCircle } from 'lucide-react';
 
 import { formatarDataFolha, getMeetingDateISOFromSemana } from '../../utils/revisarEnviar/dates';
-import { montarMensagemDesignacao, montarMensagemLembreteSemana } from '../../utils/revisarEnviar/messages';
+import { montarMensagemDesignacao as mensagemDesignacaoBase, montarMensagemLembreteSemana as mensagemLembreteBase } from '../../utils/revisarEnviar/messages';
 import { enviarEmailAutomatico, getEmailJsMissingConfig } from '../../utils/revisarEnviar/enviadorEmail';
 import { buildAgendaLink } from '../../utils/revisarEnviar/links';
 import { toast } from '../../utils/toast';
@@ -25,6 +26,11 @@ import {
     respondToWeekReminderByAssignment
 } from '../../services/confirmacoesPublicas';
 
+const montarMensagemDesignacao = options => mensagemDesignacaoBase({ ...options,
+    ...(options.config?.grupoSelecionadoId ? { incluirLinkAgenda: false, t: { ...options.t, visitDateLabel: '' } } : {}) });
+const montarMensagemLembreteSemana = options => mensagemLembreteBase({ ...options,
+    ...(options.config?.grupoSelecionadoId ? { t: { ...options.t, visitDateLabel: '' } } : {}) });
+
 const SECAO_UI = {
     tesouros: { chip: 'jw-sec-bg-tesouros', wrap: 'jw-sec-surface-tesouros', text: 'jw-sec-text-tesouros' },
     ministerio: { chip: 'jw-sec-bg-ministerio', wrap: 'jw-sec-surface-ministerio', text: 'jw-sec-text-ministerio' },
@@ -32,8 +38,10 @@ const SECAO_UI = {
 };
 
 const RevisarEnviarNotificarTab = ({
-    semanasParaNotificar,
+    semanasParaNotificar: semanasFonte,
+    alunosCadastrados = [],
     config,
+    referenciasGrupo = null,
     confirmacoes = [],
     lang,
     t,
@@ -51,6 +59,7 @@ const RevisarEnviarNotificarTab = ({
     isSent,
     onSolicitarSubstituicao = null,
 }) => {
+    const semanasParaNotificar = useMemo(() => semanasFonte.map(p => projetarProgramaOperacionalInterface(p, config, alunosCadastrados)), [semanasFonte, config, alunosCadastrados]);
     // --- ESTADOS DO ENVIO DE E-MAIL AUTOMÁTICO ---
     const [enviandoGlobal, setEnviandoGlobal] = useState(false);
     const [progresso, setProgresso] = useState({ total: 0, enviados: 0, erros: 0 });
@@ -114,11 +123,11 @@ const RevisarEnviarNotificarTab = ({
         if (!confirmationData) return { link: '', status: 'pendente' };
         const cacheKey = String(confirmationData?.assignmentKey || '').trim();
 
-        if (cacheKey && confirmationCacheRef.current.has(cacheKey)) {
-            return confirmationCacheRef.current.get(cacheKey);
-        }
-
-        const confirmacao = await ensurePublicConfirmation(confirmationData);
+        const destino = referenciasGrupo?.porChave.get(cacheKey);
+        if (referenciasGrupo && (!destino || !destino.item.reuniao.publica)) throw new Error('Publique uma reunião operacional antes de enviar sua confirmação.');
+        if (cacheKey && confirmationCacheRef.current.has(cacheKey)) return confirmationCacheRef.current.get(cacheKey);
+        const confirmacao = await ensurePublicConfirmation(destino ? { ...confirmationData, ...destino.confirmation,
+            agendaLink: confirmationData.agendaLink || '', lang: destino.lang, dataISO: destino.item.reuniao.data } : confirmationData);
         if (cacheKey) {
             confirmationCacheRef.current.set(cacheKey, confirmacao);
         }
@@ -141,7 +150,8 @@ const RevisarEnviarNotificarTab = ({
     const handleEnviarWhatsapp = async (pessoa, msg, msgKey, confirmationData) => {
         try {
             const confirmacao = await prepararConfirmacao(confirmationData);
-            enviarZap(pessoa, anexarLinkConfirmacao(msg, confirmacao.link, confirmacao.status));
+            const agenda = referenciasGrupo && confirmationData.agendaLink ? formatText(t.msgAgendar, { link: confirmationData.agendaLink }) : '';
+            enviarZap(pessoa, anexarLinkConfirmacao([msg, agenda].filter(Boolean).join('\n\n'), confirmacao.link, confirmacao.status));
             markSent(msgKey, 'wa');
             await registerNotificationChannelByAssignment(confirmationData?.assignmentKey, 'wa');
         } catch (error) {
@@ -239,6 +249,13 @@ const RevisarEnviarNotificarTab = ({
         confirmacoesMap[String(assignmentKey || '').trim()]?.status || 'pendente';
 
     const buildSubstitutionRequest = (confirmationData, pessoa) => {
+        const item = referenciasGrupo?.porChave.get(confirmationData?.assignmentKey)?.item;
+        if (item) return { dataISO: item.reuniao.data, semanaKey: item.programacaoId, semana: item.programacao.semana,
+            parteId: item.parte?.id, role: item.slotKey, fds: item.tipoReuniao === 'fimDeSemana',
+            meioSemana: item.apoio && item.tipoReuniao === 'meioSemana',
+            responsabilidadeKey: item.apoio ? item.path.at(-2) : undefined, itemIndex: item.apoio ? Number(item.path.at(-1)) : undefined,
+            pessoa: pessoa || item.pessoa };
+
         const { dataISO, semana, parteId, pessoaId, role } = parseAssignmentReference(confirmationData);
         const parsedItemIndex = Number(String(parteId || '').split('_').pop());
         const responsabilidadeKey = String(parteId || '')
@@ -285,14 +302,18 @@ const RevisarEnviarNotificarTab = ({
         return sem?.notificacaoAlteradaEm || null;
     };
 
-    const withNotificationMeta = (confirmationData, sem, parte = null) => ({
-        ...confirmationData,
-        semanaKey: sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '',
-        secao: parte?.secao || confirmationData?.secao || '',
-        notificacaoAlteradaEm: getNotificacaoAlteradaEm(sem, parte)
-    });
+    const withNotificationMeta = (confirmationData, sem, parte = null) => {
+        const row = referenciasGrupo?.porChave.get(confirmationData.assignmentKey);
+        const agendaLink = row ? buildAgendaLink({ config: { ...config, idioma: row.lang, horarioReuniao: row.item.reuniao.horario, horario: row.item.reuniao.horario },
+            semana: row.item.programacao.semana, dataISO: row.item.reuniao.data, tituloParte: row.titulo, responsavelNome: row.item.pessoa.nome,
+            ajudanteNome: row.item.parte?.ajudante?.nome || '', secao: parte?.secao || confirmationData.secao }) : confirmationData.agendaLink;
+        return { ...confirmationData, ...(row?.confirmation || {}), agendaLink,
+            semanaKey: sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '',
+            secao: parte?.secao || confirmationData?.secao || '', notificacaoAlteradaEm: getNotificacaoAlteradaEm(sem, parte) };
+    };
 
     const getDataFimDeSemanaISO = (sem) => {
+        if (sem?.fimDeSemana?.data) return sem.fimDeSemana.data;
         const fallbackStr = sem?.fimDeSemana?.data || sem?.dataReuniao || sem?.dataExata || sem?.dataInicio || sem?.data;
         return getMeetingDateISOFromSemana({
             semanaStr: sem?.semana,
@@ -307,7 +328,7 @@ const RevisarEnviarNotificarTab = ({
         return {
             ...fds,
             data: getDataFimDeSemanaISO(sem) || fds.data,
-            horario: config?.horario_fds || config?.horarioFimDeSemana || fds.horario || '',
+            horario: fds.horario || config?.horario_fds || config?.horarioFimDeSemana || '',
         };
     };
 
@@ -1379,7 +1400,7 @@ const RevisarEnviarNotificarTab = ({
                     const partes = Array.isArray(sem?.partes) ? sem.partes : [];
                     const dataISO = getDataReuniaoISO(sem);
                     const dataReuniaoFormatada = formatarDataFolha(dataISO, lang);
-                    const horarioExib = config?.horarioReuniao ?? config?.horario ?? '';
+                    const horarioExib = sem.meioSemana?.ativo === false ? sem.fimDeSemana?.horario || '' : sem.meioSemana?.horario || config?.horarioReuniao || config?.horario || '';
                     const tipoEvento = getTipoEventoSemana(sem, config);
                     const isVisita = tipoEvento === 'visita';
 
@@ -2136,7 +2157,7 @@ const RevisarEnviarNotificarTab = ({
                                     )}
                                 </h4>
                                 <div className="text-[11px] text-gray-500 font-bold">
-                                    {config?.nome_cong} | {horarioExib} | {dataReuniaoFormatada} {isVisita && t.tuesdayLabel}
+                                    {config?.nome_cong} | {horarioExib} | {dataReuniaoFormatada} {isVisita && !config?.grupoSelecionadoId && t.tuesdayLabel}
                                 </div>
                             </div>
 

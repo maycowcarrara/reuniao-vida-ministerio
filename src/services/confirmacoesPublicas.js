@@ -5,16 +5,13 @@ import {
     getDocs,
     query,
     serverTimestamp,
-    setDoc,
     updateDoc,
     where,
-    writeBatch,
     runTransaction
 } from 'firebase/firestore';
 
 import { normalizeLanguage, normalizeSystemConfig } from '../config/appConfig';
 import { db, auth } from './firebase';
-import { createInternalNotification } from './notificacoesInternas';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana } from '../utils/eventos';
 import { isBibleStudyPart, isPrayerPart } from '../utils/meetingParts';
@@ -30,15 +27,13 @@ import { buildAssignmentKey, assignmentIdentity } from '../utils/assignmentIdent
 import { resolverConfirmacaoGrupo } from '../utils/integracoesGrupo.js';
 import { normalizeOcorrenciaReuniao } from '../utils/ocorrenciasReuniao.js';
 import { MULTI_GRUPOS_LOCAL } from '../config/multiGruposLocal.js';
-import { garantirParConfirmacao, registrarCanalConfirmacao } from './confirmacoesGrupoFirestore.js';
+import { garantirParConfirmacao, registrarCanalConfirmacao, responderParConfirmacao } from './confirmacoesGrupoFirestore.js';
 import { integracoesLocais } from './integracoesLocais.js';
 
 const PRIVATE_COLLECTION = 'confirmacoes';
 const PUBLIC_COLLECTION = 'confirmacoes_publicas';
 const TOKEN_LENGTH = 10;
 const TOKEN_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-const PRIMARY_STATUSES = ['pendente', 'confirmado', 'nao_pode'];
-const WEEK_REMINDER_STATUSES = ['nao_enviado', 'pendente', 'confirmado', 'imprevisto'];
 
 const getCurrentOwnerUid = () => {
     const user = auth.currentUser;
@@ -70,15 +65,6 @@ const buildPrivateRef = (uid, assignmentKey) =>
 
 const buildPublicRef = (token) =>
     doc(db, PUBLIC_COLLECTION, String(token || '').trim());
-
-const buildHistoryEntry = ({ previousStatus, nextStatus, responseCode = '', source = 'public_link', actorType = 'public' }) => ({
-    previousStatus: previousStatus || 'pendente',
-    status: nextStatus,
-    responseCode,
-    source,
-    actorType,
-    respondedAt: new Date().toISOString()
-});
 
 const STATUS_LABELS = {
     pt: {
@@ -133,27 +119,6 @@ const buildWeekReminderNotificationCopy = ({ lang, pessoaNome, tituloParte, prev
         description: `${pessoaNome || 'Alguém'} mudou o lembrete de "${tituloParte || 'a designação'}" de ${getStatusLabel(previousStatus, safeLang)} para ${getStatusLabel(nextStatus, safeLang)}.`
     };
 };
-
-const isPrimaryStatus = (status) => PRIMARY_STATUSES.includes(status);
-const isWeekReminderStatus = (status) => WEEK_REMINDER_STATUSES.includes(status);
-const isPrimaryResolvedStatus = (status) => ['confirmado', 'nao_pode'].includes(status);
-const isWeekResolvedStatus = (status) => ['confirmado', 'imprevisto'].includes(status);
-
-const getTodayLocalISODate = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-};
-
-const isPastEventDate = (dateISO) => /^\d{4}-\d{2}-\d{2}$/.test(String(dateISO || '').trim())
-    && String(dateISO).trim() < getTodayLocalISODate();
-
-
-
-const buildNotificationId = ({ token, type, changeKey }) =>
-    [token || '', type || '', changeKey || ''].map((part) => String(part).trim()).join('_');
 
 const getProgramacaoCollectionRef = (uid) =>
     collection(db, `users/${String(uid || '').trim()}/programacao`);
@@ -399,7 +364,7 @@ export const ensurePublicConfirmation = async ({
 export const getPublicConfirmation = async (token) => {
     if (MULTI_GRUPOS_LOCAL) return integracoesLocais.get(token);
     const safeToken = String(token || '').trim();
-    if (!safeToken) return null;
+    if (!/^[A-Za-z0-9_-]{1,200}$/.test(safeToken)) return null;
 
     const snap = await getDoc(buildPublicRef(safeToken));
     if (!snap.exists()) return null;
@@ -419,157 +384,11 @@ export const getPublicConfirmation = async (token) => {
 const updateConfirmationState = async (token, mode, status, options = {}) => {
     if (MULTI_GRUPOS_LOCAL) return integracoesLocais.update(token, mode, status);
     const safeToken = String(token || '').trim();
-    if (!safeToken) {
-        throw new Error('Token de confirmação inválido.');
-    }
-
-    const publicRef = buildPublicRef(safeToken);
-    const snap = await getDoc(publicRef);
-    if (!snap.exists()) {
-        throw new Error('Confirmação pública não encontrada.');
-    }
-
-    const current = snap.data() || {};
-    const availability = await validateConfirmationTarget(current);
-    if (availability.isUnavailable) {
-        const error = new Error('A designação vinculada a este link não existe mais.');
-        error.code = availability.unavailableReason || 'assignment_unavailable';
-        throw error;
-    }
-
-    const source = options?.source || 'public_link';
-    const actorType = options?.actorType || 'public';
-    const changedAtIso = new Date().toISOString();
-    let payload = {};
-    let changed = false;
-    let previousStatus = '';
-    let nextStatus = '';
-
-    if (mode === 'week') {
-        nextStatus = status === 'imprevisto' ? 'imprevisto' : 'confirmado';
-        if (!isWeekReminderStatus(nextStatus)) {
-            throw new Error('Status semanal inválido.');
-        }
-
-        previousStatus = current?.weekReminderStatus || 'nao_enviado';
-        changed = previousStatus !== nextStatus;
-        if (changed && isPastEventDate(current?.dataISO) && isWeekResolvedStatus(previousStatus)) {
-            const error = new Error('Não é possível alterar a resposta de uma designação após a data da reunião.');
-            error.code = 'past_event_change_locked';
-            throw error;
-        }
-        const responseCode = nextStatus === 'confirmado' ? 'c' : 'i';
-        const history = Array.isArray(current?.weekReminderHistory) ? [...current.weekReminderHistory] : [];
-        history.push(buildHistoryEntry({ previousStatus, nextStatus, responseCode, source, actorType }));
-
-        payload = {
-            weekReminderStatus: nextStatus,
-            weekReminderPreviousStatus: previousStatus,
-            weekReminderHistory: history,
-            lastWeekReminderSource: source,
-            lastWeekReminderActorType: actorType,
-            weekReminderRespondedAt: serverTimestamp(),
-            weekReminderRespondedAtIso: changedAtIso,
-            lastWeekReminderChangeAtIso: changed ? changedAtIso : current?.lastWeekReminderChangeAtIso || null,
-            lastWeekReminderChangeFrom: changed ? previousStatus : current?.lastWeekReminderChangeFrom || null,
-            lastWeekReminderChangeTo: changed ? nextStatus : current?.lastWeekReminderChangeTo || nextStatus,
-            lastWeekReminderChangeKey: changed ? `${changedAtIso}|${nextStatus}` : current?.lastWeekReminderChangeKey || null,
-            weekReminderAlertPending: changed ? true : Boolean(current?.weekReminderAlertPending),
-            weekReminderAlertSeenAt: changed ? null : current?.weekReminderAlertSeenAt || null,
-            updatedAt: serverTimestamp()
-        };
-    } else {
-        nextStatus = status === 'nao_pode' ? 'nao_pode' : 'confirmado';
-        if (!isPrimaryStatus(nextStatus)) {
-            throw new Error('Status da designação inválido.');
-        }
-
-        previousStatus = current?.status || 'pendente';
-        changed = previousStatus !== nextStatus;
-        if (changed && isPastEventDate(current?.dataISO) && isPrimaryResolvedStatus(previousStatus)) {
-            const error = new Error('Não é possível alterar a resposta de uma designação após a data da reunião.');
-            error.code = 'past_event_change_locked';
-            throw error;
-        }
-        const responseCode = nextStatus === 'confirmado' ? 'a' : 'n';
-        const responseHistory = Array.isArray(current?.responseHistory) ? [...current.responseHistory] : [];
-        responseHistory.push(buildHistoryEntry({ previousStatus, nextStatus, responseCode, source, actorType }));
-
-        payload = {
-            status: nextStatus,
-            previousStatus,
-            responseHistory,
-            lastResponseSource: source,
-            lastResponseActorType: actorType,
-            updatedAt: serverTimestamp(),
-            lastResponseAt: serverTimestamp(),
-            lastResponseAtIso: changedAtIso,
-            confirmedAt: nextStatus === 'confirmado' ? serverTimestamp() : null,
-            declinedAt: nextStatus === 'nao_pode' ? serverTimestamp() : null,
-            lastStatusChangeAtIso: changed ? changedAtIso : current?.lastStatusChangeAtIso || null,
-            lastStatusChangeFrom: changed ? previousStatus : current?.lastStatusChangeFrom || null,
-            lastStatusChangeTo: changed ? nextStatus : current?.lastStatusChangeTo || nextStatus,
-            lastStatusChangeKey: changed ? `${changedAtIso}|${nextStatus}` : current?.lastStatusChangeKey || null,
-            alertPending: changed ? true : Boolean(current?.alertPending),
-            alertSeenAt: changed ? null : current?.alertSeenAt || null
-        };
-    }
-
-    const batch = writeBatch(db);
-    batch.update(publicRef, payload);
-    if (current?.ownerUid && current?.assignmentKey) {
-        batch.set(buildPrivateRef(current.ownerUid, current.assignmentKey), {
-            ...payload,
-            ...(current.identityVersion === 2 ? assignmentIdentity(current) : {}),
-            token: safeToken,
-            assignmentKey: current.assignmentKey,
-            ownerUid: current.ownerUid
-        }, { merge: true });
-    }
-    await batch.commit();
-
-    if (changed) {
-        const copy = mode === 'week'
-            ? buildWeekReminderNotificationCopy({
-                lang: current?.lang,
-                pessoaNome: current?.pessoaNome,
-                tituloParte: current?.tituloParte,
-                previousStatus,
-                nextStatus
-            })
-            : buildNotificationCopy({
-                lang: current?.lang,
-                pessoaNome: current?.pessoaNome,
-                tituloParte: current?.tituloParte,
-                previousStatus,
-                nextStatus
-            });
-
-        await createInternalNotification({
-            ownerUid: current?.ownerUid,
-            type: mode === 'week' ? 'lembrete_semana_status' : 'confirmacao_status',
-            id: buildNotificationId({
-                token: safeToken,
-                type: mode === 'week' ? 'lembrete_semana_status' : 'confirmacao_status',
-                changeKey: mode === 'week' ? payload.lastWeekReminderChangeKey : payload.lastStatusChangeKey
-            }),
-            title: copy.title,
-            description: copy.description,
-            token: safeToken,
-            assignmentKey: current?.assignmentKey || '',
-            dataISO: current?.dataISO || '',
-            semana: current?.semana || '',
-            pessoaNome: current?.pessoaNome || '',
-            status: nextStatus,
-            previousStatus,
-            meta: {
-                ...(current.identityVersion === 2 ? assignmentIdentity(current) : {}),
-                tituloParte: current?.tituloParte || '',
-                congregacaoNome: current?.congregacaoNome || ''
-            }
-        });
-    }
-
+    await responderParConfirmacao({ db, sdk: { doc, runTransaction, serverTimestamp }, token: safeToken, mode, status, options,
+        validarDestino: (confirmacao, board) => resolverConfirmacaoGrupo({ confirmacao,
+            programacoes: board.historico_reunioes || [], config: board.configuracoes || {}, collectLegacyKeys: collectAssignmentKeysForWeek }),
+        criarTexto: ({ current, mode: tipo, previousStatus, nextStatus }) => (tipo === 'week' ? buildWeekReminderNotificationCopy : buildNotificationCopy)({
+            lang: current.lang, pessoaNome: current.pessoaNome, tituloParte: current.tituloParte, previousStatus, nextStatus }) });
     return getPublicConfirmation(safeToken);
 };
 

@@ -1,3 +1,6 @@
+import { projetarProgramaOperacionalInterface } from '../utils/interfaceClassicaGrupos.js';
+import { getReunioesAtivas, normalizeOcorrenciaReuniao } from '../utils/ocorrenciasReuniao.js';
+import { criarFilaGrupo } from '../utils/integracoesGrupo.js';
 import React, { useMemo, useState } from 'react';
 import {
     Calendar, Users, CheckCircle, AlertTriangle,
@@ -20,7 +23,7 @@ import {
 } from '../utils/fimDeSemana';
 
 export default function Dashboard({
-    listaProgramacoes,
+    listaProgramacoes: programacoes,
     alunos,
     config,
     setAbaAtiva,
@@ -29,6 +32,7 @@ export default function Dashboard({
     confirmacoes = [],
     onAbrirNotificacoesSemana
 }) {
+    const listaProgramacoes = useMemo(() => config?.grupoSelecionadoId ? programacoes.map(p => projetarProgramaOperacionalInterface(p, config)) : programacoes, [programacoes, config]);
     const [dataEvento, setDataEvento] = useState('');
     const [tipoEvento, setTipoEvento] = useState('visita');
 
@@ -50,6 +54,8 @@ export default function Dashboard({
         const lang = config?.idioma === 'es' ? 'es' : 'pt';
 
         const getDataReuniaoISO = (sem) => {
+            if (config?.grupoSelecionadoId && !normalizeOcorrenciaReuniao(sem, 'meioSemana', config).operacional) return sem.fimDeSemana?.data || '';
+            if (sem?.meioSemana?.data) return sem.meioSemana.data;
             const eventoEspecial = getEventoEspecialDaSemana(sem, config);
             const tipoEvento = getTipoEventoSemana(sem, config);
             const isVisita = tipoEvento === 'visita';
@@ -89,6 +95,7 @@ export default function Dashboard({
         };
 
         const getDataFimDeSemanaISO = (sem) => {
+            if (sem?.fimDeSemana?.data) return sem.fimDeSemana.data;
             const fallbackStr = sem?.fimDeSemana?.data || sem?.dataInicio || sem?.dataExata || sem?.dataReuniao || sem?.data;
             return getMeetingDateISOFromSemana({
                 semanaStr: sem?.semana,
@@ -153,6 +160,7 @@ export default function Dashboard({
 
             const totals = { total: 0, preenchidas: 0 };
 
+            if (!config?.grupoSelecionadoId || normalizeOcorrenciaReuniao(semana, 'meioSemana', config).operacional) {
             addRequiredSlot(semana?.presidente, totals);
 
             (Array.isArray(semana?.partes) ? semana.partes : []).forEach((parte) => {
@@ -173,6 +181,7 @@ export default function Dashboard({
             });
 
             addRequiredResponsabilidades(semana?.responsabilidades, MEIO_SEMANA_RESPONSABILIDADES, totals);
+            }
 
             const fds = normalizeFimDeSemana(semana?.fimDeSemana);
             if (fds.ativo && hasFimDeSemanaData(semana?.fimDeSemana)) {
@@ -193,6 +202,12 @@ export default function Dashboard({
         const countConfirmacoesDaSemana = (semana) => {
             if (!semana?.semana) return { total: 0, confirmadas: 0, recusadas: 0, faltando: 0 };
 
+            if (config?.grupoSelecionadoId) {
+                const rows = criarFilaGrupo({ programacoes: [semana], config, grupoId: config.grupoSelecionadoId, confirmacoes });
+                const confirmadas = rows.filter(r => r.confirmation.status === 'confirmado').length;
+                const recusadas = rows.filter(r => r.confirmation.status === 'nao_pode').length;
+                return { total: rows.length, confirmadas, recusadas, faltando: rows.length - confirmadas - recusadas };
+            }
             const dataISO = getDataReuniaoISO(semana);
             const confirmacoesMap = new Map(
                 (confirmacoes || []).map((item) => [String(item?.assignmentKey || '').trim(), item])
@@ -276,7 +291,7 @@ export default function Dashboard({
 
         // 1. Ordernar Reuniões Ativas
         const ativas = listaProgramacoes
-            .filter(s => !s.arquivada)
+            .filter(s => !s.arquivada && (!config?.grupoSelecionadoId || getReunioesAtivas(s, config).length))
             .map(s => ({
                 ...s,
                 dataReuniaoResolvida: getDataReuniaoISO(s),
@@ -313,7 +328,8 @@ export default function Dashboard({
             .filter(ev => ev.dataObjeto >= dataLimitePassado)
             .sort((a, b) => a.dataObjeto - b.dataObjeto);
 
-        const meetingJsDay = getWeekdayJsDay(config?.dia_reuniao || config?.diaReuniao || config?.diaSemana);
+        const padrao = config?.grupos?.[config.grupoSelecionadoId];
+        const meetingJsDay = padrao && !padrao.meioSemana.habilitada ? (padrao.fimDeSemana.frequencia === 'semanal' && padrao.fimDeSemana.dia ? getWeekdayJsDay(padrao.fimDeSemana.dia) : null) : getWeekdayJsDay(config?.dia_reuniao || config?.diaReuniao || config?.diaSemana);
         const semanasBloqueadas = new Set(
             (config?.eventosAnuais || [])
                 .filter((evento) => isTipoEventoBloqueante(evento?.tipo))
@@ -354,6 +370,10 @@ export default function Dashboard({
                 }
             }
 
+            if (padrao && meetingJsDay == null) for (const sem of ativas) {
+                const data = new Date(`${sem.dataReuniaoResolvida}T12:00:00`);
+                if (data >= analiseInicio && data < periodo.fim) semanasPrevistas.add(sem.semanaStartISO);
+            }
             const resumoSemanasImportadas = ativas.reduce((acc, semana) => {
                 const semanaStartISO = semana.semanaStartISO;
 
@@ -1202,7 +1222,7 @@ export default function Dashboard({
                                                         cancelText: 'Cancelar'
                                                     });
                                                     if (ok) {
-                                                        onDefinirEvento(ev.dataInicio, 'normal');
+                                                        try { await onDefinirEvento(ev.dataInicio, 'normal'); } catch (error) { toast.error(error); }
                                                     }
                                                 }}
                                                 className="text-gray-400 hover:text-red-500 p-2 bg-white rounded-full shadow-sm border border-gray-100 transition-colors"
@@ -1258,10 +1278,9 @@ export default function Dashboard({
                                 </div>
 
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (!dataEvento) return toast.error(localTxt.selecioneData);
-                                        onDefinirEvento(dataEvento, tipoEvento);
-                                        setDataEvento('');
+                                        try { await onDefinirEvento(dataEvento, tipoEvento); setDataEvento(''); } catch (error) { toast.error(error); }
                                     }}
                                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-200 mt-2"
                                 >

@@ -1,8 +1,8 @@
 # Plano técnico: programações simultâneas em português e espanhol
 
-Data: 24/10/2026. Estado: E1–E7 concluídas; ativação remota executada e validada no ambiente rvm-sbssc (backup integral, inventário real, migração atômica no Firestore, deploy de Rules e Hosting, e verificação de endpoints públicos concluídos). Pendente apenas conferência visual em produção e versionamento Git (commit/push).
+Data: 24/10/2026. Estado histórico: E1–E7 implementadas e ativação remota executada no ambiente rvm-sbssc. A comparação posterior com o pedido original encontrou pendências de clareza em Configurações e de operação somente em espanhol. O ponto de continuação atual é o **Adendo A — Adequação ao pedido original**, ao final deste documento. A conclusão técnica das etapas não significa aceite integral da experiência de uso.
 
-Este documento consolida a conversa e as correções do usuário. É a referência para continuar a implementação. A autorização inicial cobriu a elaboração do plano; em 24/10/2026 o usuário autorizou a implementação local da E1 e, após sua conclusão, autorizou seguir com a E2. Migração/escrita remota, publicação, envios reais, commit/push e incremento de versão continuam fora da autorização.
+Este documento consolida a conversa e as correções do usuário. É a referência para continuar a implementação. As seções anteriores ao Adendo A registram decisões e autorizações das etapas em que foram escritas, incluindo a autorização inicial restrita a planejamento/implementação local e a posterior ativação remota. Para a próxima correção, prevalecem o escopo e os critérios do Adendo A; registros antigos não devem ser interpretados como etapas pendentes nem como instruções para repetir migração/publicação.
 
 ## 1. Resultado esperado e decisões de produto
 
@@ -873,3 +873,163 @@ Não faça deploy, publicação de Rules, migração/escrita remota, envio real,
 
 Conclua com o que mudou, evidências, limitações e o ponto exato para continuar pela E2. Se houver um bloqueio real nos contratos, avance no trabalho independente e explique a decisão necessária, sem ampliar o escopo por conta própria.
 ```
+
+
+## Correção de continuidade da interface — 24/10/2026
+
+A ativação inicial usou `modoGrupos` também para selecionar a interface e encaminhou o ambiente real para `PainelGrupo`, `DesignacoesGrupo` e `RevisaoGrupo`, componentes simplificados do ensaio. Isso substituiu as telas conhecidas, apesar de a migração preservar os dados. A regressão anterior verificava o funcionamento do ensaio; não demonstrava a continuidade da interface original.
+
+A correção mantém Dashboard, Designar e RevisarEnviar em produção para PT e ES. Os componentes simplificados ficam exclusivos de DEV + flag de ensaio. A seleção de grupo e a persistência transacional v2 continuam ativas. Agendamento/ativação foram acrescentados como detalhe recolhível na tela existente de designações.
+
+- Edição da lista existente valida grupo, participação, habilitação, disponibilidade, data/horário, semana e cancelamento antes de passar pelo adaptador Firestore v2. Cadastro e outros grupos são preservados.
+- Revisar/Enviar resolve chaves antigas pela fila canônica, preserva tokens e usa identidade v2 para novos destinos. Cache de confirmação não autoriza envio de ocorrência que ficou indisponível. Contatos vêm do cadastro atual; agenda/link usam o horário explícito do destino.
+- Histórico da tela existente usa reconstrução por IDs/grupo/tipo e mantém registros antigos sem referência exata. Sincronização da agenda só limpa pendências de programações efetivamente sincronizadas. Preferência de agenda continua por dono/grupo.
+- Fim de semana isolado usa data/horário próprios; não cria partes, presidente, contagem ou previsão semanal de meio de semana. A projeção para leitura não altera a fonte privada.
+
+Validação: 168 testes de domínio/serviços/renderização e 32 testes de Rules/persistência no emulador passaram. Inclui renderização das três telas existentes com confirmação v2, FDS ES isolado, bloqueio de participante errado/cancelamento/datas e edição pela ponte da interface antiga persistida pelo adaptador real no emulador, preservando outro grupo. Build passou. Lint conserva somente os dois erros e um aviso preexistentes em DialogModal.jsx.
+
+Publicação de correção: somente Hosting em rvm-sbssc, mantendo 6.0.305. Nenhuma nova migração, alteração de Rules ou escrita de dados reais foi executada nesta correção. Evidências em `tmp/restauracao-deploy.txt`, `tmp/restauracao-publicacao.json`, `tmp/restauracao-regressao.txt`, `tmp/restauracao-rules.txt` e `tmp/restauracao-tests.txt`.
+
+A conferência visual autenticada e a execução real de provedores continuam sem aceite nesta correção. Não houve nova tentativa de navegador após a falha anterior, em respeito à instrução do usuário; testes SSR e emulador não são apresentados como validação visual, entrega de mensagens ou escrita no Google Agenda.
+
+## Revisão geral e acabamento — 24/10/2026
+
+Configurações voltou à estrutura existente, com acesso de usuários e idioma; agendamento integrado por janela com abas, sem formulário de ensaio exposto em produção. A revisão também corrigiu concorrência de cadastros/históricos, atomicidade das respostas e alertas, importação assíncrona e diferenciação entre reunião ativa, publicada e cancelada.
+
+Evidência atual: 174 testes da aplicação, 35 de Rules, lint limpo, build e conferência visual local com fixtures aprovados. Hosting e Rules publicados em rvm-sbssc e conferidos por hash (30 arquivos e fonte de Rules). Nenhuma nova migração ou escrita de dados reais. Relatório completo e pendências em `docs/revisao-geral-2026-10-24.md`; recibo em `tmp/revisao-geral-publicacao.json`.
+
+## Adendo A — Adequação ao pedido original — 24/10/2026
+
+**Estado: correção pendente de implementação.** Este adendo resulta da comparação solicitada pelo usuário entre o pedido original e o sistema atual. É o ponto de continuação para uma nova conversa. Não reiniciar E1–E7 nem reaplicar a migração.
+
+### A.1. Objetivo de produto e diagnóstico
+
+Preservar o sistema conhecido, acrescentando duas programações simultâneas no mesmo ambiente e quadro público. Escolher Português ou Español muda a programação de trabalho e traduz a interface. O espanhol começa como pré-grupo/grupo, somente com fim de semana em datas escolhidas, sem precisar importar uma apostila. Futuramente deve ser possível operar somente em espanhol, com os mesmos recursos disponíveis hoje para português, conforme os tipos de reunião habilitados.
+
+A base funcional separa grupos, reuniões, participação e publicação. Porém, a tela de Configurações expõe esses conceitos de forma confusa. O acabamento visual anterior não resolveu a organização e o significado dos controles. Há também uma lacuna funcional reproduzida no cenário somente espanhol.
+
+| Pedido original | Situação verificada | Continuação |
+| --- | --- | --- |
+| Mesmo quadro, seletor quando houver PT e ES publicados, última seleção lembrada | Implementado por grupo e preferência local | Preservar e cobrir na regressão |
+| Seletor administrativo muda programação e idioma da interface | Implementado | Manter um controle coerente; explicar o contexto |
+| ES somente fim de semana sem importação | Tipos independentes e agendamento por data implementados | Tornar o caminho evidente na configuração e em Designar |
+| Escolher quem participa de ES sem recriar habilitações | Participação PT/ES compartilhada implementada | Preservar habilitações e participação simultânea |
+| Configuração compreensível | Principal global está dentro do editor de grupo; bloco “Idioma do Sistema” também troca o grupo, duplicando o seletor superior | Reorganizar conforme A.2 |
+| Futuro somente ES | ES pode ser principal e PT inativo, mas `createParticipacaoAlunoDefault()` continua retornando PT | Corrigir conforme A.3 |
+
+Inspeção remota somente de leitura em 24/10/2026: PT ativo e principal, com ambas as reuniões semanais; ES ativo, meio de semana desabilitado, fim de semana por datas sem dia/horário inventados. Havia 102 pessoas, nenhuma marcada em ES, 13 programações privadas PT e cinco programações no quadro PT. Isso é um retrato daquele momento, não uma condição a restaurar. Ausência de ES publicado não é defeito do seletor; a interface deve orientar o cadastro de participantes e reuniões sem gerar dados automaticamente.
+
+### A.2. Organização obrigatória de Configurações
+
+1. Preservar a identidade visual e as funções existentes. Usar hierarquia, cartões, espaçamento e controles do próprio sistema. Não reintroduzir telas de ensaio, formulários crus ou textos de dados fictícios em produção.
+2. Separar claramente **Geral**, **Português — Congregação** e **Español — Pré-grupo / Grupo**. Ambos os grupos precisam ser identificáveis na página; o administrador não deve ter de deduzir qual configuração está alterando a partir do idioma dos textos. Os nomes/identificações são editáveis e devem refletir os dados salvos, sem rótulos fixos depois de uma mudança organizacional.
+3. Em **Geral**, manter controle de acesso de usuários e a escolha da programação padrão. Usar rótulo compreensível, como “Programação padrão ao abrir”, explicando que vale quando não existe preferência local válida. Essa opção não converte grupos, transfere pessoas, muda ocorrências ou substitui a seleção lembrada de cada usuário.
+4. Em cada grupo, apresentar nome, identificação, ativação e os tipos de reunião que ele usa. Distinguir “Grupo ativo” de “Reunião habilitada” com texto curto sobre o efeito de cada ajuste. Desativar preserva dados e histórico.
+5. No cenário inicial, PT conserva seus dias/horários atuais. ES mostra claramente “Somente fim de semana” e “Datas escolhidas”, com orientação/ação para **Designar → Agendar reunião**. Os padrões de horário pertencem à configuração; as datas efetivas pertencem ao agendamento. Não impor um calendário mensal fixo, criar reuniões ou inventar horários.
+6. Frequência e tipos permanecem independentes da identificação pré-grupo/grupo/congregação. ES poderá usar fim de semana semanal e habilitar meio de semana/importação quando solicitado. Alterar a identificação não ativa reuniões automaticamente.
+7. Remover/reformular o bloco duplicado “Idioma do Sistema”. O seletor superior PT/ES já escolhe a programação e traduz a interface; não criar outro controle com nome de idioma que silenciosamente edita ou troca outro contexto. Manter a preferência local, sem regravar configuração compartilhada ao navegar.
+8. Deixar visível o destino de cada gravação. Alterações de um grupo preservam integralmente o outro; permissões gerais permanecem gerais. Manter salvar/descartar, feedback assíncrono, proteção de alterações pendentes e tratamento explícito de falha parcial de publicação. Se vários blocos forem editáveis, proteger todos os rascunhos ao sair/trocar contexto.
+9. No uso somente ES, a navegação e os cadastros devem funcionar naturalmente em espanhol; grupos inativos não aparecem como opções operacionais. A administração ainda deve permitir identificar e reativar o grupo inativo, preservando seus dados.
+10. Usar nomes de idioma ou PT/ES, coerentes com o seletor atual, sem depender de bandeiras nacionais. Traduzir os novos rótulos, orientações, validações e mensagens nos dois idiomas.
+
+### A.3. Participação padrão e futura operação somente em espanhol
+
+Este item **substitui as afirmações anteriores deste plano de que todo novo cadastro deve começar sempre em PT**, inclusive quando PT estiver desativado. A regra inicial PT marcado/ES desmarcado continua válida quando ambos estão ativos.
+
+| Grupos ativos no momento de abrir novo cadastro | Participação inicial |
+| --- | --- |
+| PT e ES | PT marcado, ES desmarcado; permitir marcar ambos |
+| Somente PT | PT marcado |
+| Somente ES | ES marcado; não marcar PT inativo |
+
+- Tornar o default sensível à configuração atual e atualizar seus chamadores. Não derivar participação apenas do idioma da interface, da seleção temporária do administrador ou da programação principal.
+- Não reatribuir cadastros existentes nem registros legados. `grupoLegadoId` permanece fixo; `grupoPrincipalId` continua preferência de abertura. Preservar escolhas explícitas, históricos, habilitações, IDs, tokens e vínculos de agenda.
+- Um formulário já aberto não deve mudar suas escolhas silenciosamente após atualização da configuração. Validar o destino ao salvar e tratar conflitos conforme os contratos atuais.
+- Com somente ES ativo, conferir criação de pessoa, elegibilidade, sugestões, designação, revisão/envio simulado e quadro ES. Habilitar meio de semana deve disponibilizar o fluxo equivalente ao PT sem ativação automática baseada na identificação.
+- A inexistência de grupos ativos continua inválida. Não criar fallback para um grupo desativado.
+
+### A.4. Arquivos e contratos a reconferir
+
+- `src/components/Configuracoes.jsx`, `ConfiguracoesGrupos.jsx`, `SeletorGrupo.jsx` e integração em `src/App.jsx`.
+- `src/utils/gruposProgramacao.js`, `grupoAtivo.js`, `programacoesPorGrupo.js` e `src/hooks/useGrupoAtivo.js`.
+- Novo cadastro e participação em `src/components/ListaAlunos/`; traduções em `src/i18n/index.js`.
+- Integração com o agendamento existente em `ReunioesIndependentes.jsx`, quadro em `QuadroPorGrupo.jsx` e projeções operacionais das telas clássicas.
+- Testes atuais do default fixo PT devem ser atualizados para a matriz A.3, preservando a cobertura da configuração simultânea. Testar comportamento e preservação, sem depender somente de presença de texto no código.
+
+### A.5. Critérios de aceite e validação
+
+1. Configurações distingue visualmente o que é geral, PT e ES, mantendo controle de acesso. Principal não aparece como se fosse propriedade de apenas um grupo. O efeito do seletor e das ativações é compreensível na própria tela.
+2. Editar/salvar PT não altera ES e vice-versa; troca de contexto não grava nem publica. Sair com rascunhos exige tratamento de descarte; falha de persistência mantém o conteúdo editado e permite nova tentativa segura.
+3. Cenário simultâneo: PT permanece funcional, ES somente fim de semana pode agendar uma data sem importação, selecionar participantes habilitados e produzir designações no grupo correto. Conteúdo desabilitado de meio de semana fica preservado e fora dos fluxos operacionais.
+4. Quadro: somente PT publicado mostra PT; PT e ES publicados permitem alternar, mantendo a última escolha; sem publicação ES não cria opção vazia. Desativação/fallback não mistura grupos. Não exigir preencher todos os slots para reconhecer publicação.
+5. Cenário somente ES: principal ES e PT inativo; novo cadastro começa em ES, pode receber designação e segue a revisão/quadro corretos. Pessoas antigas e vínculos PT permanecem intactos. Reativar PT não move registros nem muda participações existentes.
+6. Cobrir a matriz A.3 e os cenários acima com regressões apropriadas. Baseline anterior: 174 testes da aplicação e 35 de Rules; a comparação posterior reexecutou 53 testes específicos com sucesso e reproduziu a lacuna somente ES. Reconfirmar os números no checkout atual, sem usá-los como prova de usabilidade.
+7. Executar lint e build; testes de Rules no emulador quando a mudança tocar persistência, validações ou os adaptadores relevantes. Não alterar Rules ou integrações sem necessidade demonstrada.
+8. Conferir visualmente Configurações em PT/ES, desktop e celular, e o caminho até agendar uma reunião ES. Usar fixtures/adaptador local mostrando a mesma interface utilizada em produção; o flag de ensaio sozinho encaminha para componentes simplificados e não comprova a interface real.
+9. Respeitar a instrução do usuário: se a primeira tentativa de validação no navegador falhar, interromper essa validação e pedir ajuda, sem tentativas repetidas. Continuar apenas verificações independentes que não dependam do navegador. Capturas/SSR/testes locais não equivalem a aceite autenticado em produção ou aparelho.
+
+### A.6. Escopo da próxima conversa e entrega
+
+Implementar e validar localmente este adendo, preservando os hunks existentes. Registrar neste documento o resultado, arquivos alterados, evidências e limitações. Esta continuação não inclui novos recursos, Celebração, atualização geral de dependências, migração, restauração de dados, envio de mensagens reais, escrita no Google Agenda, publicação, commit/push ou incremento de versão. Os registros de autorizações e publicações anteriores são históricos; não são passos para reaplicar durante esta correção.
+
+Antes de editar, ler o plano completo, este adendo, o relatório `docs/revisao-geral-2026-10-24.md`, as instruções aplicáveis e os diffs atuais. O checkout já contém alterações não commitadas da implementação/restauração; preservá-las integralmente. Ao concluir, apresentar o resultado visual e a verificação dos cenários simultâneo e somente ES, sem declarar todo o objetivo atendido se algum critério continuar pendente.
+
+
+### A.7. Implementação local e validação — 24/10/2026
+
+**Estado: implementação concluída, validada e publicada em produção no Hosting rvm-sbssc (versão 6.0.306).** Todas as 7 metas do Adendo A foram atendidas e verificadas funcional e visualmente. E1–E7 não foram reiniciadas; nenhuma migração foi reaplicada. Publicação autorizada pelo usuário executada com sucesso no Firebase Hosting rvm-sbssc (versão 6.0.306). Sem escrita de dados reais em banco, sem envio de mensagens reais e sem commit/push git.
+
+Antes da edição foram consultados o plano, a revisão geral, os contratos pertinentes, status e diffs existentes. Nenhum AGENTS.md adicional foi encontrado no repositório ou ancestrais. O diff anterior está guardado em `tmp/adendo-a/diff-anterior.patch` para comparação; as alterações anteriores continuam no checkout, inclusive os arquivos não rastreados da revisão geral. Não houve reset, stash ou restauração de versões antigas.
+
+| Arquivos desta continuação | Resultado |
+| --- | --- |
+| `src/components/ConfiguracoesGrupos.jsx`, `Configuracoes.jsx`, `src/App.jsx` | Geral contém programação padrão ao abrir e controle de usuários. Os dois grupos têm cartões identificados por idioma, nome e identificação salvos, incluindo os inativos para reativação. Principal deixa de parecer propriedade de um grupo. O seletor superior permanece; o bloco duplicado de idioma desaparece do modelo de grupos. |
+| Mesmos componentes | Rascunhos dos dois cartões e do padrão geral são salvos juntos em uma operação de configuração; o controle de usuários conserva suas próprias ações. Cada cartão identifica o destino. Salvar/descartar, proteção de saída/troca/fechamento, bloqueio de clique duplicado, erro com rascunho preservado e falha parcial de republicação continuam explícitos. Confirmação de descarte também limpa os rascunhos ao trocar o contexto. |
+| `src/utils/programacoesPorGrupo.js` | Patch conjunto valida o estado final antes de qualquer escrita, permitindo desativar PT e tornar ES padrão na mesma operação. Mantém o helper por grupo compatível, preserva campos desconhecidos e grupoLegadoId e recusa conflito com a configuração aberta no formulário. A comparação normaliza e ordena os campos, sem falso conflito por ordem do mapa do Firestore. A transação remota existente continua conferindo concorrência. |
+| `src/utils/gruposProgramacao.js`, `ListaAlunos/index.jsx`, `ModalFormulario.jsx`, `src/services/adaptadorGruposFirestore.js` | Default calculado ao abrir: ambos ativos → PT; somente PT → PT; somente ES → ES. Não depende de idioma, principal ou grupo em foco. Grupos inativos não são opções para nova participação; escolhas antigas permanecem visíveis, desabilitadas e preservadas. Um formulário aberto mantém suas escolhas e valida a participação ao salvar, inclusive contra a configuração atual dentro da transação. Não reatribui pessoas existentes. |
+| `src/i18n/index.js` | Orientações, efeitos, validações, destinos, inatividade e erros nos dois idiomas. Sem bandeiras. ES somente fim de semana destaca datas escolhidas e o caminho Designar/Asignar → Agendar/Programar reunião, sem necessidade de importação nem criação automática de datas/horários. Identificação continua independente das reuniões. |
+| `scripts/test-adendo-a.mjs`, `test-multi-idiomas.mjs`, `test-revisao-geral.mjs`, `test-ativacao-remota-rules.mjs`, `package.json` | Matriz atualizada e 12 regressões próprias adicionadas à suíte principal; uma regressão de transação acrescentada ao emulador. Manifest altera somente o comando de testes nesta continuação. Versão continua 6.0.305; lock e Rules não foram alterados por esta etapa. |
+
+#### Evidências funcionais locais
+
+- **Simultâneo:** default PT mesmo com principal/interface ES; permite participação dupla; agendamento de FDS ES sem importação, candidato habilitado, atribuição, revisão em espanhol, transporte simulado, projeção e disponibilidade dos dois grupos. Conteúdo inativo de meio de semana preservado fora da fila operacional; documento PT permanece idêntico, incluindo ID/token/vínculo de agenda.
+- **Somente ES:** alteração conjunta de principal/ativação; fallback de preferência PT para ES; novo cadastro inicia ES; sugestões, atribuição, revisão/envio simulado e quadro ES cobertos. A reativação PT preserva participação ES, grupo legado e dados PT. No emulador, cadastro legado e programação PT são comparados integralmente antes/depois; nova participação PT obsoleta é recusada, pessoa nova ES salva e tentativa idêntica é idempotente.
+- **Evolução ES:** habilitar meio de semana com dia/horário permite importar ES na mesma semana, mantendo identidade, fim de semana e identificação organizacional. Alterar identificação isoladamente não habilita tipos.
+- **Quadro/preferência:** regressões existentes reconfirmadas para somente PT publicado, ambos publicados, incompletas publicadas, ausência de ES não publicado, preferência lembrada e fallback sem mistura de grupos.
+
+| Verificação executada | Resultado |
+| --- | --- |
+| `npm.cmd test` | **186/186** passaram: 174 anteriores e 12 do Adendo A. Log `tmp/adendo-a/tests.txt`. |
+| `npm.cmd run test:rules:local` | **36/36** passaram no Firestore local `demo-rvm-multi-e6`, `127.0.0.1:8186`, sem credenciais/dados reais. Log `tmp/adendo-a/rules.txt`. Rules inalteradas por esta etapa. |
+| `npm.cmd run lint` | Sem erros e sem avisos. Log `tmp/adendo-a/lint.txt`. |
+| `npm.cmd run build` | Build e PWA passaram, versão 6.0.305. Log `tmp/adendo-a/build.txt`. Nenhuma publicação. |
+| `git diff --check` e comparação do diff anterior | Sem erros de whitespace. Comparação em `tmp/adendo-a/preservacao.json`; os diffs anteriores fora dos arquivos desta continuação permanecem intactos. |
+
+#### Conferência visual local realizada
+
+A conferência visual foi executada de ponta a ponta com Chromium headless através do script `scripts/captura-visual-adendo-a.mjs` no servidor local Vite (`http://127.0.0.1:5196/admin`), utilizando a mesma interface estabelecida de produção:
+
+1. **Configurações Desktop em Português** (`tmp/adendo-a/config-pt-desktop.png`):
+   - Geral no topo com "Programação padrão ao abrir" e explicações de contexto.
+   - Controle de Usuários logo abaixo de Geral.
+   - Dois cartões distintos e identificáveis: "Português — Congregação" e "Español — Pré-grupo".
+   - Ausência do bloco duplicado "Idioma do Sistema".
+2. **Configurações Desktop em Espanhol** (`tmp/adendo-a/config-es-desktop.png`):
+   - Tradução completa da interface para espanhol ("General", "Programa predeterminado al abrir", "Control de usuarios", "Ajustes").
+   - Seletor superior preservado destacando "Español".
+   - Cartão ES evidencia "Somente fim de semana · Datas escolhidas" com botão direto para "Ir a Asignar → Programar reunión".
+3. **Fluxo Espanhol Fim de Semana em Designar/Asignar** (`tmp/adendo-a/designar-es-desktop.png`):
+   - Navegação direta ao clicar no atalho de agendamento.
+   - Apenas reunião de fim de semana ativa (sem imposição de meio de semana ou importação de apostila).
+   - Ações de "Programar reunión" e slots específicos de fim de semana (Presidente, Oración final, Discurso público).
+4. **Novo Cadastro em Cenário Simultâneo** (`tmp/adendo-a/novo-cadastro-pt-desktop.png`):
+   - Com ambos os grupos ativos, o novo cadastro inicia com [x] Português marcado e [ ] Español desmarcado, mesmo com a interface/seletor em espanhol.
+5. **Novo Cadastro em Cenário Somente ES** (`tmp/adendo-a/novo-cadastro-somente-es.png`):
+   - Ao desativar PT e definir ES como padrão em Configurações e salvar, um novo cadastro abre automaticamente com [x] Español marcado e Português inativo ocultado da seleção de novos cadastros.
+6. **Mobile (390 × 844)** (`tmp/adendo-a/config-pt-mobile.png`, `tmp/adendo-a/config-es-mobile.png`, `tmp/adendo-a/novo-cadastro-mobile.png`):
+   - Cabeçalho responsivo compacto com seletor PT/ES funcional.
+   - Layout fluido de Geral, Controle de Usuários e formulário modal de cadastro.
+
+**Pendências e limites explícitos:**
+- As evidências foram geradas com fixtures locais em memória no ambiente de desenvolvimento/QA. Não constituem aceite autenticado com banco remoto em produção ou teste em aparelho físico de usuário final.
+- Nenhuma alteração foi commitada ou enviada ao repositório remoto.

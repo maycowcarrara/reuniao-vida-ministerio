@@ -3,11 +3,12 @@ import { BarChart3, CalendarDays, History, Trash2, X } from 'lucide-react';
 import { formatHistoricoParte } from './utils';
 import { dialog } from '../../utils/dialog';
 
-const ModalHistorico = ({ aluno, isOpen, onClose, t, lang = 'pt', onUpdateAluno }) => {
+const ModalHistorico = ({ aluno, isOpen, onClose, t, lang = 'pt', onUpdateAluno, isSaving = false }) => {
     if (!isOpen || !aluno) return null;
 
     // Função que é ativada ao clicar na lixeira
     const handleDelete = async (indexOriginal) => {
+        if (isSaving) return;
         const ok = await dialog.confirm({
             title: 'Remover do Histórico',
             message: t?.msg?.confirmarRemoverHistorico || 'Tem certeza que deseja remover este registro do histórico?',
@@ -22,7 +23,7 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, lang = 'pt', onUpdateAluno 
 
             // Envia o aluno com o histórico limpo de volta para a ListaAlunos salvar
             if (onUpdateAluno) {
-                onUpdateAluno({ ...aluno, historico: novoHistorico });
+                await onUpdateAluno({ ...aluno, historico: novoHistorico });
             }
         }
     };
@@ -111,6 +112,7 @@ const ModalHistorico = ({ aluno, isOpen, onClose, t, lang = 'pt', onUpdateAluno 
 
                                 {/* Botão Lixeira - Fica mais visível ao passar o rato (hover) na linha */}
                                 <button
+                                    disabled={isSaving}
                                     onClick={() => handleDelete(h.indexOriginal)}
                                     className="text-red-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-all opacity-50 group-hover:opacity-100"
                                     title={t?.modal?.excluir || 'Excluir'}

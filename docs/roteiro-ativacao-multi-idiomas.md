@@ -52,3 +52,29 @@ E1–E7 de implementação, testes locais e preparação **concluídas**. Ativa�
 Pendências restantes:
 - Conferência visual em produção no navegador (`https://rvm-sbssc.web.app`).
 - Versionamento no Git (commit/push).
+
+
+## Correção de continuidade da interface — 24/10/2026
+
+A ativação inicial usou `modoGrupos` também para selecionar a interface e encaminhou o ambiente real para `PainelGrupo`, `DesignacoesGrupo` e `RevisaoGrupo`, componentes simplificados do ensaio. Isso substituiu as telas conhecidas, apesar de a migração preservar os dados. A regressão anterior verificava o funcionamento do ensaio; não demonstrava a continuidade da interface original.
+
+A correção mantém Dashboard, Designar e RevisarEnviar em produção para PT e ES. Os componentes simplificados ficam exclusivos de DEV + flag de ensaio. A seleção de grupo e a persistência transacional v2 continuam ativas. Agendamento/ativação foram acrescentados como detalhe recolhível na tela existente de designações.
+
+- Edição da lista existente valida grupo, participação, habilitação, disponibilidade, data/horário, semana e cancelamento antes de passar pelo adaptador Firestore v2. Cadastro e outros grupos são preservados.
+- Revisar/Enviar resolve chaves antigas pela fila canônica, preserva tokens e usa identidade v2 para novos destinos. Cache de confirmação não autoriza envio de ocorrência que ficou indisponível. Contatos vêm do cadastro atual; agenda/link usam o horário explícito do destino.
+- Histórico da tela existente usa reconstrução por IDs/grupo/tipo e mantém registros antigos sem referência exata. Sincronização da agenda só limpa pendências de programações efetivamente sincronizadas. Preferência de agenda continua por dono/grupo.
+- Fim de semana isolado usa data/horário próprios; não cria partes, presidente, contagem ou previsão semanal de meio de semana. A projeção para leitura não altera a fonte privada.
+
+Validação: 168 testes de domínio/serviços/renderização e 32 testes de Rules/persistência no emulador passaram. Inclui renderização das três telas existentes com confirmação v2, FDS ES isolado, bloqueio de participante errado/cancelamento/datas e edição pela ponte da interface antiga persistida pelo adaptador real no emulador, preservando outro grupo. Build passou. Lint conserva somente os dois erros e um aviso preexistentes em DialogModal.jsx.
+
+Publicação de correção: somente Hosting em rvm-sbssc, mantendo 6.0.305. Nenhuma nova migração, alteração de Rules ou escrita de dados reais foi executada nesta correção. Evidências em `tmp/restauracao-deploy.txt`, `tmp/restauracao-publicacao.json`, `tmp/restauracao-regressao.txt`, `tmp/restauracao-rules.txt` e `tmp/restauracao-tests.txt`.
+
+A conferência visual autenticada e a execução real de provedores continuam sem aceite nesta correção. Não houve nova tentativa de navegador após a falha anterior, em respeito à instrução do usuário; testes SSR e emulador não são apresentados como validação visual, entrega de mensagens ou escrita no Google Agenda.
+
+## Revisão geral e acabamento — 24/10/2026
+
+A revisão subsequente corrigiu Configurações para reutilizar a estrutura existente, com controle de usuários e idioma. O agendamento saiu do detalhe recolhível e passou para uma janela integrada à barra de Designar, com abas e proteção de alterações. Removidos os textos de ensaio em produção. Corrigidos também os estados ativa/publicada/cancelada, gravações concorrentes de cadastro/histórico, respostas e alertas atômicos, importação assíncrona e erros de carregamento do link público.
+
+Validação atual: 174 testes da aplicação e 35 testes de Rules passaram; lint sem erros/avisos e build aprovado. Conferência visual local com fixtures concluída para as telas principais e o novo agendamento. Hosting e Rules publicados em rvm-sbssc; 30 arquivos e a fonte de Rules conferidos por hash. Nenhuma escrita de dados reais ou nova migração nesta revisão. Esta evidência substitui os números e limites de lint da correção anterior.
+
+Detalhes, pendências de dependências/provedores e limites de aceite em `docs/revisao-geral-2026-10-24.md`; recibo em `tmp/revisao-geral-publicacao.json`.
