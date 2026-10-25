@@ -1,4 +1,7 @@
-import { getCanonicalWeekStartISO, getWeekStartISOFromSemana } from './revisarEnviar/dates';
+import { getCanonicalWeekStartISO, getWeekStartISOFromSemana } from './revisarEnviar/dates.js';
+import { eventoSubstituiReuniao } from './celebracao.js';
+
+export const isEventoBloqueiaImportacao = evento => eventoSubstituiReuniao(evento, 'meioSemana');
 
 export const isTipoEventoBloqueante = (tipo) => {
     const evento = (tipo ?? '').toString().toLowerCase();

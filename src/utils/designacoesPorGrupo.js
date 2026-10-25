@@ -6,6 +6,7 @@ import { isBibleStudyPart, isPrayerPart, isSongOnlyPart, isWhatWouldYouSayPart }
 import { MEIO_SEMANA_RESPONSABILIDADES } from './fimDeSemana.js';
 import { addHistorico } from './revisarEnviar/historico.js';
 import { identityFromDesignacao, buildAssignmentKey } from './assignmentIdentity.js';
+import { getCelebracao, slotsCelebracao, tipoReuniaoCelebracao } from './celebracao.js';
 
 const idPessoa = pessoa => pessoa?.id == null ? '' : String(pessoa.id);
 const bucket = { presidente_rvm: 'presidente', discurso_inicial: 'tesouros', joias_espirituais: 'joias',
@@ -14,7 +15,9 @@ const getPath = (obj, path) => path.reduce((value, key) => value?.[key], obj);
 
 // Identifica o slot dentro da reunião. A identidade completa de designação é
 // serializada exclusivamente por assignmentIdentity.js.
-export const listarSlotsReuniao = (programacao, tipo, { incluirVagos = true } = {}) => {
+export const listarSlotsReuniao = (programacao, tipo, { incluirVagos = true, config = {} } = {}) => {
+    const celebracao = getCelebracao(programacao, config);
+    if (celebracao?.tipoReuniao === tipo) return slotsCelebracao(programacao, incluirVagos, celebracao.data);
     const slots = [];
     const add = (path, slotKey, parte = null, extra = {}) => {
         const pessoa = getPath(programacao, path);
@@ -59,7 +62,7 @@ export const selecionarDesignacoes = ({ programacoes = [], config, apenasOperaci
     TIPOS_REUNIAO.flatMap(tipo => {
         const reuniao = normalizeOcorrenciaReuniao(programacao, tipo, config);
         if (apenasOperacionais && (!reuniao.operacional || (programacao.arquivada && !incluirArquivadas))) return [];
-        return listarSlotsReuniao(programacao, tipo, { incluirVagos: false }).map(slot => ({ ...slot,
+        return listarSlotsReuniao(programacao, tipo, { incluirVagos: false, config }).map(slot => ({ ...slot,
             programacao, programacaoId: createProgramacaoId(programacao), grupoId: getGrupoEfetivoId(programacao, config), tipoReuniao: tipo, reuniao }));
     }));
 
@@ -69,6 +72,7 @@ export const avaliarElegibilidadeGrupo = ({ aluno, alunos = [], programacao, tip
     if (!programacao || getGrupoEfetivoId(programacao, config) !== grupoId) return recusar('Destino de outro grupo.', 'Destino de otro grupo.');
     const reuniao = normalizeOcorrenciaReuniao(programacao, tipo, config);
     if (!reuniao.operacional || programacao.arquivada) return recusar('Reunião inativa, cancelada ou bloqueada por evento.', 'Reunión inactiva, cancelada o bloqueada por evento.');
+    if (reuniao.celebracao && !listarSlotsReuniao(programacao, tipo, { config }).some(s => s.slotId === slot?.slotId)) return recusar('A celebração substitui esta designação.', 'La Conmemoración sustituye esta asignación.');
     if (!participaDoGrupo(aluno, grupoId, config)) return recusar('Pessoa não participa deste grupo.', 'La persona no participa en este grupo.');
     if (!slot || !getAssignmentCapabilityForSlot({ parte: slot.parte, slotKey: slot.slotKey })) return recusar('Slot sem habilitação reconhecida.', 'Asignación sin habilitación reconocida.');
     const estudante = alunos.find(item => idPessoa(item) === idPessoa(slot.parte?.estudante)) || slot.parte?.estudante;
@@ -102,7 +106,7 @@ export const avaliarConflitosGrupo = ({ programacoes, config, programacao, tipo,
         const outroAbsoluto = Date.parse(`${item.reuniao.data}T00:00:00Z`) / 60000 + outroInicio;
         const sobreposicao = !mesmaReuniao && temIntervalos && inicioAbsoluto < outroAbsoluto + outraDuracao && outroAbsoluto < inicioAbsoluto + duracao;
         if (!sobreposicao && getProgramacaoWeekStartISO(item.programacao) !== semana) return null;
-        const principalIncompativel = mesmaReuniao && tipo === 'fimDeSemana' && !item.apoio && !listarSlotsReuniao(programacao, tipo).find(s => s.slotId === slotId)?.apoio;
+        const principalIncompativel = mesmaReuniao && tipo === 'fimDeSemana' && !item.apoio && !listarSlotsReuniao(programacao, tipo, { config }).find(s => s.slotId === slotId)?.apoio;
         return { ...item, principalIncompativel, nivel: sobreposicao ? 'bloqueio'
             : !mesmaReuniao && mesmaData && !temIntervalos ? 'possivel' : 'aviso' };
     }).filter(Boolean);
@@ -112,7 +116,7 @@ export const prepararAtribuicaoGrupo = ({ programacoes = [], alunos = [], config
     const programacao = programacoes.find(item => createProgramacaoId(item) === programacaoId && getGrupoEfetivoId(item, config) === grupoId);
     const reuniao = normalizeOcorrenciaReuniao(programacao, tipo, config);
     if (!programacao || !reuniao.operacional || programacao.arquivada) throw new Error('Reunião indisponível.');
-    const slots = listarSlotsReuniao(programacao, tipo).filter(item => item.slotId === slotId);
+    const slots = listarSlotsReuniao(programacao, tipo, { config }).filter(item => item.slotId === slotId);
     const slot = slots[0];
     if (slots.length !== 1) throw new Error('Slot inválido ou alterado.');
     if (pessoaAnteriorId !== undefined && idPessoa(slot.pessoa) !== String(pessoaAnteriorId)) throw new Error('Designação mudou desde a seleção; revise o slot.');
@@ -133,7 +137,7 @@ export const prepararAtribuicaoGrupo = ({ programacoes = [], alunos = [], config
     if (Array.isArray(pai) && !aluno) pai.splice(key, 1); else pai[key] = valor;
     const substituicoes = slot.pessoa ? [...(programacao.substituicoes || []), { grupoId, programacaoId, tipoReuniao: tipo, slotId,
         de: { id: slot.pessoa.id, nome: slot.pessoa.nome }, para: valor, origem: 'ensaio-local', criadoEm: new Date().toISOString() }] : programacao.substituicoes;
-    const alteracoes = tipo === 'fimDeSemana' ? { fimDeSemana: proxima.fimDeSemana } : slot.path[0] === 'partes' ? { partes: proxima.partes } : { [slot.path[0]]: proxima[slot.path[0]] };
+    const alteracoes = slot.celebracao ? { celebracao: proxima.celebracao } : tipo === 'fimDeSemana' ? { fimDeSemana: proxima.fimDeSemana } : slot.path[0] === 'partes' ? { partes: proxima.partes } : { [slot.path[0]]: proxima[slot.path[0]] };
     return { operacoes: [{ tipo: 'patch', programacaoId, alteracoes: { ...alteracoes,
         ...(substituicoes ? { substituicoes } : {}), historicoPendenteSync: true } }] };
 };
@@ -184,7 +188,8 @@ export const reconstruirHistoricoGrupo = ({ alunos = [], programacoes = [], conf
 
 export const prepararEventoGrupo = ({ config, grupoId, data, tipo }) => {
     const grupo = getGrupoProgramacao(grupoId, config);
-    if (!grupo?.ativo || !['normal', 'visita', 'assembleia', 'congresso'].includes(tipo)) throw new Error('Evento ou grupo inválido.');
+    if (!grupo?.ativo || !['normal', 'visita', 'assembleia', 'assembleia_betel', 'assembleia_circuito', 'congresso', 'celebracao'].includes(tipo)) throw new Error('Evento ou grupo inválido.');
+    if (!tipoReuniaoCelebracao(data)) throw new Error('Data inválida.');
     const semana = getProgramacaoWeekStartISO({ dataInicio: data });
     const eventosAnuais = grupo.eventosAnuais.filter(item => item.dataInicio !== semana);
     if (tipo !== 'normal') eventosAnuais.push({ dataInicio: semana, dataInput: data, tipo });

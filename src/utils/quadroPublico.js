@@ -2,6 +2,7 @@ import { normalizeGruposProgramacao, getGrupoEfetivoId } from './gruposProgramac
 import { getReunioesAtivas } from './ocorrenciasReuniao.js';
 import { selecionarDesignacoes } from './designacoesPorGrupo.js';
 import { identityFromDesignacao, buildAssignmentKey } from './assignmentIdentity.js';
+import { getCelebracao } from './celebracao.js';
 
 const pick = (src, keys) => Object.fromEntries(keys.filter(key => src?.[key] !== undefined && ['string', 'number', 'boolean'].includes(typeof src[key])).map(key => [key, src[key]]));
 const pessoa = src => src ? pick(src, ['id', 'nome']) : null;
@@ -26,19 +27,24 @@ export function projetarQuadroPublico({ configuracoes = {}, historico_reunioes =
         if (!reunioes.length) return [];
         const meio = reunioes.find(item => item.tipoReuniao === 'meioSemana');
         const fim = reunioes.find(item => item.tipoReuniao === 'fimDeSemana');
-        const fds = programa.fimDeSemana;
+        const c = getCelebracao(programa, config);
+        const meioNormal = meio && !meio.celebracao;
+        const fimNormal = fim && !fim.celebracao;
+        const cPublica = c && reunioes.some(r => r.celebracao);
+        const fds = programa.fimDeSemana || {};
         return [{ ...pick(programa, ['id', 'semana', 'dataInicio', 'dataReuniao', 'dataExata', 'data', 'evento', 'tipo', 'dataEventoEspecial']),
             grupoId: getGrupoEfetivoId(programa, config), versaoProgramacao: 2, publicadaNoQuadro: true,
             meioSemana: meio ? { ativo: true, data: meio.data, horario: meio.horario } : { ativo: false },
-            partes: meio ? partes(programa.partes) : [],
-            presidente: meio ? pessoa(programa.presidente) : null, leitor: meio ? pessoa(programa.leitor) : null,
-            responsabilidades: meio ? responsabilidades(programa.responsabilidades) : {},
-            fimDeSemana: fim ? { ativo: true, data: fim.data, horario: fim.horario,
+            ...(c ? { celebracao: cPublica ? { ativo: true, horario: c.horario, oradorNomeManual: c.oradorNomeManual, responsabilidades: responsabilidades(c.responsabilidades) } : { ativo: false } } : {}),
+            partes: meioNormal ? partes(programa.partes) : [],
+            presidente: meioNormal ? pessoa(programa.presidente) : null, leitor: meioNormal ? pessoa(programa.leitor) : null,
+            responsabilidades: meioNormal ? responsabilidades(programa.responsabilidades) : {},
+            fimDeSemana: fimNormal ? { ativo: true, data: fim.data, horario: fim.horario,
                 presidente: pessoa(fds.presidente), oracaoFinal: pessoa(fds.oracaoFinal),
                 reuniaoPublica: pick(fds.reuniaoPublica, ['temaDiscurso', 'oradorNomeManual', 'congregacaoOrador']),
                 estudoSentinela: { dirigente: pessoa(fds.estudoSentinela?.dirigente), leitor: pessoa(fds.estudoSentinela?.leitor) },
                 visitaSuperintendente: pick(fds.visitaSuperintendente, ['discursoFinal']), responsabilidades: responsabilidades(fds.responsabilidades),
-            } : { ativo: false },
+            } : fim ? { ativo: true, data: fim.data, horario: fim.horario } : { ativo: false },
         }];
     });
     // Índice público mínimo para as Rules verificarem um alvo v2 sem abrir

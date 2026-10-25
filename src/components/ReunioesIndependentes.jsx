@@ -132,12 +132,12 @@ export default function ReunioesIndependentes({ config, grupoId, programacoes, o
                             <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-bold">{G[key]} · {ocorrencia.data} · {ocorrencia.horario}</span><span className={`rounded-full px-2 py-1 font-bold ${ocorrencia.cancelada ? 'bg-rose-50 text-rose-700' : ocorrencia.ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>{ocorrencia.cancelada ? T.cancelada : ocorrencia.ativo ? T.ativa : T.rascunho}</span></div>
                             <p className="text-xs text-slate-500">{ocorrencia.publicada ? T.publicada : T.naoPublicada}</p>
                             {!grupo[key].habilitada && <p className="text-xs text-slate-500">{T.desabilitada}</p>}
-                            {grupo.ativo && grupo[key].habilitada && !ocorrencia.cancelada && !programacao.arquivada && <div className="flex flex-wrap gap-2">
+                            {grupo.ativo && grupo[key].habilitada && !ocorrencia.cancelada && !ocorrencia.celebracao && !programacao.arquivada && <div className="flex flex-wrap gap-2">
                                 {!ocorrencia.ativo && <button type="button" className={primaryClass} onClick={() => confirmar(estado => prepararEstadoOcorrencia({ ...estado, programacaoId: programacao.id, tipo: key }))}><Check size={14} />{T.ativar}</button>}
                                 <button type="button" className={buttonClass} onClick={() => executar(async () => { if (await dialog.confirm({ title: T.cancelar, message: T.confirmarCancelamento, confirmText: T.cancelar, cancelText: G.continuarEditando })) await onExecutar({ grupoId, preparar: estado => prepararEstadoOcorrencia({ ...estado, programacaoId: programacao.id, tipo: key, cancelar: true }) }); })}><Ban size={14} />{T.cancelar}</button>
                                 {key === 'fimDeSemana' && <button type="button" className={buttonClass} onClick={() => setEdicao({ id: programacao.id, ...programacao.fimDeSemana?.reuniaoPublica })}><Pencil size={14} />{T.editar}</button>}
                             </div>}
-                            {key === 'fimDeSemana' && <p className="text-xs text-slate-500">{programacao.fimDeSemana?.reuniaoPublica?.temaDiscurso} {programacao.fimDeSemana?.reuniaoPublica?.oradorNomeManual}</p>}
+                            {key === 'fimDeSemana' && !ocorrencia.celebracao && <p className="text-xs text-slate-500">{programacao.fimDeSemana?.reuniaoPublica?.temaDiscurso} {programacao.fimDeSemana?.reuniaoPublica?.oradorNomeManual}</p>}
                         </div>;
                     })}
                 </article>)}

@@ -8,6 +8,7 @@ import {
     isAlunoEligibleForAssignment,
 } from '../../utils/assignmentEligibility';
 import { getFimDeSemanaAssignedPeople, getMeioSemanaAssignedPeople } from '../../utils/fimDeSemana';
+import { getCelebracao } from '../../utils/celebracao.js';
 
 export default function ModalSugestao({
     isOpen,
@@ -22,7 +23,8 @@ export default function ModalSugestao({
     lang = 'pt',
     modo = 'sugestao',
     pessoaAtual = null,
-    avaliarCandidato = null
+    avaliarCandidato = null,
+    config = {}
 }) {
     const [sugestoes, setSugestoes] = useState([]);
     const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer', isAjudante: false });
@@ -81,6 +83,8 @@ export default function ModalSugestao({
             }
             getMeioSemanaAssignedPeople(semanaAtual).forEach((item) => addOcupado(item.pessoa));
             getFimDeSemanaAssignedPeople(semanaAtual).forEach((item) => addOcupado(item.pessoa));
+            const c = getCelebracao(semanaAtual, config);
+            if (c) Object.values(c.responsabilidades).flat().forEach(addOcupado);
         }
 
         // B. FILTRO DE PRIVILÉGIOS (O MOTOR DE REGRAS)

@@ -44,7 +44,7 @@ import RevisaoGrupo from './components/RevisaoGrupo.jsx';
 import QuadroPorGrupo from './components/QuadroPorGrupo.jsx';
 import { projetarQuadroPublico } from './utils/quadroPublico.js';
 import { gruposRemotosAtivos } from './utils/compatibilidadeGrupos.js';
-import { prepararImportacaoMeioSemana } from './utils/agendamentoReunioes.js';
+import { prepararImportacaoMeioSemana, prepararSemanaEvento } from './utils/agendamentoReunioes.js';
 import { destinoNotificacao } from './utils/integracoesGrupo.js';
 import { prepararEventoGrupo, reconstruirHistoricoGrupo } from './utils/designacoesPorGrupo.js';
 
@@ -645,6 +645,9 @@ function AdminPanel() {
 
   const salvarEventoGrupoLocal = pedido => executarLocal(async () => {
     const config = prepararEventoGrupo({ config: dadosAtuaisRef.current.configuracoes, ...pedido });
+    // Validar antes de gravar a configuração e persistir a semana sem importação.
+    const preparado = prepararSemanaEvento({ programacoes: dadosAtuaisRef.current.historico_reunioes, config, ...pedido });
+    if (preparado.operacoes.length) await controller.executar({ grupoId: pedido.grupoId, operacoes: preparado.operacoes });
     await salvarItem('configuracoes', 'geral', config);
     dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config };
     if (!MULTI_GRUPOS_LOCAL) await publicarQuadroPublico();
@@ -860,6 +863,8 @@ function AdminPanel() {
                   <DesignacoesGrupo config={configGrupos} grupoId={grupoId} programacoes={todasProgramacoes} alunos={dadosSistema.alunos} cargosMap={CARGOS_MAP}
                     busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} onCadastro={() => navegarAba('alunos')} /></> :
               <Designar
+                programacoesCompletas={todasProgramacoes}
+                onOperacaoCelebracao={pedido => executarLocal(() => controller.executar(pedido))}
                 agendamentoGrupo={modoGrupos ? <ReunioesIndependentes config={configGrupos} grupoId={grupoId} programacoes={listaProgramacoes} busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} /> : null}
                 listaProgramacoes={listaProgramacoes}
                 setListaProgramacoes={setListaProgramacoes}
@@ -879,6 +884,7 @@ function AdminPanel() {
             {abaAtiva === 'revisar' && (usarInterfaceIndependente ? <RevisaoGrupo alunos={dadosSistema.alunos} localOnly={MULTI_GRUPOS_LOCAL} ownerUid={resolveDataOwnerUid(usuario)} config={configGrupos} grupoId={grupoId} programacoes={todasProgramacoes} confirmacoes={confirmacoes} programacaoFoco={reviewShortcutRequest?.programacaoId}
               onExecutar={pedido => executarLocal(() => controller.executar(pedido))} /> :
               <RevisarEnviar
+                ownerUid={resolveDataOwnerUid(usuario)}
                 historico={listaProgramacoes}
                 alunos={alunosEmFoco || []}
                 config={configEmFoco}

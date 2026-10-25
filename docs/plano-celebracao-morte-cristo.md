@@ -1,7 +1,7 @@
 # Plano: Celebração da morte de Jesus Cristo
 
 Data: 24/10/2026.
-Status: proposta para revisão; implementação aguardando a conclusão da divisão de idiomas pelo usuário.
+Status: implementado e publicado no Hosting de `rvm-sbssc` em 25/10/2026, versão `6.1.308`, após autorização explícita do usuário. Ver seção 10.
 
 ## 1. Objetivo e regra de produto
 
@@ -225,6 +225,84 @@ automática deste trabalho.
 
 ## 8. Limite desta entrega
 
-Esta entrega adiciona somente este documento. A implementação fica aguardando
-a conclusão da divisão de idiomas e a revisão do plano com o usuário. Código,
-dados e arquivos já alterados por outros trabalhos não fazem parte desta entrega.
+A proposta original foi preparada em 24/10. Em 25/10 o usuário autorizou a
+implementação considerando os idiomas simultâneos já existentes. A implementação
+usa os grupos, ocorrências independentes, controller e identidades v2 atuais.
+Eventos e designações permanecem restritos ao grupo selecionado.
+
+Não houve deploy, aumento de versão, commit, migração, alteração de Rules,
+escrita remota nem envio real de mensagens/Google Agenda durante esta entrega.
+
+## 9. Implementação e evidências locais — 25/10/2026
+
+- A nova opção aparece na Gestão de Eventos e Visitas em PT/ES e no painel do
+  ensaio. O evento conserva a regra atual de um evento por grupo/semana.
+- A ocorrência da celebração usa a data do evento e o horário próprio, sem
+  alterar os dados das reuniões normais. O bloco privado `celebracao` guarda
+  somente seu orador e seus apoios; partes substituídas ficam preservadas.
+- Cadastrar cria/reutiliza a semana do grupo mesmo sem apostila. A importação
+  bloqueia somente quando a celebração substitui o meio de semana, inclusive
+  no domínio, após a revisão e nas entradas por conteúdo/URL.
+- O editor usa nome livre para o orador e seleção ordenada por carga/rodízio para
+  o apoio, com habilitação, participação, indisponibilidade na data exata e aviso
+  de conflitos. Não foram acrescentados presidente nem orações da celebração.
+- A enumeração central de slots, o histórico e as filas consideram apenas a
+  celebração e a reunião normal restante. IDs de slots da celebração incluem sua
+  data, impedindo reutilizar a confirmação após uma mudança de dia.
+- O quadro público usa a allowlist existente e não recebe os dados normais
+  substituídos nem contatos dos designados. Uma ocorrência não publicada continua
+  oculta mesmo quando a outra reunião da semana está pública.
+- Semanas com celebração têm impressão própria da semana completa, em página
+  separada, na ordem meio de semana → fim de semana. Isso evita omitir a
+  celebração ou a reunião restante pela opção de incluir fim de semana.
+- Em Revisar & Enviar, semanas com celebração usam a fila v2 existente de envios,
+  confirmações e agenda; semanas comuns conservam a interface anterior. O orador
+  manual segue o tratamento do discurso público, sem confirmação de aluno.
+- A sincronização gera apenas os novos alvos ativos. Eventos antigos já enviados
+  à agenda não são apagados automaticamente; permanece a indicação de revisão.
+
+Verificações executadas:
+
+- `node --test scripts/test-celebracao.mjs`: 16 testes de calendário, importação,
+  isolamento PT/ES, persistência, apoio, publicação, confirmação, histórico,
+  agenda simulada e renderização SSR. Inclui confirmação legada v1 no coletor
+  real, para que partes substituídas não continuem válidas pelo fallback.
+- Suíte local sem os arquivos `*-rules.mjs`: 202/202 aprovados, incluindo os 16
+  testes novos. Após os últimos ajustes, 45/45 nos testes direcionados de
+  celebração, operação de designações e interface clássica.
+- `npm.cmd run lint`, `npm.cmd run build` e `git diff --check`: aprovados.
+- `node scripts/validar-celebracao-browser.mjs`: primeira tentativa aprovada com
+  a interface atual e adaptadores DEV em memória. Requisições externas bloqueadas.
+  Conferiu cadastro na sexta, salvamento do orador e de um apoio, troca PT/ES,
+  alteração para domingo, preservação das partes normais e impressão.
+- Capturas e relatório em `tmp/celebracao-browser/`; PDF de teste A4 com uma
+  página, conferido com `pdfinfo` e renderizado com Poppler para inspeção visual.
+- Os dois testes de Rules recusaram a execução sem o emulador obrigatório
+  `127.0.0.1:8186`; não são parte dos 202 testes aprovados. Nenhuma Rule mudou.
+
+Estas evidências comprovam a implementação e a operação locais. Publicação,
+gravação em Firebase real, mensagens reais e sincronização com Google Agenda
+real permanecem fora desta validação.
+
+## 10. Publicação autorizada — 25/10/2026
+
+Após o pedido “blz, pode publicar”, foi publicado somente o Firebase Hosting de
+`rvm-sbssc`, em https://rvm-sbssc.web.app, com a versão `6.1.308`. A versão foi
+ajustada em paralelo em `package.json`/lockfile e preservada, sem incremento
+adicional pelo fluxo automático de deploy.
+
+- Conferência do alvo e ambiente: aprovada pelo guard do projeto e pelo ambiente
+  efetivo de produção carregado pelo Vite.
+- Novo build de produção/PWA: aprovado.
+- `firebase deploy --project rvm-sbssc --only hosting --non-interactive`:
+  concluído com release confirmado.
+- Verificação HTTP dos 30 arquivos de `dist`: todos retornaram 200 e hashes
+  SHA-256 idênticos aos arquivos locais. A versão e o editor da celebração estão
+  incluídos no JavaScript publicado.
+- Cache de HTML e service worker conferido; relatório local em
+  `tmp/celebracao-hosting-verificacao.json`.
+- Nenhuma publicação de Rules, índices ou Worker, migração, alteração de dados
+  operacionais, mensagem real, gravação no Google Agenda, commit ou push.
+
+A publicação e os arquivos servidos foram confirmados por HTTP. A aceitação
+autenticada em produção permanece distinta do ensaio local já realizado.

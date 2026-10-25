@@ -5,6 +5,7 @@ import { listarSlotsReuniao, avaliarElegibilidadeGrupo } from './designacoesPorG
 import { normalizeOcorrenciaReuniao, TIPOS_REUNIAO } from './ocorrenciasReuniao.js';
 import { criarFilaGrupo, legacyKeyFromDesignacao } from './integracoesGrupo.js';
 import { buildLegacyAssignmentKey } from './assignmentIdentity.js';
+import { getCelebracao } from './celebracao.js';
 
 // A interface existente continua editando uma lista do grupo; a persistência
 // valida somente seus deltas e conserva a fonte completa dos demais grupos.
@@ -25,8 +26,8 @@ export function prepararEdicaoClassica({ anteriores, proximas, config, grupoId, 
                 validarDataReuniao(bloco.data); validarHorarioReuniao(bloco.horario);
                 if (getProgramacaoWeekStartISO({ dataInicio: bloco.data }) !== getProgramacaoWeekStartISO(old)) throw new Error('A data deve pertencer à semana desta programação.');
             }
-            const before = new Map(listarSlotsReuniao(old, tipo).map(s => [s.slotId, s]));
-            const after = new Map(listarSlotsReuniao(result, tipo).map(s => [s.slotId, s]));
+            const before = new Map(listarSlotsReuniao(old, tipo, { config }).map(s => [s.slotId, s]));
+            const after = new Map(listarSlotsReuniao(result, tipo, { config }).map(s => [s.slotId, s]));
             for (const id of new Set([...before.keys(), ...after.keys()])) {
                 const previous = before.get(id), slot = after.get(id);
                 const personId = String(slot?.pessoa?.id || '');
@@ -57,9 +58,10 @@ export function criarReferenciasInterfaceClassica({ programacoes, config, grupoI
 // Recorte exclusivamente de leitura: dados cancelados/desabilitados permanecem
 // na fonte privada. Contatos usados no envio vêm do cadastro atual.
 export function projetarProgramaOperacionalInterface(programa, config, alunos = []) {
-    if (!config?.grupoSelecionadoId) return programa;
-    const meio = normalizeOcorrenciaReuniao(programa, 'meioSemana', config).operacional;
-    const fim = normalizeOcorrenciaReuniao(programa, 'fimDeSemana', config).operacional;
+    if (!programa || !config?.grupoSelecionadoId) return programa;
+    const c = getCelebracao(programa, config);
+    const meio = normalizeOcorrenciaReuniao(programa, 'meioSemana', config).operacional && c?.tipoReuniao !== 'meioSemana';
+    const fim = normalizeOcorrenciaReuniao(programa, 'fimDeSemana', config).operacional && c?.tipoReuniao !== 'fimDeSemana';
     const pessoa = p => p ? { ...p, ...(alunos.find(a => String(a.id) === String(p.id)) || {}) } : p;
     const apoios = src => Object.fromEntries(Object.entries(src || {}).map(([key, values]) => [key, Array.isArray(values) ? values.map(pessoa) : values]));
     return { ...programa,
@@ -76,7 +78,7 @@ export function projetarProgramaOperacionalInterface(programa, config, alunos = 
 
 export function avaliarSlotClassico({ aluno, alunos, programacao, targetSlot, config, cargosMap }) {
     const tipo = targetSlot.fds ? 'fimDeSemana' : 'meioSemana';
-    const slot = listarSlotsReuniao(programacao, tipo).find(s => {
+    const slot = listarSlotsReuniao(programacao, tipo, { config }).find(s => {
         if (targetSlot.responsabilidadeKey) return s.apoio && s.path.at(-2) === targetSlot.responsabilidadeKey && Number(s.path.at(-1)) === Number(targetSlot.itemIndex);
         if (targetSlot.parteId != null) return String(s.parte?.id) === String(targetSlot.parteId) && s.slotKey === targetSlot.key;
         return !s.parte && !s.apoio && s.slotKey === targetSlot.key;

@@ -6,6 +6,7 @@ import { getAssignmentCapabilityForSlot, getAssignmentCapabilityLabel } from '..
 import { useSectionMessages } from '../../i18n';
 import { dialog } from '../../utils/dialog';
 import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
+import CelebracaoEditor from '../Celebracao.jsx';
 
 // Designar operacional do ensaio. Todos os caminhos usam a mesma preparação;
 // o Designar legado permanece isolado até a adaptação pública/de integrações.
@@ -30,7 +31,7 @@ export default function DesignacoesGrupo({ programacoes, alunos, config, grupoId
     }, [alvo]);
     const escolher = (programacao, tipo, slot) => { setAlvo({ programacaoId: programacao.id, tipo, slotId: slot.slotId, pessoaAnteriorId: String(slot.pessoa?.id ?? '') }); setPessoaId(''); setErro(''); };
     const programacao = programacoes.find(item => item.id === alvo?.programacaoId);
-    const slot = programacao && listarSlotsReuniao(programacao, alvo.tipo).find(item => item.slotId === alvo.slotId);
+    const slot = programacao && listarSlotsReuniao(programacao, alvo.tipo, { config }).find(item => item.slotId === alvo.slotId);
     const candidatos = slot ? classificarCandidatosGrupo({ alunos, programacoes, config, grupoId, programacao,
         tipo: alvo.tipo, slot, cargosMap, lang }) : [];
     const atribuir = async (destino, alunoId) => {
@@ -65,10 +66,11 @@ export default function DesignacoesGrupo({ programacoes, alunos, config, grupoId
                 <h3 className="font-bold">{semana.semana}</h3>
                 {TIPOS_REUNIAO.map(tipo => {
                     const reuniao = normalizeOcorrenciaReuniao(semana, tipo, config);
+                    if (reuniao.celebracao) return <CelebracaoEditor key={tipo} programa={semana} programacoes={programacoes} config={config} alunos={alunos} cargosMap={cargosMap} onExecutar={onExecutar} busy={busy} />;
                     if (!reuniao.operacional || semana.arquivada) return <p key={tipo} className="text-sm text-slate-500">{G[tipo]} — {reuniao.cancelada ? T.cancelada : reuniao.bloqueadaPorEvento ? T.eventoBloqueante : T.inativa}</p>;
                     return <div key={tipo} className="border rounded-xl p-3 space-y-2">
                         <h4 className="font-bold">{G[tipo]} — {reuniao.data} {reuniao.horario}</h4>
-                        {listarSlotsReuniao(semana, tipo).map(s => {
+                        {listarSlotsReuniao(semana, tipo, { config }).map(s => {
                             const label = getAssignmentCapabilityLabel(getAssignmentCapabilityForSlot({ parte: s.parte, slotKey: s.slotKey }), lang);
                             const pessoa = alunos.find(item => String(item.id) === String(s.pessoa?.id));
                             const aviso = s.pessoa && (!pessoa || !avaliarElegibilidadeGrupo({ aluno: pessoa, alunos, programacao: semana, tipo,

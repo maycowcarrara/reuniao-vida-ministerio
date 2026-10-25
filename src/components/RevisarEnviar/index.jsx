@@ -20,6 +20,9 @@ import {
 import RevisarEnviarHeader from './RevisarEnviarHeader';
 import "./revisarEnviar.print.css";
 import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
+import SemanaCelebracaoPrint from '../SemanaCelebracaoPrint.jsx';
+import IntegracoesGrupoReal from '../IntegracoesGrupoReal.jsx';
+import { getCelebracao } from '../../utils/celebracao.js';
 
 import { getI18n } from '../../utils/revisarEnviar/translations';
 import { getMeetingDateISOFromSemana, formatarDataFolha, getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
@@ -76,7 +79,8 @@ const RevisarEnviar = ({
     reviewShortcutRequest = null,
     onSolicitarSubstituicao = null,
     somenteImpressao = false,
-    onSincronizarHistoricoGrupo = null
+    onSincronizarHistoricoGrupo = null,
+    ownerUid = ''
 }) => {
     const { lang, t } = getI18n(config);
 
@@ -358,7 +362,7 @@ const RevisarEnviar = ({
         // 🚨 A CORREÇÃO ESTÁ AQUI:
         // Se houver data manual, respeita... a menos que seja Visita!
         // Isso impede que o "dataInput" salvo como segunda-feira atropele nosso cálculo.
-        if (eventoEspecial?.dataInput && !isVisita) {
+        if (eventoEspecial?.dataInput && !isVisita && tipoEvento !== 'celebracao') {
             return eventoEspecial.dataInput;
         }
 
@@ -1147,14 +1151,15 @@ const RevisarEnviar = ({
                         <div key={idxPag} className="page-break bg-white">
                             <div
                                 className="page-content"
-                                data-qtd={somenteFimDeSemana(semanasDaPagina[0], config) ? 1 : qtdSemanas}
-                                data-incluir-fds={qtdSemanas === 1 && incluirFimDeSemana ? 'true' : 'false'}
+                                data-qtd={getCelebracao(semanasDaPagina[0], config) || somenteFimDeSemana(semanasDaPagina[0], config) ? 1 : qtdSemanas}
+                                data-incluir-fds={getCelebracao(semanasDaPagina[0], config) || qtdSemanas === 1 && incluirFimDeSemana ? 'true' : 'false'}
                                 style={{
                                     boxSizing: 'border-box',
                                     gap: layout.gap,
                                 }}
                             >
                                 {semanasDaPagina.map((semana, idxSem) => {
+                                    if (getCelebracao(semana, config)) return <SemanaCelebracaoPrint key={semana.id} programa={semana} config={config} lang={lang} />;
                                     if (somenteFimDeSemana(semana, config)) return <div key={semana.id} data-fim-isolado="true">{renderFimDeSemanaPrint(semana, true)}</div>;
                                     const dataISO = getDataReuniaoISO(semana);
                                     const horarioExib = semana.meioSemana?.horario || config?.horarioReuniao || config?.horario || '';
@@ -1388,9 +1393,11 @@ const RevisarEnviar = ({
             </div>
 
             {/* ABA NOTIFICAR */}
-            {abaAtiva === 'notificar' && (
+            {abaAtiva === 'notificar' && (<>
+                {config.grupoSelecionadoId && semanasParaImprimir.some(p => getCelebracao(p, config)) && <IntegracoesGrupoReal ownerUid={ownerUid} config={config} grupoId={config.grupoSelecionadoId} alunos={alunos} confirmacoes={confirmacoes}
+                    programacoes={semanasParaImprimir.filter(p => getCelebracao(p, config))} />}
                 <RevisarEnviarNotificarTab referenciasGrupo={referenciasGrupo} alunosCadastrados={alunos}
-                    semanasParaNotificar={semanasParaImprimir}
+                    semanasParaNotificar={semanasParaImprimir.filter(p => !getCelebracao(p, config))}
                     config={config}
                     confirmacoes={confirmacoes}
                     lang={lang}
@@ -1405,7 +1412,7 @@ const RevisarEnviar = ({
                     markSent={markSent}
                     isSent={isSent}
                     onSolicitarSubstituicao={onSolicitarSubstituicao}
-                />
+                /></>
             )}
         </div>
     );

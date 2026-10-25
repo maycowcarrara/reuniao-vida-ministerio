@@ -2,6 +2,9 @@ import React from 'react';
 import { getSemanaSortTimestamp } from '../../utils/revisarEnviar/dates';
 import { isBibleStudyPart, isPrayerPart, isSongOnlyPart } from '../../utils/meetingParts';
 import { getTipoEventoSemana } from '../../utils/eventos';
+import { getCelebracao } from '../../utils/celebracao.js';
+import { progressoSemanaCelebracao } from '../../utils/progressoCelebracao.js';
+import { CelebracaoResumo } from '../Celebracao.jsx';
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
     MEIO_SEMANA_RESPONSABILIDADES,
@@ -26,6 +29,7 @@ const NavegadorSemanas = ({
     const hasTextValue = (value) => !!String(value || '').trim();
 
     const getSemanaProgress = (sem) => {
+        if (getCelebracao(sem, config)) return progressoSemanaCelebracao(sem, config);
         const totals = { total: 0, preenchidas: 0 };
         const addRequiredSlot = (value) => {
             totals.total += 1;
@@ -261,6 +265,7 @@ const NavegadorSemanas = ({
                                 </div>
 
                                 <div className="text-xs text-gray-500 space-y-1.5 leading-tight">
+                                    {getCelebracao(sem, config) ? <CelebracaoResumo programa={sem} config={config} lang={lang} /> : <>
                                     <div className="truncate text-[11px]">
                                         <span className="font-semibold text-gray-700">{TT.presidente}:</span> <span className="text-gray-600">{sem.presidente?.nome || '--'}</span>
                                     </div>
@@ -316,6 +321,7 @@ const NavegadorSemanas = ({
                                             </div>
                                         )}
                                     </div>
+                                    </>}
                                 </div>
                             </div>
                         </button>

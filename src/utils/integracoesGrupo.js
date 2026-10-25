@@ -4,9 +4,11 @@ import { getGrupoEfetivoId, getGrupoLegadoId, getGrupoProgramacao, isProgramacao
 import { ASSIGNMENT_CAPABILITIES, getAssignmentCapabilityForSlot } from './assignmentEligibility.js';
 import { getMeetingDateISOFromSemana } from './revisarEnviar/dates.js';
 import { isBibleStudyPart, isPrayerPart } from './meetingParts.js';
+import { textosCelebracao } from './celebracao.js';
 
 const legacySlot = item => {
     const path = item.path;
+    if (item.celebracao) return `celebracao_${path.at(-2)}_${path.at(-1)}`;
     if (item.apoio) return `${item.tipoReuniao === 'fimDeSemana' ? 'fds' : 'meio'}_${path.at(-2)}_${path.at(-1)}`;
     if (item.tipoReuniao === 'fimDeSemana') return ({ presidente_fds: 'fds_presidente', oracao_fds: 'fds_oracao_final', dirigente_sentinela: 'fds_dirigente_sentinela', leitor_sentinela: 'fds_leitor_sentinela' })[item.slotKey];
     return item.parte ? item.parte.id : 'presidente';
@@ -31,7 +33,8 @@ export function criarFilaGrupo({ programacoes, config, grupoId, confirmacoes = [
     if (!grupo?.ativo) return [];
     return selecionarDesignacoes({ programacoes: programacoes.filter(p => getGrupoEfetivoId(p, config) === grupoId), config }).map(item => {
         const capability = getAssignmentCapabilityForSlot({ parte: item.parte, slotKey: item.slotKey });
-        const titulo = item.parte?.titulo || ASSIGNMENT_CAPABILITIES.find(c => c.key === capability)?.labels[grupo.idioma] || (grupo.idioma === 'es' ? 'Asignación' : 'Designação');
+        const tituloBase = item.parte?.titulo || ASSIGNMENT_CAPABILITIES.find(c => c.key === capability)?.labels[grupo.idioma] || (grupo.idioma === 'es' ? 'Asignación' : 'Designação');
+        const titulo = item.celebracao ? `${textosCelebracao(grupo.idioma).titulo} — ${tituloBase}` : tituloBase;
         const identity = identityFromDesignacao(item);
         const key = buildAssignmentKey(identity);
         const legacyKey = grupoId === getGrupoLegadoId(config) ? legacyKeyFromDesignacao(item, config) : null;
@@ -91,7 +94,7 @@ const agendaTimes = item => {
     let inicio = new Date(`${data}T${horario}:00`);
     const tempoParte = p => Math.max(1, parseInt(p.tempo, 10) || 5) + (/leitura|lectura/i.test(p.titulo || '') || p.secao === 'ministerio' ? 1 : 0);
     const partes = item.programacao.partes || [];
-    let duracao = Number(item.reuniao.duracaoMinutos) || (item.tipoReuniao === 'fimDeSemana' ? 105 : partes.reduce((total, p) => total + tempoParte(p), 0) || 5);
+    let duracao = item.celebracao ? 60 : Number(item.reuniao.duracaoMinutos) || (item.tipoReuniao === 'fimDeSemana' ? 105 : partes.reduce((total, p) => total + tempoParte(p), 0) || 5);
     if (item.tipoReuniao === 'meioSemana' && item.parte) {
         const index = partes.findIndex(p => String(p.id) === String(item.parte.id));
         inicio = new Date(inicio.getTime() + partes.slice(0, index).reduce((total, p) => total + tempoParte(p), 0) * 60000);
@@ -111,14 +114,14 @@ export async function planejarAgendaGrupo({ programacoes, config, grupoId, vincu
         // Vínculos inventariados legados são explícitos, nunca deduzidos por título/data.
         if (antigos[0]?.identityVersion !== 2 && antigos.length && grupoId !== getGrupoLegadoId(config)) throw new Error('Vínculo legado fora do grupo legado.');
         const marcador = row.item.programacao.identidadeLegada;
-        if (!antigos.length && isProgramacaoV2(row.item.programacao) && !marcador && row.item.programacao.agendaSincronizadaEm && grupoId === getGrupoLegadoId(config)) {
+        if (!row.item.celebracao && !antigos.length && isProgramacaoV2(row.item.programacao) && !marcador && row.item.programacao.agendaSincronizadaEm && grupoId === getGrupoLegadoId(config)) {
             throw new Error('Programação já sincronizada exige inventário dos vínculos antigos.');
         }
         let legacyId = '';
         const origemLegada = !isProgramacaoV2(row.item.programacao) || marcador?.versao === 1;
         const parteLegada = !marcador || !row.item.parte || !!marcador.partes?.[String(row.item.parte.id)];
         const tipoLegado = !marcador || row.tipoReuniao !== 'fimDeSemana' || !!marcador.dataFimDeSemana;
-        if (origemLegada && parteLegada && tipoLegado && grupoId === getGrupoLegadoId(config)) {
+        if (!row.item.celebracao && origemLegada && parteLegada && tipoLegado && grupoId === getGrupoLegadoId(config)) {
             const fds = row.tipoReuniao === 'fimDeSemana';
             const suffix = { presidente_fds: 'presidentefds', oracao_fds: 'oracaofds', dirigente_sentinela: 'dirigentesentinela', leitor_sentinela: 'leitorsentinela' };
             const apoio = { videoZoomSom: 'av', indicadoresEntrada: 'entrada', indicadoresAuditorio: 'auditorio', microfonesVolantes: 'microfones' };

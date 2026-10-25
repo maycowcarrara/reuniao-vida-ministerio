@@ -136,7 +136,7 @@ const getMeetingDateForWeek = (week, config) => {
     const isVisita = tipoEvento === 'visita';
     const fallbackStr = week?.dataReuniao || week?.dataExata || week?.dataInicio || week?.data || null;
 
-    if (eventoEspecial?.dataInput && !isVisita) {
+    if (eventoEspecial?.dataInput && !isVisita && tipoEvento !== 'celebracao') {
         return eventoEspecial.dataInput;
     }
 
@@ -181,7 +181,7 @@ const getWeekendDateForWeek = (week, config) => {
     }) || fallbackStr || '';
 };
 
-const collectAssignmentKeysForWeek = (week, config = {}) => {
+export const collectAssignmentKeysForWeek = (week, config = {}) => {
     const keys = new Set();
     if (week?.arquivada) return keys;
     const dataISO = getMeetingDateForWeek(week, config);
@@ -200,7 +200,8 @@ const collectAssignmentKeysForWeek = (week, config = {}) => {
         }));
     };
 
-    if (normalizeOcorrenciaReuniao(week, 'meioSemana', config).operacional) {
+    const meio = normalizeOcorrenciaReuniao(week, 'meioSemana', config);
+    if (meio.operacional && !meio.celebracao) {
     if (week?.presidente) {
         addAssignment(week.presidente, 'presidente', 'presidente');
     }
@@ -230,7 +231,8 @@ const collectAssignmentKeysForWeek = (week, config = {}) => {
 
     }
     const fds = normalizeFimDeSemana(week?.fimDeSemana);
-    if (normalizeOcorrenciaReuniao(week, 'fimDeSemana', config).operacional) {
+    const fim = normalizeOcorrenciaReuniao(week, 'fimDeSemana', config);
+    if (fim.operacional && !fim.celebracao) {
         const dataFds = getWeekendDateForWeek(week, config) || dataISO;
         const addWeekendAssignment = (pessoa, role, parteId) => {
             const pessoaId = pessoa?.id || pessoa?.nome;

@@ -10,6 +10,8 @@ import {
 import { getWeekdayJsDay } from '../config/appConfig';
 import { getCanonicalWeekStartISO, getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
+import { textosCelebracao, eventoSubstituiReuniao, getCelebracao } from '../utils/celebracao.js';
+import { progressoSemanaCelebracao } from '../utils/progressoCelebracao.js';
 import { formatText, useSectionMessages } from '../i18n';
 import { toast } from '../utils/toast';
 import { dialog } from '../utils/dialog';
@@ -54,13 +56,15 @@ export default function Dashboard({
         const lang = config?.idioma === 'es' ? 'es' : 'pt';
 
         const getDataReuniaoISO = (sem) => {
+            const c = getCelebracao(sem, config);
+            if (c?.tipoReuniao === 'meioSemana') return c.data;
             if (config?.grupoSelecionadoId && !normalizeOcorrenciaReuniao(sem, 'meioSemana', config).operacional) return sem.fimDeSemana?.data || '';
             if (sem?.meioSemana?.data) return sem.meioSemana.data;
             const eventoEspecial = getEventoEspecialDaSemana(sem, config);
             const tipoEvento = getTipoEventoSemana(sem, config);
             const isVisita = tipoEvento === 'visita';
 
-            if (eventoEspecial?.dataInput && !isVisita) {
+            if (eventoEspecial?.dataInput && !isVisita && tipoEvento !== 'celebracao') {
                 return eventoEspecial.dataInput;
             }
 
@@ -158,9 +162,10 @@ export default function Dashboard({
                 });
             };
 
+            if (getCelebracao(semana, config)) return progressoSemanaCelebracao(semana, config);
             const totals = { total: 0, preenchidas: 0 };
 
-            if (!config?.grupoSelecionadoId || normalizeOcorrenciaReuniao(semana, 'meioSemana', config).operacional) {
+            if (getCelebracao(semana, config)?.tipoReuniao !== 'meioSemana' && (!config?.grupoSelecionadoId || normalizeOcorrenciaReuniao(semana, 'meioSemana', config).operacional)) {
             addRequiredSlot(semana?.presidente, totals);
 
             (Array.isArray(semana?.partes) ? semana.partes : []).forEach((parte) => {
@@ -332,7 +337,7 @@ export default function Dashboard({
         const meetingJsDay = padrao && !padrao.meioSemana.habilitada ? (padrao.fimDeSemana.frequencia === 'semanal' && padrao.fimDeSemana.dia ? getWeekdayJsDay(padrao.fimDeSemana.dia) : null) : getWeekdayJsDay(config?.dia_reuniao || config?.diaReuniao || config?.diaSemana);
         const semanasBloqueadas = new Set(
             (config?.eventosAnuais || [])
-                .filter((evento) => isTipoEventoBloqueante(evento?.tipo))
+                .filter((evento) => eventoSubstituiReuniao(evento, padrao && !padrao.meioSemana.habilitada ? 'fimDeSemana' : 'meioSemana'))
                 .map((evento) => String(evento?.dataInicio || '').trim())
                 .filter(Boolean)
         );
@@ -519,6 +524,8 @@ export default function Dashboard({
 
         ativas.forEach((semana) => {
             if (isTipoEventoBloqueante(getTipoEventoSemana(semana, config))) return;
+            const c = getCelebracao(semana, config);
+            if (c) MEIO_SEMANA_RESPONSABILIDADES.forEach(({ storageKey, slotKey }) => c.responsabilidades[storageKey].forEach(pessoa => addBalance(slotKey, pessoa)));
             addBalance('presidente', semana?.presidente);
 
             (Array.isArray(semana?.partes) ? semana.partes : []).forEach((parte) => {
@@ -616,7 +623,8 @@ export default function Dashboard({
             'visita': txt.eventos.visita,
             'assembleia_betel': txt.eventos.assembleia_betel,
             'assembleia_circuito': txt.eventos.assembleia_circuito,
-            'congresso': txt.eventos.congresso
+            'congresso': txt.eventos.congresso,
+            'celebracao': textosCelebracao(config?.idioma).titulo
         };
         return map[tipo] || tipo;
     };
@@ -629,6 +637,7 @@ export default function Dashboard({
     };
 
     const getHelpText = () => {
+        if (tipoEvento === 'celebracao') return textosCelebracao(config?.idioma).ajuda;
         if (tipoEvento === 'visita') return txt.eventos.helpVisita;
         if (tipoEvento === 'congresso') return txt.eventos.helpCongresso;
         return txt.eventos.helpAssembleia;
@@ -1259,6 +1268,7 @@ export default function Dashboard({
                                             <option value="assembleia_betel">{txt.eventos.assembleia_betel}</option>
                                             <option value="assembleia_circuito">{txt.eventos.assembleia_circuito}</option>
                                             <option value="congresso">{txt.eventos.congresso}</option>
+                                            <option value="celebracao">{textosCelebracao(config?.idioma).titulo}</option>
                                         </select>
                                     </div>
                                     <div>

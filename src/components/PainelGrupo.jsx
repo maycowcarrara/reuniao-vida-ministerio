@@ -5,6 +5,7 @@ import { listarSlotsReuniao } from '../utils/designacoesPorGrupo.js';
 import { useSectionMessages } from '../i18n';
 import { useProtecaoTrocaGrupo } from '../hooks/useProtecaoTrocaGrupo.js';
 import { dialog } from '../utils/dialog';
+import { textosCelebracao } from '../utils/celebracao.js';
 
 export default function PainelGrupo({ programacoes, alunos, config, grupoId, onEvento, onHistorico, onDesignar, busy }) {
     const T = useSectionMessages('operacaoGrupo');
@@ -41,16 +42,17 @@ export default function PainelGrupo({ programacoes, alunos, config, grupoId, onE
         <button className="underline" onClick={onDesignar}>{T.designar}</button>
         {erro && <p role="alert">{erro}</p>}{mensagem && <p role="status">{mensagem}</p>}
         <ul className="space-y-2">{reunioes.map(({ programacao, tipoReuniao, reuniao }) => <li key={`${programacao.id}-${tipoReuniao}`} className="border bg-white rounded-xl p-3">
-            {G[tipoReuniao]} — {reuniao.data} {reuniao.horario} · {T.designadas}: {listarSlotsReuniao(programacao, tipoReuniao, { incluirVagos: false }).length}
+            {reuniao.celebracao ? textosCelebracao(config.grupos[grupoId].idioma).titulo : G[tipoReuniao]} — {reuniao.data} {reuniao.horario} · {T.designadas}: {listarSlotsReuniao(programacao, tipoReuniao, { incluirVagos: false, config }).length}
             {reuniao.eventoEspecial && <p>{T.eventos}: {reuniao.eventoEspecial.tipo}</p>}
         </li>)}</ul>
         <fieldset disabled={busy || pendente} className="border bg-white rounded-xl p-4 space-y-3">
             <legend>{T.eventos}</legend>
             <label>{T.dataEvento}<input type="date" value={data} onChange={event => setData(event.target.value)} className="block border rounded p-2" /></label>
-            <label>{T.tipoEvento}<select value={tipo} onChange={event => setTipo(event.target.value)} className="block border rounded p-2">{['normal', 'visita', 'assembleia', 'congresso'].map(key => <option key={key} value={key}>{T[key]}</option>)}</select></label>
+            <label>{T.tipoEvento}<select value={tipo} onChange={event => setTipo(event.target.value)} className="block border rounded p-2">{['normal', 'visita', 'assembleia', 'congresso', 'celebracao'].map(key => <option key={key} value={key}>{key === 'celebracao' ? textosCelebracao(config.grupos[grupoId].idioma).titulo : T[key]}</option>)}</select></label>
             <p className="text-sm">{T.eventoAviso}</p>
             <button disabled={!data} onClick={() => agir(async () => { await onEvento({ grupoId, data, tipo }); setData(''); })}>{T.salvarEvento}</button>
-            <ul>{config.grupos[grupoId].eventosAnuais.map(evento => <li key={evento.dataInicio}>{evento.dataInput || evento.dataInicio} — {T[evento.tipo] || evento.tipo}</li>)}</ul>
+            {tipo === 'celebracao' && <p>{textosCelebracao(config.grupos[grupoId].idioma).ajuda}</p>}
+            <ul>{config.grupos[grupoId].eventosAnuais.map(evento => <li key={evento.dataInicio}>{evento.dataInput || evento.dataInicio} — {evento.tipo === 'celebracao' ? textosCelebracao(config.grupos[grupoId].idioma).titulo : T[evento.tipo] || evento.tipo}</li>)}</ul>
         </fieldset>
         <fieldset disabled={busy || pendente} className="border bg-white rounded-xl p-4 space-y-3">
             <legend>{T.historico}</legend>

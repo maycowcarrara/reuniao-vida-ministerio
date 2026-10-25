@@ -3,7 +3,8 @@ import { Edit, Plus, Info, CheckCircle, AlertTriangle, ArrowUp, ArrowDown, Trash
 import { TRANSLATIONS, SECAO_UI } from '../../utils/importador/constants';
 import { formatHm } from '../../utils/importador/helpers';
 import { calcularTotalInfo } from '../../utils/importador/parser';
-import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
+import { getEventoEspecialPorSemana, isEventoBloqueiaImportacao } from '../../utils/eventos';
+import { textosCelebracao } from '../../utils/celebracao.js';
 import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
 import { formatText, useSectionMessages } from '../../i18n';
 import { dialog } from '../../utils/dialog';
@@ -108,7 +109,11 @@ export default function RevisarImportacao({ dados, setDados, onConfirm, onCancel
         );
 
         // APLICA O BLOQUEIO SE ENCONTRAR NO BANCO
-        if (ehAssembleiaNaProg || isTipoEventoBloqueante(temEventoNoDashboard?.tipo)) {
+        if (temEventoNoDashboard?.tipo === 'celebracao' && isEventoBloqueiaImportacao(temEventoNoDashboard)) {
+            await dialog.alert({ title: textosCelebracao(lang).titulo, message: `${textosCelebracao(lang).bloqueio} ${temEventoNoDashboard.dataInput}`, variant: 'danger' });
+            return;
+        }
+        if (ehAssembleiaNaProg || isEventoBloqueiaImportacao(temEventoNoDashboard)) {
             await dialog.alert({
                 title: 'Bloqueio de Segurança',
                 message: formatText(t.bloqueioSegurancaDataTpl, { data: dataImportada }),

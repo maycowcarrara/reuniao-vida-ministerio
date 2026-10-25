@@ -11,6 +11,9 @@ import NavegadorSemanas from './NavegadorSemanas';
 import SidebarAlunos from './SidebarAlunos';
 import DesignarHeader from './DesignarHeader';
 import CampoTextoAutomatico from './CampoTextoAutomatico';
+import CelebracaoEditor from '../Celebracao.jsx';
+import { getCelebracao } from '../../utils/celebracao.js';
+import { progressoSemanaCelebracao } from '../../utils/progressoCelebracao.js';
 import {
     SECOES_ORDEM, SECOES_META, normalizar, normalizarSecao,
     isAbertura, isEncerramento, isLinhaInicialFinal,
@@ -26,7 +29,8 @@ import { dialog } from '../../utils/dialog';
 import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
 import { isWhatWouldYouSayPart } from '../../utils/meetingParts';
-import { avaliarSlotClassico } from '../../utils/interfaceClassicaGrupos.js';
+import { avaliarSlotClassico, projetarProgramaOperacionalInterface } from '../../utils/interfaceClassicaGrupos.js';
+import { selecionarDesignacoes } from '../../utils/designacoesPorGrupo.js';
 import { normalizeOcorrenciaReuniao } from '../../utils/ocorrenciasReuniao.js';
 import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
 import {
@@ -56,7 +60,9 @@ const Designar = ({
     setSharedWeekSelection = () => { },
     substitutionShortcutRequest = null,
     onRepublicarQuadroPublico = null,
-    agendamentoGrupo = null
+    agendamentoGrupo = null,
+    onOperacaoCelebracao,
+    programacoesCompletas = listaProgramacoes
 }) => {
     const [agendamentoAberto, setAgendamentoAberto] = useState(false);
     const [semanaAtivaIndex, setSemanaAtivaIndex] = useState(0);
@@ -175,6 +181,11 @@ const Designar = ({
     const getSubstituicoesSemana = (sem) => (Array.isArray(sem?.substituicoes) ? sem.substituicoes : []).filter((item) => !item?.canceladaEm);
 
     const getPessoasDesignadasSemana = (sem) => {
+        if (getCelebracao(sem, config)) return selecionarDesignacoes({ programacoes: [sem], config }).map(item => ({
+            pessoa: item.pessoa, slotKey: item.slotKey, label: item.parte?.titulo || getFimDeSemanaLabel(item.slotKey),
+            context: { parteId: item.parte?.id, fds: item.tipoReuniao === 'fimDeSemana', meioSemana: item.tipoReuniao === 'meioSemana',
+                responsabilidadeKey: item.apoio ? item.path.at(-2) : undefined, itemIndex: item.apoio ? item.path.at(-1) : undefined, responsabilidade: item.apoio },
+        }));
         const assigned = [];
         const add = (pessoa, slotKey, label, extra = {}) => {
             if (!hasPessoaDesignada(pessoa)) return;
@@ -272,7 +283,7 @@ const Designar = ({
 
         if (sem?.meioSemana?.data) {
             dataBaseStr = sem.meioSemana.data;
-        } else if (eventoConfig?.dataInput && !isVisita) {
+        } else if (eventoConfig?.dataInput && !isVisita && tipoEvento !== 'celebracao') {
             dataBaseStr = eventoConfig.dataInput;
         } else {
             try {
@@ -366,6 +377,11 @@ const Designar = ({
     const getSemanaRealIndexFromFilteredIndex = (idxFiltrado) => getSemanaRealIndexByKey(getSemanaKeyByFilteredIndex(idxFiltrado));
     const getSemanaIndexContexto = () => Number.isInteger(slotAtivo?.semanaIndex) ? slotAtivo.semanaIndex : semanaAtivaIndexAtual;
     const isSemanaTotalmenteDesignada = useCallback((sem) => {
+        const c = getCelebracao(sem, config);
+        if (c) {
+            const progresso = progressoSemanaCelebracao(sem, config);
+            return progresso.preenchidas === progresso.total;
+        }
         const hasTextoPreenchido = (value) => !!String(value || '').trim();
         const hasResponsabilidadePreenchida = (responsabilidades, storageKey) =>
             (responsabilidades?.[storageKey] || []).some(hasPessoaDesignada);
@@ -1524,6 +1540,7 @@ const Designar = ({
     };
 
     const renderFimDeSemana = (sem, semanaIndexFiltrado, semanaKey) => {
+        if (getCelebracao(sem, config)?.tipoReuniao === 'fimDeSemana') return <CelebracaoEditor programa={sem} programacoes={programacoesCompletas} config={config} alunos={alunos} cargosMap={cargosMap} onExecutar={onOperacaoCelebracao} />;
         if (config.grupoSelecionadoId && !config.grupos?.[config.grupoSelecionadoId]?.fimDeSemana.habilitada) return null;
         const fds = getFimDeSemanaParaSemana(sem);
         const isVisita = getTipoEventoSemana(sem, config) === 'visita';
@@ -1750,7 +1767,8 @@ const Designar = ({
                                     semanasParaExibir.map(({ sem, idx, key }) => {
                                         const partesDaSemana = Array.isArray(sem?.partes) ? sem.partes : [];
                                         const tempoTotalMeta = getTempoTotalMeta(partesDaSemana);
-                                        const meioAtivo = !config.grupoSelecionadoId || normalizeOcorrenciaReuniao(sem, 'meioSemana', config).operacional;
+                                        const celebracao = getCelebracao(sem, config);
+                                        const meioAtivo = celebracao?.tipoReuniao !== 'meioSemana' && (!config.grupoSelecionadoId || normalizeOcorrenciaReuniao(sem, 'meioSemana', config).operacional);
                                         const isArq = !!sem?.arquivada;
                                         const publicadaNoQuadro = sem?.publicadaNoQuadro !== false;
                                         const substituicoesSemana = getSubstituicoesSemana(sem);
@@ -1853,6 +1871,7 @@ const Designar = ({
                                                     </div>
                                                 ) : (
                                                     <>
+                                                        {celebracao?.tipoReuniao === 'meioSemana' && <CelebracaoEditor programa={sem} programacoes={programacoesCompletas} config={config} alunos={alunos} cargosMap={cargosMap} onExecutar={onOperacaoCelebracao} />}
                                                         {meioAtivo && <>
                                                         <div className="flex items-center gap-2 px-1 pt-1">
                                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{TT.meioDeSemana}</span>
@@ -2028,7 +2047,7 @@ const Designar = ({
             )}
 
             {/* MODAL SUGESTÃO */}
-            <ModalSugestao avaliarCandidato={config.grupoSelecionadoId ? aluno => getAlunoEligibilityForSlot(aluno, { ...modalSugestao, semanaIndex: modalSugestao.semanaIndex }) : null} isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={listaFiltradaPorFlag?.[modalSugestao.semanaIndex]} modalKey={modalSugestao.key} cargosMap={cargosMap} lang={lang} modo={modalSugestao.modo} pessoaAtual={modalSugestao.anterior} />
+            <ModalSugestao config={config} avaliarCandidato={config.grupoSelecionadoId ? aluno => getAlunoEligibilityForSlot(aluno, { ...modalSugestao, semanaIndex: modalSugestao.semanaIndex }) : null} isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes.map(p => projetarProgramaOperacionalInterface(p, config))} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={projetarProgramaOperacionalInterface(listaFiltradaPorFlag?.[modalSugestao.semanaIndex], config)} modalKey={modalSugestao.key} cargosMap={cargosMap} lang={lang} modo={modalSugestao.modo} pessoaAtual={modalSugestao.anterior} />
         </div>
     );
 };

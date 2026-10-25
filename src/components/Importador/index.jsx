@@ -4,7 +4,8 @@ import { TRANSLATIONS, getImportadorCatalogConfig } from '../../utils/importador
 import { isLikelyHtml, isLikelyUrl, fetchHtmlViaProxy } from '../../utils/importador/helpers';
 import { extrairDados } from '../../utils/importador/parser';
 import RevisarImportacao from './RevisarImportacao';
-import { getEventoEspecialPorSemana, isTipoEventoBloqueante } from '../../utils/eventos';
+import { getEventoEspecialPorSemana, isEventoBloqueiaImportacao } from '../../utils/eventos';
+import { textosCelebracao } from '../../utils/celebracao.js';
 import { formatText } from '../../i18n';
 import { dialog } from '../../utils/dialog';
 
@@ -86,7 +87,7 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
             textSources: [titulo]
         });
 
-        return isTipoEventoBloqueante(evento?.tipo);
+        return isEventoBloqueiaImportacao(evento) ? evento : null;
     };
 
     // --- EFEITOS E HANDLERS ---
@@ -264,10 +265,11 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
 
             // 🔥 Trava de bloqueio para colar URL/Texto! Impede abrir a Revisão
             const tituloSemana = dados.semana || '';
-            if (verificarBloqueioAssembleia({ titulo: tituloSemana, dataInicio: dados.dataInicio || dados.dataExata })) {
+            const bloqueio = verificarBloqueioAssembleia({ titulo: tituloSemana, dataInicio: dados.dataInicio || dados.dataExata });
+            if (bloqueio) {
                 await dialog.alert({
                     title: 'Bloqueio de Segurança',
-                    message: formatText(t.bloqueioSegurancaSemanaTpl, { titulo: tituloSemana }),
+                    message: bloqueio.tipo === 'celebracao' ? `${textosCelebracao(lang).bloqueio} ${bloqueio.dataInput}` : formatText(t.bloqueioSegurancaSemanaTpl, { titulo: tituloSemana }),
                     variant: 'danger'
                 });
                 setLoading(false);
@@ -388,7 +390,7 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
                                                         {w.titulo}
                                                         {isBloqueado && (
                                                             <span className="flex items-center gap-1 mt-1 text-[10px] text-yellow-700 bg-yellow-200/50 px-2 py-0.5 rounded-full w-fit">
-                                                                <Ban size={10} /> {t.bloqueadoBadge}
+                                                                <Ban size={10} /> {isBloqueado?.tipo === 'celebracao' ? textosCelebracao(lang).titulo : t.bloqueadoBadge}
                                                             </span>
                                                         )}
                                                     </div>

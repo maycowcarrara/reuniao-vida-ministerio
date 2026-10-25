@@ -2,6 +2,7 @@ import { getGrupoEfetivoId, getGrupoProgramacao, isProgramacaoV2 } from './grupo
 import { createProgramacaoId, getProgramacaoWeekStartISO } from './programacoes.js';
 import { createFimDeSemanaDefault, hasFimDeSemanaData } from './fimDeSemana.js';
 import { normalizeOcorrenciaReuniao, TIPOS_REUNIAO } from './ocorrenciasReuniao.js';
+import { createCelebracaoDefault, eventoSubstituiReuniao, getCelebracao, textosCelebracao } from './celebracao.js';
 
 const DIAS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 export const validarDataReuniao = data => {
@@ -59,6 +60,7 @@ export const prepararAgendamento = ({ programacoes = [], config, grupoId, tipo, 
     let status = 'criar';
     if (atual?.cancelada || ocorrencia?.cancelada) status = 'cancelada';
     else if (atual?.arquivada) status = 'arquivada';
+    else if (eventoSubstituiReuniao(evento, tipo)) status = 'evento';
     else if (temOcorrencia(atual, tipo)) status = ocorrencia.data === data ? 'existente' : 'conflito';
     else if (bloqueante(evento) || programacaoBloqueada(atual)) status = 'evento';
     const bloco = { ...(tipo === 'fimDeSemana' ? createFimDeSemanaDefault() : {}),
@@ -102,6 +104,7 @@ export const prepararImportacaoMeioSemana = ({ programacoes = [], config, grupoI
     const ocorrencia = atual && normalizeOcorrenciaReuniao(atual, 'meioSemana', config);
     if (atual?.cancelada || atual?.arquivada || ocorrencia?.cancelada) throw new Error('Ocorrência cancelada/arquivada preservada.');
     const evento = eventoDaSemana(grupo, semana);
+    if (evento?.tipo === 'celebracao' && eventoSubstituiReuniao(evento, 'meioSemana')) throw new Error(textosCelebracao(grupo.idioma).bloqueio);
     if (bloqueante(evento) || programacaoBloqueada(atual)) throw new Error('Evento impeditivo neste grupo/semana.');
     if (temOcorrencia(atual, 'meioSemana') && ocorrencia.data !== data) throw new Error('Conflito: segunda reunião do mesmo tipo no grupo/semana.');
     // Reimportar conteúdo idêntico é no-op; conteúdo diferente exige revisão
@@ -123,6 +126,7 @@ export const prepararEstadoOcorrencia = ({ programacoes = [], config, grupoId, p
     const atual = programacoes.find(item => createProgramacaoId(item) === programacaoId && getGrupoEfetivoId(item, config) === grupoId);
     if (!temOcorrencia(atual, tipo)) throw new Error('Ocorrência não encontrada.');
     const ocorrencia = normalizeOcorrenciaReuniao(atual, tipo, config);
+    if (ocorrencia.celebracao) throw new Error('Edite a celebração pela Gestão de Eventos e Visitas.');
     if (atual.arquivada || ocorrencia.cancelada) throw new Error('Ocorrência cancelada/arquivada preservada.');
     if (!cancelar) { validarDataReuniao(ocorrencia.data); validarHorarioReuniao(ocorrencia.horario); }
     const evento = eventoDaSemana(getGrupoProgramacao(grupoId, config), semanaDe(ocorrencia.data));
@@ -135,6 +139,34 @@ export const prepararEdicaoDiscurso = ({ programacoes = [], config, grupoId, pro
     validarTipo(config, grupoId, 'fimDeSemana');
     const atual = programacoes.find(item => createProgramacaoId(item) === programacaoId && getGrupoEfetivoId(item, config) === grupoId);
     if (!temOcorrencia(atual, 'fimDeSemana') || atual.cancelada || atual.arquivada || atual.fimDeSemana?.cancelada) throw new Error('Ocorrência indisponível.');
+    if (getCelebracao(atual, config)?.tipoReuniao === 'fimDeSemana') throw new Error('Edite o discurso da celebração.');
     const reuniaoPublica = Object.fromEntries(['temaDiscurso', 'oradorNomeManual', 'congregacaoOrador'].map(key => [key, String(valores[key] || '')]));
     return { operacoes: [{ tipo: 'patch', programacaoId, alteracoes: { fimDeSemana: { reuniaoPublica } } }] };
 };
+
+// Cadastro de evento não depende de uma importação. Preserva todas as reuniões
+// normais, inclusive quando a data passa de dia útil para fim de semana.
+export function prepararSemanaEvento({ programacoes = [], config, grupoId, data, tipo }) {
+    const semana = semanaDe(data);
+    const atual = localizar(programacoes, config, grupoId, semana);
+    if (!atual && tipo !== 'celebracao') return { operacoes: [] };
+    if (atual?.arquivada || atual?.cancelada) {
+        if (tipo !== 'celebracao') return { operacoes: [] };
+        throw new Error('Programação arquivada/cancelada; revise antes de alterar o evento.');
+    }
+    const extra = { evento: tipo, dataEventoEspecial: tipo === 'normal' ? '' : data,
+        agendaPendenteSync: true, historicoPendenteSync: true };
+    if (tipo === 'celebracao') extra.celebracao = { ...createCelebracaoDefault(), ...atual?.celebracao };
+    return { operacoes: [atual ? { tipo: 'patch', programacaoId: createProgramacaoId(atual), alteracoes: extra }
+        : { tipo: 'upsert', programacao: { ...baseNova(grupoId, semana), ...extra } }] };
+}
+
+export function prepararEdicaoCelebracao({ programacoes = [], config, grupoId, programacaoId, valores }) {
+    const atual = programacoes.find(p => createProgramacaoId(p) === programacaoId && getGrupoEfetivoId(p, config) === grupoId);
+    if (!atual || atual.arquivada || atual.cancelada || !getCelebracao(atual, config)) throw new Error('Celebração indisponível.');
+    const horario = String(valores.horario || '');
+    if (horario) validarHorarioReuniao(horario);
+    return { operacoes: [{ tipo: 'patch', programacaoId, alteracoes: {
+        celebracao: { horario, oradorNomeManual: String(valores.oradorNomeManual || '').trim() }, agendaPendenteSync: true,
+    } }] };
+}

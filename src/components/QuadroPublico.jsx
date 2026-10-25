@@ -23,6 +23,8 @@ import { getLanguageMeta } from '../config/appConfig';
 import { getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { prependMeetingSectionIcon } from '../utils/meetingSections';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, getSemanaStartISO as getSemanaStartISOCompartilhado } from '../utils/eventos';
+import { getCelebracao, textosCelebracao } from '../utils/celebracao.js';
+import { CelebracaoResumo } from './Celebracao.jsx';
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
     MEIO_SEMANA_RESPONSABILIDADES,
@@ -226,7 +228,7 @@ const getDataReuniaoISO = (sem, config) => {
     const isVisita = tipoEvento === 'visita';
     const fallbackStr = sem?.dataExata || sem?.dataReuniao || sem?.dataInicio || sem?.data || null;
 
-    if (eventoEspecial?.dataInput && !isVisita) {
+    if (eventoEspecial?.dataInput && !isVisita && tipoEvento !== 'celebracao') {
         return eventoEspecial.dataInput;
     }
 
@@ -309,8 +311,13 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
             const dataReuniaoISO = getDataReuniaoISO(sem, config);
             const semanaStartISO = getSemanaStartISOCompartilhado(sem, config);
             const entries = [];
+            const c = getCelebracao(sem, config);
+            if (c && normalizeOcorrenciaReuniao(sem, c.tipoReuniao, config).publica && c.data >= hojeStr) entries.push({
+                ...sem, tipoVisual: 'celebracao', visualKey: `${sem.id}-celebracao`, semanaStartISO,
+                dataCorreta: c.data, partes: [], meetingStartTimeStr: '', meetingEndTimeStr: '',
+            });
 
-            if (normalizeOcorrenciaReuniao(sem, 'meioSemana', config).publica && dataReuniaoISO && dataReuniaoISO >= hojeStr) {
+            if (c?.tipoReuniao !== 'meioSemana' && normalizeOcorrenciaReuniao(sem, 'meioSemana', config).publica && dataReuniaoISO && dataReuniaoISO >= hojeStr) {
                 const partesComHorario = calcularHorarios(sem.partes || [], dataReuniaoISO, sem.meioSemana?.horario || config?.horario, lang);
                 const meetingStartTimeStr = partesComHorario.length > 0 ? partesComHorario[0].startTimeStr : '--:--';
                 const meetingEndTimeStr = partesComHorario.length > 0 ? partesComHorario[partesComHorario.length - 1].endTimeStr : '--:--';
@@ -329,7 +336,7 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
 
             const fds = normalizeFimDeSemana(sem?.fimDeSemana);
             const dataFimDeSemana = getDataFimDeSemanaISO(sem, config);
-            if (normalizeOcorrenciaReuniao(sem, 'fimDeSemana', config).publica && dataFimDeSemana && dataFimDeSemana >= hojeStr) {
+            if (c?.tipoReuniao !== 'fimDeSemana' && normalizeOcorrenciaReuniao(sem, 'fimDeSemana', config).publica && dataFimDeSemana && dataFimDeSemana >= hojeStr) {
                 entries.push({
                     ...sem,
                     tipoVisual: 'fimDeSemana',
@@ -352,6 +359,11 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
 
         if (termo) {
             filtradas = filtradas.map(sem => {
+                if (sem.tipoVisual === 'celebracao') {
+                    const c = getCelebracao(sem, config);
+                    return [textosCelebracao(lang).titulo, c.oradorNomeManual, c.data, ...Object.values(c.responsabilidades).flat().map(p => p?.nome)]
+                        .some(valor => normalizarTexto(valor).includes(termo)) ? sem : null;
+                }
                 const dataCompleta = formatarDataCompleta(sem.dataCorreta, lang, T);
                 const matchSemanaMetadata = normalizarTexto(sem.semana || '').includes(termo) ||
                     normalizarTexto(dataCompleta).includes(termo) ||
@@ -948,11 +960,12 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
                         semanasParaExibir.map((sem, idx) => {
                             const dataRef = sem.dataCorreta;
                             const isFimDeSemana = sem.tipoVisual === 'fimDeSemana';
+                            const isCelebracao = sem.tipoVisual === 'celebracao';
                             const estaSemana = checkEstaSemana(sem.semanaStartISO);
                             const isHoje = dataRef === hojeStr;
                             const estaAoVivo = modoTempoReal && reuniaoAoVivo === idx;
                             const estaEmContagem = modoPreLive && reuniaoEmContagem.index === idx;
-                            const horarioCabecalho = isFimDeSemana
+                            const horarioCabecalho = isCelebracao ? getCelebracao(sem, config).horario : isFimDeSemana
                                 ? sem.fimDeSemana?.horario
                                 : (sem.meioSemana?.horario || config?.horarioReuniao || config?.horario || '');
                             const contagemSemana = estaEmContagem && sem.partes?.[0]
@@ -1006,7 +1019,7 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
                                         <div className="text-left">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <h3 className="font-black text-slate-800 text-base">
-                                                    {isFimDeSemana
+                                                    {isCelebracao ? textosCelebracao(lang).titulo : isFimDeSemana
                                                         ? (T.reuniaoFimDeSemana || T.fimDeSemana || 'Reunião de fim de semana')
                                                         : (T.reuniaoMeioSemana || 'Reunião de meio de semana')}
                                                 </h3>
@@ -1035,7 +1048,7 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
                                     {/* CONTEÚDO EXPANSÍVEL */}
                                     {isExpanded && (
                                         <div className="p-5 space-y-6 bg-white border-t border-slate-100">
-                                            {isFimDeSemana ? (
+                                            {isCelebracao ? <CelebracaoResumo programa={sem} config={config} lang={lang} busca={busca} agenda /> : isFimDeSemana ? (
                                                 renderFimDeSemanaConteudo(sem)
                                             ) : isAssembleia ? (
                                                 <div className="text-center py-6 px-4 bg-purple-50 rounded-2xl border border-purple-100">
