@@ -858,10 +858,8 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
                 }
             `}</style>
             <header className="bg-blue-700 text-white shadow-md z-50 shrink-0">
-                <div className="px-4 py-4 max-w-2xl mx-auto space-y-4">
-                    {seletorGrupo && <div className="flex justify-end">{seletorGrupo}</div>}
-
-                    <div className="flex justify-between items-start">
+                <div className="px-4 py-3 sm:py-4 max-w-2xl mx-auto space-y-3 sm:space-y-4">
+                    <div className="flex justify-between items-start gap-3">
                         <div>
                             <h1 className="text-lg font-black leading-none tracking-tight">{config?.nome_cong || T.congregacaoPadrao}</h1>
 
@@ -897,20 +895,19 @@ export default function QuadroPublico({ programacoes, config, usuario, seletorGr
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                            {seletorGrupo}
                             <PwaInstallButton variant="header" />
-                            {usuario ? (
+                            {usuario && (
                                 <Link
                                     to="/admin"
-                                    className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 border border-white/10 shrink-0"
+                                    className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white h-7 sm:h-8 px-2 sm:px-3 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 border border-white/10 shrink-0"
+                                    title={T.voltarPainel}
+                                    aria-label={T.voltarPainel}
                                 >
                                     <LayoutDashboard size={14} />
                                     <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">{T.voltarPainel}</span>
                                 </Link>
-                            ) : (
-                                <div className="bg-blue-800/60 p-2 rounded-xl border border-blue-500/30 shadow-inner shrink-0">
-                                    <LayoutDashboard size={18} className="text-blue-100" />
-                                </div>
                             )}
                         </div>
                     </div>

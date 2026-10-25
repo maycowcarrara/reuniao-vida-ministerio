@@ -728,9 +728,9 @@ function AdminPanel() {
 
         {!isFullscreen && (
           // NO-PRINT ADICIONADO AQUI PARA ESCONDER O HEADER
-          <header className="relative bg-white shadow-sm px-3 sm:px-4 md:px-6 py-2 md:h-14 border-b shrink-0 z-[120] no-print">
+          <header className="relative bg-white shadow-sm px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 md:py-0 md:h-14 border-b shrink-0 z-[120] no-print flex items-center">
 
-            <div className="flex items-center justify-between gap-3 md:gap-4">
+            <div className="w-full flex items-center justify-between gap-2 sm:gap-3 md:gap-4 md:h-full">
               <div className="flex items-center gap-3 md:gap-4 min-w-0">
                 <h2 className={`${modoGrupos ? 'hidden sm:block' : ''} text-base md:text-lg font-bold text-slate-800 capitalize truncate max-w-[160px] sm:max-w-none`}>
                   {abaAtiva === 'dashboard' ? t.inicio : (t[abaAtiva] || abaAtiva)}
@@ -742,7 +742,7 @@ function AdminPanel() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 md:gap-4 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 shrink-0">
 
                 <div className="md:hidden flex items-center gap-1.5">
                   <button
@@ -781,7 +781,7 @@ function AdminPanel() {
                   </Link>
                 </div>
 
-                <div className="md:hidden h-7 w-px bg-slate-200 mx-0.5" />
+                <div className="md:hidden h-5 sm:h-6 w-px bg-slate-200 mx-0.5" />
 
                 {modoGrupos && <SeletorGrupo grupos={configGrupos.grupos} grupoId={grupoId} disabled={busy || dupModal.open}
                   onChange={id => id !== grupoId && trocarContexto(() => selecionarGrupo(id))} />}
