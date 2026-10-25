@@ -151,7 +151,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         );
     };
 
-    const hasActiveFilters = termo !== '' || filtrosTiposAtivos.length > 0 || filtrosPartesAtivas.length > 0 || filtroGenero !== 'todos' || filtroEspecial !== 'todos' || filtroStatus !== 'todos';
+    const hasActiveFilters = termo !== '' || filtrosTiposAtivos.length > 0 || filtrosPartesAtivas.length > 0 || filtroGenero !== 'todos' || filtroEspecial !== 'todos' || filtroStatus !== 'todos' || (multiGrupos && filtroGrupo !== 'todos');
 
     const limparFiltros = () => {
         setTermo('');
@@ -160,6 +160,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
         setFiltroGenero('todos');
         setFiltroEspecial('todos');
         setFiltroStatus('todos');
+        setFiltroGrupo('todos');
         setMenuPartesOpen(false);
     };
 
@@ -414,12 +415,6 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
 
     return (
         <div className="space-y-4 px-2 py-3 pb-8 sm:p-4 md:p-6">
-            {multiGrupos && <label className="block p-3 bg-white rounded-xl border text-sm font-bold">{G.participa}
-                <select className="block border rounded-lg p-2 mt-2" value={filtroGrupo} onChange={e => setFiltroGrupo(e.target.value)}>
-                    <option value="todos">{lang === 'es' ? 'Todos los registros' : 'Todos os cadastros'}</option>
-                    {Object.values(config.grupos).map(grupo => <option key={grupo.id} value={grupo.id}>{G[grupo.idioma]}</option>)}
-                </select>
-            </label>}
             <style>{`
             @media print {
                 html, body, #root { height: auto !important; overflow: visible !important; }
@@ -533,6 +528,29 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                             <button onClick={() => setFiltroStatus('todos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 text-[10px] font-black uppercase transition ${filtroStatus === 'todos' ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:bg-white'}`} title={t.acessibilidade.mostrarTodos}>{t.filtros.todos}</button>
                             <button onClick={() => setFiltroStatus('ativos')} className={`flex-1 lg:flex-none py-3 lg:py-2 px-3 border-l border-gray-200 text-[10px] font-black uppercase transition flex items-center justify-center gap-1 ${filtroStatus === 'ativos' ? 'bg-green-500 text-white' : 'text-gray-400 hover:bg-white'}`} title={t.acessibilidade.apenasAtivos}>{t.filtros.ativos}</button>
                         </div>
+
+                        {/* Filtro de Programação (Multi-Grupos) */}
+                        {multiGrupos && (
+                            <div className="relative w-full lg:w-auto shrink-0">
+                                <select
+                                    value={filtroGrupo}
+                                    onChange={e => setFiltroGrupo(e.target.value)}
+                                    className={`w-full lg:w-auto py-3 lg:py-2 pl-3 pr-8 rounded-xl border text-[10px] font-black uppercase transition outline-none cursor-pointer appearance-none ${filtroGrupo !== 'todos' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-white'}`}
+                                    title={G.participa}
+                                    aria-label={G.participa}
+                                >
+                                    <option value="todos" className="bg-white text-gray-700">
+                                        {lang === 'es' ? 'Programas: Todos' : 'Programações: Todas'}
+                                    </option>
+                                    {Object.values(config.grupos).filter(g => g.ativo).map(grupo => (
+                                        <option key={grupo.id} value={grupo.id} className="bg-white text-gray-700">
+                                            {lang === 'es' ? `Programa: ${G[grupo.idioma] || grupo.nome}` : `Programação: ${G[grupo.idioma] || grupo.nome}`}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown size={14} className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 shrink-0 transition ${filtroGrupo !== 'todos' ? 'text-white' : 'text-gray-400'}`} />
+                            </div>
+                        )}
 
                         {/* Partes habilitadas */}
                         <div className="relative w-full lg:w-auto shrink-0" ref={partesFilterRef}>

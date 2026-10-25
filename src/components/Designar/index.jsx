@@ -10,6 +10,7 @@ import ModalSugestao from './ModalSugestao';
 import NavegadorSemanas from './NavegadorSemanas';
 import SidebarAlunos from './SidebarAlunos';
 import DesignarHeader from './DesignarHeader';
+import CampoTextoAutomatico from './CampoTextoAutomatico';
 import {
     SECOES_ORDEM, SECOES_META, normalizar, normalizarSecao,
     isAbertura, isEncerramento, isLinhaInicialFinal,
@@ -1201,10 +1202,12 @@ const Designar = ({
     const atualizarFimDeSemana = (semanaIndexFiltrado, updater) => {
         const semanaRealIndex = getSemanaRealIndexFromFilteredIndex(semanaIndexFiltrado);
         if (semanaRealIndex === -1) return;
+        const semanaAlvo = listaProgramacoes[semanaRealIndex];
 
         setListaProgramacoesSafe(prev => {
             const lista = [...prev];
-            const atual = lista[semanaRealIndex];
+            const destinoIndex = lista.findIndex((item, index) => getSemanaKey(item, index) === getSemanaKey(semanaAlvo, semanaRealIndex));
+            const atual = lista[destinoIndex];
             if (!atual || isSemanaAssembleia(atual, config)) return lista;
 
             const atualNormalizado = withFimDeSemanaDefaults(atual);
@@ -1212,7 +1215,7 @@ const Designar = ({
             const semana = { ...atual, fimDeSemana: normalizeFimDeSemana(proximo) };
             marcarNotificacaoSemanaPendente(semana);
             marcarSemanaPublicadaPendente(semana, 'edicao_fim_de_semana');
-            lista[semanaRealIndex] = semana;
+            lista[destinoIndex] = semana;
             return lista;
         });
     };
@@ -1549,10 +1552,11 @@ const Designar = ({
         const field = (label, value, onChange, props = {}) => (
             <div>
                 <label className={labelClass}>{label}</label>
-                <input
+                <CampoTextoAutomatico
+                    key={`${config.grupoSelecionadoId || lang}-${semanaKey}-${label}`}
                     {...props}
                     value={value}
-                    onChange={(e) => onChange(e.target.value)}
+                    onChange={onChange}
                     className={inputClass}
                 />
             </div>
