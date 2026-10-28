@@ -12,6 +12,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# Arquivos gerados para exportação e validação
+/output/
 .env
 .env.old
 *.local

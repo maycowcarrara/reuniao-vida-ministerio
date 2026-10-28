@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { acompanharOperacao } from '../../utils/progressoOperacoes.js';
 
 import {
     Calendar, User, Search, UsersRound, UserRound, Clock,
@@ -340,11 +341,15 @@ const Designar = ({
 
     const getNextProgramacoes = (prev, updater) => normalizeAndSortProgramacoes(typeof updater === 'function' ? updater(prev) : updater);
 
-    const setListaProgramacoesSafe = async (updater, options = {}) => {
+    const setListaProgramacoesSafe = (updater, options = {}) => acompanharOperacao('salvarProgramacoes', async () => {
         try {
             const next = options.republicarQuadro ? getNextProgramacoes(listaProgramacoes, updater) : null;
             const resultado = await setListaProgramacoes(next || (prev => getNextProgramacoes(prev, updater)));
             if (resultado?.salvo === false) return false;
+            if (resultado?.erroPublicacao) {
+                toast.error(resultado.erroPublicacao, G.parcial);
+                return false;
+            }
             if (options.republicarQuadro && onRepublicarQuadroPublico) {
                 const publicacao = await onRepublicarQuadroPublico(next);
                 if (publicacao?.erroPublicacao) return false;
@@ -354,7 +359,7 @@ const Designar = ({
             toast.error(error, options.republicarQuadro ? G.parcial : G.erroSalvar);
             return false;
         }
-    };
+    });
 
     const listaFiltradaPorFlag = useMemo(() => {
         const lista = Array.isArray(listaProgramacoes) ? [...listaProgramacoes] : [];

@@ -228,6 +228,29 @@ body {
   }
 }
 
+.rvm-progresso-topo {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 3px;
+  z-index: 1200;
+  pointer-events: none;
+  background: rgb(59 130 246 / 10%);
+}
+.rvm-progresso-topo-linha {
+  height: 100%;
+  background: #2563eb;
+  box-shadow: 0 0 7px rgb(37 99 235 / 45%);
+  transition: width 160ms ease-out;
+}
+.rvm-progresso-topo[data-fase="concluido"] { animation: rvm-progresso-fim 250ms ease-out forwards; }
+.rvm-progresso-topo[data-estado="erro"] .rvm-progresso-topo-linha { background: #e11d48; }
+.rvm-progresso-topo[data-estado="offline"] .rvm-progresso-topo-linha { background: #d97706; }
+@keyframes rvm-progresso-fim { 0%, 50% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .rvm-progresso-topo-linha { transition: none; }
+  .rvm-progresso-topo[data-fase="concluido"] { animation: none; }
+}
+
 @media (min-width: 1800px) {
   .dashboard-top-grid {
     grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.82fr) minmax(320px, 0.82fr);

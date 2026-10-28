@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Building2, CalendarDays, Clock, Save, RotateCcw, Layers, Tag } from 'lucide-react';
+import { Building2, CalendarDays, Clock, Save, RotateCcw, Layers, Tag, Loader2 } from 'lucide-react';
 import Configuracoes from './Configuracoes.jsx';
 import UserAccessManager from './UserAccessManager.jsx';
 import { patchConfiguracoesGrupos } from '../utils/programacoesPorGrupo.js';
@@ -12,6 +12,7 @@ import { toast } from '../utils/toast.js';
 
 export default function ConfiguracoesGrupos({ config, grupoId, onSalvar, busy = false, lang, mostrarAcessos = false, onRepublicar, onDesignar }) {
     const T = useSectionMessages('gruposProgramacao');
+    const andamento = useSectionMessages('andamento');
     const [erroPublicacao, setErroPublicacao] = useState('');
     const [drafts, setDrafts] = useState(() => config.grupos);
     const [original, setOriginal] = useState(config);
@@ -113,7 +114,7 @@ export default function ConfiguracoesGrupos({ config, grupoId, onSalvar, busy = 
             </details>)}
             <p className="text-xs text-slate-500">{T.salvarDestino}</p>
             <div className="flex flex-wrap gap-3 pt-1">
-                <button type="submit" disabled={!dirty} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-40"><Save size={17} />{T.salvar}</button>
+                <button type="submit" disabled={!dirty || bloqueado} aria-busy={processando} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-40">{processando ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}{processando ? andamento.salvarConfiguracoes : T.salvar}</button>
                 <button type="button" onClick={descartar} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50"><RotateCcw size={16} />{T.cancelar}</button>
             </div>
         </fieldset>

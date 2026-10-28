@@ -106,11 +106,15 @@ test('E7: atualização explícita preserva precache novo; recuperação de asse
     const oldWindow = globalThis.window;
     const oldNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
     const removidos = [], destinos = [], comandos = [];
+    const waiting = new EventTarget();
+    waiting.state = 'installed';
+    waiting.postMessage = m => { comandos.push(m.type); waiting.state = 'activated'; waiting.dispatchEvent(new Event('statechange')); };
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { serviceWorker: {
-        getRegistrations: async () => [{ active: { state: 'activated' }, update: async () => comandos.push('update'), waiting: { postMessage: m => comandos.push(m.type) } }],
+        getRegistrations: async () => [{ active: { state: 'activated' }, update: async () => comandos.push('update'), waiting }],
         addEventListener: (_event, callback) => callback(),
     } } });
     globalThis.window = { location: { href: 'http://127.0.0.1/admin', replace: url => destinos.push(url) },
+        fetch: async () => ({ ok: true, json: async () => ({ version: 'fixture-B', entry: '/assets/fixture-B.js' }) }),
         navigator: globalThis.navigator, caches: { keys: async () => ['workbox-precache-v2'], delete: async key => removidos.push(key) },
         setTimeout: fn => { queueMicrotask(fn); return 1; }, clearTimeout: () => {}, sessionStorage: { getItem: () => null, setItem: () => {} } };
     try {

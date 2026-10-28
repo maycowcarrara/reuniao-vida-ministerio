@@ -1,7 +1,7 @@
 import * as firestore from 'firebase/firestore';
 import { gruposRemotosAtivos } from '../utils/compatibilidadeGrupos.js';
 import { getGrupoEfetivoId, validarParticipacaoAluno } from '../utils/gruposProgramacao.js';
-import { hashEnsaio } from '../utils/ensaioMigracaoGrupos.js';
+import { dadosIguais as same } from '../utils/compararDados.js';
 import { projetarQuadroPublico } from '../utils/quadroPublico.js';
 
 export const limparIndefinidos = value => {
@@ -9,7 +9,6 @@ export const limparIndefinidos = value => {
     if (!value || Object.getPrototypeOf(value) !== Object.prototype) return value;
     return Object.fromEntries(Object.entries(value).filter(([,v]) => v !== undefined).map(([k,v]) => [k, limparIndefinidos(v)]));
 };
-const same = async (a,b) => await hashEnsaio(a) === await hashEnsaio(b);
 const registro = snap => snap.exists() ? { ...snap.data(), id: snap.id } : null;
 
 export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = firestore }) {
@@ -30,14 +29,14 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
         const esperados = new Map(anteriores.map(p => [String(p.id), p]));
         const configTela = obterEstado().configuracoes;
         await runTransaction(db, async tx => {
-            const configSnap = await tx.get(r.config), config = configSnap.data();
-            requireActive(config);
-            if (!await same(config.grupos, configTela.grupos)) throw new Error('Configuração mudou; atualize a tela antes de salvar.');
             const destinos = ids.map(id => doc(db, `${r.base}/programacao/${id}`));
-            const snapshots = await Promise.all(destinos.map(ref => tx.get(ref)));
+            const [configSnap, ...snapshots] = await Promise.all([tx.get(r.config), ...destinos.map(ref => tx.get(ref))]);
+            const config = configSnap.data();
+            requireActive(config);
+            if (!same(config.grupos, configTela.grupos)) throw new Error('Configuração mudou; atualize a tela antes de salvar.');
             for (let i=0; i<ids.length; i++) {
                 const atual = registro(snapshots[i]), expected = esperados.get(String(ids[i])) || null;
-                if (!await same(atual, expected)) throw new Error('Programação mudou em outra sessão; atualize antes de salvar.');
+                if (!same(atual, expected)) throw new Error('Programação mudou em outra sessão; atualize antes de salvar.');
                 if (atual && getGrupoEfetivoId(atual, config) !== grupoId) throw new Error('Destino pertence a outro grupo.');
             }
             for (const p of upserts) {
@@ -57,7 +56,7 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
         await runTransaction(db, async tx => {
             const snap = await tx.get(r.config), atual = snap.data(); requireActive(atual);
             const semRevision = c => Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'revisionProgramacoes'));
-            if (!await same(semRevision(atual), semRevision(esperado))) throw new Error('Configuração mudou em outra sessão; atualize a tela.');
+            if (!same(semRevision(atual), semRevision(esperado))) throw new Error('Configuração mudou em outra sessão; atualize a tela.');
             if (config.grupoLegadoId !== atual.grupoLegadoId) throw new Error('Grupo legado é imutável.');
             tx.set(r.config, { ...limparIndefinidos(config), revisionProgramacoes: increment(1) }, { merge: true });
         });
@@ -66,15 +65,20 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
         if (!escopo?.grupoId || !escopo.programacaoIds?.length) throw new Error('Histórico exige escopo explícito.');
         const r = refs(), estado = obterEstado();
         const alterados = [];
-        for (const aluno of alunos) if (!await same(aluno.historico || [], estado.alunos.find(a => String(a.id) === String(aluno.id))?.historico || [])) alterados.push(aluno);
+        const alunosPorId = new Map(estado.alunos.map(a => [String(a.id), a]));
+        for (const aluno of alunos) if (!same(aluno.historico || [], alunosPorId.get(String(aluno.id))?.historico || [])) alterados.push(aluno);
         if (alterados.length + escopo.programacaoIds.length > 400) throw new Error('Divida a sincronização em lotes menores.');
         if (!alterados.length) return;
         await runTransaction(db, async tx => {
-            requireActive((await tx.get(r.config)).data());
-            const programs = await Promise.all(escopo.programacaoIds.map(id => tx.get(doc(db, `${r.base}/programacao/${id}`))));
-            for (const p of programs) if (!p.exists() || getGrupoEfetivoId(p.data(), estado.configuracoes) !== escopo.grupoId || !await same(registro(p), estado.historico_reunioes.find(x => String(x.id) === p.id))) throw new Error('Programação mudou durante a sincronização.');
-            const people = await Promise.all(alterados.map(a => tx.get(doc(db, `${r.base}/alunos/${a.id}`))));
-            for (const p of people) if (!await same(p.data()?.historico || [], estado.alunos.find(a => String(a.id) === p.id)?.historico || [])) throw new Error('Histórico mudou em outra sessão.');
+            const [configSnap, programs, people] = await Promise.all([
+                tx.get(r.config),
+                Promise.all(escopo.programacaoIds.map(id => tx.get(doc(db, `${r.base}/programacao/${id}`)))),
+                Promise.all(alterados.map(a => tx.get(doc(db, `${r.base}/alunos/${a.id}`)))),
+            ]);
+            requireActive(configSnap.data());
+            const programacoesPorId = new Map(estado.historico_reunioes.map(p => [String(p.id), p]));
+            for (const p of programs) if (!p.exists() || getGrupoEfetivoId(p.data(), estado.configuracoes) !== escopo.grupoId || !same(registro(p), programacoesPorId.get(p.id))) throw new Error('Programação mudou durante a sincronização.');
+            for (const p of people) if (!same(p.data()?.historico || [], alunosPorId.get(p.id)?.historico || [])) throw new Error('Histórico mudou em outra sessão.');
             for (const aluno of alterados) tx.update(doc(db, `${r.base}/alunos/${aluno.id}`), { historico: limparIndefinidos(aluno.historico) });
         });
     };
@@ -83,31 +87,33 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
         const r = refs(), ref = doc(db, `${r.base}/alunos/${aluno.id}`);
         const fields = historico ? ['historico'] : ['avatar', 'nome', 'tipo', 'telefone', 'email', 'familia', 'observacoes', 'datasIndisponiveis', 'partesHabilitadas', 'gruposParticipantes'];
         const patch = {};
-        for (const field of fields) if (aluno[field] !== undefined && (!original || !await same(aluno[field], original[field] ?? null))) patch[field] = limparIndefinidos(aluno[field]);
+        for (const field of fields) if (aluno[field] !== undefined && (!original || !same(aluno[field], original[field] ?? null))) patch[field] = limparIndefinidos(aluno[field]);
+        if (original && !Object.keys(patch).length) return;
         await runTransaction(db, async tx => {
-            const configAtual = (await tx.get(r.config)).data();
+            const [configSnap, snap] = await Promise.all([tx.get(r.config), tx.get(ref)]);
+            const configAtual = configSnap.data();
             requireActive(configAtual);
-            const snap = await tx.get(ref), atual = snap.data();
+            const atual = snap.data();
             if (!historico) validarParticipacaoAluno(aluno, configAtual, atual || null);
             if (!original) {
                 const novo = { ...limparIndefinidos(aluno), historico: aluno.historico || [] };
                 if (snap.exists()) {
-                    if (await same(atual, novo)) return;
+                    if (same(atual, novo)) return;
                     throw new Error('Identificador já cadastrado; a pessoa existente foi preservada.');
                 }
                 tx.set(ref, novo);
                 return;
             }
             if (!snap.exists()) throw new Error('Pessoa removida em outra sessão.');
-            for (const field of Object.keys(patch)) if (!await same(atual[field] ?? null, original[field] ?? null)) throw new Error('Este campo mudou em outra sessão; atualize antes de salvar.');
+            for (const field of Object.keys(patch)) if (!same(atual[field] ?? null, original[field] ?? null)) throw new Error('Este campo mudou em outra sessão; atualize antes de salvar.');
             if (Object.keys(patch).length) tx.update(ref, patch);
         });
     };
     const excluirAluno = async id => {
         const r = refs(), ref = doc(db, `${r.base}/alunos/${id}`);
         await runTransaction(db, async tx => {
-            requireActive((await tx.get(r.config)).data());
-            const snap = await tx.get(ref);
+            const [configSnap, snap] = await Promise.all([tx.get(r.config), tx.get(ref)]);
+            requireActive(configSnap.data());
             if (!snap.exists()) return;
             if (snap.data().tipo !== 'desab') throw new Error('Somente pessoas desabilitadas podem ser excluídas. O cadastro atual foi preservado.');
             tx.delete(ref);
@@ -120,9 +126,9 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
             const lista = await getDocsFromServer(collection(db, `${r.base}/programacao`));
             try {
                 return await runTransaction(db, async tx => {
-                    const config = (await tx.get(r.config)).data(); requireActive(config);
+                    const [configSnap, ...snaps] = await Promise.all([tx.get(r.config), ...lista.docs.map(p => tx.get(p.ref))]);
+                    const config = configSnap.data(); requireActive(config);
                     if (config.revisionProgramacoes !== configInicial.revisionProgramacoes) throw new Error('quadro-obsoleto');
-                    const snaps = await Promise.all(lista.docs.map(p => tx.get(p.ref)));
                     const payload = projetarQuadroPublico({ ownerUid: r.ownerUid, configuracoes: config,
                         historico_reunioes: snaps.filter(p => p.exists()).map(registro) });
                     tx.set(doc(db, `quadros_publicos/${r.ownerUid}`), limparIndefinidos(payload));

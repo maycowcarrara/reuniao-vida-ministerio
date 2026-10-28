@@ -9,6 +9,8 @@ import { projetarConfigGrupo } from '../src/utils/grupoAtivo.js';
 import { buildLegacyAssignmentKey } from '../src/utils/assignmentIdentity.js';
 import { selecionarDesignacoes } from '../src/utils/designacoesPorGrupo.js';
 import { legacyKeyFromDesignacao } from '../src/utils/integracoesGrupo.js';
+import { createProgramacoesController, operacoesDaListaDoGrupo } from '../src/utils/programacoesPorGrupo.js';
+import { projetarQuadroPublico } from '../src/utils/quadroPublico.js';
 const PT = 'grupo-portugues', ES = 'grupo-espanhol';
 const config = normalizeGruposProgramacao({ idioma: 'pt', nome_cong: 'Congregação fictícia', ativacaoMultiGrupos: { contrato: 2, status: 'ativa' } });
 const pessoa = { id: 'pessoa', nome: 'Pessoa fictícia', tipo: 'anciao', gruposParticipantes: [PT], partesHabilitadas: ['presidente_rvm'] };
@@ -16,6 +18,89 @@ const cargosMap = { anciao: { gen: 'M' } };
 const programa = { id: 'semana-fixture', grupoId: PT, versaoProgramacao: 2, publicadaNoQuadro: true, semana: '2-8 de novembro de 2026',
     meioSemana: { ativo: true, data: '2026-11-05', horario: '19:30' }, fimDeSemana: { ativo: false }, partes: [], presidente: null, desconhecido: 'preservar' };
 const preparar = next => prepararEdicaoClassica({ anteriores: [programa], proximas: [next], config, grupoId: PT, alunos: [pessoa], cargosMap });
+
+const ensaioArquivamento = ({ falhaSalvar = false, falhaPublicar = false, programas } = {}) => {
+    let estado = { configuracoes: config, historico_reunioes: programas || [
+        { ...programa, presidente: pessoa },
+        { ...programa, id: 'segunda-semana', semana: '9-15 de novembro de 2026', dataInicio: '2026-11-09',
+            meioSemana: { ativo: true, data: '2026-11-12', horario: '19:30' } },
+        { ...programa, id: 'espanhol', grupoId: ES, meioSemana: { ativo: false },
+            fimDeSemana: { ativo: true, data: '2026-11-08', horario: '10:45' } },
+    ] };
+    let quadro = projetarQuadroPublico(estado);
+    const etapas = [];
+    const controller = createProgramacoesController({ getEstado: () => estado,
+        salvarLote: async ({ upserts }) => {
+            if (falhaSalvar) throw new Error('falha-salvar');
+            etapas.push('salvar');
+            estado = { ...estado, historico_reunioes: estado.historico_reunioes.map(p => upserts.find(n => n.id === p.id) || p) };
+        },
+        publicar: async payload => {
+            etapas.push('publicar');
+            if (falhaPublicar) throw new Error('falha-publicar');
+            assert.deepEqual(payload.historico_reunioes, estado.historico_reunioes);
+            quadro = projetarQuadroPublico(payload);
+        } });
+    return { controller, etapas, estado: () => estado, quadro: () => quadro, permitirPublicacao: () => { falhaPublicar = false; } };
+};
+
+for (const fluxo of ['lista individual', 'lista em lote', 'operação por ID']) {
+    test(`Arquivar e restaurar sincroniza o quadro automaticamente: ${fluxo}`, async () => {
+        const h = ensaioArquivamento();
+        const original = structuredClone(h.estado().historico_reunioes);
+        const alvos = fluxo === 'lista em lote' ? original.filter(p => p.grupoId === PT) : [original[0]];
+        const ids = alvos.map(p => p.id);
+        const espanhol = h.quadro().historico_reunioes.find(p => p.id === 'espanhol');
+        for (const arquivada of [true, false]) {
+            const alteradas = original.filter(p => p.grupoId === PT).map(p => ids.includes(p.id)
+                ? { ...p, arquivada, arquivadaEm: arquivada ? '2026-10-25T12:00:00Z' : null } : p);
+            const resultado = fluxo === 'operação por ID'
+                ? await h.controller.arquivarProgramacoes({ grupoId: PT, ids, arquivada })
+                : await h.controller.executar({ grupoId: PT, operacoes: operacoesDaListaDoGrupo({ grupoId: PT, lista: alteradas }) });
+            assert.equal(resultado.salvo, true);
+            assert.equal(resultado.publicado, true);
+            for (const id of ids) assert.equal(h.quadro().historico_reunioes.some(p => p.id === id), !arquivada);
+            assert.deepEqual(h.quadro().historico_reunioes.find(p => p.id === 'espanhol'), espanhol);
+        }
+        assert.deepEqual(h.etapas, ['salvar', 'publicar', 'salvar', 'publicar']);
+        for (const p of h.estado().historico_reunioes.filter(p => ids.includes(p.id))) {
+            const { arquivada, arquivadaEm, ...conteudo } = p;
+            assert.equal(arquivada, false); assert.equal(arquivadaEm, null);
+            assert.deepEqual(conteudo, original.find(old => old.id === p.id));
+        }
+    });
+}
+
+test('Restaurar conserva rascunhos, ocorrências ocultas e cancelamentos', async () => {
+    const programas = [
+        { ...programa, arquivada: true, publicadaNoQuadro: false },
+        { ...programa, id: 'ocorrencia-oculta', arquivada: true, meioSemana: { ...programa.meioSemana, publicadaNoQuadro: false } },
+        { ...programa, id: 'cancelada', arquivada: true, meioSemana: { ...programa.meioSemana, cancelada: true } },
+    ];
+    const h = ensaioArquivamento({ programas });
+    const resultado = await h.controller.arquivarProgramacoes({ grupoId: PT, ids: programas.map(p => p.id), arquivada: false });
+    assert.equal(resultado.publicado, true);
+    assert.equal(h.quadro().historico_reunioes.length, 0);
+    assert.equal(h.estado().historico_reunioes[0].publicadaNoQuadro, false);
+    assert.equal(h.estado().historico_reunioes[1].meioSemana.publicadaNoQuadro, false);
+    assert.equal(h.estado().historico_reunioes[2].meioSemana.cancelada, true);
+});
+
+test('Restauração: falha ao salvar não publica; falha ao publicar permite republicar depois', async () => {
+    const programas = [{ ...programa, arquivada: true }];
+    const falha = ensaioArquivamento({ programas, falhaSalvar: true });
+    await assert.rejects(falha.controller.arquivarProgramacoes({ grupoId: PT, ids: [programa.id], arquivada: false }), /falha-salvar/);
+    assert.deepEqual(falha.etapas, []);
+    const h = ensaioArquivamento({ programas, falhaPublicar: true });
+    const resultado = await h.controller.arquivarProgramacoes({ grupoId: PT, ids: [programa.id], arquivada: false });
+    assert.equal(resultado.salvo, true); assert.equal(resultado.publicado, false);
+    assert.match(resultado.erroPublicacao.message, /falha-publicar/);
+    assert.equal(h.estado().historico_reunioes[0].arquivada, false);
+    assert.equal(h.quadro().historico_reunioes.length, 0);
+    h.permitirPublicacao();
+    await h.controller.executar({ grupoId: PT, operacoes: [], republicar: true });
+    assert.equal(h.quadro().historico_reunioes.length, 1);
+});
 test('Interface clássica: atribuição usa cadastro atual e conserva identidade/conteúdo', () => {
     const [next] = preparar({ ...programa, presidente: pessoa });
     assert.equal(next.id, programa.id); assert.equal(next.desconhecido, 'preservar');

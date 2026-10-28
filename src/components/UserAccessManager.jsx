@@ -11,6 +11,7 @@ import {
 } from '../services/adminAccess';
 import { toast } from '../utils/toast';
 import { dialog } from '../utils/dialog';
+import { acompanharOperacao } from '../utils/progressoOperacoes.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -125,7 +126,7 @@ export default function UserAccessManager({ lang = 'pt', onRoleChange }) {
 
         setSaving(true);
         try {
-            await runTransaction(db, async (transaction) => {
+            await acompanharOperacao('salvarConfiguracoes', () => runTransaction(db, async (transaction) => {
                 const snapshot = await transaction.get(accessRef);
                 const currentEmails = Array.isArray(snapshot.data()?.emails)
                     ? snapshot.data().emails.map(normalizeAccessEmail).filter(Boolean)
@@ -144,7 +145,7 @@ export default function UserAccessManager({ lang = 'pt', onRoleChange }) {
                     admins: [...new Set(next.admins.map(normalizeAccessEmail).filter(Boolean))].sort(),
                     updatedAtIso: new Date().toISOString()
                 });
-            });
+            }));
             toast.success(texts.saved);
         } catch (error) {
             console.error('Erro ao salvar acessos:', error);

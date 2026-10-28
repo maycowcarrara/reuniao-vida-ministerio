@@ -1,0 +1,303 @@
+/* Fonte local para manter a mesma impressão, inclusive sem conexão. */
+@font-face {
+    font-family: 'Source Sans 3';
+    src: url('/fonts/SourceSans3-Variable.ttf') format('truetype');
+    font-style: normal;
+    font-weight: 200 900;
+    font-display: block;
+}
+
+/* Mesma fonte em todas as folhas (1, 2, 4 e 5 semanas), inclusive na prévia. */
+#print-root .page-content {
+    font-family: 'Source Sans 3', Arial, sans-serif;
+}
+
+#print-root .font-black,
+#print-root .font-extrabold {
+    font-weight: 700;
+}
+
+/* Tempos compactos em todos os formatos, sempre em uma única linha. */
+#print-root .page-content .re-print-duration {
+    display: inline-block;
+    font-size: 9px;
+    line-height: 1.1;
+    white-space: nowrap !important;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+/* Reservar espaço ao texto também nos formatos com várias semanas. */
+.page-content[data-qtd="2"] .re-print-part-row {
+    grid-template-columns: 40px minmax(0, 1fr) 200px;
+}
+
+.page-content[data-qtd="4"] .re-print-part-row {
+    grid-template-columns: 32px minmax(0, 1fr) 122px;
+    column-gap: 6px;
+}
+
+.page-content[data-qtd="4"] .re-assignees {
+    min-width: 0;
+}
+
+#print-root .page-content[data-qtd="4"] .re-print-duration {
+    font-size: 8px;
+    padding: 1px 3px;
+}
+
+.week-5-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.week-5-num,
+.week-5-time {
+    flex: 0 0 auto;
+    white-space: nowrap !important;
+    word-break: normal;
+}
+
+.week-5-name {
+    min-width: 0;
+    flex: 1;
+}
+
+@media print {
+    /* Uma semana: leitura confortável, com menos peso e espaço vertical. */
+    .page-content[data-qtd="1"] .re-print-part-title,
+    .page-content[data-qtd="1"] .re-assignee-primary {
+        font-size: 17px;
+        font-weight: 500;
+        line-height: 1.2;
+    }
+
+    .page-content[data-qtd="1"] .re-print-description {
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="1"][data-incluir-fds="true"] .re-print-part-title,
+    .page-content[data-qtd="1"][data-incluir-fds="true"] .re-assignee-primary,
+    .page-content[data-qtd="1"] .re-print-fds-body {
+        font-size: 15px;
+        line-height: 1.2;
+    }
+
+    .page-content[data-qtd="1"] .re-assignee-secondary {
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="1"] .re-print-support-body,
+    .page-content[data-qtd="1"] .re-print-meeting-meta {
+        font-size: 11.5px;
+        font-weight: 400;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="1"][data-incluir-fds="true"] .re-print-description {
+        font-size: 12px;
+    }
+
+    .page-content[data-qtd="1"] .re-print-support-title {
+        font-size: 12px;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="1"] .re-print-president {
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="1"] .re-print-meeting-title {
+        font-size: 20px;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="1"][data-incluir-fds="true"] .re-print-meeting-title {
+        font-size: 18px;
+    }
+
+    .page-content[data-qtd="1"][data-incluir-fds="true"] .re-print-section-title {
+        font-size: 14px;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="1"] .re-print-part-row {
+        padding-top: 3px;
+        padding-bottom: 3px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .page-content[data-qtd="1"] .re-print-meeting-header {
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+    }
+
+    .page-content[data-qtd="1"] .re-print-fds {
+        margin-top: 4mm;
+        padding-top: 3mm;
+    }
+
+    .page-content[data-qtd="1"] .re-print-fds-sections {
+        margin-top: 4px;
+        row-gap: 4px;
+    }
+
+    .page-content[data-qtd="1"] .re-print-support {
+        margin-top: 4px;
+        padding-top: 4px;
+    }
+
+    .page-content[data-qtd="1"] .re-print-support-body .font-semibold {
+        font-weight: 400;
+    }
+
+    #print-root .page-content[data-qtd="1"] .re-print-support-body .font-black,
+    #print-root .page-content[data-qtd="1"] .re-print-fds-body .font-black,
+    #print-root .page-content[data-qtd="1"] .re-print-fds-body .font-semibold {
+        font-weight: 500;
+    }
+
+    /* Mesmo padrão de pesos e hierarquia, dimensionado para cada formato. */
+    .page-content[data-qtd="2"] .re-print-part-title,
+    .page-content[data-qtd="2"] .re-assignee-primary {
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="4"] .re-print-part-title,
+    .page-content[data-qtd="4"] .re-assignee-primary {
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="2"] .re-assignee-secondary {
+        font-size: 10.5px;
+        font-weight: 400;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="4"] .re-assignee-secondary {
+        font-size: 9.5px;
+        font-weight: 400;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="2"] .re-print-meeting-title,
+    .page-content[data-qtd="5"] .re-print-meeting-title {
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="4"] .re-print-meeting-title {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.15;
+    }
+
+    #print-root .page-content[data-qtd="2"] .re-print-meeting-meta,
+    #print-root .page-content[data-qtd="5"] .re-print-meeting-meta {
+        font-size: 10.5px;
+        font-weight: 400;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="4"] .re-print-meeting-meta {
+        font-size: 9.5px;
+        font-weight: 400;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="2"] .re-print-president,
+    .page-content[data-qtd="5"] .re-print-president {
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="4"] .re-print-president {
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="2"] .re-print-section-title {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="4"] .re-print-section-title {
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 1.15;
+    }
+
+    .page-content[data-qtd="2"] .re-print-part-row,
+    .page-content[data-qtd="4"] .re-print-part-row {
+        padding-top: 2px;
+        padding-bottom: 2px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .page-content[data-qtd="2"] .re-print-meeting-header,
+    .page-content[data-qtd="4"] .re-print-meeting-header,
+    .page-content[data-qtd="5"] .re-print-meeting-header {
+        padding-bottom: 3px;
+        margin-bottom: 3px;
+    }
+
+    .page-content[data-qtd="5"] .re-print-meeting-header {
+        margin-top: 5px;
+    }
+
+    .page-content[data-qtd="5"] .week-5-grid {
+        row-gap: 3px;
+    }
+
+    .page-content[data-qtd="5"] .week-5-item {
+        min-width: 0;
+        font-size: 12px;
+        line-height: 1.15;
+        break-inside: avoid;
+    }
+
+    .page-content[data-qtd="5"] .week-5-name {
+        font-weight: 500;
+        overflow-wrap: anywhere;
+    }
+
+    .page-content[data-qtd="5"] .week-5-num {
+        font-weight: 500;
+    }
+
+    .page-content[data-qtd="5"] .week-5-time {
+        font-size: 9px;
+        font-weight: 400;
+    }
+
+    /* Respiro somente nas transições entre semanas e entre as reuniões. */
+    .page-content[data-qtd="2"] .week-divider {
+        margin: 4mm 0 3mm !important;
+    }
+
+    .page-content[data-qtd="4"] {
+        row-gap: 5mm !important;
+        column-gap: 5mm !important;
+    }
+
+    .page-content[data-qtd="5"] > .print-block + .print-block {
+        margin-top: 4mm !important;
+        padding-top: 3mm !important;
+        border-top: 1px dashed #9ca3af;
+    }
+}

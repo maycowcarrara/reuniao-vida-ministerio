@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Globe, X, Minimize, WifiOff, Menu, LayoutDashboard, Send } from 'lucide-react';
 
@@ -10,6 +10,8 @@ import NotificationBell from './components/NotificationBell';
 
 // Hooks e Serviços
 import { useGerenciadorDados } from './hooks/useGerenciadorDados';
+import { acompanharOperacao, progressoOperacoes } from './utils/progressoOperacoes.js';
+import { registrosAlterados } from './utils/compararDados.js';
 import { useQuadroPublico } from './hooks/useQuadroPublico';
 import { auth } from './services/firebase';
 import { CARGOS_MAP, TRANSLATIONS } from './data/constants';
@@ -100,6 +102,7 @@ function AdminPanel() {
   const dadosAtuaisRef = useRef(dadosSistema);
   useEffect(() => { dadosAtuaisRef.current = dadosSistema; }, [dadosSistema]);
   const [busy, setBusy] = useState(false);
+  const operacoesPendentes = useSyncExternalStore(progressoOperacoes.subscribe, progressoOperacoes.getPendentes, () => 0);
   const pendingRef = useRef(false);
   const guardsRef = useRef(new Set());
   const registrarGuard = useCallback(guard => { guardsRef.current.add(guard); return () => guardsRef.current.delete(guard); }, []);
@@ -125,7 +128,7 @@ function AdminPanel() {
     if (pendingRef.current) throw new Error('Uma operação já está em andamento.');
     pendingRef.current = true;
     setBusy(true);
-    try { return await operacao(); }
+    try { return await acompanharOperacao('processando', operacao); }
     finally { pendingRef.current = false; setBusy(false); }
   };
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
@@ -385,15 +388,16 @@ function AdminPanel() {
     toast.success(APP_TEXTS.quadroRepublicado || 'Quadro publico republicado.');
   };
 
-  const salvarAlteracao = async (novosDados) => {
+  const salvarAlteracao = (novosDados) => acompanharOperacao('processando', async () => {
     if (modoGrupos) {
       // Configuração e programas têm operações próprias, nunca gravar props de tela.
       if (novosDados.configuracoes && novosDados.configuracoes !== dadosSistema.configuracoes) throw new Error('Use a edição explícita de configuração por grupo.');
       return executarLocal(async () => {
         if (novosDados.alunos) {
-          for (const aluno of novosDados.alunos) await salvarItem('alunos', aluno.id, aluno, { original: dadosAtuaisRef.current.alunos.find(a => String(a.id) === String(aluno.id)) || null });
+          const anteriores = dadosAtuaisRef.current.alunos;
+          for (const aluno of registrosAlterados(novosDados.alunos, anteriores)) await salvarItem('alunos', aluno.id, aluno, { original: anteriores.find(a => String(a.id) === String(aluno.id)) || null });
         }
-        if (novosDados.historico_reunioes) return controller.executar({ grupoId,
+        if (novosDados.historico_reunioes && novosDados.historico_reunioes !== dadosSistema.historico_reunioes) return controller.executar({ grupoId,
           operacoes: operacoesDaListaDoGrupo({ lista: novosDados.historico_reunioes, grupoId, config: dadosAtuaisRef.current.configuracoes }) });
       });
     }
@@ -472,7 +476,7 @@ function AdminPanel() {
         console.warn('Nao foi possivel publicar o resumo do quadro publico:', error);
       }
     }
-  };
+  });
 
   const setListaProgramacoes = (updater) => {
     if (modoGrupos) {
@@ -841,7 +845,7 @@ function AdminPanel() {
           {!modoGrupos && dadosSistema.configuracoes?.versaoProgramacao >= 2 && <p role="alert" className="m-3 p-3 border border-amber-300 bg-amber-50">
             {lang === 'es' ? 'Programa v2 protegido. Actualiza en Versión del Sistema; las escrituras remotas requieren activación autorizada.' : 'Programação v2 protegida. Atualize em Versão do Sistema; escritas remotas exigem ativação autorizada.'}
           </p>}
-          <fieldset disabled={modoGrupos && busy} className="min-w-0 border-0 p-0 m-0">
+          <fieldset disabled={busy || operacoesPendentes > 0} aria-busy={busy || operacoesPendentes > 0} className="min-w-0 border-0 p-0 m-0">
           <Suspense fallback={<RouteLoading text={APP_TEXTS.carregando} />}>
             {abaAtiva === 'dashboard' && (usarInterfaceIndependente
               ? <PainelGrupo config={configGrupos} grupoId={grupoId} alunos={dadosSistema.alunos} programacoes={todasProgramacoes}

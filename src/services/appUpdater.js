@@ -1,13 +1,5 @@
-let updateServiceWorker;
 let latestRegistration;
-
-const wait = (ms) => new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-});
-
-export const registerAppUpdater = (updater) => {
-    updateServiceWorker = typeof updater === 'function' ? updater : undefined;
-};
+let manualUpdate;
 
 export const registerServiceWorkerRegistration = (registration) => {
     latestRegistration = registration ?? undefined;
@@ -20,7 +12,8 @@ const getServiceWorkerRegistrations = async () => {
 
     try {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        if (registrations.length > 0) return registrations;
+        const matching = registrations.filter(r => !r.scope || window.location.href.startsWith(r.scope));
+        if (matching.length > 0) return matching.sort((a, b) => (b.scope?.length || 0) - (a.scope?.length || 0)).slice(0, 1);
     } catch {
         // Fallback below.
     }
@@ -63,61 +56,87 @@ export const reloadAppWithCacheBust = async (reason = 'asset-error') => {
     window.location.replace(url.toString());
 };
 
-const waitForControllerChange = async () => {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+const updateError = code => Object.assign(new Error(code), { code });
 
-    await new Promise((resolve) => {
-        let settled = false;
+export const esperarAtivacao = (worker, timeoutMs = 30000) => new Promise((resolve, reject) => {
+    let enviado = false;
+    let encerrado = false;
+    const terminar = error => {
+        if (encerrado) return;
+        encerrado = true;
+        window.clearTimeout(timer);
+        worker.removeEventListener('statechange', conferir);
+        if (error) reject(error); else resolve(true);
+    };
+    const conferir = () => {
+        if (worker.state === 'activated') return terminar();
+        if (worker.state === 'redundant') return terminar(updateError('atualizacaoFalhou'));
+        if (worker.state === 'installed' && !enviado) {
+            enviado = true;
+            try { worker.postMessage({ type: 'SKIP_WAITING' }); }
+            catch { terminar(updateError('atualizacaoFalhou')); }
+        }
+    };
+    const timer = window.setTimeout(() => terminar(updateError('atualizacaoDemorada')), timeoutMs);
+    // Ouvir antes de enviar evita perder uma ativação rápida. clientsClaim=false
+    // não emite controllerchange nesta aba: esperamos o worker ficar activated.
+    worker.addEventListener('statechange', conferir);
+    conferir();
+});
 
-        const finish = () => {
-            if (settled) return;
-            settled = true;
-            resolve();
-        };
-
-        const timeoutId = window.setTimeout(finish, 1200);
-
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.clearTimeout(timeoutId);
-            finish();
-        }, { once: true });
-    });
+const entradaAtual = () => {
+    const src = window.document?.querySelector('script[type="module"][src]')?.src;
+    return src ? new URL(src, window.location.href).pathname : '';
 };
 
-export const refreshAppVersion = async (versionTag) => {
-    const registrations = await getServiceWorkerRegistrations();
+const buscarVersaoPublicada = async () => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 10000);
+    try {
+        const url = new URL('/version.json', window.location.href);
+        url.searchParams.set('check', String(Date.now()));
+        const response = await window.fetch(url.toString(), { cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw updateError('versaoIndisponivel');
+        const data = await response.json();
+        if (typeof data.version !== 'string' || typeof data.entry !== 'string' || !/^\/assets\/[^/]+\.js$/.test(data.entry)) throw updateError('versaoIndisponivel');
+        return data;
+    } catch (error) {
+        if (error.code === 'versaoIndisponivel') throw error;
+        throw updateError('versaoIndisponivel');
+    } finally { window.clearTimeout(timer); }
+};
 
-    await Promise.all(registrations.map(async (registration) => {
-        if (!registration) return;
-
-        try {
-            await registration.update();
-        } catch {
-            // Keep going even if a specific registration fails to update.
-        }
-
-        try {
-            registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-        } catch {
-            // Some browsers may not accept this transition in all states.
-        }
-    }));
-
-    if (typeof updateServiceWorker === 'function') {
-        try {
-            await updateServiceWorker(true);
-        } catch {
-            // Fallback to cache busting reload below.
-        }
+const executarAtualizacao = async () => {
+    if (navigator.onLine === false) throw updateError('atualizacaoSemConexao');
+    const [publicada, registrations] = await Promise.all([buscarVersaoPublicada(), getServiceWorkerRegistrations()]);
+    let ativou = false;
+    for (const registration of registrations) {
+        const anterior = registration.active;
+        try { await registration.update(); }
+        catch { throw updateError('atualizacaoFalhou'); }
+        const worker = registration.installing || registration.waiting
+            || (registration.active?.state === 'activating' ? registration.active : null);
+        if (worker) { await esperarAtivacao(worker); ativou = true; }
+        else if (registration.active !== anterior) ativou = true;
     }
-
-    await Promise.race([waitForControllerChange(), wait(900)]);
-    // A nova versão já preparou seu precache. Apagá-lo aqui quebra a próxima
-    // navegação offline. Workbox remove caches obsoletos na ativação; limpeza
-    // forçada permanece exclusivamente no caminho de recuperação de assets.
-
+    if (!ativou && entradaAtual() === publicada.entry) return { atualizado: false, version: publicada.version };
+    // A ativação preserva o novo precache. Só esta navegação ignora o shell
+    // offline; o marcador é removido no bootstrap para manter o próximo offline.
     const url = new URL(window.location.href);
-    url.searchParams.set('appv', versionTag || String(Date.now()));
-    url.searchParams.set('ts', String(Date.now()));
+    url.searchParams.set('appUpdate', String(Date.now()));
+    url.searchParams.set('appv', publicada.version);
     window.location.replace(url.toString());
+    return { atualizado: true, version: publicada.version };
+};
+
+export const refreshAppVersion = () => {
+    if (!manualUpdate) manualUpdate = executarAtualizacao().finally(() => { manualUpdate = undefined; });
+    return manualUpdate;
+};
+
+export const limparMarcadoresAtualizacao = () => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('appUpdate')) return;
+    for (const key of ['appUpdate', 'appv', 'ts']) url.searchParams.delete(key);
+    window.history.replaceState(window.history.state, '', url.toString());
 };

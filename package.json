@@ -1,7 +1,7 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "6.1.308",
+  "version": "6.1.322",
   "type": "module",
   "scripts": {
     "version:patch": "npm version patch --no-git-tag-version",
@@ -24,7 +24,7 @@
     "migrate:indexes": "node scripts/firebase-migration/migrate-indexes.mjs --execute --yes",
     "migrate:verify": "node scripts/firebase-migration/verify-target.mjs",
     "new-congregation:check": "node scripts/firebase-migration/check-new-target.mjs",
-    "test": "node --test --test-concurrency=1 scripts/test-ativacao-agenda.mjs scripts/test-ativacao-migracao.mjs scripts/test-multi-idiomas-e2.mjs scripts/test-multi-idiomas-e3.mjs scripts/test-multi-idiomas-e4.mjs scripts/test-multi-idiomas-e5.mjs scripts/test-multi-idiomas-e6.mjs scripts/test-multi-idiomas-e7.mjs scripts/test-multi-idiomas.mjs scripts/test-o-que-voce-diria.mjs scripts/test-restauracao-interface.mjs scripts/test-revisao-geral.mjs scripts/test-adendo-a.mjs",
+    "test": "node --test --test-concurrency=1 scripts/test-ativacao-agenda.mjs scripts/test-ativacao-migracao.mjs scripts/test-multi-idiomas-e2.mjs scripts/test-multi-idiomas-e3.mjs scripts/test-multi-idiomas-e4.mjs scripts/test-multi-idiomas-e5.mjs scripts/test-multi-idiomas-e6.mjs scripts/test-multi-idiomas-e7.mjs scripts/test-multi-idiomas.mjs scripts/test-o-que-voce-diria.mjs scripts/test-restauracao-interface.mjs scripts/test-revisao-geral.mjs scripts/test-adendo-a.mjs scripts/test-confirmacao-atualizacao.mjs scripts/test-resposta-acoes.mjs scripts/test-atualizar-versao.mjs",
     "test:rules:local": "firebase emulators:exec --project demo-rvm-multi-e6 --config firebase.e6.local.json --only firestore \"node --test --test-concurrency=1 scripts/test-multi-idiomas-e6-rules.mjs scripts/test-ativacao-remota-rules.mjs\""
   },
   "dependencies": {

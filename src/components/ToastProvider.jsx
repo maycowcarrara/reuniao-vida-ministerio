@@ -3,6 +3,7 @@ import { CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
 import { toast, toastStore } from '../utils/toast';
 import { useDocumentSectionMessages } from '../i18n';
 import { DialogModal } from './DialogModal.jsx';
+import ProgressoOperacao from './ProgressoOperacao.jsx';
 
 const ToastContext = createContext(toast);
 
@@ -123,6 +124,7 @@ export function ToastProvider({ children }) {
         <ToastContext.Provider value={value}>
             {children}
             <ToastViewport />
+            <ProgressoOperacao />
             <DialogModal />
         </ToastContext.Provider>
     );

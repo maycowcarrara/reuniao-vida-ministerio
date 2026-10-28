@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { db, auth } from '../services/firebase';
 import {
     collection,
@@ -30,6 +30,9 @@ import { publicarQuadroLocal } from '../services/quadroLocal.js';
 import { integracoesLocais, atualizarContextoIntegracoesLocal } from '../services/integracoesLocais.js';
 import { exigirEscritaCompativel, gruposRemotosAtivos } from '../utils/compatibilidadeGrupos.js';
 import { createRemoteGroupAdapter } from '../services/adaptadorGruposFirestore.js';
+import { acompanharOperacao } from '../utils/progressoOperacoes.js';
+
+const acompanhar = (tipo, acao) => (...args) => acompanharOperacao(tipo, () => acao(...args));
 
 const ESTADO_INICIAL = {
     configuracoes: DEFAULT_CONFIG,
@@ -45,6 +48,17 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
     const [notificacoes, setNotificacoes] = useState([]);
     const [loading, setLoading] = useState(!modoLocal);
     const [accessError, setAccessError] = useState(null);
+    const handledPermissionError = useRef(false);
+    const handleSnapshotError = useCallback(error => {
+        console.error('Erro ao sincronizar dados:', error);
+        setLoading(false);
+        if (error?.code === 'permission-denied' && !handledPermissionError.current) {
+            handledPermissionError.current = true;
+            setAccessError(error);
+            toast.error(error, 'Acesso restrito a administradores autorizados.');
+            auth.signOut().catch(signOutError => console.error('Erro ao sair apos acesso negado:', signOutError));
+        }
+    }, []);
     const dataOwnerUid = modoLocal ? USUARIO_ENSAIO_GRUPOS.uid : resolveDataOwnerUid(usuario);
     const modoRemoto = !modoLocal && gruposRemotosAtivos(dados.configuracoes);
     const [remoto] = useState(() => createRemoteGroupAdapter({ db,
@@ -67,6 +81,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
         const unsubAuth = onAuthStateChanged(auth, (user) => {
             setUsuario(user);
             if (user) {
+                handledPermissionError.current = false;
                 setAccessError(null);
                 setLoading(true);
             } else {
@@ -88,19 +103,6 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
         const uid = dataOwnerUid;
         if (!uid) return;
         const basePath = `users/${uid}`;
-        let handledPermissionError = false;
-
-        const handleSnapshotError = (error) => {
-            console.error("Erro ao sincronizar dados:", error);
-            setLoading(false);
-
-            if (error?.code === 'permission-denied' && !handledPermissionError) {
-                handledPermissionError = true;
-                setAccessError(error);
-                toast.error(error, 'Acesso restrito a administradores autorizados.');
-                auth.signOut().catch((signOutError) => console.error("Erro ao sair apos acesso negado:", signOutError));
-            }
-        };
 
         const unsubConfig = onSnapshot(doc(db, basePath, "configuracoes", "geral"), (docSnap) => {
             if (docSnap.exists()) {
@@ -121,19 +123,6 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
             setLoading(false);
         }, handleSnapshotError);
 
-        let unsubConfirmacoes = () => {};
-        if (syncConfirmacoes) {
-            unsubConfirmacoes = onSnapshot(collection(db, basePath, "confirmacoes"), (snap) => {
-                const lista = snap.docs
-                    .map((d) => ({ id: d.id, ...d.data() }))
-                    .sort((a, b) => (b.lastResponseAtIso || '').localeCompare(a.lastResponseAtIso || ''));
-
-                setConfirmacoes(lista);
-            }, handleSnapshotError);
-        } else {
-            queueMicrotask(() => setConfirmacoes([]));
-        }
-
         const notificationsQuery = query(
             collection(db, NOTIFICATIONS_COLLECTION),
             where('ownerUid', '==', uid),
@@ -152,10 +141,23 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
             unsubConfig();
             unsubAlunos();
             unsubProg();
-            unsubConfirmacoes();
             unsubNotifications();
         };
-    }, [usuario, dataOwnerUid, syncConfirmacoes, modoLocal]);
+    }, [usuario, dataOwnerUid, modoLocal, handleSnapshotError]);
+
+    // Alternar abas muda apenas este listener, preservando as assinaturas de
+    // cadastro, configuração e programação que já estão sincronizadas.
+    useEffect(() => {
+        if (modoLocal) return;
+        if (!usuario || !dataOwnerUid || !syncConfirmacoes) {
+            queueMicrotask(() => setConfirmacoes([]));
+            return;
+        }
+        return onSnapshot(collection(db, `users/${dataOwnerUid}/confirmacoes`), snap => {
+            setConfirmacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => (b.lastResponseAtIso || '').localeCompare(a.lastResponseAtIso || '')));
+        }, handleSnapshotError);
+    }, [usuario, dataOwnerUid, syncConfirmacoes, modoLocal, handleSnapshotError]);
 
     // --- AÇÕES ---
 
@@ -227,7 +229,7 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
 
     // --- FUNÇÃO SIMPLIFICADA: EXCLUIR SEMANA ---
     // Mantivemos o mesmo nome para não quebrar a importação no App.jsx
-    const excluirSemanaELimparHistorico = async (semanaId) => {
+    const excluirSemanaELimparHistorico = useCallback(async (semanaId) => {
         if (modoRemoto) throw new Error("Use a exclusão transacional com escopo de grupo.");
         if (modoLocal) return excluirItem('programacao', semanaId);
         exigirEscritaCompativel(dados.configuracoes);
@@ -241,45 +243,41 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
             console.error("Erro ao excluir semana:", error);
             throw error;
         }
-    };
+    }, [modoRemoto, modoLocal, excluirItem, dados.configuracoes, usuario, dataOwnerUid]);
 
-    const marcarNotificacaoComoLida = async (id) => {
+    const marcarNotificacaoComoLida = useCallback(async (id) => {
         if (modoLocal) return integracoesLocais.markRead(id);
         await markNotificationRead(id);
-    };
+    }, [modoLocal]);
 
-    const marcarTodasNotificacoesComoLidas = async () => {
+    const marcarTodasNotificacoesComoLidas = useCallback(async () => {
         if (modoLocal) return integracoesLocais.markAllRead();
         await markAllNotificationsRead(notificacoes);
-    };
+    }, [modoLocal, notificacoes]);
 
-    const excluirNotificacao = async (id) => {
+    const excluirNotificacao = useCallback(async (id) => {
         if (modoLocal) return integracoesLocais.deleteNotification(id);
         await deleteNotification(id);
-    };
+    }, [modoLocal]);
 
-    const excluirNotificacoesLidas = async () => {
+    const excluirNotificacoesLidas = useCallback(async () => {
         if (modoLocal) return integracoesLocais.deleteRead();
         await deleteReadNotifications(notificacoes);
-    };
+    }, [modoLocal, notificacoes]);
 
-    return {
-        dados,
-        confirmacoes,
-        notificacoes,
-        loading,
-        accessError,
-        usuario,
-        dataOwnerUid,
-        salvarItem,
-        salvarLoteProgramacoes,
-        salvarHistoricosLocais,
-        excluirItem,
-        publicarQuadroPublico,
-        excluirSemanaELimparHistorico,
-        marcarNotificacaoComoLida,
-        marcarTodasNotificacoesComoLidas,
-        excluirNotificacao,
-        excluirNotificacoesLidas
-    };
+    const acoes = useMemo(() => ({
+        salvarItem: (...args) => acompanharOperacao(args[0] === 'alunos' ? 'salvarCadastro' : args[0] === 'configuracoes' ? 'salvarConfiguracoes' : 'salvarProgramacoes', () => salvarItem(...args)),
+        salvarLoteProgramacoes: acompanhar('salvarProgramacoes', salvarLoteProgramacoes),
+        salvarHistoricosLocais: acompanhar('historico', salvarHistoricosLocais),
+        excluirItem: acompanhar('excluir', excluirItem),
+        publicarQuadroPublico: acompanhar('publicar', publicarQuadroPublico),
+        excluirSemanaELimparHistorico: acompanhar('excluir', excluirSemanaELimparHistorico),
+        marcarNotificacaoComoLida: acompanhar('notificacao', marcarNotificacaoComoLida),
+        marcarTodasNotificacoesComoLidas: acompanhar('notificacao', marcarTodasNotificacoesComoLidas),
+        excluirNotificacao: acompanhar('notificacao', excluirNotificacao),
+        excluirNotificacoesLidas: acompanhar('notificacao', excluirNotificacoesLidas)
+    }), [salvarItem, salvarLoteProgramacoes, salvarHistoricosLocais, excluirItem, publicarQuadroPublico, excluirSemanaELimparHistorico,
+        marcarNotificacaoComoLida, marcarTodasNotificacoesComoLidas, excluirNotificacao, excluirNotificacoesLidas]);
+
+    return { dados, confirmacoes, notificacoes, loading, accessError, usuario, dataOwnerUid, ...acoes };
 }

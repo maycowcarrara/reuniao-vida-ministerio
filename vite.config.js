@@ -1,6 +1,17 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+
+const versionManifest = () => ({
+  name: 'version-manifest',
+  generateBundle(_options, bundle) {
+    const entry = Object.values(bundle).find(item => item.type === 'chunk' && item.isEntry)
+    if (!entry) this.error('Entrada do aplicativo não encontrada para version.json.')
+    const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
+    this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version, entry: `/${entry.fileName}` }) })
+  },
+})
 
 const normalizePath = (value = '') => value.replace(/\\/g, '/')
 
@@ -29,6 +40,7 @@ const getReadableChunkName = (chunkInfo) => {
 export default defineConfig({
   plugins: [
     react(),
+    versionManifest(),
     VitePWA({
       // Evita reload automatico quando o service worker encontra uma versao nova.
       // A atualizacao forcada continua disponivel pelo botao "Versao" no app.
@@ -63,9 +75,17 @@ export default defineConfig({
       workbox: {
         clientsClaim: false,
         skipWaiting: false,
+        importScripts: ['/sw-confirmacao.js'],
         cleanupOutdatedCaches: true,
+        // A confirmação precisa do HTML publicado, mesmo com um PWA antigo.
+        navigateFallbackDenylist: [/^\/c\//, /[?&]appUpdate=/],
+        runtimeCaching: [{
+          urlPattern: ({ request, url }) => request.mode === 'navigate' && url.pathname.startsWith('/c/'),
+          handler: 'NetworkOnly',
+          options: { fetchOptions: { cache: 'no-store' } },
+        }],
         // Diz para o navegador fazer cache de todos esses tipos de arquivo
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,ttf}'],
 
         // Aumenta o limite de tamanho de arquivo de 2MB para 5MB 
         // Isso impede que o chunk do Firebase seja rejeitado pelo cache offline

@@ -2,6 +2,15 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { DEFAULT_LANGUAGE, getDocumentLanguage, LANGUAGE_CHANGE_EVENT, normalizeLanguage } from '../config/appConfig';
 
 const PT_MESSAGES = {
+    andamento: {
+        progresso: 'Andamento da operação', concluido: 'Operação concluída', falhou: 'A operação não foi concluída', atualizarSistema: 'Atualizando sistema...',
+        processando: 'Processando ação...', salvarCadastro: 'Salvando cadastro...', salvarConfiguracoes: 'Salvando configurações...',
+        salvarProgramacoes: 'Salvando programação...', publicar: 'Atualizando quadro público...', historico: 'Atualizando histórico...',
+        excluir: 'Excluindo...', notificacao: 'Atualizando notificações...', prepararMensagem: 'Preparando mensagem...',
+        aguarde: 'Aguarde a confirmação antes de repetir a ação.',
+        demorando: 'A confirmação está demorando. A operação continua em andamento; aguarde.',
+        semConexao: 'Sem conexão. Reconecte para concluir e evite repetir a ação.',
+    },
     operacaoGrupo: {
         titulo: 'Designações do grupo', limite: 'Ensaio local com dados fictícios. Quadro, impressão e integrações simuladas disponíveis.',
         semParticipantes: 'Nenhuma pessoa participa deste grupo. Marque a participação no cadastro antes de designar.', cadastro: 'Abrir cadastro',
@@ -137,6 +146,12 @@ const PT_MESSAGES = {
         telaCheia: "Tela Cheia",
         versao: "Versão do Sistema",
         atualizandoVersao: "Atualizando sistema...",
+        versaoAtualizada: "O sistema já está atualizado: v{version}.",
+        aguardeOperacao: "Aguarde a gravação terminar antes de atualizar o sistema.",
+        atualizacaoSemConexao: "Conecte-se à internet para atualizar o sistema.",
+        versaoIndisponivel: "Não foi possível conferir a versão publicada. Verifique a conexão e tente novamente.",
+        atualizacaoFalhou: "Não foi possível instalar a atualização. A página atual foi mantida; tente novamente.",
+        atualizacaoDemorada: "A instalação demorou para concluir. A página atual foi mantida; tente novamente.",
         sair: "Sair da Conta",
         instalarApp: "Instalar Aplicativo",
         compartilharApp: "Compartilhar app",
@@ -404,7 +419,7 @@ const PT_MESSAGES = {
             removerSucesso: "Aluno removido com sucesso.",
             erroCadastrar: "Não foi possível cadastrar o aluno.",
             erroAtualizar: "Não foi possível atualizar o aluno.",
-            salvarDemorado: "O Firebase demorou para confirmar a gravação. Verifique a conexão e tente salvar novamente.",
+            salvarDemorado: "A confirmação está demorando. Aguarde a conclusão antes de repetir a ação.",
             vazioTitulo: "Nenhum aluno encontrado.",
             vazioDescricao: "Tente remover alguns filtros ou buscar com outro termo.",
             limparTodosFiltros: "Limpar todos os filtros",
@@ -967,6 +982,15 @@ const PT_MESSAGES = {
 };
 
 const ES_MESSAGES = {
+    andamento: {
+        progresso: 'Progreso de la operación', concluido: 'Operación finalizada', falhou: 'La operación no se completó', atualizarSistema: 'Actualizando sistema...',
+        processando: 'Procesando acción...', salvarCadastro: 'Guardando registro...', salvarConfiguracoes: 'Guardando configuración...',
+        salvarProgramacoes: 'Guardando programa...', publicar: 'Actualizando tablero público...', historico: 'Actualizando historial...',
+        excluir: 'Eliminando...', notificacao: 'Actualizando notificaciones...', prepararMensagem: 'Preparando mensaje...',
+        aguarde: 'Espera la confirmación antes de repetir la acción.',
+        demorando: 'La confirmación está tardando. La operación sigue en curso; espera.',
+        semConexao: 'Sin conexión. Vuelve a conectarte para finalizar y evita repetir la acción.',
+    },
     operacaoGrupo: {
         titulo: 'Asignaciones del grupo', limite: 'Ensayo local con datos ficticios. Tablero, impresión e integraciones simuladas disponibles.',
         semParticipantes: 'Ninguna persona participa en este grupo. Marca su participación en el registro antes de asignar.', cadastro: 'Abrir registro',
@@ -1102,6 +1126,12 @@ const ES_MESSAGES = {
         telaCheia: "Pantalla Completa",
         versao: "Versión del Sistema",
         atualizandoVersao: "Actualizando sistema...",
+        versaoAtualizada: "El sistema ya está actualizado: v{version}.",
+        aguardeOperacao: "Espera a que termine el guardado antes de actualizar el sistema.",
+        atualizacaoSemConexao: "Conéctate a internet para actualizar el sistema.",
+        versaoIndisponivel: "No fue posible comprobar la versión publicada. Revisa la conexión e inténtalo de nuevo.",
+        atualizacaoFalhou: "No fue posible instalar la actualización. Se mantuvo la página actual; inténtalo de nuevo.",
+        atualizacaoDemorada: "La instalación tardó en finalizar. Se mantuvo la página actual; inténtalo de nuevo.",
         sair: "Cerrar Sesión",
         instalarApp: "Instalar Aplicación",
         compartilharApp: "Compartir app",
@@ -1369,7 +1399,7 @@ const ES_MESSAGES = {
             removerSucesso: "Estudiante eliminado con éxito.",
             erroCadastrar: "No fue posible registrar al estudiante.",
             erroAtualizar: "No fue posible actualizar al estudiante.",
-            salvarDemorado: "Firebase tardó en confirmar el guardado. Verifique la conexión e intente guardar nuevamente.",
+            salvarDemorado: "La confirmación está tardando. Espera a que finalice antes de repetir la acción.",
             vazioTitulo: "Ningún estudiante encontrado.",
             vazioDescricao: "Pruebe quitar algunos filtros o buscar con otro término.",
             limparTodosFiltros: "Limpiar todos los filtros",

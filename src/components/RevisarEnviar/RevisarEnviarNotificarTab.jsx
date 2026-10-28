@@ -8,6 +8,7 @@ import { montarMensagemDesignacao as mensagemDesignacaoBase, montarMensagemLembr
 import { enviarEmailAutomatico, getEmailJsMissingConfig } from '../../utils/revisarEnviar/enviadorEmail';
 import { buildAgendaLink } from '../../utils/revisarEnviar/links';
 import { toast } from '../../utils/toast';
+import { acompanharOperacao } from '../../utils/progressoOperacoes.js';
 import { dialog } from '../../utils/dialog';
 import { getTipoEventoSemana } from '../../utils/eventos';
 import { formatText } from '../../i18n';
@@ -147,20 +148,19 @@ const RevisarEnviarNotificarTab = ({
         };
     };
 
-    const handleEnviarWhatsapp = async (pessoa, msg, msgKey, confirmationData) => {
+    const handleEnviarWhatsapp = (pessoa, msg, msgKey, confirmationData) => acompanharOperacao('prepararMensagem', async () => {
         try {
             const confirmacao = await prepararConfirmacao(confirmationData);
-            const agenda = referenciasGrupo && confirmationData.agendaLink ? formatText(t.msgAgendar, { link: confirmationData.agendaLink }) : '';
-            enviarZap(pessoa, anexarLinkConfirmacao([msg, agenda].filter(Boolean).join('\n\n'), confirmacao.link, confirmacao.status));
+            enviarZap(pessoa, anexarLinkConfirmacao(msg, confirmacao.link, confirmacao.status));
             markSent(msgKey, 'wa');
             await registerNotificationChannelByAssignment(confirmationData?.assignmentKey, 'wa');
         } catch (error) {
             console.error('Falha ao preparar confirmação para WhatsApp:', error);
             toast.error(error, t.reminderError);
         }
-    };
+    });
 
-    const handleEnviarLembrete = async (pessoa, msgKey, confirmationData) => {
+    const handleEnviarLembrete = (pessoa, msgKey, confirmationData) => acompanharOperacao('prepararMensagem', async () => {
         try {
             const confirmacao = await prepararConfirmacao(confirmationData);
             const msg = montarMensagemLembreteSemana({
@@ -183,7 +183,7 @@ const RevisarEnviarNotificarTab = ({
             console.error('Falha ao enviar lembrete:', error);
             toast.error(error, t.reminderError);
         }
-    };
+    });
 
     const getStatusUi = (assignmentKey) => {
         const current = confirmacoesMap[String(assignmentKey || '').trim()];

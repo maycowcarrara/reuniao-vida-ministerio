@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     Calendar, Users, LayoutDashboard, Send, Settings,
     ChevronLeft, LogOut, Home, Maximize, RefreshCw, X, Cloud, Share2
@@ -10,6 +10,7 @@ import { refreshAppVersion } from '../services/appUpdater';
 import { toast } from '../utils/toast';
 import { dialog } from '../utils/dialog';
 import PwaInstallButton from './PwaInstallButton';
+import { acompanharOperacao, progressoOperacoes } from '../utils/progressoOperacoes.js';
 
 const DEFAULT_APP_SHARE_URL = `https://${import.meta.env.VITE_FIREBASE_PROJECT_ID || 'rvm-sbssc'}.web.app`;
 
@@ -52,6 +53,7 @@ export default function Sidebar({
 }) {
     const versaoSistema = packageJson.version;
     const [atualizandoVersao, setAtualizandoVersao] = useState(false);
+    const atualizandoRef = useRef(false);
     const totalSemanasAtivas = (listaProgramacoes || []).filter(semana => !semana?.arquivada).length;
     const totalAlunosAtivos = (alunos || []).filter(aluno => aluno?.tipo !== 'desab').length;
 
@@ -59,24 +61,32 @@ export default function Sidebar({
     const alertaAtualizacao = formatText(SIDEBAR_TEXTS.alertaAtualizacao, { version: versaoSistema });
 
     const handleAtualizarSistema = async () => {
-        if (atualizandoVersao) return;
-        const ok = await dialog.confirm({
-            title: SIDEBAR_TEXTS.versaoSistema || 'Atualização do Sistema',
-            message: alertaAtualizacao,
-            variant: 'info',
-            confirmText: 'Atualizar agora',
-            cancelText: 'Cancelar'
-        });
-        if (!ok) return;
-
-        setAtualizandoVersao(true);
-        toast.info(SIDEBAR_TEXTS.atualizacaoIniciada);
-
+        if (atualizandoRef.current) return;
+        if (progressoOperacoes.getSnapshot().pendentes) {
+            toast.info(SIDEBAR_TEXTS.aguardeOperacao);
+            return;
+        }
+        atualizandoRef.current = true;
         try {
-            await refreshAppVersion(versaoSistema);
+            const ok = await dialog.confirm({
+                title: SIDEBAR_TEXTS.versaoSistema || 'Atualização do Sistema',
+                message: alertaAtualizacao,
+                variant: 'info',
+                confirmText: 'Atualizar agora',
+                cancelText: 'Cancelar'
+            });
+            if (!ok) return;
+
+            setAtualizandoVersao(true);
+            toast.info(SIDEBAR_TEXTS.atualizacaoIniciada);
+
+            const resultado = await acompanharOperacao('atualizarSistema', () => refreshAppVersion());
+            if (!resultado.atualizado) toast.success(formatText(SIDEBAR_TEXTS.versaoAtualizada, { version: resultado.version }));
         } catch (error) {
+            toast.error(SIDEBAR_TEXTS[error.code] || error, SIDEBAR_TEXTS.atualizacaoErro);
+        } finally {
+            atualizandoRef.current = false;
             setAtualizandoVersao(false);
-            toast.error(error, SIDEBAR_TEXTS.atualizacaoErro);
         }
     };
 

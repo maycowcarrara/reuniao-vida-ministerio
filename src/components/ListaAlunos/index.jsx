@@ -25,21 +25,6 @@ const StatCard = ({ icon, label, value, isActive, onClick, colorClass, activeCla
     </button>
 );
 
-const SAVE_TIMEOUT_MS = 15000;
-
-const withSaveTimeout = (promise, message) => {
-    let timeoutId;
-    const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = window.setTimeout(() => {
-            reject(Object.assign(new Error(message), { code: 'deadline-exceeded' }));
-        }, SAVE_TIMEOUT_MS);
-    });
-
-    return Promise.race([promise, timeoutPromise]).finally(() => {
-        window.clearTimeout(timeoutId);
-    });
-};
-
 const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config, cargosMap, multiGrupos = false }) => {
     const G = useSectionMessages('gruposProgramacao');
     const [filtroGrupo, setFiltroGrupo] = useState('todos');
@@ -356,11 +341,7 @@ const ListaAlunos = ({ alunos, setAlunos, onSalvarAluno, onExcluirAluno, config,
                     ? Promise.resolve(onSalvarAluno(alunoParaSalvar, { original: originalFormRef.current }))
                     : Promise.resolve(setAlunos((alunos || []).map(a => a.id === clean.id ? clean : a))));
 
-            if (onSalvarAluno) {
-                await withSaveTimeout(salvarAlunoAtual(), t.msg.salvarDemorado);
-            } else {
-                await salvarAlunoAtual();
-            }
+            await salvarAlunoAtual();
 
             setModalFormOpen(false);
             toast.success(isNovoAluno ? t.msg.cadastradoSucesso : t.msg.atualizadoSucesso);

@@ -184,7 +184,6 @@ const RevisarEnviarHeader = ({
                     const historicoOk = !!s?.historicoGravadoEm && !historicoPendente;
                     const agendaOk = !!s?.agendaSincronizadaEm && !agendaPendente;
                     const pillClass = (ok, pending) => {
-                        if (on) return pending ? 'bg-amber-300/25 text-amber-50 border-white/20' : 'bg-white/20 text-white border-white/20';
                         if (pending) return 'bg-amber-50 text-amber-700 border-amber-200';
                         if (ok) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
                         return 'bg-slate-50 text-slate-400 border-slate-200';

@@ -12,6 +12,18 @@
     ],
     "headers": [
       {
+        "source": "/version.json",
+        "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      },
+      {
+        "source": "/admin",
+        "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      },
+      {
+        "source": "/admin/**",
+        "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      },
+      {
         "source": "/",
         "headers": [
           {
@@ -26,6 +38,24 @@
           {
             "key": "Cache-Control",
             "value": "no-store, max-age=0"
+          }
+        ]
+      },
+      {
+        "source": "/c/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, max-age=0"
+          }
+        ]
+      },
+      {
+        "source": "/sw-confirmacao.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, max-age=0"
           }
         ]
       },

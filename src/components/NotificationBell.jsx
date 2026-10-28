@@ -42,6 +42,15 @@ export default function NotificationBell({
         setOpen(false);
     }, []);
 
+    const renderCardLink = (item) => onNavigate && (
+        <button
+            type="button"
+            className="absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            aria-label={`${lang === 'es' ? 'Abrir programa' : 'Abrir programação'}: ${item.title}`}
+            onClick={() => { onNavigate(item); closeNotifications(); }}
+        />
+    );
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (!wrapRef.current?.contains(event.target)) {
@@ -136,7 +145,7 @@ export default function NotificationBell({
                         )}
 
                         {!!unreadNotifications.length && (
-                            <div className="px-3 pt-3">
+                            <div className="px-3 py-3">
                                 <p className="px-2 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
                                     {t.novas}
                                 </p>
@@ -144,21 +153,21 @@ export default function NotificationBell({
                                     {visibleUnreadNotifications.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="w-full rounded-2xl border border-blue-200 bg-white/95 px-3 py-3 text-left shadow-sm transition hover:bg-blue-50"
+                                            className="relative w-full rounded-2xl border border-blue-200 bg-white/95 px-3 py-3 text-left shadow-sm transition hover:bg-blue-50"
                                         >
+                                            {renderCardLink(item)}
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-black text-slate-900">{item.title}</p>
-                                                    {onNavigate && <button type="button" className="text-blue-700 underline" onClick={() => { onNavigate(item); closeNotifications(); }}>{lang === 'es' ? 'Abrir programa' : 'Abrir programação'}</button>}
-                                                    <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">{item.description}</p>
+                                                    <p className="break-words text-sm font-black text-slate-900">{item.title}</p>
+                                                    <p className="mt-1 break-words text-xs font-medium leading-relaxed text-slate-600">{item.description}</p>
                                                 </div>
                                                 <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0" />
                                             </div>
-                                            <div className="mt-2 flex items-center justify-between gap-3">
+                                            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                                                 <span className="text-[11px] font-semibold text-slate-500">
                                                     {formatNotificationTime(item.createdAtIso, lang)}
                                                 </span>
-                                                <div className="flex shrink-0 items-center gap-1">
+                                                <div className="relative z-20 flex shrink-0 items-center gap-1">
                                                     <button
                                                         type="button"
                                                         onClick={() => onMarkOne?.(item.id)}
@@ -202,21 +211,22 @@ export default function NotificationBell({
                                     {visibleReadNotifications.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="rounded-2xl border border-slate-300 bg-slate-50/95 px-3 py-3 shadow-sm"
+                                            className="relative rounded-2xl border border-slate-300 bg-slate-50/95 px-3 py-3 shadow-sm transition hover:bg-slate-100"
                                         >
+                                            {renderCardLink(item)}
                                             <div className="flex items-start justify-between gap-3">
-                                                <p className="min-w-0 text-sm font-black text-slate-800">{item.title}</p>
+                                                <p className="min-w-0 break-words text-sm font-black text-slate-800">{item.title}</p>
                                                 <button
                                                     type="button"
                                                     onClick={() => onDeleteOne?.(item.id)}
-                                                    className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                                    className="relative z-20 shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                                                     title={t.excluir}
                                                     aria-label={t.excluir}
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
                                             </div>
-                                            <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">{item.description}</p>
+                                            <p className="mt-1 break-words text-xs font-medium leading-relaxed text-slate-500">{item.description}</p>
                                             <span className="mt-2 block text-[11px] font-semibold text-slate-400">
                                                 {formatNotificationTime(item.createdAtIso, lang)}
                                             </span>

@@ -15,6 +15,7 @@ const shell = () => `<!doctype html><html lang="pt"><meta charset="utf-8"><title
 window.controllerChanges=0;
 navigator.serviceWorker.addEventListener('controllerchange',()=>window.controllerChanges++);
 window.updater=await import('/e7-appUpdater.js');
+window.updater.limparMarcadoresAtualizacao();
 window.registration=await navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'});
 window.updater.registerServiceWorkerRegistration(window.registration);
 window.ready=await navigator.serviceWorker.ready;
@@ -25,7 +26,11 @@ const server = http.createServer(async (req, res) => {
         const url = new URL(req.url, 'http://127.0.0.1:5189');
         const path = url.pathname;
         res.setHeader('Cache-Control', 'no-store');
-        if (path === '/' || path === '/index.html') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(shell()); return; }
+        if (path === '/' || path === '/index.html') {
+            if (revision === 'B' && url.searchParams.has('__WB_REVISION__')) await new Promise(done => setTimeout(done, 1600));
+            res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(shell()); return;
+        }
+        if (path === '/version.json') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ version: `fixture-${revision}`, entry: `/assets/fixture-${revision}.js` })); return; }
         if (path === '/sw.js') {
             res.setHeader('Content-Type', 'application/javascript');
             res.end(sw.replace(/(url:"index\.html",revision:")[^"]+/, `$1e7-fixture-${revision}`)); return;
@@ -51,24 +56,25 @@ try {
     await one.reload(); await one.waitForFunction(() => !!navigator.serviceWorker.controller && !!window.ready);
     const two = await context.newPage(); await two.goto('http://127.0.0.1:5189/');
     await two.waitForFunction(() => !!window.ready);
-    revision = 'B';
-    await one.evaluate(() => window.registration.update());
-    await one.waitForFunction(() => window.registration.waiting?.state === 'installed');
     assert.equal(await one.locator('h1').innerText(), 'Fixture PWA A');
     assert.equal(await two.locator('h1').innerText(), 'Fixture PWA A');
     assert.equal(await one.evaluate(() => window.controllerChanges), 0);
     await context.setOffline(true); await two.reload();
     await two.getByRole('heading', { name: 'Fixture PWA A', exact: true }).waitFor();
     await context.setOffline(false);
+    revision = 'B';
     await one.getByRole('button', { name: 'Atualizar explicitamente', exact: true }).click();
+    await one.waitForTimeout(1000);
+    assert.equal(await one.locator('h1').innerText(), 'Fixture PWA A');
     await one.getByRole('heading', { name: 'Fixture PWA B', exact: true }).waitFor();
+    assert.equal(new URL(one.url()).searchParams.has('appUpdate'), false);
     assert.equal(await two.locator('h1').innerText(), 'Fixture PWA A');
     await two.reload(); await two.getByRole('heading', { name: 'Fixture PWA B', exact: true }).waitFor();
     await context.setOffline(true); await one.reload();
     await one.getByRole('heading', { name: 'Fixture PWA B', exact: true }).waitFor();
     await context.setOffline(false);
     await fs.writeFile(`${out}/resultado.json`, JSON.stringify({ origem: 'shell-ficticio-local', sw: 'dist/sw.js', updater: 'src/services/appUpdater.js',
-        duasAbas: true, atualizacaoAguardouAcao: true, offlineVersaoA: true, offlineVersaoB: true, segundaAbaSemReloadForcado: true,
+        duasAbas: true, instalacaoAcimaDe900ms: true, atualizacaoAguardouAcao: true, offlineVersaoA: true, offlineVersaoB: true, segundaAbaSemReloadForcado: true,
         aceitePwaInstaladoFisico: false }, null, 2));
     await one.screenshot({ path: `${out}/versao-b.png` });
     console.log('SW gerado: duas abas, waiting, atualização explícita e offline A/B verificados no harness local.');

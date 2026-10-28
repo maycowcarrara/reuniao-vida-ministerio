@@ -1,5 +1,6 @@
 import { getGrupoEfetivoId, getGrupoLegadoId, isProgramacaoV2, normalizeGruposProgramacao } from './gruposProgramacao.js';
 import { createProgramacaoId, getProgramacaoWeekStartISO } from './programacoes.js';
+import { dadosIguais } from './compararDados.js';
 
 const isObject = value => !!value && Object.getPrototypeOf(value) === Object.prototype;
 
@@ -128,21 +129,29 @@ export const createProgramacoesController = ({ getEstado, salvarLote, publicar }
             const estado = getEstado();
             const config = estado.configuracoes;
             const antes = estado.historico_reunioes;
+            const anterioresPorId = new Map(antes.map(item => [createProgramacaoId(item, { config }), item]));
             // E3: revalida prévias na fonte atual, dentro da mesma exclusão mútua.
             if (preparar) operacoes = preparar({ programacoes: antes, alunos: estado.alunos || [], config, grupoId }).operacoes;
             const next = aplicarOperacoesProgramacao({ programacoes: antes, config, grupoId, operacoes });
             const ids = new Set(next.map(item => createProgramacaoId(item, { config })));
-            const upserts = next.filter(item => JSON.stringify(item) !== JSON.stringify(antes.find(old =>
-                createProgramacaoId(old, { config }) === createProgramacaoId(item, { config }))));
+            const upserts = next.filter(item => !dadosIguais(item, anterioresPorId.get(createProgramacaoId(item, { config }))));
+            const alteradosIds = new Set(upserts.map(item => createProgramacaoId(item, { config })));
             const excluirIds = antes.filter(item => !ids.has(createProgramacaoId(item, { config })))
                 .map(item => createProgramacaoId(item, { config }));
+            // Arquivar/restaurar muda a visibilidade de reuniões já publicadas.
+            // Vale também para os upserts da interface clássica, individuais ou em lote.
+            const mudouArquivamento = upserts.some(item => {
+                const anterior = anterioresPorId.get(createProgramacaoId(item, { config }));
+                return anterior && !!anterior.arquivada !== !!item.arquivada;
+            });
+            const deveRepublicar = republicar || mudouArquivamento;
             if (upserts.length || excluirIds.length) await salvarLote({ grupoId, upserts, excluirIds,
-                anteriores: antes.filter(p => upserts.some(n => n.id === p.id) || excluirIds.includes(p.id)) });
-            if (republicar) {
+                anteriores: antes.filter(p => alteradosIds.has(createProgramacaoId(p, { config })) || !ids.has(createProgramacaoId(p, { config }))) });
+            if (deveRepublicar) {
                 try { await publicar({ configuracoes: config, historico_reunioes: next }); }
                 catch (erroPublicacao) { return { salvo: true, publicado: false, erroPublicacao }; }
             }
-            return { salvo: true, publicado: republicar };
+            return { salvo: true, publicado: deveRepublicar };
         } finally { emAndamento = false; }
     };
     return {

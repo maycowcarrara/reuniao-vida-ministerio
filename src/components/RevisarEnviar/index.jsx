@@ -19,6 +19,7 @@ import {
 
 import RevisarEnviarHeader from './RevisarEnviarHeader';
 import "./revisarEnviar.print.css";
+import "./revisarEnviar.typography.css";
 import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
 import SemanaCelebracaoPrint from '../SemanaCelebracaoPrint.jsx';
 import IntegracoesGrupoReal from '../IntegracoesGrupoReal.jsx';
@@ -450,11 +451,11 @@ const RevisarEnviar = ({
         if (linhas.length === 0) return null;
 
         return (
-            <div className="mt-2 border-t border-gray-200 pt-2 print:mt-1.5 print:pt-1">
-                <h3 className="text-[12px] print:text-[11px] font-black uppercase tracking-wide text-gray-700">
+            <div className="re-print-support mt-2 border-t border-gray-200 pt-2 print:mt-1.5 print:pt-1">
+                <h3 className="re-print-support-title text-[12px] print:text-[11px] font-black uppercase tracking-wide text-gray-700">
                     {t.apoioMeioSemana || t.responsabilidades || 'Apoio do meio de semana'}
                 </h3>
-                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] print:text-[10.5px] leading-tight">
+                <div className="re-print-support-body mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] print:text-[10.5px] leading-tight">
                     {linhas.map((item) => (
                         <div key={item.label} className="grid grid-cols-[105px_1fr] gap-2">
                             <span className="font-black text-gray-500 uppercase">{item.label}</span>
@@ -514,35 +515,35 @@ const RevisarEnviar = ({
 
         const renderFdsSecao = (titulo, children, className = 'text-gray-800') => (
             <div className="break-inside-avoid">
-                <h4 className={`border-b border-gray-400 pb-0.5 text-[15px] print:text-[12.5px] font-bold uppercase tracking-wide leading-tight ${className}`}>
+                <h4 className={`re-print-section-title border-b border-gray-400 pb-0.5 text-[15px] print:text-[12.5px] font-bold uppercase tracking-wide leading-tight ${className}`}>
                     {titulo}
                 </h4>
-                <div className="mt-1 text-[13px] print:text-[11.5px] leading-tight">
+                <div className="re-print-fds-body mt-1 text-[13px] print:text-[11.5px] leading-tight">
                     {children}
                 </div>
             </div>
         );
 
         return (
-            <div className="mt-2.5 border-t-2 border-gray-400 pt-2 print:mt-2 print:pt-1.5">
-                <div className="border-b border-gray-300 pb-1 text-center">
-                    <h3 className="text-[19px] print:text-[15px] font-bold uppercase tracking-tighter leading-tight text-gray-900">
+            <div className="re-print-fds mt-2.5 border-t-2 border-gray-400 pt-2 print:mt-2 print:pt-1.5">
+                <div className="re-print-meeting-header border-b border-gray-300 pb-1 text-center">
+                    <h3 className="re-print-meeting-title text-[19px] print:text-[15px] font-bold uppercase tracking-tighter leading-tight text-gray-900">
                         {tituloFimDeSemana}
                     </h3>
                     {fimDeSemanaMeta && (
-                        <p className="mt-0.5 text-[12px] print:text-[10.5px] font-bold uppercase leading-tight text-gray-500">
+                        <p className="re-print-meeting-meta mt-0.5 text-[12px] print:text-[10.5px] font-bold uppercase leading-tight text-gray-500">
                             {fimDeSemanaMeta}
                         </p>
                     )}
                     {fds.presidente?.nome && (
-                        <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[13px] print:text-[11.5px] font-bold uppercase leading-tight text-gray-800">
+                        <div className="re-print-president mt-0.5 flex items-center justify-center gap-1.5 text-[13px] print:text-[11.5px] font-bold uppercase leading-tight text-gray-800">
                             <span className="rounded bg-gray-100 px-1.5">{t.presidente}:</span>
                             <span>{fds.presidente.nome}</span>
                         </div>
                     )}
                 </div>
 
-                <div className="mt-1.5 grid grid-cols-1 gap-1.5">
+                <div className="re-print-fds-sections mt-1.5 grid grid-cols-1 gap-1.5">
                     {temReuniaoPublica && renderFdsSecao(t.reuniaoPublica || 'Reunião pública', (
                         renderFdsDiscursoLinha()
                     ), 'text-blue-800')}
@@ -571,11 +572,11 @@ const RevisarEnviar = ({
                     ), 'text-blue-700')}
 
                     {apoioFimDeSemanaLinhas.length > 0 && (
-                        <div className="mt-0.5 border-t border-gray-400 pt-1.5 break-inside-avoid">
-                            <h4 className="text-[12px] print:text-[11px] font-black uppercase tracking-wide text-gray-700 leading-tight">
+                        <div className="re-print-support mt-0.5 border-t border-gray-400 pt-1.5 break-inside-avoid">
+                            <h4 className="re-print-support-title text-[12px] print:text-[11px] font-black uppercase tracking-wide text-gray-700 leading-tight">
                                 {t.apoioFimDeSemana || t.responsabilidades || 'Apoio do fim de semana'}
                             </h4>
-                            <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] print:text-[10.5px] leading-tight">
+                            <div className="re-print-support-body mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] print:text-[10.5px] leading-tight">
                                 {apoioFimDeSemanaLinhas.map((item) => (
                                     <div key={item.label} className="grid grid-cols-[105px_1fr] gap-2">
                                         <span className="font-black text-gray-500 uppercase">{item.label}</span>
@@ -933,9 +934,12 @@ const RevisarEnviar = ({
         }
     };
 
-    const handlePrint = () => {
+    const handlePrint = async () => {
         if (!paginas.length) { toast.info(t.agendaNoWeeks); return; }
         try {
+            // Aguarda a fonte local antes de o navegador montar o PDF.
+            await document.fonts.load('600 14px "Source Sans 3"');
+            await document.fonts.ready;
             window.print();
         } catch (e) {
             console.error("Erro ao imprimir", e);
@@ -1004,7 +1008,7 @@ const RevisarEnviar = ({
         let contadorPartesReais = 1;
 
         return (
-            <div className="week-5-grid">
+            <div className="week-5-grid" style={{ gridTemplateRows: `repeat(${Math.max(1, Math.ceil(linhas.length / 2))}, auto)` }}>
                 {linhas.map((item, idx) => {
 
                     let numExibicao = '';
@@ -1174,12 +1178,12 @@ const RevisarEnviar = ({
                                             {!isListMode ? (
                                                 <div
                                                     className={`
-                                                        text-center border-b border-gray-200
+                                                        re-print-meeting-header text-center border-b border-gray-200
                                                         ${qtdSemanas === 1 ? 'pb-2 mb-2' : 'pb-1 mb-1'}
                                                         ${qtdSemanas === 5 ? 'mt-4 print:mt-2' : ''}
                                                     `}
                                                 >
-                                                    <h2 className={`${layout.h1} font-bold uppercase tracking-tighter flex items-center justify-center gap-2`}>
+                                                    <h2 className={`re-print-meeting-title ${layout.h1} font-bold uppercase tracking-tighter flex items-center justify-center gap-2`}>
                                                         {tituloMeioSemana}
                                                         {isVisita && (
                                                             <span className="text-[9px] bg-white text-blue-700 px-2 py-0.5 rounded border border-blue-700 font-bold uppercase tracking-widest">
@@ -1188,17 +1192,17 @@ const RevisarEnviar = ({
                                                         )}
                                                     </h2>
                                                     {qtdSemanas === 5 ? (
-                                                        <p className="text-[13px] font-extrabold text-gray-500 uppercase">
+                                                        <p className="re-print-meeting-meta text-[13px] font-extrabold text-gray-500 uppercase">
                                                             {formatarDataFolha(dataISO, lang)}
                                                         </p>
                                                     ) : (
-                                                        <p className={`${layout.h2} font-bold text-gray-500 uppercase`}>
+                                                        <p className={`re-print-meeting-meta ${layout.h2} font-bold text-gray-500 uppercase`}>
                                                             {formatarDataFolha(dataISO, lang)} | {horarioExib} | {config?.nome_cong}
                                                         </p>
                                                     )}
 
                                                     {semana?.presidente && (
-                                                        <div className={`flex justify-center items-center gap-2 font-bold text-gray-800 uppercase ${qtdSemanas === 1 ? (incluirFimDeSemana ? 'text-[13px] print:text-[11.5px] mt-1' : 'text-[14px] mt-2') : 'text-[11px]'}`}>
+                                                        <div className={`re-print-president flex justify-center items-center gap-2 font-bold text-gray-800 uppercase ${qtdSemanas === 1 ? (incluirFimDeSemana ? 'text-[13px] print:text-[11.5px] mt-1' : 'text-[14px] mt-2') : 'text-[11px]'}`}>
                                                             <span className="bg-gray-100 px-2 rounded">{t.presidente}:</span>
                                                             <span>{semana.presidente.nome}</span>
                                                         </div>
@@ -1250,7 +1254,7 @@ const RevisarEnviar = ({
                                                                     {sectionChanged && parte.secao && t.secoes[parte.secao] && (
                                                                         <h3
                                                                             className={`
-                                                                                ${layout.sectionTitle}
+                                                                                re-print-section-title ${layout.sectionTitle}
                                                                                 w-full
                                                                                 col-span-full
                                                                                 whitespace-normal
@@ -1270,9 +1274,9 @@ const RevisarEnviar = ({
 
                                                                     <div
                                                                         className={`
-                                                                            grid items-start border-b border-gray-100
+                                                                            re-print-part-row grid items-start border-b border-gray-100
                                                                             ${qtdSemanas === 1
-                                                                                ? 'grid-cols-[48px_1fr_260px] gap-x-4 py-2'
+                                                                                ? 'grid-cols-[48px_minmax(0,1fr)_200px] gap-x-4 py-2'
                                                                                 : qtdSemanas === 2
                                                                                     ? 'grid-cols-[60px_1fr_200px] gap-x-2 py-0.5 print:py-[1.5px]'
                                                                                     : 'grid-cols-[60px_1fr_150px] gap-x-2 py-0.5'
@@ -1282,16 +1286,16 @@ const RevisarEnviar = ({
 
                                                                         {/* Tempo */}
                                                                         <div className={`text-right text-sm font-medium whitespace-nowrap ${qtdSemanas === 2 ? 'pr-2' : 'pr-1'}`}>
-                                                                            <span className="bg-gray-100 text-gray-600 font-bold border border-gray-200 rounded px-1.5 py-0.5 text-[9px]">
+                                                                            <span className="re-print-duration bg-gray-100 text-gray-600 font-bold border border-gray-200 rounded px-1.5 py-0.5 text-[9px]">
                                                                                 {parte.tempo} min
                                                                             </span>
                                                                         </div>
 
                                                                         {/* Título e Descrição */}
-                                                                        <div>
+                                                                        <div className="min-w-0 break-words">
                                                                             <span
                                                                                 className={`
-                                                                                    ${layout.partTitle}
+                                                                                    re-print-part-title ${layout.partTitle}
                                                                                     text-gray-900 block
                                                                                     leading-tight
                                                                                 `}
@@ -1300,7 +1304,7 @@ const RevisarEnviar = ({
                                                                             </span>
 
                                                                             {qtdSemanas === 1 && parte.descricao && (
-                                                                                <div className={layout.description}>
+                                                                                <div className={`re-print-description ${layout.description}`}>
                                                                                     {parte.descricao}
                                                                                 </div>
                                                                             )}
@@ -1312,7 +1316,7 @@ const RevisarEnviar = ({
                                                                                 re-assignees
                                                                                 text-right flex flex-col items-end
                                                                                 ${qtdSemanas === 1
-                                                                                    ? 'min-w-[260px] gap-1'
+                                                                                    ? 'min-w-0 gap-1'
                                                                                     : qtdSemanas === 2
                                                                                         ? 'min-w-[200px]'
                                                                                         : 'min-w-[140px]'
