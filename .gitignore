@@ -36,6 +36,9 @@ dist-ssr
 .env.test.local
 .env.production.local
 serviceAccountKey.json
+.dev.vars
+.dev.vars.*
+workers/**/.dev.vars
 *-firebase-adminsdk-*.json
 *adminsdk*.json
 *service-account*.json
