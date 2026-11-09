@@ -1,7 +1,7 @@
 {
   "name": "reuniao-vida-ministerio",
   "private": true,
-  "version": "6.2.325",
+  "version": "6.2.326",
   "type": "module",
   "scripts": {
     "version:patch": "npm version patch --no-git-tag-version",
@@ -36,6 +36,7 @@
     "firebase": "^12.8.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.562.0",
+    "qrcode-generator": "2.0.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1"

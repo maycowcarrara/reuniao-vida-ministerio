@@ -2,12 +2,16 @@ import React from 'react';
 import { CelebracaoResumo } from './Celebracao.jsx';
 import { normalizeOcorrenciaReuniao, TIPOS_REUNIAO } from '../utils/ocorrenciasReuniao.js';
 import { MEIO_SEMANA_RESPONSABILIDADES } from '../utils/fimDeSemana.js';
+import PrintMeetingHeading from './RevisarEnviar/PrintMeetingHeading.jsx';
 
 export default function SemanaCelebracaoPrint({ programa, config, lang }) {
     const es = lang === 'es';
     const nomes = (...pessoas) => [...new Set(pessoas.filter(Boolean).map(p => p.nome).filter(Boolean))].join(' / ');
     return <article className="print-block p-3 space-y-3 text-sm" data-semana-celebracao="true">
-        <h2 className="text-center text-lg font-bold">{config.nome_cong} — {programa.semana}</h2>
+        <PrintMeetingHeading showQr lang={lang}>
+            <h2 className="text-left text-lg font-bold">{config.nome_cong}</h2>
+            <p className="text-sm">{programa.semana}</p>
+        </PrintMeetingHeading>
         {TIPOS_REUNIAO.map(tipo => {
             const r = normalizeOcorrenciaReuniao(programa, tipo, config);
             if (!r.operacional) return null;

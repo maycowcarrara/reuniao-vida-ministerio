@@ -12,6 +12,59 @@
     font-family: 'Source Sans 3', Arial, sans-serif;
 }
 
+/* O QR acompanha só a altura do título e da linha de data/congregação. */
+#print-root .re-print-heading {
+    position: relative;
+    text-align: left;
+}
+
+#print-root .re-print-heading-with-qr .re-print-heading-copy {
+    padding-right: 68px;
+}
+
+#print-root .re-print-qr {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    aspect-ratio: 1;
+    display: block;
+    background: white;
+}
+
+#print-root .re-print-qr svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Em quatro semanas, o topo da folha ocupa duas colunas. */
+#print-root .page-content[data-qtd="4"] > :first-child .re-print-qr {
+    right: calc(-100% - 6mm);
+}
+
+#print-root .page-content[data-qtd="4"] > :first-child .re-print-heading-copy {
+    padding-right: 0;
+}
+
+#print-root .page-content[data-qtd="4"] > :nth-child(2) .re-print-heading-copy {
+    padding-right: 68px;
+}
+
+@media print {
+    #print-root .re-print-heading-with-qr .re-print-heading-copy {
+        padding-right: 48px;
+    }
+
+    #print-root .page-content[data-qtd="4"] > :first-child .re-print-qr {
+        right: calc(-100% - 5mm);
+    }
+
+    #print-root .page-content[data-qtd="4"] > :nth-child(2) .re-print-heading-copy {
+        padding-right: 48px;
+    }
+}
+
 #print-root .font-black,
 #print-root .font-extrabold {
     font-weight: 700;

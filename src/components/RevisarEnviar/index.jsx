@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import RevisarEnviarHeader from './RevisarEnviarHeader';
+import PrintMeetingHeading from './PrintMeetingHeading.jsx';
 import "./revisarEnviar.print.css";
 import "./revisarEnviar.typography.css";
 import RevisarEnviarNotificarTab from './RevisarEnviarNotificarTab';
@@ -526,17 +527,19 @@ const RevisarEnviar = ({
 
         return (
             <div className="re-print-fds mt-2.5 border-t-2 border-gray-400 pt-2 print:mt-2 print:pt-1.5">
-                <div className="re-print-meeting-header border-b border-gray-300 pb-1 text-center">
-                    <h3 className="re-print-meeting-title text-[19px] print:text-[15px] font-bold uppercase tracking-tighter leading-tight text-gray-900">
-                        {tituloFimDeSemana}
-                    </h3>
-                    {fimDeSemanaMeta && (
-                        <p className="re-print-meeting-meta mt-0.5 text-[12px] print:text-[10.5px] font-bold uppercase leading-tight text-gray-500">
-                            {fimDeSemanaMeta}
-                        </p>
-                    )}
+                <div className="re-print-meeting-header border-b border-gray-300 pb-1 text-left">
+                    <PrintMeetingHeading showQr={isolado} lang={lang}>
+                        <h3 className="re-print-meeting-title text-[19px] print:text-[15px] font-bold uppercase tracking-tighter leading-tight text-gray-900">
+                            {tituloFimDeSemana}
+                        </h3>
+                        {fimDeSemanaMeta && (
+                            <p className="re-print-meeting-meta mt-0.5 text-[12px] print:text-[10.5px] font-bold uppercase leading-tight text-gray-500">
+                                {fimDeSemanaMeta}
+                            </p>
+                        )}
+                    </PrintMeetingHeading>
                     {fds.presidente?.nome && (
-                        <div className="re-print-president mt-0.5 flex items-center justify-center gap-1.5 text-[13px] print:text-[11.5px] font-bold uppercase leading-tight text-gray-800">
+                        <div className="re-print-president mt-0.5 flex items-center justify-start gap-1.5 text-[13px] print:text-[11.5px] font-bold uppercase leading-tight text-gray-800">
                             <span className="rounded bg-gray-100 px-1.5">{t.presidente}:</span>
                             <span>{fds.presidente.nome}</span>
                         </div>
@@ -1178,31 +1181,33 @@ const RevisarEnviar = ({
                                             {!isListMode ? (
                                                 <div
                                                     className={`
-                                                        re-print-meeting-header text-center border-b border-gray-200
+                                                        re-print-meeting-header text-left border-b border-gray-200
                                                         ${qtdSemanas === 1 ? 'pb-2 mb-2' : 'pb-1 mb-1'}
                                                         ${qtdSemanas === 5 ? 'mt-4 print:mt-2' : ''}
                                                     `}
                                                 >
-                                                    <h2 className={`re-print-meeting-title ${layout.h1} font-bold uppercase tracking-tighter flex items-center justify-center gap-2`}>
-                                                        {tituloMeioSemana}
-                                                        {isVisita && (
-                                                            <span className="text-[9px] bg-white text-blue-700 px-2 py-0.5 rounded border border-blue-700 font-bold uppercase tracking-widest">
-                                                                {t.visitTag}
-                                                            </span>
+                                                    <PrintMeetingHeading showQr={idxSem === 0} lang={lang}>
+                                                        <h2 className={`re-print-meeting-title ${layout.h1} font-bold uppercase tracking-tighter flex items-center justify-start gap-2`}>
+                                                            {tituloMeioSemana}
+                                                            {isVisita && (
+                                                                <span className="text-[9px] bg-white text-blue-700 px-2 py-0.5 rounded border border-blue-700 font-bold uppercase tracking-widest">
+                                                                    {t.visitTag}
+                                                                </span>
+                                                            )}
+                                                        </h2>
+                                                        {qtdSemanas === 5 ? (
+                                                            <p className="re-print-meeting-meta text-[13px] font-extrabold text-gray-500 uppercase">
+                                                                {formatarDataFolha(dataISO, lang)}
+                                                            </p>
+                                                        ) : (
+                                                            <p className={`re-print-meeting-meta ${layout.h2} font-bold text-gray-500 uppercase`}>
+                                                                {formatarDataFolha(dataISO, lang)} | {horarioExib} | {config?.nome_cong}
+                                                            </p>
                                                         )}
-                                                    </h2>
-                                                    {qtdSemanas === 5 ? (
-                                                        <p className="re-print-meeting-meta text-[13px] font-extrabold text-gray-500 uppercase">
-                                                            {formatarDataFolha(dataISO, lang)}
-                                                        </p>
-                                                    ) : (
-                                                        <p className={`re-print-meeting-meta ${layout.h2} font-bold text-gray-500 uppercase`}>
-                                                            {formatarDataFolha(dataISO, lang)} | {horarioExib} | {config?.nome_cong}
-                                                        </p>
-                                                    )}
 
+                                                    </PrintMeetingHeading>
                                                     {semana?.presidente && (
-                                                        <div className={`re-print-president flex justify-center items-center gap-2 font-bold text-gray-800 uppercase ${qtdSemanas === 1 ? (incluirFimDeSemana ? 'text-[13px] print:text-[11.5px] mt-1' : 'text-[14px] mt-2') : 'text-[11px]'}`}>
+                                                        <div className={`re-print-president flex justify-start items-center gap-2 font-bold text-gray-800 uppercase ${qtdSemanas === 1 ? (incluirFimDeSemana ? 'text-[13px] print:text-[11.5px] mt-1' : 'text-[14px] mt-2') : 'text-[11px]'}`}>
                                                             <span className="bg-gray-100 px-2 rounded">{t.presidente}:</span>
                                                             <span>{semana.presidente.nome}</span>
                                                         </div>
