@@ -1,4 +1,5 @@
 import { planejarAgendaGrupo } from '../utils/integracoesGrupo.js';
+import { getGrupoLegadoId, isProgramacaoV2 } from '../utils/gruposProgramacao.js';
 
 const bodyEvento = event => Object.fromEntries(['id','summary','description','start','end','attendees','extendedProperties','reminders'].filter(k => event[k] !== undefined).map(k=>[k,event[k]]));
 export function validarEventoExistente(evento, atual, grupoLegadoId) {
@@ -13,7 +14,6 @@ export function validarEventoExistente(evento, atual, grupoLegadoId) {
 }
 export async function sincronizarAgendaGrupo({ token, calendarId, programacoes, config, grupoId, alunos, fetchImpl = fetch }) {
     if (!token || !calendarId) throw new Error('Escolha a agenda e autorize a conta Google.');
-    const eventos = await planejarAgendaGrupo({ programacoes, config, grupoId, alunos });
     const resultados = [];
     const base = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
     const request = async (url, options={}) => {
@@ -22,9 +22,37 @@ export async function sincronizarAgendaGrupo({ token, calendarId, programacoes, 
         if (!response.ok && response.status!==404 && response.status!==409) throw new Error(`Google Agenda (${response.status}): ${data?.error?.message || 'operação recusada'}`);
         return {status:response.status,data};
     };
+    // Semanas nativas v2 também recebem agendaSincronizadaEm. Esse marcador
+    // sozinho não prova origem legada: recupere os vínculos pelos IDs estáveis
+    // e pela identidade privada, antes de permitir qualquer gravação.
+    const semInventario = new Set(programacoes.filter(p => isProgramacaoV2(p)
+        && !p.identidadeLegada && p.agendaSincronizadaEm && grupoId === getGrupoLegadoId(config))
+        .map(p => String(p.id)));
+    const consultados = new Map();
+    const vinculos = [];
+    if (semInventario.size) {
+        const propostas = await planejarAgendaGrupo({ config, grupoId, alunos,
+            programacoes: programacoes.map(p => semInventario.has(String(p.id)) ? { ...p, agendaSincronizadaEm: null } : p) });
+        const verificadas = new Set();
+        for (const evento of propostas) {
+            if (!semInventario.has(evento.identity.programacaoId)) continue;
+            const atual = await request(`${base}/${evento.id}`);
+            consultados.set(evento.id, atual);
+            if (atual.status !== 404) {
+                validarEventoExistente(evento, atual.data, getGrupoLegadoId(config));
+                if (!atual.data || atual.data.id !== evento.id) throw new Error('Não foi possível verificar o vínculo do evento na agenda.');
+                verificadas.add(evento.identity.programacaoId);
+            }
+            vinculos.push({ ...evento.identity, eventId: evento.id });
+        }
+        for (const id of new Set(propostas.filter(e => semInventario.has(e.identity.programacaoId)).map(e => e.identity.programacaoId))) {
+            if (!verificadas.has(id)) throw new Error('Não foi possível localizar os eventos já sincronizados desta semana. Escolha a mesma agenda usada anteriormente e tente novamente.');
+        }
+    }
+    const eventos = await planejarAgendaGrupo({ programacoes, config, grupoId, alunos, vinculos });
     for (const evento of eventos) {
         try {
-            let atual = await request(`${base}/${evento.id}`);
+            let atual = consultados.get(evento.id) || await request(`${base}/${evento.id}`);
             validarEventoExistente(evento, atual.status===404 ? null : atual.data, config.grupoLegadoId);
             let resposta;
             if (atual.status===404) {

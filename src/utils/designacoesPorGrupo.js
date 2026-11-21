@@ -4,7 +4,7 @@ import { getProgramacaoWeekStartISO, createProgramacaoId } from './programacoes.
 import { getAssignmentCapabilityForSlot, isAlunoEligibleForAssignment } from './assignmentEligibility.js';
 import { isBibleStudyPart, isPrayerPart, isSongOnlyPart, isWhatWouldYouSayPart } from './meetingParts.js';
 import { MEIO_SEMANA_RESPONSABILIDADES } from './fimDeSemana.js';
-import { addHistorico } from './revisarEnviar/historico.js';
+import { addHistorico, isLegacyHistoricoEntry } from './revisarEnviar/historico.js';
 import { identityFromDesignacao, buildAssignmentKey } from './assignmentIdentity.js';
 import { getCelebracao, slotsCelebracao, tipoReuniaoCelebracao } from './celebracao.js';
 
@@ -161,18 +161,74 @@ export const classificarCandidatosGrupo = ({ alunos = [], programacoes, config, 
             || (a.ultimaData && b.ultimaData ? a.ultimaData.localeCompare(b.ultimaData) : a.ultimaData ? -1 : b.ultimaData ? 1 : 0) || a.aluno.nome.localeCompare(b.aluno.nome));
 };
 
+const PARTES_FDS_LEGADO = new Set(['presidente_fds', 'dirigente_sentinela', 'leitor_sentinela', 'oracao_fds']);
+const PARTES_MEIO_SEMANA_LEGADO = new Set([
+    'presidente', 'tesouros', 'joias', 'leitura', 'ministerio',
+    'o_que_voce_diria', 'discurso', 'ajudante', 'vidacrista',
+    'estudobiblico', 'leitor', 'oracao',
+]);
+
+const weekBoundsISO = (iso) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null;
+    const base = new Date(`${iso}T12:00:00Z`);
+    const diff = base.getUTCDay() === 0 ? 6 : base.getUTCDay() - 1;
+    const start = new Date(base); start.setUTCDate(base.getUTCDate() - diff);
+    const end = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+};
+
+const inferirTipoReuniaoLegado = (entry) => {
+    if (PARTES_FDS_LEGADO.has(entry?.parte)) return 'fimDeSemana';
+    if (PARTES_MEIO_SEMANA_LEGADO.has(entry?.parte)) return 'meioSemana';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(entry?.data || '')) {
+        const day = new Date(`${entry.data}T12:00:00Z`).getUTCDay();
+        return (day === 0 || day === 6) ? 'fimDeSemana' : 'meioSemana';
+    }
+    return null;
+};
+
 export const reconstruirHistoricoGrupo = ({ alunos = [], programacoes = [], config, grupoId, programacaoIds, tipos }) => {
     if (!getGrupoProgramacao(grupoId, config) || !programacaoIds?.length || !tipos?.length || tipos.some(tipo => !TIPOS_REUNIAO.includes(tipo))) throw new Error('Selecione grupo, programações e tipos.');
     const selecionadas = programacoes.filter(item => programacaoIds.includes(createProgramacaoId(item)) && getGrupoEfetivoId(item, config) === grupoId);
     if (new Set(programacaoIds).size !== selecionadas.length) throw new Error('Programação fora do grupo ou inexistente.');
-    const alvos = new Set(selecionadas.flatMap(item => tipos.filter(tipo => normalizeOcorrenciaReuniao(item, tipo, config).operacional && !item.arquivada)
-        .map(tipo => JSON.stringify([createProgramacaoId(item), tipo]))));
-    // Ausência de IDs de escopo em histórico antigo é ambígua: preserva, nunca
-    // presume que todo registro da mesma data pertence à seleção.
+    const grupoLegadoId = getGrupoLegadoId(config);
+    const isGrupoLegado = grupoId === grupoLegadoId;
+    const alvos = new Set();
+    const datasAlvoPorTipo = new Set();
+    const alvosLegado = [];
+    for (const item of selecionadas) {
+        if (item.arquivada) continue;
+        const programacaoId = createProgramacaoId(item);
+        const weekBase = getProgramacaoWeekStartISO(item);
+        for (const tipo of tipos) {
+            const reuniao = normalizeOcorrenciaReuniao(item, tipo, config);
+            if (!reuniao.operacional) continue;
+            alvos.add(JSON.stringify([programacaoId, tipo]));
+            if (reuniao.data) datasAlvoPorTipo.add(JSON.stringify([tipo, reuniao.data]));
+            if (isGrupoLegado) {
+                const bounds = weekBoundsISO(weekBase || reuniao.data);
+                alvosLegado.push({ tipo, data: reuniao.data || '', start: bounds?.start || '', end: bounds?.end || '' });
+            }
+        }
+    }
+    // Entradas legadas (v1, sem grupoId/programacaoId) pertencem exclusivamente
+    // ao grupo legado; ao ressincronizar o grupo legado, substituimos os registros
+    // legados do escopo alvo pelos registros v2 estruturados, evitando duplicidade.
+    // Ao sincronizar outros grupos (ex.: ES), o historico legado e preservado intacto.
+    const legadoNoEscopo = (h) => {
+        if (!isGrupoLegado || !isLegacyHistoricoEntry(h) || !h.data) return false;
+        return alvosLegado.some(alvo =>
+            (alvo.data && h.data === alvo.data) ||
+            (alvo.start && alvo.end && h.data >= alvo.start && h.data <= alvo.end && inferirTipoReuniaoLegado(h) === alvo.tipo)
+        );
+    };
     let next = alunos.map(aluno => ({ ...aluno, historico: (aluno.historico || []).filter(h => {
-        const noEscopo = (h.grupoId || getGrupoLegadoId(config)) === grupoId && h.programacaoId
-            && alvos.has(JSON.stringify([String(h.programacaoId), h.tipoReuniao]));
-        return !noEscopo;
+        if (legadoNoEscopo(h)) return false;
+        const mesmoGrupo = (h.grupoId || grupoLegadoId) === grupoId;
+        if (!mesmoGrupo) return true;
+        if (h.programacaoId && alvos.has(JSON.stringify([String(h.programacaoId), h.tipoReuniao]))) return false;
+        if (h.tipoReuniao && h.data && datasAlvoPorTipo.has(JSON.stringify([h.tipoReuniao, h.data]))) return false;
+        return true;
     }) }));
     selecionarDesignacoes({ programacoes: selecionadas, config }).filter(item => tipos.includes(item.tipoReuniao)).forEach(item => {
         const capability = getAssignmentCapabilityForSlot({ parte: item.parte, slotKey: item.slotKey });
@@ -181,7 +237,7 @@ export const reconstruirHistoricoGrupo = ({ alunos = [], programacoes = [], conf
         const identity = identityFromDesignacao(item);
         next = addHistorico(next, item.pessoa.id, { ...identity, assignmentKey: buildAssignmentKey(identity), grupoId, programacaoId: item.programacaoId, tipoReuniao: item.tipoReuniao,
             slotId: item.slotId, papel: item.slotKey, data: item.reuniao.data, parte,
-            ajudante: item.slotKey === 'ajudante' ? item.parte?.estudante?.nome || '' : item.parte?.ajudante?.nome || '' });
+            ajudante: item.slotKey === 'ajudante' ? item.parte?.estudante?.nome || '' : item.parte?.ajudante?.nome || '' }, { grupoLegadoId });
     });
     return next;
 };

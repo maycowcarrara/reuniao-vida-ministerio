@@ -9,6 +9,82 @@ const program = { id: 'pt-fixture', versaoProgramacao: 2, grupoId: 'grupo-portug
     presidente: { id: 'fixture', nome: 'Fictício' }, fimDeSemana: { ativo: false },
     identidadeLegada: { versao: 1, programacaoId: 'pt-fixture', dataMeioSemana: '2026-11-05', partes: {} } };
 const args = { token: 'fake-test-token', calendarId: 'fixture-calendar', programacoes: [program], config, grupoId: 'grupo-portugues' };
+
+function agendaFalsa(iniciais = []) {
+    const eventos = new Map(iniciais.map(e => [e.id, structuredClone(e)]));
+    const calls = [];
+    const fetchImpl = async (url, options = {}) => {
+        const method = options.method || 'GET';
+        calls.push({ url, method });
+        const id = new URL(url).pathname.split('/').at(-1);
+        const response = (status, data) => ({ status, ok: status < 400, json: async () => structuredClone(data) });
+        if (method === 'GET') return response(eventos.has(id) ? 200 : 404, eventos.get(id) || {});
+        const body = JSON.parse(options.body);
+        if (method === 'POST') {
+            if (eventos.has(body.id)) return response(409, {});
+            eventos.set(body.id, { ...body, etag: 'created' });
+            return response(200, eventos.get(body.id));
+        }
+        assert.equal(method, 'PATCH');
+        assert.equal(options.headers['If-Match'], eventos.get(id).etag);
+        eventos.set(id, { ...eventos.get(id), ...body, etag: 'updated' });
+        return response(200, eventos.get(id));
+    };
+    return { eventos, calls, fetchImpl };
+}
+
+test('Agenda: segunda sincronização v2 recupera vínculos e atualiza data/pessoa sem duplicar', async () => {
+    const nativa = { ...program }; delete nativa.identidadeLegada;
+    const agenda = agendaFalsa();
+    const primeira = await sincronizarAgendaGrupo({ ...args, programacoes: [nativa], fetchImpl: agenda.fetchImpl });
+    assert.equal(primeira.sucesso, true);
+    const [id] = agenda.eventos.keys();
+    const alterada = { ...nativa, agendaSincronizadaEm: '2026-11-01T12:00:00Z',
+        meioSemana: { ...nativa.meioSemana, data: '2026-11-04', horario: '20:00' },
+        presidente: { id: 'substituto', nome: 'Novo presidente' } };
+    agenda.calls.length = 0;
+    const segunda = await sincronizarAgendaGrupo({ ...args, programacoes: [alterada], fetchImpl: agenda.fetchImpl });
+    assert.equal(segunda.sucesso, true);
+    assert.deepEqual(segunda.programacaoIdsSincronizadas, [nativa.id]);
+    assert.equal(agenda.eventos.size, 1);
+    assert.match(agenda.eventos.get(id).summary, /Novo presidente/);
+    assert.equal(agenda.eventos.get(id).start.dateTime, new Date('2026-11-04T20:00:00').toISOString());
+    assert.deepEqual(agenda.calls.map(c => c.method), ['GET', 'PATCH']);
+    assert.equal(alterada.agendaSincronizadaEm, '2026-11-01T12:00:00Z');
+});
+
+test('Agenda: semana v2 já sincronizada permite preencher novo slot sem recriar os existentes', async () => {
+    const nativa = { ...program }; delete nativa.identidadeLegada;
+    const agenda = agendaFalsa();
+    await sincronizarAgendaGrupo({ ...args, programacoes: [nativa], fetchImpl: agenda.fetchImpl });
+    const alterada = { ...nativa, agendaSincronizadaEm: 'antes', partes: [
+        { id: 'nova-parte', titulo: 'Discurso', tempo: 5, estudante: { id: 'outro', nome: 'Outro' } } ] };
+    const result = await sincronizarAgendaGrupo({ ...args, programacoes: [alterada], fetchImpl: agenda.fetchImpl });
+    assert.equal(result.sucesso, true);
+    assert.equal(agenda.eventos.size, 2);
+});
+
+test('Agenda: ausência de vínculos ou identidade conflitante bloqueia antes de qualquer gravação', async () => {
+    const nativa = { ...program, agendaSincronizadaEm: 'antes' }; delete nativa.identidadeLegada;
+    const [evento] = await planejarAgendaGrupo({ ...args, programacoes: [{ ...nativa, agendaSincronizadaEm: null }] });
+    for (const iniciais of [[], [{ ...evento, extendedProperties: { private: { rvmIdentity: 'outro-grupo' } } }]]) {
+        const agenda = agendaFalsa(iniciais);
+        await assert.rejects(sincronizarAgendaGrupo({ ...args, programacoes: [nativa], fetchImpl: agenda.fetchImpl }));
+        assert.equal(agenda.calls.every(c => c.method === 'GET'), true);
+        assert.deepEqual([...agenda.eventos.values()], iniciais);
+    }
+});
+
+test('Agenda: vínculo recuperado continua sujeito ao ETag e falha não marca semana sincronizada', async () => {
+    const nativa = { ...program, agendaSincronizadaEm: 'antes' }; delete nativa.identidadeLegada;
+    const [evento] = await planejarAgendaGrupo({ ...args, programacoes: [{ ...nativa, agendaSincronizadaEm: null }] });
+    const agenda = agendaFalsa([{ ...evento, etag: 'old' }]);
+    const result = await sincronizarAgendaGrupo({ ...args, programacoes: [nativa], fetchImpl: (url, options = {}) =>
+        options.method === 'PATCH' ? Promise.resolve({ ok: false, status: 412 }) : agenda.fetchImpl(url, options) });
+    assert.equal(result.sucesso, false);
+    assert.deepEqual(result.programacaoIdsSincronizadas, []);
+    assert.equal(agenda.eventos.get(evento.id).etag, 'old');
+});
 test('Agenda: vínculo legado exige ID, data, grupo e origem exatos', async () => {
     const [evento] = await planejarAgendaGrupo(args);
     const atual = { id: evento.id, summary: '[RVM] Presidente', start: { dateTime: '2026-11-05T19:30:00-03:00' }, etag: 'old' };
