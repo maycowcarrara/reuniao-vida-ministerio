@@ -12,6 +12,29 @@
     font-family: 'Source Sans 3', Arial, sans-serif;
 }
 
+/* Títulos com destaque também na prévia, proporcionais ao espaço de cada folha. */
+#print-root .re-print-meeting-title {
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+#print-root .page-content[data-qtd="1"] .re-print-meeting-title {
+    font-size: 28px;
+}
+
+#print-root .page-content[data-qtd="1"][data-incluir-fds="true"] .re-print-meeting-title {
+    font-size: 26px;
+}
+
+#print-root .page-content[data-qtd="2"] .re-print-meeting-title,
+#print-root .page-content[data-qtd="5"] .re-print-meeting-title {
+    font-size: 21px;
+}
+
+#print-root .page-content[data-qtd="4"] .re-print-meeting-title {
+    font-size: 17px;
+}
+
 /* O QR acompanha só a altura do título e da linha de data/congregação. */
 #print-root .re-print-heading {
     position: relative;
@@ -19,7 +42,7 @@
 }
 
 #print-root .re-print-heading-with-qr .re-print-heading-copy {
-    padding-right: 68px;
+    padding-right: 80px;
 }
 
 #print-root .re-print-qr {
@@ -48,12 +71,12 @@
 }
 
 #print-root .page-content[data-qtd="4"] > :nth-child(2) .re-print-heading-copy {
-    padding-right: 68px;
+    padding-right: 80px;
 }
 
 @media print {
     #print-root .re-print-heading-with-qr .re-print-heading-copy {
-        padding-right: 48px;
+        padding-right: 60px;
     }
 
     #print-root .page-content[data-qtd="4"] > :first-child .re-print-qr {
@@ -61,7 +84,7 @@
     }
 
     #print-root .page-content[data-qtd="4"] > :nth-child(2) .re-print-heading-copy {
-        padding-right: 48px;
+        padding-right: 60px;
     }
 }
 
@@ -165,15 +188,6 @@
         line-height: 1.15;
     }
 
-    .page-content[data-qtd="1"] .re-print-meeting-title {
-        font-size: 20px;
-        line-height: 1.15;
-    }
-
-    .page-content[data-qtd="1"][data-incluir-fds="true"] .re-print-meeting-title {
-        font-size: 18px;
-    }
-
     .page-content[data-qtd="1"][data-incluir-fds="true"] .re-print-section-title {
         font-size: 14px;
         line-height: 1.15;
@@ -240,19 +254,6 @@
     .page-content[data-qtd="4"] .re-assignee-secondary {
         font-size: 9.5px;
         font-weight: 400;
-        line-height: 1.15;
-    }
-
-    .page-content[data-qtd="2"] .re-print-meeting-title,
-    .page-content[data-qtd="5"] .re-print-meeting-title {
-        font-size: 16px;
-        font-weight: 600;
-        line-height: 1.15;
-    }
-
-    .page-content[data-qtd="4"] .re-print-meeting-title {
-        font-size: 14px;
-        font-weight: 600;
         line-height: 1.15;
     }
 
