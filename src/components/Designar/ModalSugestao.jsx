@@ -3,12 +3,12 @@ import { X, Calendar, CheckCircle, AlertCircle, Filter, Info } from 'lucide-reac
 import { formatText, useSectionMessages } from '../../i18n';
 import { dialog } from '../../utils/dialog';
 import {
-    getAssignmentCapabilityForSlot,
     getAssignmentContextForSlot,
     isAlunoEligibleForAssignment,
 } from '../../utils/assignmentEligibility';
 import { getFimDeSemanaAssignedPeople, getMeioSemanaAssignedPeople } from '../../utils/fimDeSemana';
 import { getCelebracao } from '../../utils/celebracao.js';
+import { calcularRecenciaDesignacao } from '../../utils/sugestoesDesignacao.js';
 
 export default function ModalSugestao({
     isOpen,
@@ -35,7 +35,7 @@ export default function ModalSugestao({
         if (!isOpen) return;
         calcularSugestoes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, parteAtual, modalKey, lang]);
+    }, [isOpen, parteAtual, modalKey, lang, semanaAtual, historico, alunos]);
 
     // --- 1. DETECTAR O CONTEXTO EXATO DA PARTE CLICADA ---
     const detectarContexto = () => {
@@ -112,63 +112,9 @@ export default function ModalSugestao({
 
         // C. Mapear o Histórico exato para cada aluno que passou nos filtros
         listaFiltrada = listaFiltrada.map(aluno => {
-            let ultimaData = null;
-            let diasSemFazer = 9999;
-
-            for (let i = historico.length - 1; i >= 0; i--) {
-                const semana = historico[i];
-                let fezParteEspecifica = false;
-
-                const apoioMeioSemanaMatch = getMeioSemanaAssignedPeople(semana).find((item) => {
-                    if (item?.pessoa?.id !== aluno.id) return false;
-                    return item.slotKey === ctx.capabilityKey;
-                });
-                const fimDeSemanaMatch = getFimDeSemanaAssignedPeople(semana).find((item) => {
-                    if (item?.pessoa?.id !== aluno.id) return false;
-                    if (ctx.slotKey === 'oracao_fds') return item.slotKey === 'oracao_fds';
-                    return item.slotKey === ctx.capabilityKey;
-                });
-
-                if (apoioMeioSemanaMatch) {
-                    fezParteEspecifica = true;
-                    ultimaData = apoioMeioSemanaMatch.data || semana.dataReuniao;
-                } else if (fimDeSemanaMatch) {
-                    fezParteEspecifica = true;
-                    ultimaData = fimDeSemanaMatch.data || semana.dataReuniao;
-                } else if (ctx.capabilityKey === 'presidente_rvm' && semana.presidente?.id === aluno.id) {
-                    fezParteEspecifica = true;
-                } else if (Array.isArray(semana.partes)) {
-                    for (const p of semana.partes) {
-                        const isEstud = p.estudante?.id === aluno.id;
-                        const isAjud = p.ajudante?.id === aluno.id;
-                        const isOrac = p.oracao?.id === aluno.id;
-                        const isDirig = p.dirigente?.id === aluno.id;
-                        const isLeit = p.leitor?.id === aluno.id;
-
-                        if (!isEstud && !isAjud && !isOrac && !isDirig && !isLeit) continue;
-
-                        if (isOrac && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'oracao' }) === ctx.capabilityKey) fezParteEspecifica = true;
-                        if (isDirig && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'dirigente' }) === ctx.capabilityKey) fezParteEspecifica = true;
-                        if (isLeit && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'leitor' }) === ctx.capabilityKey) fezParteEspecifica = true;
-                        if (isEstud && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'estudante' }) === ctx.capabilityKey) fezParteEspecifica = true;
-                        if (isAjud && getAssignmentCapabilityForSlot({ parte: p, slotKey: 'ajudante' }) === ctx.capabilityKey) fezParteEspecifica = true;
-
-                        if (fezParteEspecifica) break;
-                    }
-                }
-
-                if (fezParteEspecifica) {
-                    ultimaData = ultimaData || semana.dataReuniao;
-
-                    const hoje = new Date();
-                    hoje.setHours(12, 0, 0, 0);
-                    const dataParte = new Date(ultimaData + 'T12:00:00');
-
-                    const diffTime = hoje.getTime() - dataParte.getTime();
-                    diasSemFazer = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                    break;
-                }
-            }
+            const { ultimaData, diasSemFazer } = calcularRecenciaDesignacao({
+                alunoId: aluno.id, historico, contexto: ctx, config,
+            });
 
             return {
                 ...aluno,
