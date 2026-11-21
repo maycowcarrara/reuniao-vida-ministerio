@@ -1,5 +1,5 @@
-import { normalizar } from './helpers';
-import { getWeekStartISOFromSemana } from '../revisarEnviar/dates';
+import { normalizar, isExactWeekHeading, extractWeekRangeText } from './helpers.js';
+import { getWeekStartISOFromSemana } from '../revisarEnviar/dates.js';
 
 let cheerioModulePromise;
 const loadCheerio = async () => {
@@ -54,35 +54,59 @@ const limparTexto = (txt) => {
     return out;
 };
 
+const EXACT_IGNORES = new Set([
+    'pular para conteudo', 'pular para sumario', 'jw.org', 'testemunhas de jeova',
+    'selecione o idioma', 'selecionar o idioma', 'log in', 'pesquisar', 'inicio',
+    'ensinos biblicos', 'biblioteca', 'noticias', 'quem somos', 'ler em',
+    'opcoes de download', 'sumario', 'anterior', 'proximo', 'copyright',
+    'termos de uso', 'politica de privacidade', 'configuracoes de aparencia', 'links rapidos',
+    'sim nao', 'copiado', 'copiar link', 'compartilhar por e-mail', 'mostrar tabela de conteudos',
+    'imprimir', 'apostilas', 'guias',
+    'saltar al contenido', 'saltar al sumario', 'saltar al indice', 'testigos de jehova',
+    'seleccione el idioma', 'iniciar sesion', 'buscar', 'ensenanzas biblicas',
+    'quienes somos', 'leer en', 'opciones de descarga', 'siguiente', 'derechos de autor',
+    'terminos de uso', 'politica de privacidad', 'configuracion de apariencia', 'enlaces rapidos',
+    'si no', 'copiar enlace', 'compartir por correo', 'mostrar tabla de contenidos',
+]);
+
+const PREFIX_IGNORES = [
+    'pular para conteudo', 'pular para sumario', 'saltar al contenido', 'saltar al sumario', 'saltar al indice',
+    'title:', 'url source:', 'published time:', 'markdown content:',
+    'gostaria de ler este artigo em', 'le gustaria leer este articulo en',
+    'ler em ', 'leer en ', 'selecione o idioma', 'selecionar o idioma', 'seleccione el idioma',
+    'opcoes de download', 'opciones de descarga', 'mostrar tabela de conteudos', 'mostrar tabla de contenidos',
+    'copyright ', 'derechos de autor', 'termos de uso', 'terminos de uso',
+    'politica de privacidade', 'politica de privacidad', 'configuracoes de aparencia', 'configuracion de apariencia',
+    'aceitar rejeitar personalizar',
+];
+
+const CONTAINS_IGNORES = [
+    'gostaria de ler este artigo em',
+    'le gustaria leer este articulo en',
+    'aceitar rejeitar personalizar',
+    'this is a modal window',
+    'beginning of dialog window',
+    'end of dialog window',
+    'watch tower bible and tract society',
+];
+
+const PLAYER_EXACT_IGNORES = new Set([
+    'tempo', 'duration', 'reproduzir', 'voltar', 'avancar', 'mudo', 'configuracoes',
+    'tiempo', 'duracion', 'reproducir', 'retroceder', 'adelantar', 'silenciar', 'configuracion',
+]);
+
 const shouldIgnoreLine = (linha) => {
     const n = normalizar(linha);
     if (!n) return true;
-    const ignores = [
-        'pular para conteudo', 'pular para sumario', 'jw.org', 'testemunhas de jeova',
-        'selecione o idioma', 'selecionar o idioma', 'log in', 'pesquisar', 'inicio',
-        'ensinos biblicos', 'biblioteca', 'noticias', 'quem somos', 'ler em',
-        'opcoes de download', 'sumario', 'anterior', 'proximo', 'copyright',
-        'termos de uso', 'politica de privacidade', 'configuracoes de aparencia', 'links rapidos',
-        'title:', 'url source:', 'published time:', 'markdown content:',
-        'gostaria de ler este artigo em', 'sim nao', 'aceitar rejeitar personalizar',
-        'copiado', 'copiar link', 'compartilhar por e-mail', 'mostrar tabela de conteudos',
-        'this is a modal window', 'beginning of dialog window', 'end of dialog window',
-        'saltar al contenido', 'saltar al sumario', 'saltar al indice', 'testigos de jehova',
-        'seleccione el idioma', 'iniciar sesion', 'buscar', 'inicio', 'ensenanzas biblicas',
-        'biblioteca', 'noticias', 'quienes somos', 'leer en', 'opciones de descarga',
-        'sumario', 'anterior', 'siguiente', 'derechos de autor', 'terminos de uso',
-        'politica de privacidad', 'configuracion de apariencia', 'enlaces rapidos',
-        'le gustaria leer este articulo en', 'si no', 'copiar enlace', 'compartir por correo',
-        'mostrar tabla de contenidos',
-    ];
-    if (ignores.some((x) => n.includes(x))) return true;
+    // Linhas de duração/descrição de parte (ex.: "(4 min) TESTEMUNHO PÚBLICO...") nunca são chrome do site.
+    if (/^\(?\s*\d+\s*min(?:s)?(?:utos)?\.?\s*\)?/i.test(n)) return false;
+    if (EXACT_IGNORES.has(n)) return true;
+    if (PREFIX_IGNORES.some((x) => n.startsWith(x))) return true;
+    if (CONTAINS_IGNORES.some((x) => n.includes(x))) return true;
     if (/^\d+\.\s+(apostilas|apostila da reuniao vida e ministerio|guias|guia de actividades)/i.test(n)) return true;
     if (/^\d+\.\s+\d{1,2}.*(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i.test(n)) return true;
-    const player = [
-        'tempo', 'duration', 'reproduzir', 'voltar', 'avancar', 'mudo', 'configuracoes',
-        'tiempo', 'duracion', 'reproducir', 'retroceder', 'adelantar', 'silenciar', 'configuracion',
-    ];
-    if (player.some((x) => n === x || n.startsWith(x + ' '))) return true;
+    if (PLAYER_EXACT_IGNORES.has(n)) return true;
+    if (/^(tempo|duration|tiempo|duracion)\s+(atual|restante|actual|\d)/i.test(n)) return true;
     return false;
 };
 
@@ -90,15 +114,13 @@ const extractSemanaLeituraFromText = (rawText) => {
     const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     let semana = null;
     let leitura = null;
-    const reSemanaGeneric = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)\s+(?:de\s+)?([\p{L}]+)(?:\s+de\s+\d{4})?$/iu;
-    const reSemanaCapsGeneric = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)\s+DE\s+([\p{L}]+)(?:\s+\d{4})?$/iu;
     const reLeitura = /^[A-ZÀ-ÜÇÃÕÑ]{2,}(\s+[A-ZÀ-ÜÇÃÕÑ]{2,})*\s+\d{1,3}(?:\s*(?:[-–]\s*\d{1,3}|,\s*\d{1,3})+)?[,]?$/;
 
     for (let i = 0; i < lines.length; i++) {
         const l = lines[i];
         if (!semana) {
-            const lc = l.replace(/\s+/g, ' ').trim();
-            if (reSemanaCapsGeneric.test(lc) || reSemanaGeneric.test(lc)) {
+            const lc = l.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+            if (isExactWeekHeading(lc)) {
                 semana = lc;
                 const nextClean = (lines[i + 1] || '').replace(/^\[|\]$/g, '').trim();
                 const next2 = (lines[i + 2] || '').replace(/^\[|\]$/g, '').trim();
@@ -137,7 +159,8 @@ const extrairMioloTextoImportado = (rawText, termos) => {
     const isWeekHeading = (n) => {
         if (!n) return false;
         if (n.includes('programacao da reuniao vida e ministerio')) return true;
-        return /(^| )\d{1,2}(?:[.°ºª]|er|ero)?\s*(?:[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?|de\s+[\p{L}]+\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?).*(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/iu.test(n);
+        if (n.includes('vida y ministerio cristianos')) return true;
+        return Boolean(extractWeekRangeText(n));
     };
 
     const sectionStart = normalizadas.findIndex((n) => isSectionLine(n) || n.includes('comentarios iniciais') || n.includes('comentarios iniciales'));
@@ -182,30 +205,32 @@ const extrairTextoDoHtmlJW = async (html) => {
     const $ = cheerio.load(html);
     const weekHeader = $('article header h1').first().text().trim() || '';
     const leituraHeader = $('article header h2').first().text().replace(/\s+/g, ' ').trim() || '';
+    const canonicalUrl = $('link[rel="canonical"]').attr('href')?.trim() || '';
+    const breadcrumbFull = $('ol.breadcrumbMenu').text().replace(/\s+/g, ' ').trim() || '';
+    const breadcrumb = $('ol.breadcrumbMenu span[aria-current="page"]').first().text().trim() || '';
     $('script, style, noscript, nav, footer, header').remove();
     const ogTitle = $('meta[property="og:title"]').attr('content')?.trim() || '';
-    const breadcrumb = $('ol.breadcrumbMenu span[aria-current="page"]').first().text().trim() || '';
     const pageTitle = $('.synopsis .syn-body h3 a').first().text().trim() ||
         $('.synopsis .syn-body h3').first().text().trim() ||
         $('main h1').first().text().trim() || '';
-    const root = $('#regionMain').length ? $('#regionMain') : $('main').length ? $('main') : $('body');
+    const root = $('#article').length
+        ? $('#article')
+        : $('article').length
+            ? $('article')
+            : $('#regionMain').length
+                ? $('#regionMain')
+                : $('main').length
+                    ? $('main')
+                    : $('body');
     const blocos = root.find('h1,h2,h3,h4,p,li').map((_, el) => $(el).text().replace(/\s+/g, ' ').trim()).get().filter(Boolean);
     let texto = blocos.join('\n');
     if (!texto || texto.trim().length < 50) {
         texto = root.text().replace(/\s+\n/g, '\n').replace(/\n\s+/g, '\n');
     }
-    return { texto, ogTitle, breadcrumb, pageTitle, weekHeader, leituraHeader };
+    return { texto, ogTitle, breadcrumb, breadcrumbFull, canonicalUrl, pageTitle, weekHeader, leituraHeader };
 };
 
-const extrairSemanaDeString = (s) => {
-    const raw = (s || '').toString().replace(/\s+/g, ' ').trim();
-    if (!raw) return null;
-    const re = /(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)\s+(?:de\s+)?([\p{L}]+)(?:\s+de\s+\d{4})?/iu;
-    const m = re.exec(raw);
-    if (!m) return null;
-    const end = m.index + m[0].length;
-    return raw.slice(m.index, end).trim();
-};
+const extrairSemanaDeString = (s) => extractWeekRangeText(s);
 
 const isSongPrayerText = (n) => {
     return (n.includes('cantico') || n.includes('cancion')) && (n.includes('e oracao') || n.includes('y oracion'));
@@ -250,13 +275,15 @@ export const calcularTotalInfo = (partes) => {
     return { totalVisivel, bonusLeituraBiblia, ministerioCount, bonusMinisterio: ministerioCount, totalEfetivo };
 };
 
-export const extrairDados = async (conteudo, tipoOrigem, lang) => {
+export const extrairDados = async (conteudo, tipoOrigem, lang, { sourceUrl = '' } = {}) => {
     const termos = getTermos(lang);
     let textoProcessar = conteudo || '';
     let semanaStr = null;
     let leituraSemanal = null;
     let weekHeader = '';
     let breadcrumb = '';
+    let breadcrumbFull = '';
+    let canonicalUrl = '';
     let pageTitle = '';
     let ogTitle = '';
 
@@ -264,7 +291,7 @@ export const extrairDados = async (conteudo, tipoOrigem, lang) => {
         const extraido = await extrairTextoDoHtmlJW(conteudo);
         const { texto, leituraHeader } = extraido;
 
-        ({ ogTitle, breadcrumb, pageTitle, weekHeader } = extraido);
+        ({ ogTitle, breadcrumb, breadcrumbFull, canonicalUrl, pageTitle, weekHeader } = extraido);
         textoProcessar = texto;
         semanaStr = (weekHeader && weekHeader.trim()) || extrairSemanaDeString(breadcrumb) ||
             extrairSemanaDeString(pageTitle) || extrairSemanaDeString(ogTitle) || null;
@@ -456,7 +483,17 @@ export const extrairDados = async (conteudo, tipoOrigem, lang) => {
     const dataInicio = getWeekStartISOFromSemana({
         semanaStr,
         isoFallback: null,
-        textSources: [weekHeader, breadcrumb, pageTitle, ogTitle, bruto, semanaStr]
+        textSources: [
+            weekHeader,
+            breadcrumb,
+            pageTitle,
+            ogTitle,
+            canonicalUrl,
+            sourceUrl,
+            breadcrumbFull,
+            semanaStr,
+            bruto,
+        ]
     });
 
     return {

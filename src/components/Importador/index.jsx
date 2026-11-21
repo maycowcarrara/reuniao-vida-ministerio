@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ClipboardList, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, RefreshCcw, ExternalLink, ChevronLeft, Search, Ban } from 'lucide-react';
 import { TRANSLATIONS, getImportadorCatalogConfig } from '../../utils/importador/constants';
-import { isLikelyHtml, isLikelyUrl, fetchHtmlViaProxy } from '../../utils/importador/helpers';
+import { isLikelyHtml, isLikelyUrl, fetchHtmlViaProxy, isWeekTitle } from '../../utils/importador/helpers';
 import { extrairDados } from '../../utils/importador/parser';
 import RevisarImportacao from './RevisarImportacao';
 import { getEventoEspecialPorSemana, isEventoBloqueiaImportacao } from '../../utils/eventos';
@@ -79,12 +79,12 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
     const CATALOG_URL = `https://www.jw.org/${catalogConfig.languagePath}/biblioteca/${CATALOG_BASE}/`;
 
     // --- 🔥 HELPER INTELIGENTE DE BLOQUEIO DE ASSEMBLEIA ---
-    const verificarBloqueioAssembleia = ({ titulo, dataInicio } = {}) => {
+    const verificarBloqueioAssembleia = ({ titulo, dataInicio, extraSources = [] } = {}) => {
         const evento = getEventoEspecialPorSemana({
             semanaStr: titulo,
             config,
             isoFallback: dataInicio || null,
-            textSources: [titulo]
+            textSources: [titulo, ...extraSources].filter(Boolean)
         });
 
         return isEventoBloqueiaImportacao(evento) ? evento : null;
@@ -94,13 +94,10 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
 
     const parseSemanas = useCallback(async (html) => {
         if (!isLikelyHtml(html)) {
-            const reStart = /^(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?/iu;
-            const reShort = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)/iu;
             const parsed = parseMarkdownLinks(html)
                 .filter(({ titulo, url }) => {
                     const hrefLower = url.toLowerCase();
-                    const looksWeek = reStart.test(titulo) || reShort.test(titulo);
-                    return looksWeek && catalogConfig.weekLinkMatcher(hrefLower);
+                    return isWeekTitle(titulo) && catalogConfig.weekLinkMatcher(hrefLower);
                 });
 
             return [...new Map(parsed.map((item) => [item.url, item])).values()];
@@ -109,8 +106,6 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
         const cheerio = await loadCheerio();
         const $ = cheerio.load(html);
         const out = [];
-        const reStart = /^(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?\s*[-–]\s*(\d{1,2}(?:[.°ºª]|er|ero)?)(\s*de\s+[\p{L}]+)?/iu;
-        const reShort = /^(\d{1,2}(?:[.°ºª]|er|ero)?\s*[-–]\s*\d{1,2}(?:[.°ºª]|er|ero)?)/iu;
 
         $('a[href]').each((_, el) => {
             const href = ($(el).attr('href') || '').trim();
@@ -119,11 +114,10 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
                 $(el).attr('title') ||
                 $(el).attr('aria-label') ||
                 ''
-            ).replace(/\s+/g, ' ').trim();
+            ).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
             if (!href || !txt) return;
-            const looksWeek = reStart.test(txt) || reShort.test(txt);
-            if (!looksWeek) return;
-            
+            if (!isWeekTitle(txt)) return;
+
             const hrefLower = href.toLowerCase();
             const isProgramLink = catalogConfig.weekLinkMatcher(hrefLower);
 
@@ -260,12 +254,17 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
                 html = res.text;
                 tipoOrigem = res.contentKind === 'html' ? 'html' : 'texto';
             }
-            const dados = await extrairDados(html, tipoOrigem, lang);
+            const sourceUrl = tipo === 'url' ? conteudoLimpo : '';
+            const dados = await extrairDados(html, tipoOrigem, lang, { sourceUrl });
             if (!dados) throw new Error('Parse Error');
 
             // 🔥 Trava de bloqueio para colar URL/Texto! Impede abrir a Revisão
             const tituloSemana = dados.semana || '';
-            const bloqueio = verificarBloqueioAssembleia({ titulo: tituloSemana, dataInicio: dados.dataInicio || dados.dataExata });
+            const bloqueio = verificarBloqueioAssembleia({
+                titulo: tituloSemana,
+                dataInicio: dados.dataInicio || dados.dataExata,
+                extraSources: [sourceUrl, apostilaSelecionada?.titulo, apostilaSelecionada?.url],
+            });
             if (bloqueio) {
                 await dialog.alert({
                     title: 'Bloqueio de Segurança',
@@ -382,7 +381,10 @@ export default function Importador({ onImportComplete, idioma = 'pt', config, pr
                                     <div className="space-y-2">
                                         {semanas.map(w => {
                                             // 🔥 Verificador Atuando na Renderização da Lista
-                                            const isBloqueado = verificarBloqueioAssembleia({ titulo: w.titulo });
+                                            const isBloqueado = verificarBloqueioAssembleia({
+                                                titulo: w.titulo,
+                                                extraSources: [w.url, apostilaSelecionada?.titulo, apostilaSelecionada?.url],
+                                            });
 
                                             return (
                                                 <div key={w.url} className={`border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isBloqueado ? 'border-yellow-200 bg-yellow-50/50' : 'border-gray-200 bg-white'}`}>

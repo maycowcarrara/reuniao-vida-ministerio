@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { X, FilterX, Search, SortAsc, SortDesc, User, UserRound, UsersRound, AlertTriangle, Clock, GripVertical, CalendarX } from 'lucide-react';
 import { useSectionMessages } from '../../i18n';
+import { getWeekStartISOFromSemana } from '../../utils/revisarEnviar/dates';
 
 // Função para gerar as iniciais caso não tenha foto
 const getIniciais = (nome) => {
@@ -45,22 +46,10 @@ const SidebarAlunos = ({
             if (matchISO) {
                 dataBaseStr = matchISO[1];
             } else {
-                const matchDia = key.match(/^(\d{1,2})/);
-                const matchMes = key.match(/(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/);
-
-                if (matchDia && matchMes) {
-                    const meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-                    const dia = parseInt(matchDia[1], 10);
-                    const mesIdx = meses.indexOf(matchMes[1]);
-
-                    let ano = new Date().getFullYear();
-                    const mesAtual = new Date().getMonth();
-
-                    if (mesAtual === 11 && mesIdx === 0) ano++;
-                    if (mesAtual === 0 && mesIdx === 11) ano--;
-
-                    dataBaseStr = `${ano}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-                }
+                dataBaseStr = getWeekStartISOFromSemana({
+                    semanaStr: String(semanaKey),
+                    textSources: [String(semanaKey)],
+                });
             }
 
             if (!dataBaseStr) return null;

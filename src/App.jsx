@@ -245,7 +245,7 @@ function AdminPanel() {
     if (!programacao) return programacao;
 
     const nextProg = { ...programacao, semana: (programacao.semana || '').toString().trim() };
-    const fallbackISO = nextProg.dataExata || nextProg.dataReuniao || nextProg.dataInicio || nextProg.data || null;
+    const fallbackISO = nextProg.dataInicio || nextProg.dataExata || nextProg.dataReuniao || nextProg.data || null;
 
     if (nextProg.semana) {
       const dataInicioCalculada = getWeekStartISOFromSemana({

@@ -11,6 +11,68 @@ export const isLikelyUrl = (v) => /^https?:\/\/\S+/i.test((v || '').trim());
 
 export const isLikelyHtml = (v) => /^\s*<!doctype html|^\s*<html[\s>]/i.test((v || '').trim());
 
+const DAY_TOKEN = '\\d{1,2}(?:\\s*\\.?\\s*[°ºª]|\\.|er|ero)?';
+const MONTH_TOKEN = '(?:janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|enero|febrero|marzo|mayo|junio|julio|septiembre|setiembre|octubre|noviembre|diciembre)';
+const OPT_YEAR_TOKEN = '(?:\\s+(?:de|del)\\s+20\\d{2}|\\s+20\\d{2})?';
+const RANGE_SEP_TOKEN = '(?:\\s*[-–—]\\s*|\\s+(?:a|al)\\s+)';
+
+const RE_WEEK_CROSS_MONTH_START = new RegExp(
+    `^${DAY_TOKEN}\\s+(?:de|del)\\s+${MONTH_TOKEN}${OPT_YEAR_TOKEN}${RANGE_SEP_TOKEN}${DAY_TOKEN}\\s+(?:de|del)\\s+${MONTH_TOKEN}${OPT_YEAR_TOKEN}`,
+    'iu'
+);
+const RE_WEEK_SAME_MONTH_START = new RegExp(
+    `^${DAY_TOKEN}${RANGE_SEP_TOKEN}${DAY_TOKEN}\\s+(?:(?:de|del)\\s+)?${MONTH_TOKEN}${OPT_YEAR_TOKEN}`,
+    'iu'
+);
+const RE_WEEK_SHORT_START = new RegExp(
+    `^${DAY_TOKEN}\\s*[-–—]\\s*${DAY_TOKEN}(?:\\s+(?:de|del)\\s+${MONTH_TOKEN}${OPT_YEAR_TOKEN})?$`,
+    'iu'
+);
+const RE_WEEK_CROSS_MONTH_EXACT = new RegExp(
+    `^${DAY_TOKEN}\\s+(?:de|del)\\s+${MONTH_TOKEN}${OPT_YEAR_TOKEN}${RANGE_SEP_TOKEN}${DAY_TOKEN}\\s+(?:de|del)\\s+${MONTH_TOKEN}${OPT_YEAR_TOKEN}$`,
+    'iu'
+);
+const RE_WEEK_SAME_MONTH_EXACT = new RegExp(
+    `^${DAY_TOKEN}${RANGE_SEP_TOKEN}${DAY_TOKEN}\\s+(?:(?:de|del)\\s+)?${MONTH_TOKEN}${OPT_YEAR_TOKEN}$`,
+    'iu'
+);
+const RE_WEEK_CROSS_MONTH_FIND = new RegExp(
+    `(?:^|[^\\d])(${DAY_TOKEN}\\s+(?:de|del)\\s+${MONTH_TOKEN}${OPT_YEAR_TOKEN}${RANGE_SEP_TOKEN}${DAY_TOKEN}\\s+(?:de|del)\\s+${MONTH_TOKEN}${OPT_YEAR_TOKEN})`,
+    'iu'
+);
+const RE_WEEK_SAME_MONTH_FIND = new RegExp(
+    `(?:^|[^\\d])(${DAY_TOKEN}${RANGE_SEP_TOKEN}${DAY_TOKEN}\\s+(?:(?:de|del)\\s+)?${MONTH_TOKEN}${OPT_YEAR_TOKEN})`,
+    'iu'
+);
+
+const cleanWeekCandidate = (value) => (value || '').toString().replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+
+export const isWeekTitle = (value) => {
+    const clean = cleanWeekCandidate(value);
+    if (!clean || clean.startsWith('<')) return false;
+    return (
+        RE_WEEK_CROSS_MONTH_START.test(clean) ||
+        RE_WEEK_SAME_MONTH_START.test(clean) ||
+        RE_WEEK_SHORT_START.test(clean)
+    );
+};
+
+export const isExactWeekHeading = (value) => {
+    const clean = cleanWeekCandidate(value);
+    if (!clean) return false;
+    return RE_WEEK_CROSS_MONTH_EXACT.test(clean) || RE_WEEK_SAME_MONTH_EXACT.test(clean);
+};
+
+export const extractWeekRangeText = (value) => {
+    const clean = cleanWeekCandidate(value);
+    if (!clean) return null;
+    const crossMatch = RE_WEEK_CROSS_MONTH_FIND.exec(clean);
+    if (crossMatch?.[1]) return crossMatch[1].trim();
+    const sameMatch = RE_WEEK_SAME_MONTH_FIND.exec(clean);
+    if (sameMatch?.[1]) return sameMatch[1].trim();
+    return null;
+};
+
 export const formatHm = (mins) => {
     const m = Math.max(0, parseInt(mins, 10) || 0);
     const h = Math.floor(m / 60);
@@ -21,8 +83,8 @@ export const formatHm = (mins) => {
 const DEFAULT_PROXY_TIMEOUT_MS = 12000;
 const HTML_CACHE_PREFIX = 'importador:html:';
 
-const envProxyUrl = (import.meta.env.VITE_JW_PROXY_URL || '').trim();
-const envFallbackList = (import.meta.env.VITE_JW_PROXY_FALLBACKS || '')
+const envProxyUrl = (import.meta.env?.VITE_JW_PROXY_URL || '').trim();
+const envFallbackList = (import.meta.env?.VITE_JW_PROXY_FALLBACKS || '')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);

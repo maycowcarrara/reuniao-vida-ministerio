@@ -48,8 +48,8 @@ const monthIndexFromName = (name) => {
     return null;
 };
 
-const parseSemanaRange = (semanaStr) => {
-    const raw = (semanaStr ?? '').toString().trim();
+export const parseSemanaRange = (semanaStr) => {
+    const raw = (semanaStr ?? '').toString().replace(/\u00a0/g, ' ').trim();
     if (!raw) return null;
 
     // Normalização inicial: remove traços longos
@@ -70,31 +70,41 @@ const parseSemanaRange = (semanaStr) => {
             .replace(/(\d{1,2})(?:er|ero)\b/gi, '$1')
             .trim();
 
-        // 1. Dois meses diferentes: "26 de outubro-1 de novembro" ou "26 de outubro a 1 de novembro"
-        let m = /(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)\s*(?:-|\s+(?:a|al)\s+)\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)/i.exec(cleaned);
+        // 1. Dois meses diferentes (mesmo ano ou cruzando ano):
+        //    "26 de outubro-1 de novembro", "30 de noviembre a 6 de diciembre",
+        //    "28 de dezembro de 2026-3 de janeiro de 2027", "28 de dezembro-3 de janeiro de 2027"
+        let m = /(?:^|[^\d])(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)(?:\s+(?:de|del)\s+(20\d{2})|\s+(20\d{2}))?\s*(?:-|\s+(?:a|al)\s+)\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)(?:\s+(?:de|del)\s+(20\d{2})|\s+(20\d{2}))?/i.exec(cleaned);
         if (m) {
             const mStart = monthIndexFromName(m[2]);
-            const mEnd = monthIndexFromName(m[4]);
+            const mEnd = monthIndexFromName(m[6]);
             if (mStart != null && mEnd != null) {
+                const startYear = m[3] || m[4] ? Number(m[3] || m[4]) : null;
+                const endYear = m[7] || m[8] ? Number(m[7] || m[8]) : null;
                 return {
                     startDay: Number(m[1]),
                     startMonthName: m[2],
-                    endDay: Number(m[3]),
-                    endMonthName: m[4],
+                    startYear,
+                    endDay: Number(m[5]),
+                    endMonthName: m[6],
+                    endYear,
                 };
             }
         }
 
-        // 2. Mesmo mês: "4-10 de maio" ou "4 a 10 de maio" ou "1 al 7 de noviembre"
-        m = /(\d{1,2})\s*(?:-|\s+(?:a|al)\s+)\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)/i.exec(cleaned);
+        // 2. Mesmo mês: "4-10 de maio", "4 a 10 de maio", "1 al 7 de noviembre", "4-10 de janeiro de 2027"
+        //    (?:^|[^\d]) impede falso positivo com final de ano como "2026-3 de janeiro".
+        m = /(?:^|[^\d])(\d{1,2})\s*(?:-|\s+(?:a|al)\s+)\s*(\d{1,2})\s*(?:de|del)\s*([A-Za-zÀ-ÿ]+)(?:\s+(?:de|del)\s+(20\d{2})|\s+(20\d{2}))?/i.exec(cleaned);
         if (m) {
             const mEnd = monthIndexFromName(m[3]);
             if (mEnd != null) {
+                const explicitYear = m[4] || m[5] ? Number(m[4] || m[5]) : null;
                 return {
                     startDay: Number(m[1]),
                     startMonthName: m[3],
+                    startYear: explicitYear,
                     endDay: Number(m[2]),
                     endMonthName: m[3],
+                    endYear: explicitYear,
                 };
             }
         }
@@ -153,39 +163,93 @@ export const parseFlexibleDateToISO = (value) => {
     return null;
 };
 
-const getYearFromSources = ({ isoFallback, config, textSources = [] }) => {
-    if (isoFallback && /^\d{4}-\d{2}-\d{2}$/.test(isoFallback)) {
-        return Number(isoFallback.slice(0, 4));
+const resolveStartYearForRange = ({ range, mStart, mEnd, isoFallback, config, textSources = [] }) => {
+    const crossesYear = mEnd < mStart;
+
+    if (Number.isInteger(range?.startYear)) {
+        return range.startYear;
+    }
+
+    if (Number.isInteger(range?.endYear)) {
+        return crossesYear ? range.endYear - 1 : range.endYear;
+    }
+
+    const fallbackISO = parseFlexibleDateToISO(isoFallback);
+    if (fallbackISO) {
+        const fbYear = Number(fallbackISO.slice(0, 4));
+        const fbMonth = Number(fallbackISO.slice(5, 7)) - 1;
+        if (crossesYear && fbMonth === mEnd) {
+            return fbYear - 1;
+        }
+        return fbYear;
     }
 
     for (const source of textSources) {
         const text = (source ?? '').toString();
-        const match = text.match(/\b(20\d{2})\b/);
-        if (match) return Number(match[1]);
+        if (!text) continue;
+
+        if (crossesYear) {
+            const parsedSource = parseSemanaRange(text);
+            if (parsedSource) {
+                const srcStart = monthIndexFromName(parsedSource.startMonthName);
+                const srcEnd = monthIndexFromName(parsedSource.endMonthName);
+                if (srcStart != null && srcEnd != null && srcEnd < srcStart) {
+                    if (Number.isInteger(parsedSource.startYear)) return parsedSource.startYear;
+                    if (Number.isInteger(parsedSource.endYear)) return parsedSource.endYear - 1;
+                }
+            }
+        }
+
+        const years = Array.from(text.matchAll(/\b(20\d{2})\b/g), (match) => Number(match[1]));
+        if (years.length > 0) {
+            if (crossesYear) {
+                const pairStart = years.find((y) => years.includes(y + 1));
+                if (pairStart != null) return pairStart;
+            }
+            return years[0];
+        }
     }
 
     if (Number(config?.anoProgramacao)) return Number(config.anoProgramacao);
     if (Number(config?.ano)) return Number(config.ano);
 
-    return new Date().getFullYear();
+    const now = new Date();
+    if (crossesYear && now.getMonth() === mEnd) {
+        return now.getFullYear() - 1;
+    }
+    return now.getFullYear();
 };
 
 const getWeekRangeDatesFromSemana = ({ semanaStr, config, isoFallback, textSources = [] }) => {
     const range = parseSemanaRange(semanaStr);
     if (!range) return null;
 
-    const year = getYearFromSources({ isoFallback, config, textSources });
-
     const mStart = monthIndexFromName(range.startMonthName);
     const mEnd = monthIndexFromName(range.endMonthName);
     if (mStart == null || mEnd == null) return null;
 
-    const start = new Date(year, mStart, range.startDay);
-    let end = new Date(year, mEnd, range.endDay);
+    const crossesYear = mEnd < mStart;
+    const startYear = resolveStartYearForRange({
+        range,
+        mStart,
+        mEnd,
+        isoFallback,
+        config,
+        textSources,
+    });
+    let endYear = Number.isInteger(range.endYear)
+        ? range.endYear
+        : (crossesYear ? startYear + 1 : startYear);
+    if (crossesYear && endYear <= startYear) {
+        endYear = startYear + 1;
+    }
 
-    // se cruzar ano (ex.: dezembro -> janeiro)
+    const start = new Date(startYear, mStart, range.startDay);
+    let end = new Date(endYear, mEnd, range.endDay);
+
+    // Garantia adicional caso o fim caia antes do início (ex.: dezembro -> janeiro)
     if (end.getTime() < start.getTime()) {
-        end = new Date(year + 1, mEnd, range.endDay);
+        end = new Date(startYear + 1, mEnd, range.endDay);
     }
 
     return { start, end };
@@ -237,37 +301,67 @@ export const formatarDataFolha = (dataStr, lang) => {
     });
 };
 
-const getStoredDateISOFromSemana = (sem, orderedFields = []) =>
-    orderedFields
-        .map((field) => sem?.[field])
-        .map(parseFlexibleDateToISO)
-        .find(Boolean) || null;
+const getStoredDateISOFromSemana = (sem, orderedFields = []) => {
+    for (const field of orderedFields) {
+        const value = field.includes('.')
+            ? field.split('.').reduce((acc, part) => acc?.[part], sem)
+            : sem?.[field];
+        const iso = parseFlexibleDateToISO(value);
+        if (iso) return iso;
+    }
+    return null;
+};
 
 export const getCanonicalWeekStartISO = ({ sem, config }) => {
     if (!sem) return null;
 
+    const storedStartISO = getStoredDateISOFromSemana(sem, [
+        'dataInicio',
+        'dataExata',
+        'dataReuniao',
+        'data',
+        'meioSemana.data',
+        'fimDeSemana.data',
+    ]);
+
     const parsedFromLabel = getWeekStartISOFromSemana({
         semanaStr: sem?.semana,
         config,
-        isoFallback: null,
+        isoFallback: storedStartISO,
         textSources: [sem?.semana],
     });
 
-    return parsedFromLabel || getStoredDateISOFromSemana(sem, ['dataInicio', 'dataExata', 'dataReuniao', 'data']);
+    return parsedFromLabel || storedStartISO;
 };
 
 export const getCanonicalMeetingDateISO = ({ sem, config, overrideDia = null }) => {
     if (!sem) return null;
 
+    const storedYearRefISO = getStoredDateISOFromSemana(sem, [
+        'dataInicio',
+        'dataReuniao',
+        'dataExata',
+        'data',
+        'meioSemana.data',
+        'fimDeSemana.data',
+    ]);
+
     const parsedFromLabel = getMeetingDateISOFromSemana({
         semanaStr: sem?.semana,
         config,
-        isoFallback: null,
+        isoFallback: storedYearRefISO,
         overrideDia,
         textSources: [sem?.semana],
     });
 
-    return parsedFromLabel || getStoredDateISOFromSemana(sem, ['dataReuniao', 'dataExata', 'dataInicio', 'data']);
+    return parsedFromLabel || getStoredDateISOFromSemana(sem, [
+        'dataReuniao',
+        'dataExata',
+        'dataInicio',
+        'data',
+        'meioSemana.data',
+        'fimDeSemana.data',
+    ]);
 };
 
 export const getSemanaSortTimestamp = (sem, config) => {
