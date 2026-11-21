@@ -19,5 +19,7 @@ export const projetarConfigGrupo = (config, grupoId) => {
     return { ...config, grupoSelecionadoId: grupoId, idioma: grupo.idioma, nome_cong: grupo.nome,
         dia_reuniao: grupo.meioSemana.dia, horario: grupo.meioSemana.horario,
         dia_reuniao_fds: grupo.fimDeSemana.dia, horario_fds: grupo.fimDeSemana.horario,
-        eventosAnuais: grupo.eventosAnuais };
+        planejamentoReunioes: Object.fromEntries(['meioSemana', 'fimDeSemana'].map(tipo => [tipo, {
+            proximaTroca: grupo[tipo].proximaTroca || null, historicoDias: grupo[tipo].historicoDias || [],
+        }])), eventosAnuais: grupo.eventosAnuais };
 };

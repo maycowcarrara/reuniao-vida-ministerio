@@ -8,6 +8,7 @@ export async function garantirParConfirmacao({ db, sdk, ownerUid, safeKey, candi
     if (v2 && buildAssignmentKey(v2) !== safeKey) throw new Error('Identidade da confirmação divergente.');
     const privateRef = sdk.doc(db, `users/${ownerUid}/confirmacoes/${safeKey}`);
     return sdk.runTransaction(db, async tx => {
+        let dataConfirmacao = dataISO;
         const privateSnap = await tx.get(privateRef);
         const privateData = privateSnap.exists() ? privateSnap.data() : {};
         const token = privateData.token || candidate;
@@ -21,12 +22,13 @@ export async function garantirParConfirmacao({ db, sdk, ownerUid, safeKey, candi
             const program = await tx.get(sdk.doc(db, `users/${ownerUid}/programacao/${v2.programacaoId}`));
             const validation = resolverConfirmacaoGrupo({ confirmacao: { ...v2, ownerUid, assignmentKey: safeKey }, config: cfg,
                 programacoes: program.exists() ? [{ ...program.data(), id: program.id }] : [] });
+            dataConfirmacao = validation.dataISO || dataISO;
             if (validation.isUnavailable) throw new Error('A designação mudou; atualize a tela.');
         }
         const status = publicData.status || privateData.status || 'pendente';
         const baseData = {
             ...(v2 || {}), token, assignmentKey: safeKey, ownerUid,
-            lang: lang === 'es' ? 'es' : 'pt', semana: semana || '', dataISO: dataISO || '',
+            lang: lang === 'es' ? 'es' : 'pt', semana: semana || '', dataISO: dataConfirmacao || '',
             tituloParte: tituloParte || '', tituloParteExibicao: tituloParteExibicao || '',
             pessoaNome: pessoaNome || '', role: role || '', congregacaoNome: congregacaoNome || '',
             agendaLink, sala, secao, status,
@@ -80,7 +82,7 @@ export async function responderParConfirmacao({ db, sdk, token, mode, status, op
         if (!board.exists()) throw new Error('Quadro indisponível para conferir a designação.');
         const availability = validarDestino(current, board.data());
         if (availability.isUnavailable) { const error = new Error('A designação vinculada a este link não está disponível.'); error.code = availability.unavailableReason; throw error; }
-        const payload = prepararRespostaConfirmacao(current, { ...options, mode, status, nowISO, requestId, timestamp: sdk.serverTimestamp });
+        const payload = prepararRespostaConfirmacao({ ...current, dataISO: availability.dataISO || current.dataISO }, { ...options, mode, status, nowISO, requestId, timestamp: sdk.serverTimestamp });
         if (!payload) return { changed: false };
         const week = mode === 'week', previousStatus = week ? payload.weekReminderPreviousStatus : payload.previousStatus;
         const type = week ? 'lembrete_semana_status' : 'confirmacao_status';

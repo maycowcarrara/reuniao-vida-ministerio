@@ -10,6 +10,8 @@ import {
 import { useSectionMessages } from '../i18n';
 import { getWeekdayOptions, normalizeLanguage, normalizeMeetingDay } from '../config/appConfig';
 import UserAccessManager from './UserAccessManager';
+import PlanejarTrocaDia from './PlanejarTrocaDia.jsx';
+import { getPadraoReuniao } from '../config/meetingSchedule.js';
 
 export default function Configuracoes({ dados, salvarAlteracao, lang, editorProgramacao = null, mostrarAcessos = true, onSelecionarIdioma = null }) {
     const T = useSectionMessages('configuracoes');
@@ -20,7 +22,7 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, editorProg
     const weekendMeetingDay = normalizeMeetingDay(dados?.configuracoes?.dia_reuniao_fds || 'saturday');
     const weekdayOptions = getWeekdayOptions(lang);
     const atualizarConfig = (campo, valor) => {
-        salvarAlteracao({
+        return salvarAlteracao({
             ...dados,
             configuracoes: { ...dados.configuracoes, [campo]: valor }
         });
@@ -150,6 +152,15 @@ export default function Configuracoes({ dados, salvarAlteracao, lang, editorProg
             </div>
             )}
 
+            {!editorProgramacao && ['meioSemana', 'fimDeSemana'].map(tipo => {
+                const padrao = getPadraoReuniao(dados.configuracoes, tipo);
+                return <section key={tipo} className="space-y-2">
+                    <h3 className="text-xs font-black text-slate-700">{tipo === 'meioSemana' ? T.dia : T.fimDeSemanaTitulo}</h3>
+                    <PlanejarTrocaDia key={JSON.stringify([padrao.dia, padrao.proximaTroca])} padrao={padrao} lang={lang} onChange={troca => atualizarConfig('planejamentoReunioes', {
+                        ...dados.configuracoes.planejamentoReunioes, [tipo]: { ...dados.configuracoes.planejamentoReunioes?.[tipo], proximaTroca: troca },
+                    })} />
+                </section>;
+            })}
             {mostrarAcessos && <UserAccessManager lang={activeLocale} />}
 
             {!editorProgramacao && <div className="bg-white p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden">

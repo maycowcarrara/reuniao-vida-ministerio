@@ -7,7 +7,7 @@ import {
     ArrowRight, Activity, Clock, Briefcase, Tent, UsersRound, Plus, Trash2, Info, MessageCircle,
     UserCheck, UserX, User, Medal, BookHeart, Archive, HeartPulse, ThumbsUp, AlertCircle
 } from 'lucide-react';
-import { getWeekdayJsDay } from '../config/appConfig';
+import { getDataSemanalVigente, getPadraoReuniao } from '../config/meetingSchedule.js';
 import { getCanonicalWeekStartISO, getMeetingDateISOFromSemana } from '../utils/revisarEnviar/dates';
 import { getEventoEspecialDaSemana, getTipoEventoSemana, isTipoEventoBloqueante } from '../utils/eventos';
 import { textosCelebracao, eventoSubstituiReuniao, getCelebracao } from '../utils/celebracao.js';
@@ -105,7 +105,7 @@ export default function Dashboard({
                 semanaStr: sem?.semana,
                 config,
                 isoFallback: fallbackStr,
-                overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+                tipoReuniao: 'fimDeSemana',
                 textSources: [sem?.semana]
             }) || fallbackStr;
         };
@@ -129,15 +129,6 @@ export default function Dashboard({
             const diffToMonday = day === 0 ? -6 : 1 - day;
             d.setDate(d.getDate() + diffToMonday);
             return toISODateOnly(d);
-        };
-
-        const getFirstMeetingDateOnOrAfter = (startDate, weekdayJs) => {
-            const d = new Date(startDate);
-            d.setHours(12, 0, 0, 0);
-            while (d.getDay() !== weekdayJs) {
-                d.setDate(d.getDate() + 1);
-            }
-            return d;
         };
 
         const getSemanaStartISO = (sem) => getCanonicalWeekStartISO({ sem, config });
@@ -334,7 +325,7 @@ export default function Dashboard({
             .sort((a, b) => a.dataObjeto - b.dataObjeto);
 
         const padrao = config?.grupos?.[config.grupoSelecionadoId];
-        const meetingJsDay = padrao && !padrao.meioSemana.habilitada ? (padrao.fimDeSemana.frequencia === 'semanal' && padrao.fimDeSemana.dia ? getWeekdayJsDay(padrao.fimDeSemana.dia) : null) : getWeekdayJsDay(config?.dia_reuniao || config?.diaReuniao || config?.diaSemana);
+        const padraoSemanal = padrao && !padrao.meioSemana.habilitada ? (padrao.fimDeSemana.frequencia === 'semanal' && padrao.fimDeSemana.dia ? getPadraoReuniao(config, 'fimDeSemana') : null) : getPadraoReuniao(config, 'meioSemana');
         const semanasBloqueadas = new Set(
             (config?.eventosAnuais || [])
                 .filter((evento) => eventoSubstituiReuniao(evento, padrao && !padrao.meioSemana.habilitada ? 'fimDeSemana' : 'meioSemana'))
@@ -362,12 +353,13 @@ export default function Dashboard({
             analiseInicio.setHours(12, 0, 0, 0);
 
             const semanasPrevistas = new Set();
-            if (analiseInicio < periodo.fim && meetingJsDay != null) {
+            if (analiseInicio < periodo.fim && padraoSemanal) {
                 for (
-                    let dataCursor = getFirstMeetingDateOnOrAfter(analiseInicio, meetingJsDay);
+                    let dataCursor = new Date(analiseInicio);
                     dataCursor < periodo.fim;
-                    dataCursor = new Date(dataCursor.getFullYear(), dataCursor.getMonth(), dataCursor.getDate() + 7, 12, 0, 0)
+                    dataCursor = new Date(dataCursor.getFullYear(), dataCursor.getMonth(), dataCursor.getDate() + 1, 12, 0, 0)
                 ) {
+                    if (getDataSemanalVigente(toISODateOnly(dataCursor), padraoSemanal) !== toISODateOnly(dataCursor)) continue;
                     const semanaStartISO = getWeekStartISOFromDate(dataCursor);
                     if (!semanasBloqueadas.has(semanaStartISO)) {
                         semanasPrevistas.add(semanaStartISO);
@@ -375,7 +367,7 @@ export default function Dashboard({
                 }
             }
 
-            if (padrao && meetingJsDay == null) for (const sem of ativas) {
+            if (padrao && !padraoSemanal) for (const sem of ativas) {
                 const data = new Date(`${sem.dataReuniaoResolvida}T12:00:00`);
                 if (data >= analiseInicio && data < periodo.fim) semanasPrevistas.add(sem.semanaStartISO);
             }

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { X, FilterX, Search, SortAsc, SortDesc, User, UserRound, UsersRound, AlertTriangle, Clock, GripVertical, CalendarX } from 'lucide-react';
 import { useSectionMessages } from '../../i18n';
 import { getWeekStartISOFromSemana } from '../../utils/revisarEnviar/dates';
+import { getTipoReuniaoSlot } from '../../utils/sugestoesDesignacao.js';
 
 // Função para gerar as iniciais caso não tenha foto
 const getIniciais = (nome) => {
@@ -80,6 +81,10 @@ const SidebarAlunos = ({
 
     const semanaIdxCtx = typeof getSemanaIndexContexto === 'function' ? getSemanaIndexContexto() : null;
     const currentSemanaKey = typeof getSemanaKeyByFilteredIndex === 'function' ? getSemanaKeyByFilteredIndex(semanaIdxCtx) : null;
+
+    const tipoReuniaoAtiva = slotAtivo ? getTipoReuniaoSlot(slotAtivo) : null;
+    const duplicadoMesmaTitle = tipoReuniaoAtiva ? (localTx.duplicadoMesmaReuniao || localTx.duplicadoMesma) : localTx.duplicadoMesma;
+    const duplicadoMesmaLabel = tipoReuniaoAtiva ? (localTx.nestaReuniao || localTx.nestaSemana) : localTx.nestaSemana;
 
     const alunosProcessados = useMemo(() => {
         const lista = slotAtivo && typeof getAlunoEligibilityForSlot === 'function'
@@ -241,7 +246,7 @@ const SidebarAlunos = ({
                             const bloqueadoPorHabilitacao = slotAtivo && !elegibilidade.eligible;
 
                             if (!indisponivel && !bloqueadoPorHabilitacao) {
-                                if (currentSemanaKey && isAlunoDuplicadoBySemanaKey(aluno?.id, currentSemanaKey)) {
+                                if (currentSemanaKey && isAlunoDuplicadoBySemanaKey(aluno?.id, currentSemanaKey, tipoReuniaoAtiva)) {
                                     duplicadoMesmaSemana = true;
                                 }
 
@@ -312,7 +317,7 @@ const SidebarAlunos = ({
 
                                             atribuirAluno(aluno);
                                         }}
-                                        title={cardTitle || (duplicadoMesmaSemana ? localTx.duplicadoMesma : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara)}
+                                        title={cardTitle || (duplicadoMesmaSemana ? duplicadoMesmaTitle : duplicadoOutraSemana ? localTx.duplicadoOutra : TT.cliquePara)}
                                     >
 
                                         {/* CONTAINER PRINCIPAL DO NOME + AVATAR */}
@@ -340,8 +345,8 @@ const SidebarAlunos = ({
 
                                                     {/* LÓGICA UNIFICADA */}
                                                     {duplicadoMesmaSemana ? (
-                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 inline-flex items-center gap-0.5" title={localTx.duplicadoMesma}>
-                                                            <AlertTriangle size={8} /> {localTx.nestaSemana}
+                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 inline-flex items-center gap-0.5" title={duplicadoMesmaTitle}>
+                                                            <AlertTriangle size={8} /> {duplicadoMesmaLabel}
                                                         </span>
                                                     ) : duplicadoOutraSemana ? (
                                                         <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 inline-flex items-center gap-0.5" title={localTx.duplicadoOutra}>

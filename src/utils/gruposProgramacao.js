@@ -1,4 +1,5 @@
 import { normalizeMeetingDay, normalizeSystemConfig } from '../config/appConfig.js';
+import { promoverDiaReuniao } from '../config/meetingSchedule.js';
 
 export const GRUPO_PORTUGUES_ID = 'grupo-portugues';
 export const GRUPO_ESPANHOL_ID = 'grupo-espanhol';
@@ -43,7 +44,7 @@ export const normalizeGruposProgramacao = (config = {}) => {
         const grupo = src.grupos?.[id] || {};
         const tipos = {};
         for (const tipo of ['meioSemana', 'fimDeSemana']) {
-            const reuniao = { ...base[tipo], ...grupo[tipo] };
+            const reuniao = promoverDiaReuniao({ ...base[tipo], ...(id === legadoId ? geral.planejamentoReunioes?.[tipo] : {}), ...grupo[tipo] });
             tipos[tipo] = { ...reuniao, dia: reuniao.dia ? normalizeMeetingDay(reuniao.dia) : null };
         }
         grupos[id] = {

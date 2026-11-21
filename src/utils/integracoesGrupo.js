@@ -5,6 +5,7 @@ import { ASSIGNMENT_CAPABILITIES, getAssignmentCapabilityForSlot } from './assig
 import { getMeetingDateISOFromSemana } from './revisarEnviar/dates.js';
 import { isBibleStudyPart, isPrayerPart } from './meetingParts.js';
 import { textosCelebracao } from './celebracao.js';
+import { projetarConfigGrupo } from './grupoAtivo.js';
 
 const legacySlot = item => {
     const path = item.path;
@@ -22,8 +23,8 @@ const legacyDate = (item, config) => {
     if (explicit) return explicit;
     const group = getGrupoProgramacao(item.grupoId, config);
     return getMeetingDateISOFromSemana({ semanaStr: p.semana, isoFallback: p.dataInicio || p.data,
-        config: { ...config, dia_reuniao: group.meioSemana.dia },
-        overrideDia: item.tipoReuniao === 'fimDeSemana' ? group.fimDeSemana.dia : item.reuniao.eventoEspecial?.tipo === 'visita' ? 'tuesday' : null }) || item.reuniao.data;
+        config: projetarConfigGrupo({ ...config, grupos: { ...config.grupos, [group.id]: group } }, group.id), tipoReuniao: item.tipoReuniao,
+        overrideDia: item.tipoReuniao === 'meioSemana' && item.reuniao.eventoEspecial?.tipo === 'visita' ? 'tuesday' : null }) || item.reuniao.data;
 };
 export const legacyKeyFromDesignacao = (item, config = {}) => buildLegacyAssignmentKey({ dataISO: legacyDate(item, config),
     semana: item.programacao.semana, parteId: legacySlot(item), pessoaId: item.pessoa.id, role: legacyRole(item) });
@@ -43,7 +44,9 @@ export function criarFilaGrupo({ programacoes, config, grupoId, confirmacoes = [
         if (matches.length > 1) throw new Error('Conflito de identidade: múltiplas confirmações para o destino.');
         const existente = matches[0];
         // Reutilizar vínculo exato, token, status, lembretes e checks do v1.
-        const confirmation = existente ? { ...existente } : { ...identity, assignmentKey: key, lang: grupo.idioma,
+        const confirmation = existente ? { ...existente,
+            ...(existente.identityVersion === 2 ? { dataISO: item.reuniao.data } : {}),
+        } : { ...identity, assignmentKey: key, lang: grupo.idioma,
             semana: item.programacao.semana || '', dataISO: item.reuniao.data, pessoaNome: item.pessoa.nome,
             role: identity.papel, congregacaoNome: grupo.nome, tituloParte: titulo,
             status: 'pendente', weekReminderStatus: 'nao_enviado', responseHistory: [], weekReminderHistory: [], sentChannels: {} };
@@ -67,7 +70,7 @@ export function resolverConfirmacaoGrupo({ confirmacao, programacoes, config, co
         const programs = programacoes.filter(p => String(p.id) === identity.programacaoId && getGrupoEfetivoId(p, config) === identity.grupoId);
         if (programs.length !== 1) return unavailable('week_removed');
         const matches = selecionarDesignacoes({ programacoes: programs, config }).filter(item => sameAssignment(identityFromDesignacao(item), identity));
-        return matches.length === 1 ? { isUnavailable: false, unavailableReason: '' } : unavailable('assignment_changed');
+        return matches.length === 1 ? { isUnavailable: false, unavailableReason: '', dataISO: matches[0].reuniao.data } : unavailable('assignment_changed');
     }
     if (confirmacao.grupoId && confirmacao.grupoId !== legado) return unavailable('legacy_group');
     const weeks = programacoes.filter(p => getGrupoEfetivoId(p, config) === legado && String(p.semana || '').trim() === String(confirmacao.semana || '').trim());

@@ -1,5 +1,6 @@
 // src/utils/revisarEnviar/dates.js
 import { getLanguageMeta, getWeekdayJsDay } from '../../config/appConfig.js';
+import { getDataSemanalVigente, getPadraoReuniao } from '../../config/meetingSchedule.js';
 
 const normalizarTxt = (s) =>
     (s ?? '')
@@ -261,18 +262,22 @@ export const getWeekStartISOFromSemana = ({ semanaStr, config, isoFallback, text
     return formatISODateOnly(rangeDates.start);
 };
 
-export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, overrideDia = null, textSources = [] }) => {
+export const getMeetingDateISOFromSemana = ({ semanaStr, config, isoFallback, overrideDia = null, tipoReuniao = 'meioSemana', textSources = [] }) => {
     // Se houver um overrideDia (ex: 'Terça-feira' para visita), usa ele.
     // Senão, tenta a configuração. Se não tiver configuração, string vazia.
     const diaAlvo = overrideDia || config?.dia_reuniao || config?.diaReuniao || config?.diaSemana || '';
     const weekdayIdx = getWeekdayJsDay(diaAlvo);
     const rangeDates = getWeekRangeDatesFromSemana({ semanaStr, config, isoFallback, textSources });
 
+    if (!rangeDates && !overrideDia && parseFlexibleDateToISO(isoFallback)) {
+        return getDataSemanalVigente(isoFallback, getPadraoReuniao(config, tipoReuniao)) || isoFallback;
+    }
     if (!rangeDates || weekdayIdx == null) {
         return isoFallback || null;
     }
 
     const { start, end } = rangeDates;
+    if (!overrideDia) return getDataSemanalVigente(formatISODateOnly(start), getPadraoReuniao(config, tipoReuniao)) || isoFallback || null;
     let cur = new Date(start);
     let found = null;
 
@@ -334,7 +339,7 @@ export const getCanonicalWeekStartISO = ({ sem, config }) => {
     return parsedFromLabel || storedStartISO;
 };
 
-export const getCanonicalMeetingDateISO = ({ sem, config, overrideDia = null }) => {
+export const getCanonicalMeetingDateISO = ({ sem, config, overrideDia = null, tipoReuniao = 'meioSemana' }) => {
     if (!sem) return null;
 
     const storedYearRefISO = getStoredDateISOFromSemana(sem, [
@@ -351,6 +356,7 @@ export const getCanonicalMeetingDateISO = ({ sem, config, overrideDia = null }) 
         config,
         isoFallback: storedYearRefISO,
         overrideDia,
+        tipoReuniao,
         textSources: [sem?.semana],
     });
 

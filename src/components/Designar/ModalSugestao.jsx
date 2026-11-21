@@ -6,9 +6,11 @@ import {
     getAssignmentContextForSlot,
     isAlunoEligibleForAssignment,
 } from '../../utils/assignmentEligibility';
-import { getFimDeSemanaAssignedPeople, getMeioSemanaAssignedPeople } from '../../utils/fimDeSemana';
-import { getCelebracao } from '../../utils/celebracao.js';
-import { calcularRecenciaDesignacao } from '../../utils/sugestoesDesignacao.js';
+import {
+    calcularOcupacaoReuniao,
+    calcularRecenciaDesignacao,
+    getTipoReuniaoSlot,
+} from '../../utils/sugestoesDesignacao.js';
 
 export default function ModalSugestao({
     isOpen,
@@ -19,6 +21,8 @@ export default function ModalSugestao({
     parteAtual,
     semanaAtual,
     modalKey, // 'estudante', 'ajudante', 'presidente', 'oracao', 'dirigente', 'leitor'
+    slotAtual = null,
+    tipoReuniao = null,
     cargosMap,
     lang = 'pt',
     modo = 'sugestao',
@@ -30,12 +34,27 @@ export default function ModalSugestao({
     const [contexto, setContexto] = useState({ labelKey: 'qualquer', gender: 'todos', tipo: 'qualquer', isAjudante: false });
 
     const t = useSectionMessages('designarSuggest');
+    const tipoReuniaoEfetivo = tipoReuniao || getTipoReuniaoSlot(slotAtual || { key: modalKey });
 
     useEffect(() => {
         if (!isOpen) return;
         calcularSugestoes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, parteAtual, modalKey, lang, semanaAtual, historico, alunos]);
+    }, [
+        isOpen,
+        parteAtual,
+        modalKey,
+        tipoReuniaoEfetivo,
+        slotAtual?.parteId,
+        slotAtual?.fds,
+        slotAtual?.meioSemana,
+        slotAtual?.responsabilidadeKey,
+        slotAtual?.itemIndex,
+        lang,
+        semanaAtual,
+        historico,
+        alunos,
+    ]);
 
     // --- 1. DETECTAR O CONTEXTO EXATO DA PARTE CLICADA ---
     const detectarContexto = () => {
@@ -61,31 +80,15 @@ export default function ModalSugestao({
         const ctx = detectarContexto();
         setContexto(ctx);
 
-        // A. Verifica quem já está ocupado na semana do modal
-        const ocupadosNestaSemana = new Set();
-        const familiasOcupadasNestaSemana = new Set();
-        const familiaPorPessoa = new Map(
-            (alunos || []).map((a) => [String(a?.id || a?.nome || '').trim(), (a?.familia || '').trim()])
-        );
-        const addOcupado = (u) => {
-            if (u?.id) ocupadosNestaSemana.add(u.id);
-            const pessoaKey = String(u?.id || u?.nome || '').trim();
-            const familia = (u?.familia || familiaPorPessoa.get(pessoaKey) || '').trim().toLowerCase();
-            if (familia) familiasOcupadasNestaSemana.add(familia);
-        };
-
-        if (semanaAtual) {
-            addOcupado(semanaAtual.presidente);
-            if (Array.isArray(semanaAtual.partes)) {
-                semanaAtual.partes.forEach(p => {
-                    addOcupado(p.estudante); addOcupado(p.ajudante); addOcupado(p.leitor); addOcupado(p.dirigente); addOcupado(p.oracao);
-                });
-            }
-            getMeioSemanaAssignedPeople(semanaAtual).forEach((item) => addOcupado(item.pessoa));
-            getFimDeSemanaAssignedPeople(semanaAtual).forEach((item) => addOcupado(item.pessoa));
-            const c = getCelebracao(semanaAtual, config);
-            if (c) Object.values(c.responsabilidades).flat().forEach(addOcupado);
-        }
+        // A. Verifica quem já está ocupado somente nesta reunião (meio de semana ou fim de semana)
+        const ocupacao = calcularOcupacaoReuniao({
+            semana: semanaAtual,
+            tipoReuniao: tipoReuniaoEfetivo,
+            targetSlot: slotAtual,
+            alunos,
+            config,
+            lang,
+        });
 
         // B. FILTRO DE PRIVILÉGIOS (O MOTOR DE REGRAS)
         let listaFiltrada = alunos.filter(aluno => {
@@ -120,8 +123,9 @@ export default function ModalSugestao({
                 ...aluno,
                 ultimaData,
                 diasSemFazer,
-                ocupadoAgora: ocupadosNestaSemana.has(aluno.id),
-                familiaOcupadaAgora: !!aluno.familia && familiasOcupadasNestaSemana.has(aluno.familia.trim().toLowerCase())
+                ocupadoAgora: ocupacao.isAlunoOcupado(aluno),
+                partesOcupadas: ocupacao.getPartesOcupadas(aluno),
+                familiaOcupadaAgora: ocupacao.isFamiliaOcupada(aluno),
             };
         });
 
@@ -129,8 +133,10 @@ export default function ModalSugestao({
         listaFiltrada.sort((a, b) => {
             if (a.ocupadoAgora && !b.ocupadoAgora) return 1;
             if (!a.ocupadoAgora && b.ocupadoAgora) return -1;
-            if (a.familiaOcupadaAgora && !b.familiaOcupadaAgora) return 1;
-            if (!a.familiaOcupadaAgora && b.familiaOcupadaAgora) return -1;
+            if (!a.ocupadoAgora && !b.ocupadoAgora) {
+                if (a.familiaOcupadaAgora && !b.familiaOcupadaAgora) return 1;
+                if (!a.familiaOcupadaAgora && b.familiaOcupadaAgora) return -1;
+            }
 
             const aNunca = a.diasSemFazer === 9999;
             const bNunca = b.diasSemFazer === 9999;
@@ -153,6 +159,10 @@ export default function ModalSugestao({
         return t.todos;
     };
 
+    const reuniaoLabel = tipoReuniaoEfetivo === 'fimDeSemana'
+        ? (t.reuniaoFimDeSemana || 'Fim de semana')
+        : (t.reuniaoMeioSemana || 'Meio de semana');
+
     if (!isOpen) return null;
 
     return (
@@ -165,9 +175,11 @@ export default function ModalSugestao({
                         <h3 className="font-bold text-lg flex items-center gap-2">
                             <CheckCircle size={20} className="text-green-300" /> {modo === 'substituicao' ? t.substituirDesignado : t.titulo}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1 text-blue-100 text-xs">
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-blue-100 text-xs">
                             <Filter size={12} />
                             <span>{t.filtro}: <strong>{t.labels[contexto.labelKey] || contexto.labelKey}</strong></span>
+                            <span className="opacity-50">|</span>
+                            <span>{t.reuniaoLabel || 'Reunião'}: <strong>{reuniaoLabel}</strong></span>
                             <span className="opacity-50">|</span>
                             <span>{t.genero}: <strong>{getGenderLabel()}</strong></span>
                             {modo === 'substituicao' && pessoaAtual?.nome && (
@@ -189,16 +201,30 @@ export default function ModalSugestao({
                         const meses = aluno.diasSemFazer !== 9999 ? Math.floor(aluno.diasSemFazer / 30) : null;
                         const motivos = [
                             aluno.diasSemFazer === 9999
-                                ? 'Nunca fez esta parte'
+                                ? { label: t.nuncaFezParte || 'Nunca fez esta parte', tone: 'green' }
                                 : aluno.diasSemFazer < 0
-                                    ? 'Já tem parte futura'
-                                    : `${aluno.diasSemFazer} dias desde a última vez`,
-                            contexto.gender === 'todos' ? 'Perfil compatível' : 'Gênero compatível',
-                            aluno.ocupadoAgora ? 'Já usado nesta semana' : 'Livre nesta semana'
+                                    ? { label: t.jaTemParteFutura || 'Já tem parte futura', tone: 'blue' }
+                                    : { label: formatText(t.diasDesdeUltimaTpl || '{DIAS} dias desde a última vez', { DIAS: aluno.diasSemFazer }), tone: 'green' },
+                            {
+                                label: contexto.gender === 'todos'
+                                    ? (t.perfilCompativel || 'Perfil compatível')
+                                    : (t.generoCompativel || 'Gênero compatível'),
+                                tone: 'blue',
+                            },
+                            aluno.ocupadoAgora
+                                ? { label: t.jaUsadoReuniao || 'Já usado nesta reunião', tone: 'red' }
+                                : { label: t.livreReuniao || 'Livre nesta reunião', tone: 'blue' },
                         ];
-                        if (aluno.familiaOcupadaAgora && !aluno.ocupadoAgora) motivos.push(t.familiaJaUsada);
+                        if (aluno.familiaOcupadaAgora && !aluno.ocupadoAgora) {
+                            motivos.push({ label: t.familiaJaUsada, tone: 'amber' });
+                        }
 
-                        const mostrarSeparadorNuncaFez = index > 0 && aluno.diasSemFazer === 9999 && sugestoes[index - 1].diasSemFazer !== 9999;
+                        const mostrarSeparadorNuncaFez = index > 0
+                            && aluno.diasSemFazer === 9999
+                            && sugestoes[index - 1].diasSemFazer !== 9999
+                            && !!aluno.ocupadoAgora === !!sugestoes[index - 1].ocupadoAgora;
+
+                        const partesOcupadasResumo = (aluno.partesOcupadas || []).join(', ');
 
                         return (
                             <React.Fragment key={aluno.id}>
@@ -229,7 +255,7 @@ export default function ModalSugestao({
                                             : 'bg-white border-gray-200 hover:border-blue-500'
                                         }`}
                                 >
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0 overflow-hidden border
                                             ${aluno.ocupadoAgora ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200'}
                                         `}>
@@ -240,36 +266,47 @@ export default function ModalSugestao({
                                                 aluno.nome.charAt(0)
                                             )}
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                             <div className="font-bold text-gray-800">{aluno.nome}</div>
-                                            <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                            <div className="text-xs text-gray-500 flex flex-wrap items-center gap-1 mt-0.5">
                                                 <span className="px-1.5 py-0.5 bg-gray-100 rounded border text-[9px] font-bold">
                                                     {(cargosMap?.[aluno.tipo]?.[lang] || aluno.tipo)}
                                                 </span>
-                                            {aluno.ocupadoAgora && <span className="text-red-500 font-bold ml-1 flex items-center gap-1 text-[10px]"><AlertCircle size={10} /> {t.jaTemParte}</span>}
-                                            {aluno.familiaOcupadaAgora && !aluno.ocupadoAgora && <span className="text-amber-600 font-bold ml-1 flex items-center gap-1 text-[10px]"><AlertCircle size={10} /> {t.familiaJaUsada}</span>}
+                                                {aluno.ocupadoAgora && (
+                                                    <span
+                                                        className="text-red-500 font-bold ml-1 flex items-center gap-1 text-[10px]"
+                                                        title={partesOcupadasResumo || t.jaTemParte}
+                                                    >
+                                                        <AlertCircle size={10} className="shrink-0" />
+                                                        <span>
+                                                            {t.jaTemParte}
+                                                            {partesOcupadasResumo ? ` • ${partesOcupadasResumo}` : ''}
+                                                        </span>
+                                                    </span>
+                                                )}
+                                                {aluno.familiaOcupadaAgora && !aluno.ocupadoAgora && <span className="text-amber-600 font-bold ml-1 flex items-center gap-1 text-[10px]"><AlertCircle size={10} /> {t.familiaJaUsada}</span>}
                                             </div>
                                             <div className="mt-1.5 flex flex-wrap gap-1">
                                                 {motivos.map((motivo) => (
                                                     <span
-                                                        key={motivo}
-                                                        className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${motivo.includes('Já usado')
+                                                        key={motivo.label}
+                                                        className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${motivo.tone === 'red'
                                                             ? 'bg-red-50 text-red-600'
-                                                            : motivo === t.familiaJaUsada
+                                                            : motivo.tone === 'amber'
                                                                 ? 'bg-amber-50 text-amber-700'
-                                                            : motivo.includes('Nunca') || motivo.includes('dias')
-                                                                ? 'bg-green-50 text-green-700'
-                                                                : 'bg-blue-50 text-blue-700'
+                                                                : motivo.tone === 'green'
+                                                                    ? 'bg-green-50 text-green-700'
+                                                                    : 'bg-blue-50 text-blue-700'
                                                             }`}
                                                     >
-                                                        {motivo}
+                                                        {motivo.label}
                                                     </span>
                                                 ))}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="text-right">
+                                    <div className="text-right shrink-0 ml-2">
                                         {aluno.diasSemFazer === 9999 ? (
                                             <div className="flex flex-col items-end">
                                                 <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-[10px] font-bold border border-gray-200">

@@ -19,7 +19,10 @@ export function projetarQuadroPublico({ configuracoes = {}, historico_reunioes =
     const config = normalizeGruposProgramacao(configuracoes);
     const grupos = Object.fromEntries(Object.values(config.grupos).map(grupo => [grupo.id, {
         ...pick(grupo, ['id', 'nome', 'idioma', 'identificacao', 'ativo']),
-        ...Object.fromEntries(['meioSemana', 'fimDeSemana'].map(tipo => [tipo, pick(grupo[tipo], ['habilitada', 'dia', 'horario'])])),
+        ...Object.fromEntries(['meioSemana', 'fimDeSemana'].map(tipo => [tipo, { ...pick(grupo[tipo], ['habilitada', 'dia', 'horario']),
+            proximaTroca: grupo[tipo].proximaTroca ? pick(grupo[tipo].proximaTroca, ['data', 'dia']) : null,
+            historicoDias: (grupo[tipo].historicoDias || []).map(troca => pick(troca, ['data', 'dia', 'diaAnterior'])),
+        }])),
         eventosAnuais: grupo.eventosAnuais.map(evento => pick(evento, ['dataInicio', 'dataInput', 'tipo'])),
     }]));
     const programas = historico_reunioes.flatMap(programa => {

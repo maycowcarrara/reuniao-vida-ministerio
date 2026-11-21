@@ -40,6 +40,29 @@ function fixture({ pessoaAtual = pessoa, configAtual = config } = {}) {
     return { adapter, documentos, escritas, leituras, maximo: () => maximo, transacoes: () => transacoes };
 }
 
+test('Troca de dias grava configuracao e datas existentes na mesma transacao', async () => {
+    const f = fixture();
+    const next = { ...programa, meioSemana: { ...programa.meioSemana, data: '2026-11-04' }, historicoPendenteSync: true };
+    await f.adapter.salvarConfig({ ...config, grupos: { ...config.grupos,
+        'grupo-portugues': { ...config.grupos['grupo-portugues'], meioSemana: { ...config.grupos['grupo-portugues'].meioSemana, dia: 'wednesday' } },
+    } }, { programacoes: [next] });
+    assert.equal(f.transacoes(), 1);
+    assert.equal(f.escritas.length, 2);
+    assert.equal(f.escritas[0].path, 'users/fixture/configuracoes/geral');
+    assert.deepEqual(f.escritas[1].data, next);
+    assert.deepEqual(f.escritas[0].data.revisionProgramacoes, { incremento: 1 });
+});
+
+test('Troca de dias nao grava parcialmente se uma programacao mudou em outra sessao', async () => {
+    const f = fixture();
+    f.documentos.set('users/fixture/programacao/pt-1', { ...programa, presidente: { id: 'outro' } });
+    await assert.rejects(f.adapter.salvarConfig(config, { programacoes: [{ ...programa, dataReuniao: '2026-11-04' }] }), /mudou em outra sessao/);
+    assert.deepEqual(f.escritas, []);
+    const g = fixture();
+    await assert.rejects(g.adapter.salvarConfig(config, { programacoes: [{ ...programa, grupoId: 'grupo-espanhol' }] }), /imutavel/);
+    assert.deepEqual(g.escritas, []);
+});
+
 test('Salvar um cadastro lê configuração e pessoa juntos e grava só o campo alterado', async () => {
     const f = fixture({ pessoaAtual: { ...pessoa, telefone: 'telefone atualizado em outra sessão', historico: [{ preservar: 'histórico remoto' }] } });
     await f.adapter.salvarAluno({ ...pessoa, nome: 'Nome novo' }, { original: pessoa });

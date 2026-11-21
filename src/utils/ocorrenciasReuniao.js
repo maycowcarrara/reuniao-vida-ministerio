@@ -1,6 +1,8 @@
 import { getGrupoEfetivoId, getGrupoProgramacao, isProgramacaoV2 } from './gruposProgramacao.js';
 import { getProgramacaoWeekStartISO } from './programacoes.js';
 import { getCelebracao, getEventoDaProgramacao, eventoSubstituiReuniao } from './celebracao.js';
+import { getMeetingDateISOFromSemana } from './revisarEnviar/dates.js';
+import { projetarConfigGrupo } from './grupoAtivo.js';
 
 export const TIPOS_REUNIAO = Object.freeze(['meioSemana', 'fimDeSemana']);
 
@@ -28,12 +30,17 @@ export const normalizeOcorrenciaReuniao = (programacao, tipo, config = {}) => {
     // E3: acrescentar um tipo à semana publicada não publica a nova ocorrência.
     // Ausência do campo continua herdando o contrato anterior/legado.
     const publicada = agregadoPublicado && bloco.publicadaNoQuadro !== false;
+    const dataPadrao = !bloco.data && grupo ? getMeetingDateISOFromSemana({
+        semanaStr: programacao?.semana, isoFallback: programacao?.dataInicio || programacao?.data,
+        config: projetarConfigGrupo({ ...config, grupos: { ...config.grupos, [grupoId]: grupo } }, grupoId),
+        tipoReuniao: tipo, overrideDia: tipo === 'meioSemana' && eventoEspecial?.tipo === 'visita' ? 'tuesday' : null,
+    }) : '';
     return {
         ...bloco, grupoId, tipoReuniao: tipo, ativo: isCelebracao ? celebracao.ativo : ativo,
         cancelada: isCelebracao ? programacao?.cancelada === true : cancelada, publicada, eventoEspecial, bloqueadaPorEvento, celebracao: isCelebracao,
         data: isCelebracao ? celebracao.data : bloco.data || (tipo === 'meioSemana'
-            ? programacao?.dataReuniao || programacao?.dataExata || programacao?.dataInicio || programacao?.data || ''
-            : ''),
+            ? programacao?.dataReuniao || programacao?.dataExata || dataPadrao || programacao?.dataInicio || programacao?.data || ''
+            : dataPadrao || ''),
         horario: isCelebracao ? celebracao.horario : bloco.horario || grupo?.[tipo]?.horario || '',
         operacional,
         publica: operacional && publicada && !programacao?.arquivada,

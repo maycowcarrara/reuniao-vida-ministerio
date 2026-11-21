@@ -4,6 +4,7 @@ import { createFimDeSemanaDefault, hasFimDeSemanaData } from './fimDeSemana.js';
 import { normalizeOcorrenciaReuniao, TIPOS_REUNIAO } from './ocorrenciasReuniao.js';
 import { createCelebracaoDefault, eventoSubstituiReuniao, getCelebracao, textosCelebracao } from './celebracao.js';
 import { getWeekStartISOFromSemana } from './revisarEnviar/dates.js';
+import { getDataSemanalVigente } from '../config/meetingSchedule.js';
 
 const DIAS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 export const validarDataReuniao = data => {
@@ -84,7 +85,7 @@ export const prepararGeracaoReunioes = ({ programacoes = [], config, grupoId, ti
     if (duracao > 366) throw new Error('Escolha um intervalo finito de até 367 dias por lote.');
     const previa = [];
     for (; cursor.toISOString().slice(0, 10) <= fim; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-        if (cursor.getUTCDay() !== dia) continue;
+        if (getDataSemanalVigente(cursor.toISOString().slice(0, 10), padrao) !== cursor.toISOString().slice(0, 10)) continue;
         previa.push(prepararAgendamento({ programacoes, config, grupoId, tipo,
             data: cursor.toISOString().slice(0, 10), horario: padrao.horario }));
     }
@@ -126,9 +127,9 @@ const dataSemanal = (semana, padrao) => {
     const dia = DIAS.indexOf(padrao.dia);
     if (dia < 0) throw new Error('Defina o dia semanal.');
     validarHorarioReuniao(padrao.horario);
-    const data = new Date(`${semana}T12:00:00Z`);
-    data.setUTCDate(data.getUTCDate() + ((dia + 6) % 7));
-    return data.toISOString().slice(0, 10);
+    const data = getDataSemanalVigente(semana, padrao);
+    if (!data) throw new Error('trocaDiaSemanaAmbigua');
+    return data;
 };
 
 // Confirmar a apostila no fluxo semanal tambem agenda as reunioes habilitadas.

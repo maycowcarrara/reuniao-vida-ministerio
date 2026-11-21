@@ -319,7 +319,7 @@ const RevisarEnviarNotificarTab = ({
             semanaStr: sem?.semana,
             config,
             isoFallback: fallbackStr,
-            overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday'
+            tipoReuniao: 'fimDeSemana'
         }) || fallbackStr || '';
     };
 

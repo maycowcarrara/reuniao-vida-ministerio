@@ -51,14 +51,24 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
             tx.update(r.config, { revisionProgramacoes: increment(1) });
         });
     };
-    const salvarConfig = async config => {
-        const r = refs(), esperado = obterEstado().configuracoes;
+    const salvarConfig = async (config, { programacoes = [] } = {}) => {
+        if (programacoes.length > 400) throw new Error('Divida a troca em ate 400 programacoes.');
+        const estado = obterEstado();
+        const r = refs(), esperado = estado.configuracoes;
         await runTransaction(db, async tx => {
             const snap = await tx.get(r.config), atual = snap.data(); requireActive(atual);
+            const destinos = programacoes.map(p => doc(db, `${r.base}/programacao/${p.id}`));
+            const snapshots = await Promise.all(destinos.map(ref => tx.get(ref)));
+            for (let i = 0; i < snapshots.length; i++) {
+                const anterior = estado.historico_reunioes.find(p => p.id === programacoes[i].id);
+                if (!anterior || !same(registro(snapshots[i]), anterior)) throw new Error('Programacao mudou em outra sessao; atualize a tela.');
+                if (getGrupoEfetivoId(anterior, atual) !== getGrupoEfetivoId(programacoes[i], config)) throw new Error('Grupo da programacao e imutavel.');
+            }
             const semRevision = c => Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'revisionProgramacoes'));
             if (!same(semRevision(atual), semRevision(esperado))) throw new Error('Configuração mudou em outra sessão; atualize a tela.');
             if (config.grupoLegadoId !== atual.grupoLegadoId) throw new Error('Grupo legado é imutável.');
             tx.set(r.config, { ...limparIndefinidos(config), revisionProgramacoes: increment(1) }, { merge: true });
+            for (let i = 0; i < destinos.length; i++) tx.set(destinos[i], limparIndefinidos(programacoes[i]));
         });
     };
     const salvarHistoricos = async (alunos, escopo) => {

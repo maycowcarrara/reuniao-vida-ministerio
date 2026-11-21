@@ -176,7 +176,7 @@ const getWeekendDateForWeek = (week, config) => {
         semanaStr: week?.semana,
         config,
         isoFallback: fallbackStr,
-        overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+        tipoReuniao: 'fimDeSemana',
         textSources: [week?.semana]
     }) || fallbackStr || '';
 };

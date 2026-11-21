@@ -215,3 +215,44 @@ test('Adendo A: transação usa grupos atuais, conserva vínculos e aceita pesso
         if (!estado.configuracoes.grupos['grupo-portugues'].ativo) { await adapter.salvarConfig(anterior); await refresh(); }
     }
 });
+
+test('Troca de dias: configuracao e reunioes futuras sao gravadas juntas com as regras reais', async () => {
+    const { patchConfiguracaoGrupo } = await import('../src/utils/programacoesPorGrupo.js');
+    const { atualizarProgramacoesPorTroca } = await import('../src/utils/trocaDiasReuniao.js');
+    await refresh();
+    const grupoId = 'grupo-portugues';
+    const antes = patchConfiguracaoGrupo(estado.configuracoes, { grupoId, alteracoes: {
+        meioSemana: { dia: 'thursday' }, fimDeSemana: { dia: 'sunday' },
+    } });
+    await adapter.salvarConfig(antes); await refresh();
+    const futura = { id: 'troca-2027', versaoProgramacao: 2, grupoId, publicadaNoQuadro: true,
+        semana: '28 de dezembro de 2026-3 de janeiro de 2027', dataInicio: '2026-12-28',
+        dataReuniao: '2026-12-31', partes: [], privado: { preservar: true },
+        meioSemana: { ativo: true, data: '2026-12-31', horario: '19:30' },
+        fimDeSemana: { ativo: true, data: '2027-01-03', horario: '18:00', presidente: { id: 'troca-pessoa', nome: 'Pessoa exemplo' } } };
+    await adapter.salvarLote({ grupoId, upserts: [futura], excluirIds: [], anteriores: [] }); await refresh();
+    estado.historico_reunioes.push(futura);
+    const configAntes = estado.configuracoes;
+    const rowAntes = criarFilaGrupo({ config: configAntes, grupoId, programacoes: [futura] }).find(row => row.tipoReuniao === 'fimDeSemana');
+    const confirmada = await garantirParConfirmacao({ db, sdk, ownerUid: owner, safeKey: rowAntes.assignmentKey, candidate: 'troca-token-original', dados: rowAntes.confirmation });
+    const depois = patchConfiguracaoGrupo(configAntes, { grupoId, alteracoes: {
+        meioSemana: { proximaTroca: { data: '2027-01-01', dia: 'wednesday' } },
+        fimDeSemana: { proximaTroca: { data: '2027-01-01', dia: 'saturday' } },
+    } });
+    const [next] = atualizarProgramacoesPorTroca({ programacoes: [futura], configAntes, configDepois: depois, hoje: '2026-11-21' });
+    await adapter.salvarConfig(depois, { programacoes: [next] }); await refresh();
+    const salva = (await getDoc(programRef(futura.id))).data();
+    assert.equal(salva.meioSemana.data, '2026-12-31');
+    assert.equal(salva.fimDeSemana.data, '2027-01-02');
+    assert.deepEqual(salva.privado, futura.privado);
+    assert.equal(salva.historicoPendenteSync, true);
+    assert.equal(estado.configuracoes.revisionProgramacoes, configAntes.revisionProgramacoes + 1);
+    assert.equal(estado.configuracoes.grupos[grupoId].fimDeSemana.proximaTroca.dia, 'saturday');
+    estado.historico_reunioes = estado.historico_reunioes.map(p => p.id === next.id ? next : p);
+    await adapter.publicar();
+    const quadro = (await getDoc(doc(db, `quadros_publicos/${owner}`))).data();
+    assert.equal(quadro.historico_reunioes.find(p => p.id === futura.id).fimDeSemana.data, '2027-01-02');
+    const atualizada = await garantirParConfirmacao({ db, sdk, ownerUid: owner, safeKey: rowAntes.assignmentKey, candidate: 'nao-regenerar', dados: rowAntes.confirmation });
+    assert.equal(atualizada.token, confirmada.token);
+    assert.equal((await getDoc(doc(db, 'confirmacoes_publicas', confirmada.token))).data().dataISO, '2027-01-02');
+});

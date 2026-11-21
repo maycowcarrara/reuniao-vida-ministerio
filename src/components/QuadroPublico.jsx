@@ -258,7 +258,7 @@ const getDataFimDeSemanaISO = (sem, config) => {
         semanaStr: sem?.semana,
         config,
         isoFallback: fallbackStr,
-        overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+        tipoReuniao: 'fimDeSemana',
         textSources: [sem?.semana]
     }) || fallbackStr;
 };

@@ -165,12 +165,13 @@ export function useGerenciadorDados({ syncConfirmacoes = true, localOnly = false
         if (modoLocal) {
             const campo = colecao === 'programacao' ? 'historico_reunioes' : colecao;
             setDados(prev => colecao === 'configuracoes'
-                ? { ...prev, configuracoes: mergeCamposPreservados(prev.configuracoes, objeto) }
+                  ? { ...prev, configuracoes: mergeCamposPreservados(prev.configuracoes, objeto),
+                      historico_reunioes: prev.historico_reunioes.map(p => opcoes.programacoes?.find(next => next.id === p.id) || p) }
                 : { ...prev, [campo]: [...(prev[campo] || []).filter(item => String(item.id) !== String(id)), objeto] });
             return;
         }
         exigirEscritaCompativel(dados.configuracoes, objeto);
-        if (modoRemoto && colecao === 'configuracoes') return remoto.salvarConfig(objeto);
+        if (modoRemoto && colecao === 'configuracoes') return remoto.salvarConfig(objeto, opcoes);
         if (modoRemoto && colecao === 'alunos') return remoto.salvarAluno(objeto, opcoes);
         if (modoRemoto && colecao === 'programacao') throw new Error('Use a operação transacional por grupo.');
         if (!usuario || !dataOwnerUid) return;

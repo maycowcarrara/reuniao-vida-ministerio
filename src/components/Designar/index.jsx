@@ -31,15 +31,13 @@ import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
 import { isWhatWouldYouSayPart } from '../../utils/meetingParts';
 import { avaliarSlotClassico, projetarProgramaOperacionalInterface } from '../../utils/interfaceClassicaGrupos.js';
-import { selecionarDesignacoes } from '../../utils/designacoesPorGrupo.js';
+import { getDesignacoesDaReuniao, getTipoReuniaoSlot, isSameDesignacaoSlot } from '../../utils/sugestoesDesignacao.js';
 import { normalizeOcorrenciaReuniao } from '../../utils/ocorrenciasReuniao.js';
 import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
 import {
     FIM_DE_SEMANA_RESPONSABILIDADES,
     MEIO_SEMANA_RESPONSABILIDADES,
-    getFimDeSemanaAssignedPeople,
     getFimDeSemanaSlotLabel,
-    getMeioSemanaAssignedPeople,
     hasFimDeSemanaData,
     normalizeFimDeSemana,
     normalizeResponsabilidades
@@ -129,7 +127,7 @@ const Designar = ({
             return getCanonicalMeetingDateISO({
                 sem,
                 config,
-                overrideDia: config?.dia_reuniao_fds || config?.diaReuniaoFds || 'saturday',
+                tipoReuniao: 'fimDeSemana',
             }) || '';
         } catch {
             return '';
@@ -182,51 +180,40 @@ const Designar = ({
 
     const getSubstituicoesSemana = (sem) => (Array.isArray(sem?.substituicoes) ? sem.substituicoes : []).filter((item) => !item?.canceladaEm);
 
-    const getPessoasDesignadasSemana = (sem) => {
-        if (getCelebracao(sem, config)) return selecionarDesignacoes({ programacoes: [sem], config }).map(item => ({
-            pessoa: item.pessoa, slotKey: item.slotKey, label: item.parte?.titulo || getFimDeSemanaLabel(item.slotKey),
-            context: { parteId: item.parte?.id, fds: item.tipoReuniao === 'fimDeSemana', meioSemana: item.tipoReuniao === 'meioSemana',
-                responsabilidadeKey: item.apoio ? item.path.at(-2) : undefined, itemIndex: item.apoio ? item.path.at(-1) : undefined, responsabilidade: item.apoio },
-        }));
-        const assigned = [];
-        const add = (pessoa, slotKey, label, extra = {}) => {
-            if (!hasPessoaDesignada(pessoa)) return;
-            assigned.push({ pessoa, slotKey, label, context: extra });
+    const getPessoasDesignadasReuniao = (sem, tipoReuniao = null) => {
+        if (!sem) return [];
+        const semProjetada = projetarProgramaOperacionalInterface(sem, config);
+        const labels = {
+            presidente: TT.presidente,
+            oracao: TT.oracao,
+            dirigente: TT.dirigente,
+            leitor: TT.leitor,
+            estudante: TT.estudante,
+            ajudante: TT.ajudante,
+            videoZoomSom: TT.videoZoomSom,
+            indicadoresEntrada: TT.indicadoresEntrada,
+            indicadoresAuditorio: TT.indicadoresAuditorio,
+            microfonesVolantes: TT.microfonesVolantes,
         };
-
-        add(sem?.presidente, 'presidente', TT.presidente);
-        (sem?.partes || []).forEach((parte) => {
-            add(parte?.estudante, 'estudante', parte?.titulo || TT.estudante, { parteId: parte?.id });
-            add(parte?.ajudante, 'ajudante', TT.ajudante, { parteId: parte?.id });
-            add(parte?.oracao, 'oracao', TT.oracao, { parteId: parte?.id });
-            add(parte?.dirigente, 'dirigente', TT.dirigente, { parteId: parte?.id });
-            add(parte?.leitor, 'leitor', TT.leitor, { parteId: parte?.id });
-        });
-
-        getMeioSemanaAssignedPeople(sem).forEach((item) => assigned.push(item));
-        getFimDeSemanaAssignedPeople(sem).forEach((item) => assigned.push(item));
-        return assigned;
+        if (tipoReuniao === 'meioSemana' || tipoReuniao === 'fimDeSemana') {
+            return getDesignacoesDaReuniao(semProjetada, tipoReuniao, { config, lang, labels });
+        }
+        return [
+            ...getDesignacoesDaReuniao(semProjetada, 'meioSemana', { config, lang, labels }),
+            ...getDesignacoesDaReuniao(semProjetada, 'fimDeSemana', { config, lang, labels }),
+        ];
     };
 
     const getConflitoDesignacaoSemana = (sem, aluno, targetSlot) => {
         if (!sem || !aluno || !targetSlot) return null;
-        const ocorrencias = getPessoasDesignadasSemana(sem).filter((item) => {
+        const tipoReuniao = getTipoReuniaoSlot(targetSlot);
+        const ocorrencias = getPessoasDesignadasReuniao(sem, tipoReuniao).filter((item) => {
             if (!hasSlotPessoa(item, aluno)) return false;
-            const ctx = item.context || {};
-            const itemSlot = {
-                key: item.slotKey,
-                semanaIndex: targetSlot.semanaIndex,
-                parteId: ctx.parteId,
-                fds: !!ctx.fds,
-                meioSemana: !!ctx.meioSemana,
-                responsabilidadeKey: ctx.responsabilidadeKey,
-                itemIndex: ctx.itemIndex,
-            };
-            return !sameSlotCtx(itemSlot, targetSlot);
+            return !isSameDesignacaoSlot(item, targetSlot);
         });
 
         if (ocorrencias.length === 0) return null;
-        const temOutroSlotPrincipalFds = !!targetSlot.fds && ocorrencias.some((item) => item.context?.fds && !item.context?.responsabilidade);
+        const temOutroSlotPrincipalFds = tipoReuniao === 'fimDeSemana' && ocorrencias.some((item) => item.context?.fds && !item.context?.responsabilidade);
         return {
             severity: temOutroSlotPrincipalFds && !targetSlot.responsabilidadeKey ? 'block' : 'warning',
             labels: ocorrencias.map((item) => item.label || item.slotKey),
@@ -745,10 +732,10 @@ const Designar = ({
         return Math.floor((new Date().getTime() - new Date(ultimo.data).getTime()) / (1000 * 60 * 60 * 24));
     };
 
-    const isAlunoDuplicadoBySemanaKey = (alunoId, semanaKey) => {
+    const isAlunoDuplicadoBySemanaKey = (alunoId, semanaKey, tipoReuniao = null) => {
         const sem = listaProgramacoes?.[getSemanaRealIndexByKey(semanaKey)];
         if (!sem) return false;
-        return getPessoasDesignadasSemana(sem).some((item) => {
+        return getPessoasDesignadasReuniao(sem, tipoReuniao).some((item) => {
             const pessoaKey = item?.pessoa?.id || item?.pessoa?.nome;
             return pessoaKey && alunoId && String(pessoaKey) === String(alunoId);
         });
@@ -849,7 +836,7 @@ const Designar = ({
             if (conflito) {
                 const msg = conflito.severity === 'block'
                     ? (TT.bloqueioConflitoFds || 'Este irmao ja esta em outra funcao principal do fim de semana. Confirmar excecao?')
-                    : (TT.confirmarConflitoFds || TT.confirmarDuplicado || 'Este aluno ja esta designado nesta semana. Deseja continuar?');
+                    : (TT.confirmarConflitoFds || TT.confirmarDuplicado || 'Este aluno ja esta designado nesta reuniao. Deseja continuar?');
                 const confirmado = await dialog.confirm({
                     title: conflito.severity === 'block' ? 'Conflito de Designação' : 'Aviso de Designação Duplicada',
                     message: `${msg}\n\n${conflito.labels.join(', ')}`,
@@ -2070,7 +2057,7 @@ const Designar = ({
             )}
 
             {/* MODAL SUGESTÃO */}
-            <ModalSugestao config={config} avaliarCandidato={config.grupoSelecionadoId ? aluno => getAlunoEligibilityForSlot(aluno, { ...modalSugestao, semanaIndex: modalSugestao.semanaIndex }) : null} isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes.map(p => projetarProgramaOperacionalInterface(p, config))} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={projetarProgramaOperacionalInterface(listaFiltradaPorFlag?.[modalSugestao.semanaIndex], config)} modalKey={modalSugestao.key} cargosMap={cargosMap} lang={lang} modo={modalSugestao.modo} pessoaAtual={modalSugestao.anterior} />
+            <ModalSugestao config={config} avaliarCandidato={config.grupoSelecionadoId ? aluno => getAlunoEligibilityForSlot(aluno, { ...modalSugestao, semanaIndex: modalSugestao.semanaIndex }) : null} isOpen={modalSugestao.aberto} onClose={() => setModalSugestao({ ...modalSugestao, aberto: false })} onSelect={aplicarSugestao} alunos={alunos} historico={listaProgramacoes.map(p => projetarProgramaOperacionalInterface(p, config))} parteAtual={modalSugestao.parteId ? listaFiltradaPorFlag?.[modalSugestao.semanaIndex]?.partes?.find(p => p.id === modalSugestao.parteId) : null} semanaAtual={projetarProgramaOperacionalInterface(listaFiltradaPorFlag?.[modalSugestao.semanaIndex], config)} modalKey={modalSugestao.key} slotAtual={modalSugestao} tipoReuniao={getTipoReuniaoSlot(modalSugestao)} cargosMap={cargosMap} lang={lang} modo={modalSugestao.modo} pessoaAtual={modalSugestao.anterior} />
         </div>
     );
 };

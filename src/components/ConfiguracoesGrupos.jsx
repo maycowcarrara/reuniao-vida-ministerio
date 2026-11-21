@@ -9,10 +9,12 @@ import { projetarConfigGrupo } from '../utils/grupoAtivo.js';
 import { useProtecaoTrocaGrupo } from '../hooks/useProtecaoTrocaGrupo.js';
 import { dialog } from '../utils/dialog.js';
 import { toast } from '../utils/toast.js';
+import PlanejarTrocaDia from './PlanejarTrocaDia.jsx';
 
 export default function ConfiguracoesGrupos({ config, grupoId, onSalvar, busy = false, lang, mostrarAcessos = false, onRepublicar, onDesignar }) {
     const T = useSectionMessages('gruposProgramacao');
     const andamento = useSectionMessages('andamento');
+    const trocaTxt = useSectionMessages('trocaDiasReuniao');
     const [erroPublicacao, setErroPublicacao] = useState('');
     const [drafts, setDrafts] = useState(() => config.grupos);
     const [original, setOriginal] = useState(config);
@@ -23,6 +25,16 @@ export default function ConfiguracoesGrupos({ config, grupoId, onSalvar, busy = 
     const [principal, setPrincipal] = useState(config.grupoPrincipalId);
     const [initial, setInitial] = useState(() => JSON.stringify([config.grupos, config.grupoPrincipalId]));
     const dirty = JSON.stringify([drafts, principal]) !== initial;
+    useEffect(() => {
+        if (dirty) return;
+        let cancelado = false;
+        queueMicrotask(() => {
+            if (cancelado) return;
+            setDrafts(config.grupos); setOriginal(config);
+            setPrincipal(config.grupoPrincipalId); setInitial(JSON.stringify([config.grupos, config.grupoPrincipalId]));
+        });
+        return () => { cancelado = true; };
+    }, [config, dirty]);
     useEffect(() => {
         if (!dirty) return;
         const proteger = event => { event.preventDefault(); event.returnValue = ''; };
@@ -57,7 +69,7 @@ export default function ConfiguracoesGrupos({ config, grupoId, onSalvar, busy = 
             if (resultado?.erroPublicacao) toast.error(resultado.erroPublicacao, T.parcial);
             else toast.success(T.salvo);
         } catch (error) {
-            const mensagem = T[error.message] || (validacao ? T.erroValidacao : T.erroPersistencia);
+            const mensagem = trocaTxt[error.message] || T[error.message] || (validacao ? T.erroValidacao : T.erroPersistencia);
             setErro(mensagem); toast.error(mensagem);
         } finally { pendente.current = false; setProcessando(false); }
     };
@@ -108,6 +120,7 @@ export default function ConfiguracoesGrupos({ config, grupoId, onSalvar, busy = 
                         {draft[tipo].frequencia === 'semanal' && <label className="block"><span className={labelClass}>{T.dia}</span><select className={inputClass} value={draft[tipo].dia || ''} onChange={e => updateTipo(draft.id, tipo, 'dia', e.target.value || null)}><option value="">{T.indefinido}</option>{getWeekdayOptions(lang).map(day => <option key={day.value} value={day.value}>{day.label}</option>)}</select></label>}
                         <label className="block"><span className={labelClass}><Clock size={12} className="mr-1 inline" />{T.horarioPadrao}</span><input type="time" className={inputClass} value={draft[tipo].horario} onChange={e => updateTipo(draft.id, tipo, 'horario', e.target.value)} /></label>
                     </div>
+                    {draft[tipo].frequencia === 'semanal' && <PlanejarTrocaDia key={JSON.stringify([draft[tipo].dia, draft[tipo].proximaTroca])} padrao={draft[tipo]} lang={lang} salvarDepois onChange={troca => updateTipo(draft.id, tipo, 'proximaTroca', troca)} />}
                 </div> : <p className="text-xs leading-relaxed text-slate-500">{T.tipoDesabilitado}</p>}
             </div>)}
                 </div>

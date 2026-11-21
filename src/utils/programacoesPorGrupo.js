@@ -1,6 +1,7 @@
 import { getGrupoEfetivoId, getGrupoLegadoId, isProgramacaoV2, normalizeGruposProgramacao } from './gruposProgramacao.js';
 import { createProgramacaoId, getProgramacaoWeekStartISO } from './programacoes.js';
 import { dadosIguais } from './compararDados.js';
+import { validarProximaTroca } from '../config/meetingSchedule.js';
 
 const isObject = value => !!value && Object.getPrototypeOf(value) === Object.prototype;
 
@@ -98,6 +99,8 @@ export const patchConfiguracoesGrupos = (config, { alteracoesPorGrupo = {}, grup
         next.grupos[grupoId] = grupo;
         for (const tipo of ['meioSemana', 'fimDeSemana']) {
             const reuniao = grupo[tipo];
+            if (!dadosIguais(reuniao.historicoDias || [], normalized.grupos[grupoId][tipo].historicoDias || [])) throw new Error('configuracaoConflito');
+            validarProximaTroca(reuniao);
             if (!['semanal', 'datas'].includes(reuniao.frequencia)) throw new Error('Frequência inválida.');
             if (reuniao.habilitada && reuniao.frequencia === 'semanal' && (!reuniao.dia || !reuniao.horario)) {
                 throw new Error('Informe dia e horário da reunião semanal.');
@@ -107,7 +110,9 @@ export const patchConfiguracoesGrupos = (config, { alteracoesPorGrupo = {}, grup
             Object.assign(next, { nome_cong: grupo.nome, idioma: grupo.idioma,
                 dia_reuniao: grupo.meioSemana.dia, horario: grupo.meioSemana.horario,
                 dia_reuniao_fds: grupo.fimDeSemana.dia, horario_fds: grupo.fimDeSemana.horario,
-                eventosAnuais: grupo.eventosAnuais });
+                planejamentoReunioes: Object.fromEntries(['meioSemana', 'fimDeSemana'].map(tipo => [tipo, {
+                    proximaTroca: grupo[tipo].proximaTroca || null, historicoDias: grupo[tipo].historicoDias || [],
+                }])), eventosAnuais: grupo.eventosAnuais });
         }
     }
     if (!Object.values(next.grupos).some(item => item.ativo)) throw new Error('Mantenha pelo menos um grupo ativo.');

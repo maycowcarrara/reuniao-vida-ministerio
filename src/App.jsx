@@ -49,6 +49,8 @@ import { gruposRemotosAtivos } from './utils/compatibilidadeGrupos.js';
 import { prepararImportacaoSemanal, prepararSemanaEvento } from './utils/agendamentoReunioes.js';
 import { destinoNotificacao } from './utils/integracoesGrupo.js';
 import { prepararEventoGrupo, reconstruirHistoricoGrupo } from './utils/designacoesPorGrupo.js';
+import { promoverTrocasConfiguracao, hojeReunioesISO } from './config/meetingSchedule.js';
+import { atualizarProgramacoesPorTroca } from './utils/trocaDiasReuniao.js';
 
 const LOCAL_ADMIN_UID_KEY = 'quadro_admin_uid';
 
@@ -296,6 +298,9 @@ function AdminPanel() {
   };
 
   const prepararProgramacoesParaSalvar = (programacoes = [], configDestino = dadosSistema?.configuracoes, configOrigem = dadosSistema?.configuracoes) => {
+    if (JSON.stringify(configOrigem?.planejamentoReunioes) !== JSON.stringify(configDestino?.planejamentoReunioes)) {
+      return atualizarProgramacoesPorTroca({ programacoes, configAntes: configOrigem, configDepois: configDestino });
+    }
     const diaOrigem = normalizeMeetingDay(configOrigem?.dia_reuniao || configOrigem?.diaReuniao || configOrigem?.diaSemana);
     const diaDestino = normalizeMeetingDay(configDestino?.dia_reuniao || configDestino?.diaReuniao || configDestino?.diaSemana);
     const diaFimSemanaOrigem = normalizeMeetingDay(configOrigem?.dia_reuniao_fds || configOrigem?.diaReuniaoFds || configOrigem?.diaSemanaFimDeSemana || 'saturday');
@@ -638,14 +643,41 @@ function AdminPanel() {
   );
 
   const salvarConfigGrupoLocal = pedido => executarLocal(async () => {
-    const config = patchConfiguracoesGrupos(dadosAtuaisRef.current.configuracoes, pedido);
-    await salvarItem('configuracoes', 'geral', config);
-    dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config };
+    const estado = dadosAtuaisRef.current;
+    const config = promoverTrocasConfiguracao(patchConfiguracoesGrupos(estado.configuracoes, pedido));
+    const programacoes = atualizarProgramacoesPorTroca({ programacoes: estado.historico_reunioes, configAntes: estado.configuracoes, configDepois: config });
+    const alteradas = programacoes.filter((p, i) => p !== estado.historico_reunioes[i]);
+    await salvarItem('configuracoes', 'geral', config, { programacoes: alteradas });
+    dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config, historico_reunioes: programacoes };
     if (!MULTI_GRUPOS_LOCAL) {
       try { await publicarQuadroPublico(); } catch (erroPublicacao) { return { salvo: true, publicado: false, erroPublicacao }; }
     }
     return { salvo: true, publicado: true };
   });
+
+  // A regra por vigencia funciona mesmo com o app fechado. Ao abrir/virar o dia,
+  // promove a configuracao e libera o campo da proxima troca sem perder o passado.
+  useEffect(() => {
+    if (loading || !usuario) return;
+    const promover = async () => {
+      if (pendingRef.current) return;
+      const atual = dadosAtuaisRef.current.configuracoes;
+      const tipos = Object.values(atual.grupos || {}).flatMap(g => [g.meioSemana, g.fimDeSemana]);
+      tipos.push(...Object.values(atual.planejamentoReunioes || {}));
+      if (!tipos.some(p => p?.proximaTroca?.data <= hojeReunioesISO())) return;
+      try {
+        const config = promoverTrocasConfiguracao(atual);
+        await executarLocal(async () => {
+          await salvarItem('configuracoes', 'geral', config);
+          dadosAtuaisRef.current = { ...dadosAtuaisRef.current, configuracoes: config };
+        });
+      } catch (error) { toast.error(error); }
+    };
+    void promover();
+    const timer = window.setInterval(promover, 60_000);
+    window.addEventListener('focus', promover);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', promover); };
+  }, [loading, usuario, dadosSistema.configuracoes, salvarItem]);
 
   const salvarEventoGrupoLocal = pedido => executarLocal(async () => {
     const config = prepararEventoGrupo({ config: dadosAtuaisRef.current.configuracoes, ...pedido });
