@@ -21,7 +21,7 @@ const SidebarAlunos = ({
     cargosMap, filtrosTiposAtivos, toggleFiltroTipo, setFiltrosTiposAtivos, lang, // <-- Adicionado setFiltrosTiposAtivos aqui
     atribuirAluno, calcularDiasDesdeUltimaParte, getHistoricoRecente,
     isAlunoDuplicadoBySemanaKey, getSemanaKeyByFilteredIndex, getSemanaIndexContexto, getCargoInfo,
-    getAlunoEligibilityForSlot, setDraggedAluno, semanasSelecionadas, stickyOffset = 176
+    getAlunoEligibilityForSlot, setDraggedAluno, semanasSelecionadas, stickyOffset = 176, panelMaxHeight = null
 }) => {
 
     const localTx = useSectionMessages('designarSidebar');
@@ -132,10 +132,10 @@ const SidebarAlunos = ({
                 />
             )}
             <div
-                className={`${slotAtivo ? 'fixed inset-x-0 bottom-0 z-[160] px-2 pb-2' : 'hidden'} lg:block lg:w-80 shrink-0 w-full lg:sticky self-start lg:px-0 lg:pb-0`}
-                style={{ top: `${stickyOffset}px` }}
+                className={`${slotAtivo ? 'fixed inset-x-0 bottom-0 z-[160] px-2 pb-2' : 'hidden'} lg:block lg:w-80 shrink-0 w-full lg:sticky lg:top-[var(--designar-sticky-offset)] self-start lg:px-0 lg:pb-0`}
+                style={{ '--designar-sticky-offset': `${stickyOffset}px`, '--designar-panel-height': panelMaxHeight != null ? `${panelMaxHeight}px` : `calc(100dvh - ${stickyOffset + 16}px)` }}
             >
-            <div className="bg-white rounded-t-2xl lg:rounded-xl shadow-2xl lg:shadow-lg border border-gray-200 flex flex-col overflow-hidden" style={{ maxHeight: slotAtivo ? 'min(78vh, calc(100vh - 5rem))' : `calc(100vh - ${stickyOffset + 16}px)` }}>
+            <div className="min-h-0 max-h-[min(78dvh,calc(100dvh-5rem))] lg:max-h-[var(--designar-panel-height)] bg-white rounded-t-2xl lg:rounded-xl shadow-2xl lg:shadow-lg border border-gray-200 flex flex-col overflow-hidden">
                 <div className="p-4 bg-blue-700 text-white text-xs font-bold uppercase tracking-widest flex justify-between items-center shrink-0">
                     <div className="flex flex-col">
                         <span>{buildSlotLabel()}</span>
@@ -226,7 +226,7 @@ const SidebarAlunos = ({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scroll bg-gray-50/20">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 space-y-2 custom-scroll bg-gray-50/20">
                     {alunosProcessados.length === 0 ? (
                         <div className="text-center py-10 text-gray-400 flex flex-col items-center">
                             <Search size={32} className="mx-auto mb-2 opacity-30" />

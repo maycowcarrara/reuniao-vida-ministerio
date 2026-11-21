@@ -19,6 +19,7 @@ const NavegadorSemanas = ({
     setSemanaAtivaIndex,
     getSemanaKey,
     stickyOffset = 176,
+    panelMaxHeight = null,
     TT,
     config = {},
     lang = 'pt' // Adicionado lang como prop (ou fallback)
@@ -193,10 +194,10 @@ const NavegadorSemanas = ({
 
     return (
         <div
-            className="hidden xl:flex flex-col w-64 shrink-0 xl:sticky self-start overflow-y-auto bg-white rounded-xl shadow-sm border border-gray-200 custom-scroll z-30"
-            style={{ top: `${stickyOffset}px`, maxHeight: `calc(100vh - ${stickyOffset + 16}px)` }}
+            className="hidden xl:flex flex-col min-h-0 w-64 shrink-0 xl:sticky self-start overflow-hidden isolate bg-white rounded-xl shadow-sm border border-gray-200 z-30"
+            style={{ top: `${stickyOffset}px`, maxHeight: panelMaxHeight ?? `calc(100dvh - ${stickyOffset + 16}px)` }}
         >
-            <div className="p-4 bg-gray-50 border-b border-gray-200 sticky top-0 z-10 flex items-center justify-between">
+            <div className="p-4 bg-gray-50 border-b border-gray-200 shrink-0 flex items-center justify-between">
                 <h3 className="font-bold text-xs text-gray-700 uppercase tracking-widest">
                     {localTx.resumo}
                 </h3>
@@ -205,7 +206,7 @@ const NavegadorSemanas = ({
                 </span>
             </div>
 
-            <div className="p-2 flex flex-col gap-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scroll p-2 flex flex-col gap-2">
                 {semanasOrdenadas.map(({ sem, originalIndex: idx }) => {
                     const key = getSemanaKey(sem, idx);
                     const isSelected = semanasSelecionadas[key];
@@ -247,7 +248,7 @@ const NavegadorSemanas = ({
                                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                 }, 50);
                             }}
-                            className={`relative overflow-hidden text-left p-3 rounded-lg border transition-all ${isActive ? 'border-blue-300 ring-1 ring-blue-300' : 'border-gray-100 hover:border-blue-100'
+                            className={`relative shrink-0 overflow-hidden text-left p-3 rounded-lg border transition-all ${isActive ? 'border-blue-300 ring-1 ring-blue-300' : 'border-gray-100 hover:border-blue-100'
                                 }`}
                         >
                             <div className={`absolute inset-0 ${cardBaseClass}`} aria-hidden="true" />

@@ -3,6 +3,7 @@ import { createProgramacaoId, getProgramacaoWeekStartISO } from './programacoes.
 import { createFimDeSemanaDefault, hasFimDeSemanaData } from './fimDeSemana.js';
 import { normalizeOcorrenciaReuniao, TIPOS_REUNIAO } from './ocorrenciasReuniao.js';
 import { createCelebracaoDefault, eventoSubstituiReuniao, getCelebracao, textosCelebracao } from './celebracao.js';
+import { getWeekStartISOFromSemana } from './revisarEnviar/dates.js';
 
 const DIAS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 export const validarDataReuniao = data => {
@@ -119,6 +120,64 @@ export const prepararImportacaoMeioSemana = ({ programacoes = [], config, grupoI
         horario: atual?.meioSemana?.horario || horario, ...(evento ? { eventoEspecial: { ...evento } } : {}) };
     return { operacoes: [operacaoBloco(atual, grupoId, semana, 'meioSemana', bloco,
         { partes: dados.partes, ...(!atual ? { semana: dados.semana || semana } : {}) })] };
+};
+
+const dataSemanal = (semana, padrao) => {
+    const dia = DIAS.indexOf(padrao.dia);
+    if (dia < 0) throw new Error('Defina o dia semanal.');
+    validarHorarioReuniao(padrao.horario);
+    const data = new Date(`${semana}T12:00:00Z`);
+    data.setUTCDate(data.getUTCDate() + ((dia + 6) % 7));
+    return data.toISOString().slice(0, 10);
+};
+
+// Confirmar a apostila no fluxo semanal tambem agenda as reunioes habilitadas.
+// O fluxo de datas explicitas continua criando rascunhos para ativacao manual.
+export const prepararImportacaoSemanal = ({ programacoes = [], config, grupoId, dados }) => {
+    const grupo = validarTipo(config, grupoId, 'meioSemana');
+    if (grupo.meioSemana.frequencia !== 'semanal') throw new Error('Escolha uma data explicita para esta frequencia.');
+    const semana = semanaDe(dados?.dataInicio || getWeekStartISOFromSemana({ semanaStr: dados?.semana, config }));
+    const atual = localizar(programacoes, config, grupoId, semana);
+    const data = atual?.meioSemana?.data || atual?.dataReuniao || atual?.dataExata || dataSemanal(semana, grupo.meioSemana);
+    const resultado = prepararImportacaoMeioSemana({ programacoes, config, grupoId, dados, data,
+        horario: grupo.meioSemana.horario });
+    if (!resultado.operacoes.length) return resultado;
+    const operacao = resultado.operacoes[0];
+    const patch = operacao.tipo === 'patch' ? operacao.alteracoes : operacao.programacao;
+    if (!temOcorrencia(atual, 'meioSemana')) patch.meioSemana.ativo = true;
+    const evento = eventoDaSemana(grupo, semana);
+    if (grupo.fimDeSemana.habilitada && grupo.fimDeSemana.frequencia === 'semanal'
+        && !temOcorrencia(atual, 'fimDeSemana') && !eventoSubstituiReuniao(evento, 'fimDeSemana')) {
+        patch.fimDeSemana = { ...createFimDeSemanaDefault(), ...atual?.fimDeSemana, ativo: true, publicadaNoQuadro: false,
+            data: dataSemanal(semana, grupo.fimDeSemana), horario: grupo.fimDeSemana.horario };
+    }
+    return resultado;
+};
+
+// Reparo explicito por ID para apostilas afetadas pela importacao inativa.
+// Conserva partes, designacoes, identidades e qualquer ocorrencia cancelada.
+export const prepararReparoImportacaoSemanal = ({ programacoes = [], config, grupoId, programacaoId }) => {
+    const atual = programacoes.find(p => p.id === programacaoId && getGrupoEfetivoId(p, config) === grupoId);
+    if (!atual || atual.publicadaNoQuadro !== false || atual.meioSemana?.ativo !== false
+        || !atual.partes?.length || atual.cancelada || atual.arquivada || atual.meioSemana?.cancelada) {
+        throw new Error('O destino precisa ser uma apostila em rascunho com meio de semana inativo.');
+    }
+    if (programacaoBloqueada(atual)) throw new Error('Evento impeditivo neste grupo/semana.');
+    const semana = getProgramacaoWeekStartISO(atual);
+    const [operacao] = prepararImportacaoSemanal({ config, grupoId,
+        dados: { semana: atual.semana, dataInicio: semana, partes: atual.partes } }).operacoes;
+    const padrao = operacao.programacao;
+    const meio = { ...atual.meioSemana, ativo: true, data: atual.meioSemana.data || padrao.meioSemana.data,
+        horario: atual.meioSemana.horario || padrao.meioSemana.horario };
+    validarDataReuniao(meio.data); validarHorarioReuniao(meio.horario);
+    if (semanaDe(meio.data) !== semana) throw new Error('Data fora da semana importada.');
+    const alteracoes = { meioSemana: meio };
+    if (padrao.fimDeSemana && !atual.fimDeSemana?.cancelada && !atual.fimDeSemana?.data) {
+        alteracoes.fimDeSemana = { ...padrao.fimDeSemana, ...atual.fimDeSemana,
+            ativo: true, data: padrao.fimDeSemana.data, horario: atual.fimDeSemana?.horario || padrao.fimDeSemana.horario };
+        validarHorarioReuniao(alteracoes.fimDeSemana.horario);
+    }
+    return { operacoes: [{ tipo: 'patch', programacaoId, alteracoes }] };
 };
 
 export const prepararEstadoOcorrencia = ({ programacoes = [], config, grupoId, programacaoId, tipo, cancelar = false }) => {

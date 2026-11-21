@@ -93,6 +93,7 @@ const Designar = ({
     const stickyHeaderRef = useRef(null);
     const lastSubstitutionShortcutTokenRef = useRef(null);
     const [stickyOffset, setStickyOffset] = useState(176);
+    const [panelMaxHeight, setPanelMaxHeight] = useState(null);
     const semanasSelecionadas = sharedWeekSelection || {};
     const setSemanasSelecionadas = setSharedWeekSelection;
 
@@ -471,21 +472,36 @@ const Designar = ({
         const headerNode = stickyHeaderRef.current;
         if (!headerNode) return undefined;
 
+        // Sticky usa o scroll da area de trabalho, abaixo do cabecalho do app.
+        // Medir essa area evita somar a altura do cabecalho novamente ao viewport.
+        let scrollContainer = headerNode.parentElement;
+        while (scrollContainer && !/(auto|scroll|overlay)/.test(getComputedStyle(scrollContainer).overflowY)) {
+            scrollContainer = scrollContainer.parentElement;
+        }
+
         const updateStickyOffset = () => {
             const nextOffset = Math.ceil(headerNode.getBoundingClientRect().height) + 16;
+            const availableHeight = scrollContainer
+                ? Math.min(scrollContainer.clientHeight, window.innerHeight - scrollContainer.getBoundingClientRect().top)
+                : window.innerHeight;
+            const nextHeight = Math.max(0, Math.floor(availableHeight - nextOffset - 16));
             setStickyOffset((prev) => (prev === nextOffset ? prev : nextOffset));
+            setPanelMaxHeight(prev => prev === nextHeight ? prev : nextHeight);
         };
 
         updateStickyOffset();
 
-        if (typeof ResizeObserver !== 'undefined') {
-            const observer = new ResizeObserver(updateStickyOffset);
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateStickyOffset) : null;
+        if (observer) {
             observer.observe(headerNode);
-            return () => observer.disconnect();
+            if (scrollContainer) observer.observe(scrollContainer);
         }
 
         window.addEventListener('resize', updateStickyOffset);
-        return () => window.removeEventListener('resize', updateStickyOffset);
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener('resize', updateStickyOffset);
+        };
     }, []);
 
     const semanasParaExibir = (listaFiltradaPorFlag || [])
@@ -1734,7 +1750,7 @@ const Designar = ({
 
             {agendamentoAberto && agendamentoGrupo && React.cloneElement(agendamentoGrupo, { modal: true, onClose: () => setAgendamentoAberto(false) })}
             <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-4">
-                <div className="flex flex-col lg:flex-row gap-6 pb-20 items-stretch lg:items-start">
+                <div className="flex flex-col lg:flex-row gap-6 pb-20 lg:pb-0 items-stretch lg:items-start">
 
                     <NavegadorSemanas
                         listaSemanas={listaFiltradaPorFlag}
@@ -1743,6 +1759,7 @@ const Designar = ({
                         setSemanaAtivaIndex={setSemanaAtivaIndex}
                         getSemanaKey={getSemanaKey}
                         stickyOffset={stickyOffset}
+                        panelMaxHeight={panelMaxHeight}
                         TT={TT}
                         lang={lang}
                         config={config}
@@ -1961,6 +1978,7 @@ const Designar = ({
                         semanasSelecionadas={semanasSelecionadas}
                         dragOverSlot={dragOverSlot}
                         stickyOffset={stickyOffset}
+                        panelMaxHeight={panelMaxHeight}
                     />
 
                 </div>

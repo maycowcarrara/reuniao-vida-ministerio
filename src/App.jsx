@@ -46,7 +46,7 @@ import RevisaoGrupo from './components/RevisaoGrupo.jsx';
 import QuadroPorGrupo from './components/QuadroPorGrupo.jsx';
 import { projetarQuadroPublico } from './utils/quadroPublico.js';
 import { gruposRemotosAtivos } from './utils/compatibilidadeGrupos.js';
-import { prepararImportacaoMeioSemana, prepararSemanaEvento } from './utils/agendamentoReunioes.js';
+import { prepararImportacaoSemanal, prepararSemanaEvento } from './utils/agendamentoReunioes.js';
 import { destinoNotificacao } from './utils/integracoesGrupo.js';
 import { prepararEventoGrupo, reconstruirHistoricoGrupo } from './utils/designacoesPorGrupo.js';
 
@@ -852,11 +852,10 @@ function AdminPanel() {
                   busy={busy} onEvento={salvarEventoGrupoLocal} onHistorico={sincronizarHistoricoGrupoLocal} onDesignar={() => navegarAba('designar')} />
               : <Dashboard listaProgramacoes={listaProgramacoes} alunos={alunosEmFoco || []} config={configEmFoco} setAbaAtiva={navegarAba} onDefinirEvento={handleDefinirEvento} t={t} confirmacoes={confirmacoes} onAbrirNotificacoesSemana={handleAbrirNotificacoesSemana} />)}
             {abaAtiva === 'importar' && (modoGrupos
-              ? (!MULTI_GRUPOS_LOCAL && configEmFoco.dia_reuniao && configEmFoco.horario
+              ? (!MULTI_GRUPOS_LOCAL && configGrupos.grupos[grupoId]?.meioSemana.frequencia === 'semanal' && configEmFoco.dia_reuniao && configEmFoco.horario
                 ? <Importador config={configEmFoco} programacoes={listaProgramacoes} idioma={lang} onImportComplete={async d => {
                     const conteudo = { ...d }; delete conteudo.id;
-                    const data = d.meioSemana?.data || d.dataReuniao || d.dataExata || getMeetingDateISOFromSemana({ semanaStr: d.semana, config: configEmFoco, isoFallback: d.dataInicio });
-                    await executarLocal(() => controller.executar({ grupoId, preparar: estado => prepararImportacaoMeioSemana({ ...estado, dados: conteudo, data, horario: configEmFoco.horario }) }));
+                    await executarLocal(() => controller.executar({ grupoId, preparar: estado => prepararImportacaoSemanal({ ...estado, dados: conteudo }) }));
                     setAbaAtiva('designar');
                   }} />
                 : <ReunioesIndependentes key={`${grupoId}-importar`} importar config={configGrupos} grupoId={grupoId} programacoes={listaProgramacoes} busy={busy} onExecutar={pedido => executarLocal(() => controller.executar(pedido))} />)
