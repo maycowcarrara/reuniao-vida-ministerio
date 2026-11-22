@@ -78,7 +78,7 @@ test('Agenda: ausência de vínculos ou identidade conflitante bloqueia antes de
 test('Agenda: vínculo recuperado continua sujeito ao ETag e falha não marca semana sincronizada', async () => {
     const nativa = { ...program, agendaSincronizadaEm: 'antes' }; delete nativa.identidadeLegada;
     const [evento] = await planejarAgendaGrupo({ ...args, programacoes: [{ ...nativa, agendaSincronizadaEm: null }] });
-    const agenda = agendaFalsa([{ ...evento, etag: 'old' }]);
+    const agenda = agendaFalsa([{ ...evento, summary: 'Evento precisa ser atualizado', etag: 'old' }]);
     const result = await sincronizarAgendaGrupo({ ...args, programacoes: [nativa], fetchImpl: (url, options = {}) =>
         options.method === 'PATCH' ? Promise.resolve({ ok: false, status: 412 }) : agenda.fetchImpl(url, options) });
     assert.equal(result.sucesso, false);
@@ -111,7 +111,7 @@ test('Agenda: criação idempotente trata corrida 409 e não duplica evento', as
         if (n === 3) return { ok: true, status: 200, json: async () => ({ ...evento, etag: 'concurrent' }) };
         assert.equal(options.method, 'PATCH'); return { ok: true, status: 200 };
     } });
-    assert.equal(r.sucesso, true); assert.equal(n, 4);
+    assert.equal(r.sucesso, true); assert.equal(n, 3); // A corrida já criou exatamente o evento esperado; não regrava.
 });
 
 test('Integração real: renderiza ações do grupo sem disparar provedores', async () => {

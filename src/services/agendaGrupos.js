@@ -1,7 +1,8 @@
 import { planejarAgendaGrupo } from '../utils/integracoesGrupo.js';
 import { getGrupoLegadoId, isProgramacaoV2 } from '../utils/gruposProgramacao.js';
 
-const bodyEvento = event => Object.fromEntries(['id','summary','description','start','end','attendees','extendedProperties','reminders'].filter(k => event[k] !== undefined).map(k=>[k,event[k]]));
+import { assinaturaConfirmada, mapLimit } from '../utils/agendaDelta.js';
+import { criarClienteAgenda, sincronizarEventosAgenda } from './agendaEventos.js';
 export function validarEventoExistente(evento, atual, grupoLegadoId) {
     if (!atual) return;
     const esperado = evento.extendedProperties.private.rvmIdentity;
@@ -12,16 +13,11 @@ export function validarEventoExistente(evento, atual, grupoLegadoId) {
         && String(atual.start?.dateTime || atual.start?.date || '').slice(0,10) === legado.dataOriginal) return;
     throw new Error('Evento existente não corresponde à identidade do destino; revisão necessária.');
 }
-export async function sincronizarAgendaGrupo({ token, calendarId, programacoes, config, grupoId, alunos, fetchImpl = fetch }) {
+export async function sincronizarAgendaGrupo({ token, calendarId, programacoes, config, grupoId, alunos, fetchImpl = fetch, conferirTudo = false }) {
     if (!token || !calendarId) throw new Error('Escolha a agenda e autorize a conta Google.');
-    const resultados = [];
-    const base = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
-    const request = async (url, options={}) => {
-        const response = await fetchImpl(url,{...options,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}});
-        const data = await response.json().catch(()=>null);
-        if (!response.ok && response.status!==404 && response.status!==409) throw new Error(`Google Agenda (${response.status}): ${data?.error?.message || 'operação recusada'}`);
-        return {status:response.status,data};
-    };
+    const cliente = criarClienteAgenda({ token, calendarId, fetchImpl });
+    const { base, request } = cliente;
+    const porId = new Map(programacoes.map(p => [String(p.id), p]));
     // Semanas nativas v2 também recebem agendaSincronizadaEm. Esse marcador
     // sozinho não prova origem legada: recupere os vínculos pelos IDs estáveis
     // e pela identidade privada, antes de permitir qualquer gravação.
@@ -34,43 +30,28 @@ export async function sincronizarAgendaGrupo({ token, calendarId, programacoes, 
         const propostas = await planejarAgendaGrupo({ config, grupoId, alunos,
             programacoes: programacoes.map(p => semInventario.has(String(p.id)) ? { ...p, agendaSincronizadaEm: null } : p) });
         const verificadas = new Set();
-        for (const evento of propostas) {
-            if (!semInventario.has(evento.identity.programacaoId)) continue;
-            const atual = await request(`${base}/${evento.id}`);
-            consultados.set(evento.id, atual);
-            if (atual.status !== 404) {
-                validarEventoExistente(evento, atual.data, getGrupoLegadoId(config));
-                if (!atual.data || atual.data.id !== evento.id) throw new Error('Não foi possível verificar o vínculo do evento na agenda.');
-                verificadas.add(evento.identity.programacaoId);
+        const inventario = propostas.filter(e => semInventario.has(e.identity.programacaoId));
+        await mapLimit(inventario, async evento => {
+            const id = evento.identity.programacaoId;
+            // O checkpoint só é salvo após sucesso verificado no destino exato.
+            const conhecido = assinaturaConfirmada(porId.get(id), calendarId, evento.id);
+            if (conhecido) verificadas.add(id);
+            else {
+                const atual = await request(`${base}/${evento.id}`);
+                consultados.set(evento.id, atual);
+                if (atual.status !== 404) {
+                    validarEventoExistente(evento, atual.data, getGrupoLegadoId(config));
+                    if (!atual.data || atual.data.id !== evento.id) throw new Error('Não foi possível verificar o vínculo do evento na agenda.');
+                    verificadas.add(id);
+                }
             }
-            vinculos.push({ ...evento.identity, eventId: evento.id });
-        }
+        });
+        vinculos.push(...inventario.map(evento => ({ ...evento.identity, eventId: evento.id })));
         for (const id of new Set(propostas.filter(e => semInventario.has(e.identity.programacaoId)).map(e => e.identity.programacaoId))) {
             if (!verificadas.has(id)) throw new Error('Não foi possível localizar os eventos já sincronizados desta semana. Escolha a mesma agenda usada anteriormente e tente novamente.');
         }
     }
     const eventos = await planejarAgendaGrupo({ programacoes, config, grupoId, alunos, vinculos });
-    for (const evento of eventos) {
-        try {
-            let atual = consultados.get(evento.id) || await request(`${base}/${evento.id}`);
-            validarEventoExistente(evento, atual.status===404 ? null : atual.data, config.grupoLegadoId);
-            let resposta;
-            if (atual.status===404) {
-                resposta = await request(`${base}?sendUpdates=none`,{method:'POST',body:JSON.stringify(bodyEvento(evento))});
-                if (resposta.status===409) atual = await request(`${base}/${evento.id}`);
-            }
-            if (atual.status!==404) {
-                validarEventoExistente(evento,atual.data,config.grupoLegadoId);
-                if (!atual.data?.etag) throw new Error('Evento sem ETag; atualização recusada.');
-                const response = await fetchImpl(`${base}/${evento.id}?sendUpdates=none`,{method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','If-Match':atual.data.etag},body:JSON.stringify({ ...bodyEvento(evento), extendedProperties: { ...atual.data.extendedProperties, private: { ...atual.data.extendedProperties?.private, ...evento.extendedProperties.private } } })});
-                if (!response.ok) throw new Error(`Atualização do evento recusada (${response.status}); destino preservado.`);
-                resposta = {status:response.status};
-            }
-            if (!resposta || resposta.status>=400) throw new Error('Não foi possível sincronizar este evento.');
-            resultados.push({id:evento.id,ok:true});
-        } catch(error) {resultados.push({id:evento.id,ok:false,erro:error.message});}
-    }
-    const programacaoIdsSincronizadas = [...new Set(eventos.map(e => e.identity.programacaoId))].filter(id =>
-        eventos.filter(e => e.identity.programacaoId === id).every(e => resultados.some(r => r.id === e.id && r.ok)));
-    return {sucesso:resultados.every(r=>r.ok),resultados,programacaoIdsSincronizadas};
+    return sincronizarEventosAgenda({ eventos, programacoes, calendarId, cliente, consultados, conferirTudo,
+        validar: (evento, atual) => validarEventoExistente(evento, atual, getGrupoLegadoId(config)) });
 }

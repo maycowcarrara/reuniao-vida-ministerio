@@ -1,3 +1,4 @@
+import { criarClienteAgenda, sincronizarEventosAgenda } from './agendaEventos.js';
 import { gruposRemotosAtivos } from '../utils/compatibilidadeGrupos.js';
 import { sincronizarAgendaGrupo } from './agendaGrupos.js';
 import { isProgramacaoV2 } from '../utils/gruposProgramacao.js';
@@ -176,15 +177,15 @@ export const iniciarSincronizacao = async () => {
 };
 
 // 2. Função que recebe a escolha do utilizador e envia/atualiza os eventos
-export const enviarEventosParaAgenda = async (token, calendarId, reunioes, configuracoes) => {
+export const enviarEventosParaAgenda = async (token, calendarId, reunioes, configuracoes, { conferirTudo = false } = {}) => {
     try {
         if (reunioes.some(isProgramacaoV2)) {
             const grupoId = configuracoes?.grupoSelecionadoId;
             if (!gruposRemotosAtivos(configuracoes) || !grupoId || reunioes.some(p => p.grupoId !== grupoId)) throw new Error('Escolha um grupo ativo antes de sincronizar.');
-            const result = await sincronizarAgendaGrupo({ token, calendarId, programacoes: reunioes, config: configuracoes, grupoId });
-            return { ...result, quantidade: result.resultados.filter(r => r.ok).length, erro: result.resultados.filter(r => !r.ok).map(r => r.erro).join('; ') };
+            const result = await sincronizarAgendaGrupo({ token, calendarId, programacoes: reunioes, config: configuracoes, grupoId, conferirTudo });
+            return result;
         }
-        let eventosProcessados = 0;
+        const eventos = [];
         const config = normalizeSystemConfig(configuracoes || {});
         const horarioPadrao = config?.horario || "19:30";
         const horarioFimDeSemanaPadrao = config?.horario_fds || config?.horarioFimDeSemana || "18:00";
@@ -192,27 +193,6 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
         // 🔥 Detecta o idioma para as tags e textos dinâmicos
         const lang = normalizeLanguage(config?.idioma);
         const textos = getSectionMessages('calendarSync', lang);
-
-        // 🔥 FUNÇÃO INTELIGENTE DE ENVIO (Cria ou Atualiza)
-        const enviarParaGoogle = async (evento) => {
-            let res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(evento)
-            });
-
-            // Se retornar 409 (Conflict), significa que o evento já existe! Então vamos ATUALIZAR (PUT)
-            if (res.status === 409) {
-                res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${evento.id}?sendUpdates=none`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(evento)
-                });
-            }
-
-            if (!res.ok) throw new Error(getGoogleCalendarErrorMessage(res, await readGoogleJson(res)));
-            eventosProcessados++;
-        };
 
         for (const reuniao of reunioes) {
             if (reuniao.arquivada) continue;
@@ -499,13 +479,14 @@ export const enviarEventosParaAgenda = async (token, calendarId, reunioes, confi
                 }
             }
 
-            // 5. Enviar / Atualizar um por um
-            for (const evt of requestsParaEnviar) {
-                await enviarParaGoogle(evt);
-            }
+            eventos.push(...requestsParaEnviar.map(evento => ({ ...evento, programacaoId: String(reuniao.id) })));
         }
 
-        return { sucesso: true, quantidade: eventosProcessados };
+        return await sincronizarEventosAgenda({ eventos, programacoes: reunioes, calendarId, conferirTudo,
+            cliente: criarClienteAgenda({ token, calendarId }),
+            validar: (evento, atual) => {
+                if (atual && (atual.id !== evento.id || !/^\[RVM\]/.test(atual.summary || ''))) throw new Error('Evento existente não corresponde ao destino RVM.');
+            } });
 
     } catch (error) {
         console.error("Erro ao enviar eventos:", error);

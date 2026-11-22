@@ -1,5 +1,6 @@
 import { criarReferenciasInterfaceClassica } from '../../utils/interfaceClassicaGrupos.js';
 import { buildAssignmentKey } from '../../utils/assignmentIdentity.js';
+import { aplicarResultadoAgenda } from '../../utils/agendaDelta.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Printer,
@@ -1089,7 +1090,7 @@ const RevisarEnviar = ({
                     limparPrint={limparPrint}
                     onPrint={handlePrint}
                     onGravarHistorico={gravarHistorico}
-                    onConfirmSync={async (tokenGoogle, calendarId) => {
+                    onConfirmSync={async (tokenGoogle, calendarId, opcoes) => {
                         // OPÇÃO B: Filtra EXATAMENTE as semanas que estão com a pílula azul
                         const reunioesSelecionadas = semanasDisponiveis.filter((sem, i) => {
                             const key = getSemanaKey(sem, i);
@@ -1108,30 +1109,19 @@ const RevisarEnviar = ({
                         }));
 
                         const { enviarEventosParaAgenda } = await import('../../services/calendarSync');
-                        const resultado = await enviarEventosParaAgenda(tokenGoogle, calendarId, reunioesComDataExata, config);
+                        const resultado = await enviarEventosParaAgenda(tokenGoogle, calendarId, reunioesComDataExata, config, opcoes);
 
-                        if (resultado.sucesso) {
-                            if (onProgramacoesChange) {
-                                const sincronizadas = new Set(
-                                    reunioesSelecionadas
-                                        .filter(sem => !config?.grupoSelecionadoId || resultado.programacaoIdsSincronizadas?.includes(String(sem.id)))
-                                        .map((sem) => (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString())
-                                        .filter(Boolean)
-                                );
-                                const syncedAt = new Date().toISOString();
-                                await onProgramacoesChange((prev) => (prev || []).map((sem) => {
-                                    const key = (sem?.id || sem?.dataReuniao || sem?.dataInicio || sem?.dataExata || sem?.data || '').toString();
-                                    if (!sincronizadas.has(key)) return sem;
-                                    const proximaSemana = { ...(sem || {}), agendaSincronizadaEm: syncedAt };
-                                    if (config?.grupoSelecionadoId) return { ...proximaSemana, agendaPendenteSync: false, needsCalendarSync: false, agendaPendenteMotivo: '', agendaPendenteDesde: null };
-                                    delete proximaSemana.agendaPendenteSync;
-                                    delete proximaSemana.needsCalendarSync;
-                                    delete proximaSemana.agendaPendenteMotivo;
-                                    delete proximaSemana.agendaPendenteDesde;
-                                    return proximaSemana;
-                                }));
+                        // Guarda também sucessos parciais: uma nova tentativa envia somente o que faltou.
+                        if (onProgramacoesChange && resultado.estadosPorProgramacao) {
+                            const syncedAt = new Date().toISOString();
+                            const gravacao = await onProgramacoesChange(prev => (prev || []).map(sem => aplicarResultadoAgenda(sem, resultado, syncedAt)));
+                            if (gravacao?.salvo === false) {
+                                toast.error(lang === 'es' ? 'Agenda procesada, pero no fue posible guardar el estado de sincronización.' : 'Agenda processada, mas não foi possível gravar o estado da sincronização.');
+                                return;
                             }
-                            toast.success(formatText(t.agendaSuccessTpl, { count: resultado.quantidade }));
+                        }
+                        if (resultado.sucesso) {
+                            toast.success(resultado.quantidade === 0 ? (lang === 'es' ? 'Agenda actualizada. Ningún evento necesitó cambios.' : 'Agenda já atualizada. Nenhum evento precisou de alteração.') : formatText(t.agendaSuccessTpl, { count: resultado.quantidade }));
                         } else {
                             toast.error(resultado.erro, t.agendaError);
                         }
@@ -1404,7 +1394,7 @@ const RevisarEnviar = ({
             {/* ABA NOTIFICAR */}
             {abaAtiva === 'notificar' && (<>
                 {config.grupoSelecionadoId && semanasParaImprimir.some(p => getCelebracao(p, config)) && <IntegracoesGrupoReal ownerUid={ownerUid} config={config} grupoId={config.grupoSelecionadoId} alunos={alunos} confirmacoes={confirmacoes}
-                    programacoes={semanasParaImprimir.filter(p => getCelebracao(p, config))} />}
+                    programacoes={semanasParaImprimir.filter(p => getCelebracao(p, config))} onProgramacoesChange={onProgramacoesChange} />}
                 <RevisarEnviarNotificarTab referenciasGrupo={referenciasGrupo} alunosCadastrados={alunos}
                     semanasParaNotificar={semanasParaImprimir.filter(p => !getCelebracao(p, config))}
                     config={config}

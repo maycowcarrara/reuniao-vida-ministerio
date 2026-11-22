@@ -1,7 +1,8 @@
 import * as firestore from 'firebase/firestore';
 import { gruposRemotosAtivos } from '../utils/compatibilidadeGrupos.js';
 import { getGrupoEfetivoId, validarParticipacaoAluno } from '../utils/gruposProgramacao.js';
-import { dadosIguais as same } from '../utils/compararDados.js';
+import { dadosIguais as same, historicosIguais } from '../utils/compararDados.js';
+import { getReunioesAtivas } from '../utils/ocorrenciasReuniao.js';
 import { projetarQuadroPublico } from '../utils/quadroPublico.js';
 
 export const limparIndefinidos = value => {
@@ -41,7 +42,14 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
             }
             for (const p of upserts) {
                 if (getGrupoEfetivoId(p, config) !== grupoId) throw new Error('Grupo do documento inválido.');
-                tx.set(doc(db, `${r.base}/programacao/${p.id}`), limparIndefinidos(p));
+                const ref = doc(db, `${r.base}/programacao/${p.id}`);
+                const anterior = esperados.get(String(p.id));
+                // Documentos existentes enviam somente os campos alterados.
+                // Mantém o contrato de substituição se houver remoção explícita.
+                if (anterior && Object.keys(anterior).every(key => key in p)) {
+                    const patch = Object.fromEntries(Object.entries(p).filter(([key, value]) => !same(value, anterior[key])));
+                    if (Object.keys(patch).length) tx.update(ref, limparIndefinidos(patch));
+                } else tx.set(ref, limparIndefinidos(p));
             }
             for (const id of excluirIds) {
                 tx.set(doc(db, `${r.base}/operacoes_programacao/${id}`), { versaoProgramacao: 2, ownerUid: r.ownerUid, grupoId,
@@ -76,21 +84,34 @@ export function createRemoteGroupAdapter({ db, getOwnerUid, getEstado, sdk = fir
         const r = refs(), estado = obterEstado();
         const alterados = [];
         const alunosPorId = new Map(estado.alunos.map(a => [String(a.id), a]));
-        for (const aluno of alunos) if (!same(aluno.historico || [], alunosPorId.get(String(aluno.id))?.historico || [])) alterados.push(aluno);
-        if (alterados.length + escopo.programacaoIds.length > 400) throw new Error('Divida a sincronização em lotes menores.');
-        if (!alterados.length) return;
+        for (const aluno of alunos) if (!historicosIguais(aluno.historico || [], alunosPorId.get(String(aluno.id))?.historico || [])) alterados.push(aluno);
+        const programacoesPorId = new Map(estado.historico_reunioes.map(p => [String(p.id), p]));
+        const programacaoIds = [...new Set(escopo.programacaoIds.map(String))];
+        const marcadores = programacaoIds.filter(id => {
+            const p = programacoesPorId.get(id);
+            return p && !p.arquivada && getReunioesAtivas(p, estado.configuracoes).length
+                && (!p.historicoGravadoEm || p.historicoPendenteSync || p.historicoPendenteMotivo || p.historicoPendenteDesde);
+        });
+        if (alterados.length + marcadores.length + (marcadores.length ? 1 : 0) > 400) throw new Error('Divida a sincronização em lotes menores.');
+        if (!alterados.length && !marcadores.length) return;
+        const agoraIso = new Date().toISOString();
+        const patches = marcadores.map(id => ({ id, alteracoes: { historicoGravadoEm: agoraIso,
+            historicoPendenteSync: false, historicoPendenteMotivo: '', historicoPendenteDesde: null } }));
         await runTransaction(db, async tx => {
             const [configSnap, programs, people] = await Promise.all([
                 tx.get(r.config),
-                Promise.all(escopo.programacaoIds.map(id => tx.get(doc(db, `${r.base}/programacao/${id}`)))),
+                Promise.all(programacaoIds.map(id => tx.get(doc(db, `${r.base}/programacao/${id}`)))),
                 Promise.all(alterados.map(a => tx.get(doc(db, `${r.base}/alunos/${a.id}`)))),
             ]);
             requireActive(configSnap.data());
-            const programacoesPorId = new Map(estado.historico_reunioes.map(p => [String(p.id), p]));
+            if (!same(configSnap.data().grupos, estado.configuracoes.grupos)) throw new Error('Configuração mudou durante a sincronização.');
             for (const p of programs) if (!p.exists() || getGrupoEfetivoId(p.data(), estado.configuracoes) !== escopo.grupoId || !same(registro(p), programacoesPorId.get(p.id))) throw new Error('Programação mudou durante a sincronização.');
             for (const p of people) if (!same(p.data()?.historico || [], alunosPorId.get(p.id)?.historico || [])) throw new Error('Histórico mudou em outra sessão.');
             for (const aluno of alterados) tx.update(doc(db, `${r.base}/alunos/${aluno.id}`), { historico: limparIndefinidos(aluno.historico) });
+            for (const patch of patches) tx.update(doc(db, `${r.base}/programacao/${patch.id}`), patch.alteracoes);
+            if (patches.length) tx.update(r.config, { revisionProgramacoes: increment(1) });
         });
+        return { programacoes: patches, alunosAlterados: alterados.length };
     };
     const salvarAluno = async (aluno, { original = null, historico = false } = {}) => {
         if (!aluno?.id) throw new Error('Identificador da pessoa ausente.');

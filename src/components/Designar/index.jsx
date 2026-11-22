@@ -30,7 +30,7 @@ import { dialog } from '../../utils/dialog';
 import { getLanguageMeta } from '../../config/appConfig';
 import { isAlunoEligibleForAssignment } from '../../utils/assignmentEligibility';
 import { isWhatWouldYouSayPart } from '../../utils/meetingParts';
-import { avaliarSlotClassico, projetarProgramaOperacionalInterface } from '../../utils/interfaceClassicaGrupos.js';
+import { avaliarSlotClassico, projetarProgramaOperacionalInterface, pessoaParaDesignacao } from '../../utils/interfaceClassicaGrupos.js';
 import { getDesignacoesDaReuniao, getTipoReuniaoSlot, isSameDesignacaoSlot } from '../../utils/sugestoesDesignacao.js';
 import { normalizeOcorrenciaReuniao } from '../../utils/ocorrenciasReuniao.js';
 import { useProtecaoTrocaGrupo } from '../../hooks/useProtecaoTrocaGrupo.js';
@@ -792,6 +792,16 @@ const Designar = ({
         if (semanaRealIndex === -1) return false;
 
         const sem = listaProgramacoes[semanaRealIndex];
+        const valorAtualSlot = targetSlot.meioSemana
+            ? getResponsabilidadesMeioSemana(sem)?.[targetSlot.responsabilidadeKey]?.[targetSlot.itemIndex]
+            : targetSlot.fds ? getFimDeSemanaSlotValue(withFimDeSemanaDefaults(sem), targetSlot)
+                : targetSlot.key === 'presidente' ? sem?.presidente : getParteFromTargetSlot(sem, targetSlot)?.[targetSlot.key];
+        if (aluno && mesmaPessoa(valorAtualSlot, aluno)) {
+            if (targetSlot === slotAtivo) setSlotAtivo(null);
+            return false;
+        }
+        const pessoaDesignada = pessoaParaDesignacao(aluno);
+
 
         // 🔥 TRAVA: BLOQUEIA DESIGNAÇÃO SE FOR ASSEMBLEIA
         if (isSemanaAssembleia(sem, config)) {
@@ -880,7 +890,7 @@ const Designar = ({
                 if (aluno === null) {
                     atual.splice(targetSlot.itemIndex, 1);
                 } else {
-                    atual[targetSlot.itemIndex] = aluno;
+                    atual[targetSlot.itemIndex] = pessoaDesignada;
                 }
                 semana.responsabilidades = normalizeResponsabilidades({
                     ...responsabilidades,
@@ -892,12 +902,12 @@ const Designar = ({
                 const fdsAtual = withFimDeSemanaDefaults(semana);
                 const anterior = getFimDeSemanaSlotValue(fdsAtual, targetSlot);
                 registrarSubstituicao(anterior, { id: targetSlot.responsabilidadeKey || targetSlot.key, titulo: getFimDeSemanaLabel(targetSlot.key) });
-                semana.fimDeSemana = setFimDeSemanaSlotValue(fdsAtual, targetSlot, aluno);
+                semana.fimDeSemana = setFimDeSemanaSlotValue(fdsAtual, targetSlot, pessoaDesignada);
                 marcarNotificacaoSemanaPendente(semana, now);
             }
             else if (targetSlot.key === 'presidente') {
                 registrarSubstituicao(semana.presidente, null);
-                semana.presidente = aluno;
+                semana.presidente = pessoaDesignada;
                 marcarNotificacaoSemanaPendente(semana, now);
             }
             else {
@@ -905,7 +915,7 @@ const Designar = ({
                 if (idxParte !== -1) {
                     const parteAtual = semana.partes[idxParte];
                     registrarSubstituicao(parteAtual?.[targetSlot.key], parteAtual);
-                    semana.partes[idxParte] = marcarNotificacaoPartePendente({ ...parteAtual, [targetSlot.key]: aluno }, semana, now);
+                    semana.partes[idxParte] = marcarNotificacaoPartePendente({ ...parteAtual, [targetSlot.key]: pessoaDesignada }, semana, now);
                 }
             }
 

@@ -6,6 +6,21 @@ import { normalizeOcorrenciaReuniao, TIPOS_REUNIAO } from './ocorrenciasReuniao.
 import { criarFilaGrupo, legacyKeyFromDesignacao } from './integracoesGrupo.js';
 import { buildLegacyAssignmentKey } from './assignmentIdentity.js';
 import { getCelebracao } from './celebracao.js';
+import { dadosIguais } from './compararDados.js';
+
+// Exclui marcadores de envio, confirmações e dados de cadastro sem efeito na reunião.
+const conteudoSincronizavel = programa => JSON.parse(JSON.stringify(Object.fromEntries([
+    'semana', 'dataInicio', 'dataReuniao', 'dataExata', 'evento', 'dataEventoEspecial',
+    'presidente', 'leitor', 'partes', 'responsabilidades', 'meioSemana', 'fimDeSemana', 'celebracao',
+].map(key => [key, programa[key]])), (key, value) => {
+    if (['historico', 'notificacaoAlteradaEm'].includes(key)) return undefined;
+    if (value?.id && value?.nome) return { id: value.id, nome: value.nome, email: value.email || '' };
+    return value;
+}));
+
+// O histórico pertence ao cadastro e não precisa viajar dentro de cada designação.
+export const pessoaParaDesignacao = pessoa => pessoa
+    ? Object.fromEntries(Object.entries(pessoa).filter(([key]) => key !== 'historico')) : null;
 
 // A interface existente continua editando uma lista do grupo; a persistência
 // valida somente seus deltas e conserva a fonte completa dos demais grupos.
@@ -39,6 +54,11 @@ export function prepararEdicaoClassica({ anteriores, proximas, config, grupoId, 
                 const eligibility = avaliarElegibilidadeGrupo({ aluno, alunos, programacao: result, tipo, slot, grupoId, config, cargosMap });
                 if (!eligibility.eligible) throw new Error(eligibility.reason);
             }
+        }
+        if (!dadosIguais(conteudoSincronizavel(old), conteudoSincronizavel(result))) {
+            result.agendaPendenteSync = true;
+            result.needsCalendarSync = true;
+            result.historicoPendenteSync = true;
         }
         return result;
     });

@@ -139,7 +139,7 @@ export const prepararAtribuicaoGrupo = ({ programacoes = [], alunos = [], config
         de: { id: slot.pessoa.id, nome: slot.pessoa.nome }, para: valor, origem: 'ensaio-local', criadoEm: new Date().toISOString() }] : programacao.substituicoes;
     const alteracoes = slot.celebracao ? { celebracao: proxima.celebracao } : tipo === 'fimDeSemana' ? { fimDeSemana: proxima.fimDeSemana } : slot.path[0] === 'partes' ? { partes: proxima.partes } : { [slot.path[0]]: proxima[slot.path[0]] };
     return { operacoes: [{ tipo: 'patch', programacaoId, alteracoes: { ...alteracoes,
-        ...(substituicoes ? { substituicoes } : {}), historicoPendenteSync: true } }] };
+        ...(substituicoes ? { substituicoes } : {}), historicoPendenteSync: true, agendaPendenteSync: true, needsCalendarSync: true } }] };
 };
 
 export const classificarCandidatosGrupo = ({ alunos = [], programacoes, config, grupoId, programacao, tipo, slot, cargosMap, lang }) => {

@@ -154,7 +154,11 @@ test('E6: escritor Agenda legado preserva IDs e aceita fim de semana sem partes 
     const { enviarEventosParaAgenda } = await server.ssrLoadModule('/src/services/calendarSync.js');
     const d = fixture(); const calls = [];
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (url, options) => { calls.push({ url, payload: JSON.parse(options.body) }); return { ok: true, status: 200 }; };
+    globalThis.fetch = async (url, options) => {
+        if (!options.method) return { ok: false, status: 404, json: async () => ({}) };
+        calls.push({ url, payload: JSON.parse(options.body) });
+        return { ok: true, status: 200, json: async () => ({}) };
+    };
     try {
         const pt = d.historico_reunioes[0];
         const result = await enviarEventosParaAgenda('fixture-token', 'fixture-calendar', [{ ...pt, dataExata: pt.dataReuniao }], d.configuracoes);

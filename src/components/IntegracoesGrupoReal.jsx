@@ -5,10 +5,11 @@ import { buildWhatsappHref } from '../utils/revisarEnviar/links.js';
 import { enviarEmailAutomatico } from '../utils/revisarEnviar/enviadorEmail.js';
 import { iniciarSincronizacao } from '../services/calendarSync.js';
 import { sincronizarAgendaGrupo } from '../services/agendaGrupos.js';
+import { aplicarResultadoAgenda } from '../utils/agendaDelta.js';
 
 const storage = () => { try { return typeof window === 'undefined' ? null : window.localStorage; } catch { return null; } };
 
-export default function IntegracoesGrupoReal({ config, grupoId, ownerUid, programacoes, confirmacoes, alunos = [], programacaoFoco = '' }) {
+export default function IntegracoesGrupoReal({ config, grupoId, ownerUid, programacoes, confirmacoes, alunos = [], programacaoFoco = '', onProgramacoesChange }) {
     const es = config.grupos[grupoId].idioma === 'es';
     const [status, setStatus] = useState('');
     const [busy, setBusy] = useState(false);
@@ -68,7 +69,11 @@ export default function IntegracoesGrupoReal({ config, grupoId, ownerUid, progra
                 <button className="border p-2" onClick={() => executar(async () => {
                     if (!agenda) throw new Error(es ? 'Elige un calendario.' : 'Escolha uma agenda.');
                     const r = await sincronizarAgendaGrupo({ token: oauth.token, calendarId: agenda, programacoes, config, grupoId, alunos });
-                    setStatus(`${r.resultados.filter(x => x.ok).length} eventos. ${r.resultados.filter(x => !x.ok).map(x => x.erro).join('; ')}`);
+                    if (onProgramacoesChange) {
+                        const gravacao = await onProgramacoesChange(prev => prev.map(p => aplicarResultadoAgenda(p, r, new Date().toISOString())));
+                        if (gravacao?.salvo === false) throw new Error(es ? 'Agenda procesada; no se pudo guardar el estado de sincronización.' : 'Agenda processada; não foi possível gravar o estado da sincronização.');
+                    }
+                    setStatus(`${r.quantidade} ${es ? 'eventos actualizados' : 'eventos atualizados'}. ${r.semAlteracoes} ${es ? 'sin cambios' : 'sem alterações'}. ${r.erro}`);
                 })}>{es ? 'Sincronizar este grupo' : 'Sincronizar este grupo'}</button></>}
             {!fila.length && <p>{es ? 'Ninguna asignación operativa.' : 'Nenhuma designação operacional.'}</p>}
             {fila.map(row => <article data-programacao-id={row.programacaoId} className={`p-3 my-2 border rounded ${row.programacaoId === programacaoFoco ? 'bg-amber-50' : ''}`} key={row.assignmentKey}>

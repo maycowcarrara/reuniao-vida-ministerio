@@ -30,7 +30,6 @@ import { getSectionMessages, I18nProvider } from './i18n';
 import { resolveDataOwnerUid } from './services/adminAccess';
 import { MULTI_GRUPOS_LOCAL } from './config/multiGruposLocal.js';
 import { USUARIO_ENSAIO_GRUPOS } from './data/ensaioGrupos.js';
-import { getReunioesAtivas } from './utils/ocorrenciasReuniao.js';
 import { prepararEdicaoClassica } from './utils/interfaceClassicaGrupos.js';
 import { normalizeGruposProgramacao, participaDoGrupo } from './utils/gruposProgramacao.js';
 import { projetarConfigGrupo } from './utils/grupoAtivo.js';
@@ -692,11 +691,12 @@ function AdminPanel() {
     const estado = dadosAtuaisRef.current;
     const alunos = reconstruirHistoricoGrupo({ ...pedido, config: estado.configuracoes,
       alunos: estado.alunos, programacoes: estado.historico_reunioes });
-    await salvarHistoricosLocais(alunos, pedido);
-    dadosAtuaisRef.current = { ...estado, alunos };
-    if (!MULTI_GRUPOS_LOCAL) await controller.executar({ grupoId: pedido.grupoId,
-      operacoes: pedido.programacaoIds.filter(id => { const p = estado.historico_reunioes.find(x => x.id === id); return p && !p.arquivada && getReunioesAtivas(p, estado.configuracoes).length; }).map(programacaoId => ({ tipo: 'patch', programacaoId,
-        alteracoes: { historicoGravadoEm: new Date().toISOString(), historicoPendenteSync: false, historicoPendenteMotivo: '', historicoPendenteDesde: null } })) });
+    const resultado = await salvarHistoricosLocais(alunos, pedido);
+    // Históricos e marcadores são confirmados juntos, sem segunda transação.
+    const patches = new Map((resultado?.programacoes || []).map(p => [p.id, p.alteracoes]));
+    dadosAtuaisRef.current = { ...dadosAtuaisRef.current, alunos,
+      historico_reunioes: dadosAtuaisRef.current.historico_reunioes.map(p => patches.has(String(p.id)) ? { ...p, ...patches.get(String(p.id)) } : p) };
+
   });
 
   if (loading) {

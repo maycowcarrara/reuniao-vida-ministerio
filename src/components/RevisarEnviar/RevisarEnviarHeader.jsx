@@ -54,6 +54,7 @@ const RevisarEnviarHeader = ({
     const grupoAgenda = config?.grupoSelecionadoId || getGrupoLegadoId(config);
     const storage = () => { try { return window.localStorage; } catch { return null; } };
     const [enviando, setEnviando] = useState(false);
+    const [conferirTudo, setConferirTudo] = useState(false);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
     // Mapeamos para preservar o índice original
@@ -273,7 +274,7 @@ const RevisarEnviarHeader = ({
         try {
             // Salva a escolha do usuário na memória para a próxima vez
             salvarAgendaGrupo(storage(), calendarOwner, grupoAgenda, calendarioSelecionado);
-            await onConfirmSync(tokenGoogle, calendarioSelecionado);
+            await onConfirmSync(tokenGoogle, calendarioSelecionado, { conferirTudo });
             setModalCalendario(false);
         } finally {
             setEnviando(false);
@@ -370,6 +371,10 @@ const RevisarEnviarHeader = ({
                                 </select>
                             </div>
 
+                            <label className="flex gap-2 items-start text-xs text-gray-600">
+                                <input type="checkbox" checked={conferirTudo} onChange={e => setConferirTudo(e.target.checked)} disabled={enviando} />
+                                {config?.idioma === 'es' ? 'Comprobar también eventos sin cambios (si editaste directamente en Google Agenda).' : 'Conferir também eventos sem alterações (se você editou diretamente no Google Agenda).'}
+                            </label>
                             <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
                                 <button onClick={() => setModalCalendario(false)} disabled={enviando} className="px-4 py-2 text-xs font-bold text-gray-400 hover:bg-gray-100 rounded-xl transition">
                                     {t.agendaCancel}

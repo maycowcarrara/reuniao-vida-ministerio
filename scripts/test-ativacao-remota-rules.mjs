@@ -107,7 +107,24 @@ test('Ativação: histórico exige escopo atual, conserva outros campos e rejeit
     await adapter.salvarHistoricos(input, { grupoId: 'grupo-espanhol', programacaoIds: ['es-1'] });
     assert.equal((await getDoc(personRef)).data().privado, 'preservar');
     assert.deepEqual((await getDoc(personRef)).data().historico, next);
+    // O marcador agora faz parte da mesma transação do histórico.
+    const gravada = (await getDoc(programRef('es-1'))).data();
+    assert.ok(gravada.historicoGravadoEm);
+    assert.equal(gravada.historicoPendenteSync, false);
+    estado.historico_reunioes = [{ ...gravada, id: 'es-1' }];
+    await refresh();
     await assert.rejects(adapter.salvarHistoricos(input, { grupoId: 'grupo-espanhol', programacaoIds: ['es-1'] }), /Histórico mudou/);
+});
+
+test('Ativação: checkpoint da agenda grava somente metadados e conserva os demais campos', async () => {
+    const anterior = { ...(await getDoc(programRef('es-1'))).data(), id: 'es-1' };
+    await refresh();
+    estado.historico_reunioes = [anterior];
+    const agendaSyncEstado = { versao: 1, calendarId: 'agenda-ficticia', eventos: [{ id: 'evento-ficticio', assinatura: 'hash-ficticio' }] };
+    await adapter.salvarLote({ grupoId: 'grupo-espanhol', anteriores: [anterior], excluirIds: [],
+        upserts: [{ ...anterior, agendaSyncEstado }] });
+    assert.deepEqual((await getDoc(programRef('es-1'))).data(), { ...anterior, agendaSyncEstado });
+    await refresh();
 });
 
 test('Ativação: canais concorrentes são atômicos e lembrete não apaga resposta', async () => {
